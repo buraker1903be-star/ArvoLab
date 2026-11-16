@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { KAYIP_IZI, YETIM_IZI, baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
+import { DOGRULANAMADI_IZI, KAYIP_IZI, YETIM_IZI, baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
 
 /*
   P52b-1 karar testleri. İstemci SAHTE: burada sınanan, hangi yanıtta hangi
@@ -14,7 +14,13 @@ import { KAYIP_IZI, YETIM_IZI, baglamayiGeriAl, baglantiyiDogrula, otomatikSonuc
 type Yanit = { data?: unknown; error?: { code?: string; message?: string } | null };
 type Cagri = { tablo: string; adimlar: [string, ...unknown[]][] };
 
-function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false, depo: { var?: boolean | "firlat"; yuklemeHatasi?: string } = {}) {
+/*
+  `var`: listeleme cevabı. true = dosya listede, false = liste boş (KESİN yok),
+  "hata" = depo hata döndü (yetki: Storage süresi dolmuş jetona böyle cevap
+  veriyor), "firlat" = ağ hatası. `exists` bilerek "yok" diyor: HEAD bu
+  durumları ayırt edemiyor ve artık kullanılmamalı.
+*/
+function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false, depo: { var?: boolean | "firlat" | "hata"; yuklemeHatasi?: string } = {}) {
   const cagrilar: Cagri[] = [];
   const silinen: string[] = [];
   const yuklenen: string[] = [];
@@ -47,9 +53,11 @@ function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false, depo: { var?: bool
         yuklenen.push(yol);
         return { data: { path: yol }, error: null };
       },
-      exists: async () => {
+      exists: async () => ({ data: false, error: { message: "HEAD 400" } }),
+      list: async (_klasor: string, secenek: { search: string }) => {
         if (depo.var === "firlat") throw new Error("ağ");
-        return depo.var ? { data: true, error: null } : { data: false, error: { message: "not found" } };
+        if (depo.var === "hata") return { data: null, error: { message: "jwt expired" } };
+        return { data: depo.var ? [{ name: secenek.search }] : [], error: null };
       },
     }),
   };
@@ -222,7 +230,7 @@ test("sahipsizseSil TOCTOU: bayt yoksa (yerine geçilen eski dosya) KAYIP iziyle
   }
 });
 
-test("baglantiyiDogrula: dosya yerindeyse dokunmaz; yoksa geri yükler (Y2); geri yüklenemezse 'kayip'", async () => {
+test("baglantiyiDogrula: dosya yerindeyse dokunmaz; KESİN yoksa geri yükler (Y2); geri yüklenemezse 'kayip'", async () => {
   const yerinde = sahteIstemci([], false, { var: true });
   assert.equal(await baglantiyiDogrula(yerinde.sb, YOL, BAYT, "deneme"), "yerinde");
   assert.deepEqual(yerinde.yuklenen, []);
@@ -236,14 +244,29 @@ test("baglantiyiDogrula: dosya yerindeyse dokunmaz; yoksa geri yükler (Y2); ger
     const dusuk = sahteIstemci([], false, { var: false, yuklemeHatasi: "depo kapalı" });
     assert.equal(await baglantiyiDogrula(dusuk.sb, YOL, BAYT, "deneme"), "kayip");
     assert.ok(g.satirlar.some((x) => x.includes(KAYIP_IZI) && x.includes(YOL)));
-
-    // Varlık sorusu düşerse "zaten var" cevabı dosyanın yerinde olduğunu söyler.
-    const bilinmez = sahteIstemci([], false, { var: "firlat", yuklemeHatasi: "The resource already exists" });
-    assert.equal(await baglantiyiDogrula(bilinmez.sb, YOL, BAYT, "deneme"), "yerinde");
   } finally {
     g.birak();
   }
 });
+
+test("baglantiyiDogrula: depo cevap veremiyorsa (ağ / servis / YETKİ) 'kayip' DEMEZ — geçerli kayıt geri alınmaz", async () => {
+  const g = gunlukYakala();
+  try {
+    for (const durum of ["firlat", "hata"] as const) {
+      // Geri yükleme de aynı nedenle düşer: sonuç "dogrulanamadi", kayıt korunur.
+      const s = sahteIstemci([], false, { var: durum, yuklemeHatasi: durum === "hata" ? "jwt expired" : "fetch failed" });
+      assert.equal(await baglantiyiDogrula(s.sb, YOL, BAYT, "deneme"), "dogrulanamadi", durum);
+      // Geri yükleme "zaten var" derse dosya yerinde demektir.
+      const varmis = sahteIstemci([], false, { var: durum, yuklemeHatasi: "The resource already exists" });
+      assert.equal(await baglantiyiDogrula(varmis.sb, YOL, BAYT, "deneme"), "yerinde", durum);
+    }
+    assert.ok(g.satirlar.some((x) => x.includes(DOGRULANAMADI_IZI) && x.includes(YOL)));
+    assert.equal(g.satirlar.some((x) => x.includes(KAYIP_IZI)), false, "belirsizlik KAYIP sayılmaz");
+  } finally {
+    g.birak();
+  }
+});
+
 
 const ONCEKI = { durum: "yuklendi", depo_yolu: ESKI, kaynak_adres: null, baslik_eslesti: true, bakildi: "2026-11-01T00:00:00Z" };
 

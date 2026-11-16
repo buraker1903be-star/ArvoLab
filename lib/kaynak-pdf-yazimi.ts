@@ -137,28 +137,68 @@ export async function sahipsizseSil(
   return "kayip";
 }
 
+export type DepoDurumu = "var" | "yok" | "bilinmiyor";
+
+/*
+  Dosya depoda mı? Üç cevap: var, yok, BİLİNMİYOR. "Yok" yalnızca depo
+  BAŞARIYLA cevap verip dosyayı listelemediğinde söylenir.
+
+  `exists()` (HEAD) bu ayrımı yapamıyor: Storage API HEAD'de dosya yokken de,
+  jeton süresi dolmuşken ya da imzası geçersizken de 400 dönüyor (gövdesiz),
+  istemci üçünü de "yok" diye çeviriyor. Ağ ve 5xx hataları ise fırlatıyor.
+  Eskiden bu "yok" kesin sayılıyordu: dosya yerindeyken bir yetki ya da
+  servis hatası geçerli PDF kaydını geri aldırıyordu (denetim/p52b1/toctou.mjs,
+  Z-*). Listeleme (POST /object/list) yetki hatasını ayrı bir hata olarak,
+  olmayan dosyayı boş liste olarak döndürüyor.
+*/
+export async function depoDurumu(sb: SupabaseClient, yol: string): Promise<DepoDurumu> {
+  const bolu = yol.lastIndexOf("/");
+  const klasor = yol.slice(0, bolu);
+  const ad = yol.slice(bolu + 1);
+  try {
+    const { data, error } = await sb.storage.from(KOVA).list(klasor, { search: ad, limit: 100 });
+    if (error || !Array.isArray(data)) return "bilinmiyor";
+    return data.some((d) => d.name === ad) ? "var" : "yok";
+  } catch {
+    return "bilinmiyor";
+  }
+}
+
+/*
+  Varlığı doğrulanamayan dosya: kayıt korunur (dosyayı az önce biz yükledik,
+  büyük olasılıkla yerinde), durum bu izle yoluyla günlüğe yazılır.
+*/
+export const DOGRULANAMADI_IZI = "[kaynak-pdf] DOGRULANAMADI";
+
+export type BaglantiSonucu = "yerinde" | "geri_yuklendi" | "kayip" | "dogrulanamadi";
+
 /*
   Bağlayan tarafın yarısı: kayıt yazıldıktan SONRA dosya hâlâ depoda mı?
   Silen taraf son bakışını yaptıktan sonra yazılan bir kayıt, o bakışın
   göremediği tek durum (denetim Y2). Her iki taraf da yazma/silme SONRASI
   karşı tarafın deposuna bakınca her sıralamada dosya ya yerinde kalır ya da
   geri yüklenir. Baytlar bağlayanın elinde (yüklenen ya da indirilen dosya).
+
+  "kayip" (çağıran kaydı GERİ ALIR) yalnızca dosyanın yokluğu KESİNSE ve geri
+  yükleme de düştüyse döner. Depo cevap veremiyorsa (ağ, 5xx, yetki) sonuç
+  "dogrulanamadi": geçerli bir kaydı belirsizlik yüzünden geri almak, yerinde
+  duran bir PDF'i kullanıcıdan koparmak olurdu. Geri yüklemenin kendisi de
+  `upsert: false`: yerinde duran bir dosyanın üzerine hiçbir koşulda yazmaz.
 */
-export async function baglantiyiDogrula(sb: SupabaseClient, yol: string, bayt: Uint8Array, neden: string): Promise<"yerinde" | "geri_yuklendi" | "kayip"> {
-  let var_: boolean | null = null;
-  try {
-    const { data, error } = await sb.storage.from(KOVA).exists(yol);
-    var_ = error && !data ? false : Boolean(data);
-  } catch {
-    var_ = null;
-  }
-  if (var_ === true) return "yerinde";
+export async function baglantiyiDogrula(sb: SupabaseClient, yol: string, bayt: Uint8Array, neden: string): Promise<BaglantiSonucu> {
+  const durum = await depoDurumu(sb, yol);
+  if (durum === "var") return "yerinde";
   if (await geriYukle(sb, yol, bayt)) {
-    if (var_ === false) console.error("[kaynak-pdf] bağlanan dosya depoda yoktu, geri yüklendi:", neden, yol);
-    return var_ === null ? "yerinde" : "geri_yuklendi";
+    // Geri yükleme başarılıysa dosya gerçekten yoktu; "zaten var" ise yerindeydi.
+    if (durum === "yok") console.error("[kaynak-pdf] bağlanan dosya depoda yoktu, geri yüklendi:", neden, yol);
+    return durum === "yok" ? "geri_yuklendi" : "yerinde";
   }
-  console.error(`${KAYIP_IZI} bağlanan dosya depoda yok ve geri yüklenemedi:`, neden, yol);
-  return "kayip";
+  if (durum === "yok") {
+    console.error(`${KAYIP_IZI} bağlanan dosya depoda yok ve geri yüklenemedi:`, neden, yol);
+    return "kayip";
+  }
+  console.error(`${DOGRULANAMADI_IZI} depo cevap vermedi, kayıt korundu:`, neden, yol);
+  return "dogrulanamadi";
 }
 
 export type KaynakPdfKaydi = {

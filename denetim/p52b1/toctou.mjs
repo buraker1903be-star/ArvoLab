@@ -54,8 +54,11 @@ function istemci(kapilar = []) {
     const k = kapilar.find((x) => !x.kullanildi && x.eslesir(String(url), yontem));
     if (k) {
       k.kullanildi = !k.surekli;
+      k.sayi = (k.sayi ?? 0) + 1;
       if (k.once) await k.once();
       if (k.yerine) throw new TypeError(`fetch failed (enjekte: ${k.ad})`);
+      if (k.cevap) return k.cevap();
+      if (k.degistir) return fetch(url, k.degistir(secenek));
     }
     return fetch(url, secenek);
   };
@@ -91,6 +94,11 @@ async function yukle(sb, yol) {
   return error?.message ?? null;
 }
 
+/* console.error yakalanır: günlükte hangi izin hangi yolla yazıldığı kanıt. */
+const gunluk = [];
+const asilHata = console.error;
+console.error = (...a) => void gunluk.push(a.map((x) => (typeof x === "string" ? x : x instanceof Error ? x.message : JSON.stringify(x))).join(" "));
+const gunlukte = (bas, iz, yol) => gunluk.slice(bas).some((x) => x.includes(iz) && x.includes(yol));
 const sonuclar = [];
 async function senaryo(kimlik, ad, fn) {
   const kanit = {};
@@ -225,7 +233,8 @@ await senaryo("Y3c", "Aynı milisaniyede aynı künyeye iki otomatik indirme →
 });
 
 const depoYukle = (url, yontem) => url.includes("/storage/v1/object/project-files/") && yontem === "POST";
-const depoVarMi = (url, yontem) => url.includes("/storage/v1/object/project-files/") && yontem === "HEAD";
+/* Varlık bakışı: eski kodda HEAD (exists), yenisinde listeleme (POST /object/list). İkisini de yakalar. */
+const depoVarMi = (url, yontem) => (url.includes("/storage/v1/object/project-files/") && yontem === "HEAD") || (url.includes("/storage/v1/object/list/project-files") && yontem === "POST");
 const icerik = async (yol) => {
   const { data } = await istemci().storage.from("project-files").download(yol);
   return data ? new TextDecoder().decode(new Uint8Array(await data.arrayBuffer())) : null;
@@ -320,6 +329,94 @@ await senaryo("Y7", "Geri alma DAHA YENİ kaydı ezmez: otomatik indirme 'kayıp
   if (k.sarkan.length) return `sarkan kayıt: ${k.sarkan[0]}`;
 });
 
+/* ===== Storage hata sınıflandırması: "yok" ile "bilinmiyor" ayrı mı? ===== */
+const SURESI_DOLMUS = imzala({ role: "authenticated", aud: "authenticated", sub: SAHIP, exp: 1763200001 });
+const depoIstegi = (u) => u.includes("/storage/v1/object/");
+/** Kayıt yazıldıktan SONRAKİ depo istekleri: varlık bakışı (HEAD), listeleme, geri yükleme. */
+function sonrakiDepoKapilari(ayar, ilkYuklemeVar) {
+  let ilkGecti = !ilkYuklemeVar;
+  return [
+    { ad: "ilk yükleme serbest", eslesir: (u, y) => { if (!ilkGecti && depoYukle(u, y)) { ilkGecti = true; return true; } return false; } },
+    { ad: "sonraki depo istekleri", eslesir: (u) => ilkGecti && depoIstegi(u) && !u.includes("/object/sign/"), surekli: true, ...ayar },
+  ];
+}
+const geriAlmaIstegi = (u, y) => u.includes("/rest/v1/kaynak_pdfleri") && u.includes("depo_yolu=eq.") && (y === "PATCH" || y === "DELETE");
+const SINIF = [
+  ["ag", "ağ hatası (bağlantı kopuk)", { yerine: true }],
+  ["503", "servis hatası (503)", { cevap: () => new Response(JSON.stringify({ statusCode: "503", error: "Service Unavailable", message: "enjekte" }), { status: 503, headers: { "content-type": "application/json" } }) }],
+  ["yetki", "yetkilendirme hatası (süresi dolmuş jeton, GERÇEK Storage yanıtı)", { degistir: (o) => ({ ...o, headers: { ...Object.fromEntries(new Headers(o.headers).entries()), authorization: `Bearer ${SURESI_DOLMUS}` } }) }],
+];
+
+for (const [kod, ad, ayar] of SINIF) {
+  await senaryo(`Z-oto-${kod}`, `Otomatik indirme: dosya DEPODA, doğrulama ${ad} veriyor → geçerli kayıt GERİ ALINMAZ`, async (k) => {
+    const pid = proje();
+    let geriAlma = 0;
+    const sb = istemci([
+      ...sonrakiDepoKapilari(ayar, true),
+      { ad: "geri alma sayacı", eslesir: (u, y) => { if (geriAlmaIstegi(u, y)) geriAlma++; return false; } },
+    ]);
+    const bas = gunluk.length;
+    globalThis.__denetim.ctx = baglam(sb);
+    const r = await kaynakPdfleriniBul(pid, [{ kunye: KUNYE_A, doi: `10.1/z-${kod}`, dogrulama: "verified" }]);
+    const yol = kayitlar(pid)[0]?.split("|")[1];
+    Object.assign(k, { donus: r.error ?? null, satirlar: (r.satirlar ?? []).map((x) => x.durum), sorunlar: r.sorunlar, kayit: kayitlar(pid), nesneVar: yol && yol !== "-" ? nesneVar(yol) : null, geriAlma, iz: yol ? gunluk.slice(bas).filter((x) => x.includes(yol)).map((x) => x.slice(0, 90)) : [] });
+    if (!k.kayit[0]?.startsWith("indirildi|")) return `geçerli kayıt geri alındı: ${k.kayit[0]}`;
+    if (!k.nesneVar) return "dosya depoda değil (ön koşul)";
+    if (geriAlma) return "geri alma isteği gönderildi";
+  });
+
+  await senaryo(`Z-yukle-${kod}`, `Yükleme: dosya DEPODA, doğrulama ${ad} veriyor → kayıt yeni PDF'te kalır`, async (k) => {
+    const pid = proje();
+    const P1 = yuklemeYolu(pid, SAHIP);
+    await yukle(istemci(), P1);
+    let geriAlma = 0;
+    const sb = istemci([
+      ...sonrakiDepoKapilari(ayar, false).slice(1).map((x) => ({ ...x, eslesir: (u, y) => depoIstegi(u) && (y === "HEAD" || u.includes("/object/list/") || depoYukle(u, y)) })),
+      { ad: "geri alma sayacı", eslesir: (u, y) => { if (geriAlmaIstegi(u, y)) geriAlma++; return false; } },
+    ]);
+    globalThis.__denetim.ctx = baglam(sb);
+    const r = await kaynakPdfiYuklendi(pid, { kunye: KUNYE_A, depoYolu: P1 });
+    Object.assign(k, { donus: r.error ?? "başarılı", kayit: kayitlar(pid), nesneVar: nesneVar(P1), geriAlma });
+    if (k.kayit[0] !== `yuklendi|${P1}`) return `geçerli kayıt geri alındı/silindi: ${k.kayit[0] ?? "(yok)"}`;
+    if (geriAlma) return "geri alma isteği gönderildi";
+  });
+}
+
+await senaryo("Z-yok", "Dosya GERÇEKTEN yok (404), geri yükleme başarılı → kayıt kalır, dosya geri gelir", async (k) => {
+  const pid = proje();
+  const P1 = yuklemeYolu(pid, SAHIP);
+  await yukle(istemci(), P1);
+  const sb = istemci([{ ad: "varlık bakışından önce dosya kaybolur", eslesir: depoVarMi, once: async () => { await istemci().storage.from("project-files").remove([P1]); } }]);
+  globalThis.__denetim.ctx = baglam(sb);
+  const r = await kaynakPdfiYuklendi(pid, { kunye: KUNYE_A, depoYolu: P1 });
+  Object.assign(k, { donus: r.error ?? "başarılı", kayit: kayitlar(pid), nesneVar: nesneVar(P1) });
+  if (r.error || k.kayit[0] !== `yuklendi|${P1}` || !k.nesneVar) return `kayıt ${k.kayit[0]}, dosya ${k.nesneVar}`;
+});
+
+await senaryo("Z-geri-alma-duser", "Yükleme: dosya yok, geri yüklenemedi, GERİ ALMA da düştü → kullanıcıya hata, KAYIP_DOSYA izi yoluyla, önceki PDF silinmez", async (k) => {
+  const pid = proje();
+  const P0 = yuklemeYolu(pid, SAHIP);
+  await yukle(istemci(), P0);
+  globalThis.__denetim.ctx = baglam(istemci());
+  await kaynakPdfiYuklendi(pid, { kunye: KUNYE_A, depoYolu: P0 });
+  const P1 = yuklemeYolu(pid, SAHIP);
+  await yukle(istemci(), P1);
+  const sb = istemci([
+    { ad: "varlık bakışından önce yeni dosya kaybolur", eslesir: depoVarMi, once: async () => { await istemci().storage.from("project-files").remove([P1]); } },
+    { ad: "geri yükleme ağda düşer", eslesir: depoYukle, yerine: true },
+    // Yalnızca YENİ yola koşullu geri alma (asıl yazma eski yola koşullu PATCH'tir, o serbest).
+    { ad: "geri alma ağda düşer", eslesir: (u, y) => geriAlmaIstegi(u, y) && decodeURIComponent(u).includes(`depo_yolu=eq.${P1}`), yerine: true },
+  ]);
+  const bas = gunluk.length;
+  globalThis.__denetim.ctx = baglam(sb);
+  const r = await kaynakPdfiYuklendi(pid, { kunye: KUNYE_A, depoYolu: P1 });
+  Object.assign(k, { donus: r.error ?? "başarılı", kayit: kayitlar(pid), oncekiVar: nesneVar(P0), kayipIzi: gunlukte(bas, "KAYIP_DOSYA", P1) });
+  if (!r.error) return "başarı bildirildi";
+  if (!k.kayipIzi) return "KAYIP_DOSYA izi yoluyla yazılmadı";
+  if (!k.oncekiVar) return "önceki PDF silindi";
+});
+
+console.error = asilHata;
 const fail = sonuclar.filter((s) => s.sonuc !== "PASS").length;
 console.log(`\n${sonuclar.length - fail}/${sonuclar.length} PASS`);
 if (process.argv[2]) fs.writeFileSync(process.argv[2], JSON.stringify(sonuclar, null, 2));

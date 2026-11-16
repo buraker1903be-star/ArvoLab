@@ -258,3 +258,49 @@ Kalan risk: geri alma ile daha yeni bir yazma arasında koşul tek ifadede değe
 yok. Geri almanın kendisi düşerse (DB kapalı) kayıt depoda olmayan dosyayı göstermeye devam eder.
 Bu durum `KAYIP_DOSYA` izinde ve kullanıcıya hata olarak dönüyor. Kalıcı onarım P52b-2'nin
 taramasına kalıyor.
+
+---
+
+## Storage hata sınıflandırması (316c033 sonrası)
+
+`baglantiyiDogrula` dosyanın varlığını `exists()` (HEAD) ile soruyordu. Yerel Storage API'de ölçüldü:
+HEAD isteği, dosya yokken de, jetonun süresi dolmuşken de, imza geçersizken de **aynı yanıtı
+(gövdesiz 400)** veriyor. İstemci üçünü de "yok" olarak çeviriyor; ağ ve 5xx hataları ise fırlatıyor
+ve "bilinmiyor" sayılıyordu. Her iki durumda da geri yükleme aynı nedenle düşünce sonuç "kayip"
+oluyordu ve dosya yerindeyken **geçerli PDF kaydı geri alınıyordu**.
+
+Listeleme (`POST /object/list`) bu durumları ayırt ediyor; aynı yığında ölçüldü:
+
+| Durum | HEAD | list |
+|---|---|---|
+| Geçerli jeton, dosya yok | 400 | 200 `[]` |
+| Süresi dolmuş jeton | 400 | 400 `{"statusCode":"403","message":"jwt expired"}` |
+| Geçersiz imza | 400 | 400 `{"statusCode":"403","message":"invalid signature"}` |
+
+**Düzeltme:** `depoDurumu` artık üç değer döndürüyor: `var`, `yok`, `bilinmiyor`. "Yok" yalnızca
+listeleme başarıyla dönüp dosyayı içermediğinde söyleniyor.
+- `kayip` sonucu (çağıran kaydı geri alır) yalnızca **kesin yok** ve geri yükleme de düştüyse döner.
+- Depo cevap veremiyorsa (ağ, 5xx, yetki) sonuç `dogrulanamadi` olur. Kayıt korunur, kullanıcıya
+  başarı gösterilir (dosyayı az önce biz yükledik). Durum `[kaynak-pdf] DOGRULANAMADI` iziyle
+  yoluyla günlüğe yazılır.
+- Geri yükleme `upsert: false` ile yapılıyor: yerinde duran bir dosyanın üzerine hiçbir koşulda yazmaz.
+
+Senaryolar `toctou.mjs` dosyasında, gerçek Storage API üzerinde. Yetki senaryosunda doğrulama
+istekleri süresi dolmuş GERÇEK bir jetonla gidiyor ve Storage API'nin kendi yanıtı alınıyor.
+
+| # | Senaryo | 316c033 | Sonra |
+|---|---|---|---|
+| Z-oto-ag / Z-yukle-ag | Dosya depoda, doğrulama ağ hatası veriyor | **FAIL** (kayıt `erisilemedi` oldu ya da silindi) | PASS (kayıt korundu, geri alma isteği yok, DOGRULANAMADI izi) |
+| Z-oto-503 / Z-yukle-503 | Dosya depoda, 503 | **FAIL** | PASS |
+| Z-oto-yetki / Z-yukle-yetki | Dosya depoda, süresi dolmuş jeton | **FAIL** | PASS |
+| Z-yok | Dosya gerçekten yok, geri yükleme başarılı | PASS | PASS (dosya geri geldi, kayıt kaldı) |
+| Y5 / Y6 | Dosya gerçekten yok, geri yükleme düştü | PASS | PASS (kayıt geri alındı) |
+| Z-geri-alma-duser | Yükleme: dosya yok, geri yükleme düştü, geri alma da düştü | PASS | PASS (hata: "PDF depoya ulaşmadı; yeniden yükleyin."; `KAYIP_DOSYA` izi yoluyla; önceki PDF silinmedi) |
+
+Toplam: 316c033 11/17, sonra 17/17. Kalıcı birim testi: `tests/unit/kaynak-pdf-yazimi.test.ts`
+(ağ ve yetki için `dogrulanamadi`; "zaten var" → `yerinde`; belirsizlik `KAYIP` sayılmıyor).
+
+**Kalan risk:** `dogrulanamadi` durumunda dosya gerçekten yoksa (depo kapalıyken başka bir yolla
+silinmişse) kayıt depoda olmayan dosyayı göstermeye devam eder. Bu durum izde yoluyla duruyor;
+kalıcı onarım P52b-2 taramasına kalıyor. Bilinçli tercih: belirsizlikte geçerli bir kaydı koparmak
+yerine kaydı korumak.

@@ -86,6 +86,11 @@ function sahteDepo() {
       for (const y of yollar) nesneler.delete(y);
       return { data: yollar.map((name) => ({ name })), error: null };
     },
+    async list(klasor, secenek = {}) {
+      erisim.push(["list", klasor]);
+      const ad = secenek.search ?? "";
+      return { data: [...nesneler.keys()].filter((y) => y.startsWith(`${klasor}/`) && y.slice(klasor.length + 1).startsWith(ad)).map((y) => ({ name: y.slice(klasor.length + 1) })), error: null };
+    },
     async exists(yol) {
       erisim.push(["exists", yol]);
       return nesneler.has(yol) ? { data: true, error: null } : { data: false, error: { message: "not found" } };
