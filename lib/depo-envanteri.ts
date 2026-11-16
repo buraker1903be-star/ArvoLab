@@ -250,8 +250,31 @@ export type Rapor = {
   kategori: Record<string, Record<string, Sayac>>;
   sebep: Record<string, number>;
   okunamayan_klasor: number;
+  /**
+   * Listelenirken içeriği kayan (sayfa sınırında ekleme/silme görülen) ve yeniden
+   * denemelerde de kararlı listelenemeyen klasörler. İçlerinde atlanmış nesne
+   * olabilir: eksiksiz sayılmazlar.
+   */
+  degisen_klasor: number;
+  /** Aynı yol birden çok kez göründü ve TEK kez sayıldı (ofsetli sayfalamada ekleme). */
+  tekrar_ayiklanan: number;
   ikinci_geciste_kaybolan: number;
   istek: { listeleme: number; yeniden_deneme: number; veritabani: number };
+  /**
+   * Rapor kesin mi? Yalnızca bütün klasörler eksiksiz ve kararlı listelendiyse,
+   * referanslar ve sahipler okunabildiyse ve tarama yarıda kesilmediyse.
+   * Kesin olmayan raporda sayılar "en az" anlamına gelir ve kayıp kararları
+   * yalnızca okunabilen klasörler için geçerlidir.
+   */
+  kesin: boolean;
+  kesin_degil_cunku: string[];
+  /**
+   * Her rapor bir ADAY raporudur; hiçbir koşulda silme kararı değildir. Kalıcı
+   * silme (P52b-2C tasarımı) her yolu kendi anında, kilit altında, rapordan
+   * bağımsız olarak yeniden doğrular. Alan sabit: raporu okuyan bir sonraki
+   * araç bunu "kesin = true ise sil" diye yorumlamasın diye yazılıyor.
+   */
+  nitelik: "yalnizca_aday";
 };
 
 export function bosRapor(): Rapor {
@@ -265,9 +288,87 @@ export function bosRapor(): Rapor {
     kategori: {},
     sebep: {},
     okunamayan_klasor: 0,
+    degisen_klasor: 0,
+    tekrar_ayiklanan: 0,
     ikinci_geciste_kaybolan: 0,
     istek: { listeleme: 0, yeniden_deneme: 0, veritabani: 0 },
+    kesin: false,
+    kesin_degil_cunku: ["tamamlanmadi"],
+    nitelik: "yalnizca_aday",
   };
+}
+
+/**
+ * Taramanın sonunda raporun kesin olup olmadığına karar verir. Varsayılan
+ * "kesin değil"dir (bosRapor): bu işlev çağrılmadan dönen bir rapor kesin
+ * görünmez.
+ */
+export function kesinligiBelirle(
+  r: Rapor,
+  d: { yarim: boolean; referansOkunamadi: boolean; sahipOkunamadi: boolean },
+): void {
+  const n: string[] = [];
+  if (d.yarim) n.push("nesne_ust_siniri");
+  if (r.okunamayan_klasor > 0) n.push("okunamayan_klasor");
+  if (r.degisen_klasor > 0) n.push("tarama_sirasinda_degisen_klasor");
+  if (d.referansOkunamadi) n.push("referanslar_okunamadi");
+  if (d.sahipOkunamadi) n.push("sahipler_okunamadi");
+  r.kesin = n.length === 0;
+  r.kesin_degil_cunku = n;
+}
+
+export type SayfaGirdisi = { ad: string; klasorMu: boolean };
+const anahtar = (g: SayfaGirdisi) => `${g.klasorMu ? "d" : "f"}:${g.ad}`;
+
+/**
+ * Ofsetli listelemeyi örtüşen sayfalarla okur: k. sayfa (k ≥ 1) bir önceki
+ * sayfanın SON öğesiyle başlamalıdır (offset = k·(sayfa−1)). Başlamıyorsa
+ * sınırın önünde net bir ekleme ya da silme olmuştur ve ofsetli sayfalama o
+ * klasörde bir öğeyi ya İKİ KEZ verir ya da HİÇ vermez (gerçek PostgreSQL'de
+ * gösterildi: denetim/p52b2/yaris, C1).
+ *
+ * Neden yeter: adlar tekil ve sıra deterministik. Sınır öğesinin kimliği
+ * yalnızca sınırın önünde net kayma olursa değişir; net kayma yoksa sonraki
+ * sayfa doğru devamdır (önde biri eklenip biri silindiyse eklenen tarama
+ * başladıktan sonra gelmiştir, silinen zaten okunmuştur). Yani "kararlı"
+ * çıkan bir listelemede, listeleme boyunca var olan her öğe tam bir kez
+ * görülür. Sınırın ARKASINDAKİ değişiklik henüz okunmamış bölgededir.
+ *
+ * Eskiden sayfalar uç uca (offset = k·sayfa) okunuyor ve birleştiriliyordu:
+ * tekrar eden yol iki kez sayılıyor, atlanan yol hiç bilinmiyordu ve klasör
+ * yine de "eksiksiz listelendi" sayılıyordu.
+ */
+export function sayfalariBirlestir<G extends SayfaGirdisi>(
+  sayfalar: G[][],
+  sayfaBoyu: number,
+): { girdiler: G[]; kararli: boolean; tekrar: number; bitti: boolean } {
+  const gorulen = new Map<string, G>();
+  let tekrar = 0;
+  let kararli = true;
+  for (let k = 0; k < sayfalar.length; k++) {
+    const s = sayfalar[k];
+    let ortusuyor = false;
+    if (k > 0) {
+      const onceki = sayfalar[k - 1];
+      const sinir = onceki[onceki.length - 1];
+      // Dolu bir sayfadan sonra en az örtüşen öğe gelmeliydi; boş ya da farklı başlangıç = kayma.
+      ortusuyor = !!s.length && !!sinir && anahtar(s[0]) === anahtar(sinir);
+      if (!ortusuyor) kararli = false;
+    }
+    for (let i = 0; i < s.length; i++) {
+      if (i === 0 && ortusuyor) continue; // örtüşen öğe: beklenen tekrar, sayılmaz
+      const a = anahtar(s[i]);
+      if (gorulen.has(a)) tekrar += 1;
+      else gorulen.set(a, s[i]);
+    }
+  }
+  const son = sayfalar[sayfalar.length - 1];
+  return { girdiler: [...gorulen.values()], kararli, tekrar, bitti: !son || son.length < sayfaBoyu };
+}
+
+/** Örtüşmeli sayfalamada k. sayfanın ofseti. */
+export function ortusmeliOfset(k: number, sayfaBoyu: number): number {
+  return k * (sayfaBoyu - 1);
 }
 
 /** Bir nesnenin son kararını rapora işler. Yol rapora GİRMEZ. */

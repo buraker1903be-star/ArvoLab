@@ -417,7 +417,7 @@ await senaryo(
   "B1b-isim-ile-bitlemeli",
   "Kuşak yerine kira_sahibi adıyla koşullu geçiş: aynı adla yeniden başlayan worker'ın geç 'yeniden dene'si B'nin kirasını düşürür",
   TEMEL + BAGLA_V2 + ISCI_V1 + `insert into depo (yol) values ('p'); select kuyruga_al('p');`,
-  async ({ yeni, durum }) => {
+  async ({ yeni }) => {
     const A = await yeni("A");
     const B = await yeni("B");
     await A.calistir("select kusak from kira_al('isci-1');");

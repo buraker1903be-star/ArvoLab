@@ -1,0 +1,45 @@
+{
+  "etiket": "yeni",
+  "kok_commit": "calisma-agaci",
+  "sonuc": [
+    {
+      "senaryo": "S1-sabit",
+      "aciklama": "değişiklik yok",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2600,
+      "sayilan": 2600,
+      "ayni_yol_iki_kez_sayilan": 0,
+      "tarama_boyunca_var_olup_gorulmeyen": 0,
+      "aday_kayip": 0,
+      "kesin": true,
+      "degisen_klasor": 0,
+      "tekrar_ayiklanan": 0
+    },
+    {
+      "senaryo": "S2-ekleme",
+      "aciklama": "her ara sayfadan önce önde bir ekleme",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2606,
+      "sayilan": 2604,
+      "ayni_yol_iki_kez_sayilan": 0,
+      "tarama_boyunca_var_olup_gorulmeyen": 0,
+      "aday_kayip": 0,
+      "kesin": false,
+      "degisen_klasor": 1,
+      "tekrar_ayiklanan": 12
+    },
+    {
+      "senaryo": "S3-silme",
+      "aciklama": "her ara sayfadan önce baştan bir silme; kalan her dosya başvurulu",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2594,
+      "sayilan": 2594,
+      "ayni_yol_iki_kez_sayilan": 0,
+      "tarama_boyunca_var_olup_gorulmeyen": 0,
+      "aday_kayip": 0,
+      "kesin": false,
+      "degisen_klasor": 1,
+      "tekrar_ayiklanan": 0
+    }
+  ]
+}

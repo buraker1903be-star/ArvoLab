@@ -1,0 +1,235 @@
+[
+  {
+    "kimlik": "E1",
+    "ad": "Uçtan uca envanter: sınıflar ve sebepler beklendiği gibi, yol rapora girmiyor",
+    "sonuc": "FAIL",
+    "sorun": "kesinlik: {}",
+    "kanit": {
+      "rapor": {
+        "toplam_dosya": 2514,
+        "toplam_bayt": 17710,
+        "sinif": {
+          "SAHIPLI": {
+            "adet": 2504,
+            "bayt": 17560
+          },
+          "ADAY_YETIM": {
+            "adet": 7,
+            "bayt": 105
+          },
+          "DOGRULANAMADI": {
+            "adet": 3,
+            "bayt": 45
+          }
+        },
+        "aday_kayip": 2,
+        "kayip_dogrulanamadi": 0,
+        "kategori": {
+          "editor-images": {
+            "ADAY_YETIM": {
+              "adet": 1,
+              "bayt": 15
+            },
+            "SAHIPLI": {
+              "adet": 2502,
+              "bayt": 17530
+            }
+          },
+          "kaynak-pdf": {
+            "ADAY_YETIM": {
+              "adet": 3,
+              "bayt": 45
+            },
+            "SAHIPLI": {
+              "adet": 1,
+              "bayt": 15
+            },
+            "DOGRULANAMADI": {
+              "adet": 1,
+              "bayt": 15
+            }
+          },
+          "imports": {
+            "ADAY_YETIM": {
+              "adet": 2,
+              "bayt": 30
+            },
+            "DOGRULANAMADI": {
+              "adet": 1,
+              "bayt": 15
+            }
+          },
+          "kilavuz": {
+            "ADAY_YETIM": {
+              "adet": 1,
+              "bayt": 15
+            },
+            "DOGRULANAMADI": {
+              "adet": 1,
+              "bayt": 15
+            }
+          },
+          "belge": {
+            "SAHIPLI": {
+              "adet": 1,
+              "bayt": 15
+            }
+          }
+        },
+        "sebep": {
+          "ADAY_YETIM:sahip_yok": 4,
+          "ADAY_YETIM:gecici_eski": 1,
+          "DOGRULANAMADI:taze": 2,
+          "DOGRULANAMADI:kapsam_disi": 1,
+          "SAHIPLI:referansli": 3,
+          "SAHIPLI:kutuphane": 2501,
+          "ADAY_YETIM:referanssiz": 2,
+          "KAYIP_ADAY_KAYIP:depoda_yok": 2
+        },
+        "okunamayan_klasor": 0,
+        "ikinci_geciste_kaybolan": 0,
+        "istek": {
+          "listeleme": 27,
+          "yeniden_deneme": 0,
+          "veritabani": 19
+        }
+      },
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E2",
+    "ad": "Sayfalama: 2500 nesnelik klasör eksiksiz sayıldı (sayfa=1000 → 3 istek)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "listeleme": 27,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E3",
+    "ad": "Eşzamanlı yükleme: ilk geçişte referanssız, ikinci geçiş beklemesinde bağlanan dosya YETİM SAYILMAZ",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "sebep": {
+        "ADAY_YETIM:sahip_yok": 4,
+        "ADAY_YETIM:gecici_eski": 1,
+        "DOGRULANAMADI:taze": 2,
+        "DOGRULANAMADI:kapsam_disi": 1,
+        "SAHIPLI:referansli": 3,
+        "SAHIPLI:kutuphane": 2501,
+        "SAHIPLI:ikinci_geciste_referansli": 1,
+        "ADAY_YETIM:referanssiz": 1,
+        "KAYIP_ADAY_KAYIP:depoda_yok": 2
+      },
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E4",
+    "ad": "Storage kapalı: hiç aday yok, her şey okunamadı",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "toplam": 0,
+      "okunamayan": 1,
+      "kayip": 0,
+      "kayip_dogrulanamadi": 5,
+      "yeniden": 3,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E5",
+    "ad": "Bir klasör okunamazsa (kalıcı 403) içindeki referans KAYIP değil, DOĞRULANAMADI",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "kayip": 1,
+      "sebep": {
+        "ADAY_YETIM:sahip_yok": 4,
+        "ADAY_YETIM:gecici_eski": 1,
+        "DOGRULANAMADI:taze": 1,
+        "DOGRULANAMADI:kapsam_disi": 1,
+        "SAHIPLI:referansli": 2,
+        "SAHIPLI:kutuphane": 2501,
+        "KAYIP_DOGRULANAMADI:klasor_okunamadi": 2,
+        "KAYIP_ADAY_KAYIP:depoda_yok": 1
+      },
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E6",
+    "ad": "İdempotentlik: art arda iki tarama aynı raporu verir, depo ve tablolar değişmez",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ayni": true,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E7",
+    "ad": "Salt okunur istemci: silme ve güncelleme isteği AĞA ÇIKMADAN reddedilir",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "silme": "depo envanteri salt okunur: DELETE isteği reddedildi",
+      "guncelle": "Error: depo envanteri salt okunur: PATCH isteği reddedildi",
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E8",
+    "ad": "Uzak adres reddedilir; komut çıktısında yol/kimlik yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "uzak": "Depo envanteri yalnızca yerel yığında çalışır (127.0.0.1/localhost).",
+      "cikis": 0,
+      "uzunluk": 1581,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E9",
+    "ad": "Tarama sırasında TEK ekleme (2. sayfadan önce, sınırın önüne): klasör yeniden listelenir, her yol bir kez, rapor kesin",
+    "sonuc": "FAIL",
+    "sorun": "1 yol iki kez sayıldı",
+    "kanit": {
+      "toplam": 2515,
+      "iki_kez": 1,
+      "gorulmeyen": 0,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E10",
+    "ad": "Tarama sırasında SÜREKLİ silme (her ara sayfadan önce baştan bir nesne): görülen her yol bir kez, kalanların hepsi görüldü, rapor KESİN DEĞİL",
+    "sonuc": "FAIL",
+    "sorun": "2 hep var olan yol görülmedi",
+    "kanit": {
+      "silinen": 2,
+      "toplam": 2512,
+      "iki_kez": 0,
+      "gorulmeyen": 2,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E11",
+    "ad": "Tarama sırasında SÜREKLİ ekleme (her ara sayfadan önce önde yeni nesne): aynı yol iki kez sayılmaz, başlangıçtakilerin hepsi görüldü, rapor KESİN DEĞİL",
+    "sonuc": "FAIL",
+    "sorun": "2 yol iki kez sayıldı",
+    "kanit": {
+      "eklenen": 2,
+      "toplam": 2516,
+      "iki_kez": 2,
+      "gorulmeyen": 0,
+      "salt_okunur": true
+    }
+  }
+]

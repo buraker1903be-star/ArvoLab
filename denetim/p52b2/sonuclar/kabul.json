@@ -49,22 +49,12 @@
               "bayt": 15
             }
           },
-          "imports": {
-            "ADAY_YETIM": {
-              "adet": 2,
-              "bayt": 30
-            },
-            "DOGRULANAMADI": {
-              "adet": 1,
-              "bayt": 15
-            }
-          },
           "kilavuz": {
-            "ADAY_YETIM": {
+            "DOGRULANAMADI": {
               "adet": 1,
               "bayt": 15
             },
-            "DOGRULANAMADI": {
+            "ADAY_YETIM": {
               "adet": 1,
               "bayt": 15
             }
@@ -74,25 +64,40 @@
               "adet": 1,
               "bayt": 15
             }
+          },
+          "imports": {
+            "ADAY_YETIM": {
+              "adet": 2,
+              "bayt": 30
+            },
+            "DOGRULANAMADI": {
+              "adet": 1,
+              "bayt": 15
+            }
           }
         },
         "sebep": {
           "ADAY_YETIM:sahip_yok": 4,
-          "SAHIPLI:kutuphane": 2501,
-          "SAHIPLI:referansli": 3,
-          "ADAY_YETIM:referanssiz": 2,
-          "DOGRULANAMADI:taze": 2,
           "DOGRULANAMADI:kapsam_disi": 1,
+          "SAHIPLI:referansli": 3,
           "ADAY_YETIM:gecici_eski": 1,
+          "DOGRULANAMADI:taze": 2,
+          "SAHIPLI:kutuphane": 2501,
+          "ADAY_YETIM:referanssiz": 2,
           "KAYIP_ADAY_KAYIP:depoda_yok": 2
         },
         "okunamayan_klasor": 0,
+        "degisen_klasor": 0,
+        "tekrar_ayiklanan": 0,
         "ikinci_geciste_kaybolan": 0,
         "istek": {
           "listeleme": 27,
           "yeniden_deneme": 0,
           "veritabani": 19
-        }
+        },
+        "kesin": true,
+        "kesin_degil_cunku": [],
+        "nitelik": "yalnizca_aday"
       },
       "salt_okunur": true
     }
@@ -115,13 +120,13 @@
     "kanit": {
       "sebep": {
         "ADAY_YETIM:sahip_yok": 4,
-        "SAHIPLI:kutuphane": 2501,
-        "SAHIPLI:referansli": 3,
-        "SAHIPLI:ikinci_geciste_referansli": 1,
-        "DOGRULANAMADI:taze": 2,
-        "ADAY_YETIM:referanssiz": 1,
         "DOGRULANAMADI:kapsam_disi": 1,
+        "SAHIPLI:referansli": 3,
         "ADAY_YETIM:gecici_eski": 1,
+        "DOGRULANAMADI:taze": 2,
+        "SAHIPLI:kutuphane": 2501,
+        "SAHIPLI:ikinci_geciste_referansli": 1,
+        "ADAY_YETIM:referanssiz": 1,
         "KAYIP_ADAY_KAYIP:depoda_yok": 2
       },
       "salt_okunur": true
@@ -150,11 +155,11 @@
       "kayip": 1,
       "sebep": {
         "ADAY_YETIM:sahip_yok": 4,
-        "SAHIPLI:kutuphane": 2501,
-        "SAHIPLI:referansli": 2,
         "DOGRULANAMADI:kapsam_disi": 1,
+        "SAHIPLI:referansli": 2,
         "ADAY_YETIM:gecici_eski": 1,
         "DOGRULANAMADI:taze": 1,
+        "SAHIPLI:kutuphane": 2501,
         "KAYIP_DOGRULANAMADI:klasor_okunamadi": 2,
         "KAYIP_ADAY_KAYIP:depoda_yok": 1
       },
@@ -190,7 +195,56 @@
     "kanit": {
       "uzak": "Depo envanteri yalnızca yerel yığında çalışır (127.0.0.1/localhost).",
       "cikis": 0,
-      "uzunluk": 1581,
+      "uzunluk": 1703,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E9",
+    "ad": "Tarama sırasında TEK ekleme (2. sayfadan önce, sınırın önüne): klasör yeniden listelenir, her yol bir kez, rapor kesin",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "toplam": 2515,
+      "iki_kez": 0,
+      "gorulmeyen": 0,
+      "degisen": 0,
+      "tekrar": 2,
+      "kesin": true,
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E10",
+    "ad": "Tarama sırasında SÜREKLİ silme (her ara sayfadan önce baştan bir nesne): görülen her yol bir kez, kalanların hepsi görüldü, rapor KESİN DEĞİL",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "silinen": 6,
+      "toplam": 2514,
+      "iki_kez": 0,
+      "gorulmeyen": 0,
+      "degisen": 1,
+      "kesin": false,
+      "nedenler": [
+        "tarama_sirasinda_degisen_klasor"
+      ],
+      "salt_okunur": true
+    }
+  },
+  {
+    "kimlik": "E11",
+    "ad": "Tarama sırasında SÜREKLİ ekleme (her ara sayfadan önce önde yeni nesne): aynı yol iki kez sayılmaz, başlangıçtakilerin hepsi görüldü, rapor KESİN DEĞİL",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "eklenen": 6,
+      "toplam": 2518,
+      "iki_kez": 0,
+      "gorulmeyen": 0,
+      "degisen": 1,
+      "tekrar": 12,
+      "kesin": false,
       "salt_okunur": true
     }
   }

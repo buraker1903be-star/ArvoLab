@@ -176,6 +176,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     const ayrintiDosyasi = arguman("ayrinti");
     if (ayrintiDosyasi) fs.writeFileSync(ayrintiDosyasi, JSON.stringify(ayrinti, null, 2));
     console.log(JSON.stringify({ yarim, ...rapor }, null, 2));
+    // Okuyan kişi JSON'un ortasındaki bir alanı kaçırmasın: kesin değilse ayrıca söyle.
+    if (!rapor.kesin) console.error(`UYARI: rapor KESİN DEĞİL (${rapor.kesin_degil_cunku.join(", ")}). Sayılar "en az" anlamındadır.`);
+    console.error("Bu bir aday raporudur; hiçbir silme kararı bu rapora dayanamaz.");
   } catch (hata) {
     // Hata metni de yol taşımasın: yalnızca türü.
     console.error("Depo envanteri durdu:", hata instanceof Error ? hata.message.slice(0, 200) : "bilinmeyen hata");

@@ -1,0 +1,45 @@
+{
+  "etiket": "eski",
+  "kok_commit": "05182c7",
+  "sonuc": [
+    {
+      "senaryo": "S1-sabit",
+      "aciklama": "değişiklik yok",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2600,
+      "sayilan": 2600,
+      "ayni_yol_iki_kez_sayilan": 0,
+      "tarama_boyunca_var_olup_gorulmeyen": 0,
+      "aday_kayip": 0,
+      "kesin": "(alan yok)",
+      "degisen_klasor": "(alan yok)",
+      "tekrar_ayiklanan": "(alan yok)"
+    },
+    {
+      "senaryo": "S2-ekleme",
+      "aciklama": "her ara sayfadan önce önde bir ekleme",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2602,
+      "sayilan": 2602,
+      "ayni_yol_iki_kez_sayilan": 2,
+      "tarama_boyunca_var_olup_gorulmeyen": 0,
+      "aday_kayip": 0,
+      "kesin": "(alan yok)",
+      "degisen_klasor": "(alan yok)",
+      "tekrar_ayiklanan": "(alan yok)"
+    },
+    {
+      "senaryo": "S3-silme",
+      "aciklama": "her ara sayfadan önce baştan bir silme; kalan her dosya başvurulu",
+      "var_olan_baslangic": 2600,
+      "var_olan_son": 2598,
+      "sayilan": 2596,
+      "ayni_yol_iki_kez_sayilan": 0,
+      "tarama_boyunca_var_olup_gorulmeyen": 2,
+      "aday_kayip": 0,
+      "kesin": "(alan yok)",
+      "degisen_klasor": "(alan yok)",
+      "tekrar_ayiklanan": "(alan yok)"
+    }
+  ]
+}

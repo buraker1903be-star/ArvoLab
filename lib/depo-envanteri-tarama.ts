@@ -1,5 +1,8 @@
 import {
   bosRapor,
+  kesinligiBelirle,
+  ortusmeliOfset,
+  sayfalariBirlestir,
   kayibiDogrula,
   nesneyiSay,
   nesneyiSiniflandir,
@@ -67,6 +70,8 @@ export type TaramaAyari = {
   enDerin: number;
   /** Güvenlik freni: bu kadar nesneden sonra tarama durur ve rapor "yarım" der. */
   enCokNesne: number;
+  /** Listelenirken içeriği kayan klasör baştan en çok bu kadar kez yeniden listelenir. */
+  kararsizYenidenDeneme?: number;
   simdi: () => number;
   uyu: (ms: number) => Promise<void>;
 };
@@ -102,6 +107,11 @@ class Listeleyici {
   }
 
   /* Bir sayfa: hız sınırına uyar, geçici hatayı üstel geri çekilmeyle yeniden dener. */
+  get sayfaBoyu(): number {
+    // Örtüşme bir öğe yer; 1'lik sayfa hiç ilerlemez.
+    return Math.max(2, this.a.sayfa);
+  }
+
   async sayfa(klasor: string, offset: number, ara?: string): Promise<DepoGirdisi[] | null> {
     for (let deneme = 0; ; deneme++) {
       const bekle = this.sonIstek + this.a.istekAraligiMs - this.a.simdi();
@@ -110,7 +120,7 @@ class Listeleyici {
       this.r.istek.listeleme += 1;
       let s: ListeSonucu;
       try {
-        s = await this.depo.listele(klasor, offset, this.a.sayfa, ara);
+        s = await this.depo.listele(klasor, offset, this.sayfaBoyu, ara);
       } catch {
         s = { ok: false, tekrarDenenebilir: true };
       }
@@ -121,15 +131,29 @@ class Listeleyici {
     }
   }
 
-  /* Klasörün TAMAMI; bir sayfa bile düşerse null (yarım liste "yok" demeye yetmez). */
-  async hepsi(klasor: string, ara?: string): Promise<DepoGirdisi[] | null> {
-    const girdiler: DepoGirdisi[] = [];
-    for (let offset = 0; ; offset += this.a.sayfa) {
-      const s = await this.sayfa(klasor, offset, ara);
-      if (s === null) return null;
-      girdiler.push(...s);
-      if (s.length < this.a.sayfa) return girdiler;
+  /*
+    Klasörün TAMAMI, örtüşen sayfalarla. Bir sayfa bile düşerse null (yarım liste
+    "yok" demeye yetmez). İçerik listelenirken kaydıysa klasör baştan yeniden
+    listelenir; denemeler bitince `kararli: false` döner: görülen nesneler
+    gerçektir (tekilleştirilmiş), ama atlanan olabilir.
+  */
+  async hepsi(klasor: string, ara?: string): Promise<{ girdiler: DepoGirdisi[]; kararli: boolean } | null> {
+    const deneme = 1 + (this.a.kararsizYenidenDeneme ?? 2);
+    const birlesik = new Map<string, DepoGirdisi>();
+    for (let d = 0; d < deneme; d++) {
+      const sayfalar: DepoGirdisi[][] = [];
+      for (let k = 0; ; k++) {
+        const s = await this.sayfa(klasor, ortusmeliOfset(k, this.sayfaBoyu), ara);
+        if (s === null) return null;
+        sayfalar.push(s);
+        if (s.length < this.sayfaBoyu) break;
+      }
+      const b = sayfalariBirlestir(sayfalar, this.sayfaBoyu);
+      this.r.tekrar_ayiklanan += b.tekrar;
+      if (b.kararli) return { girdiler: b.girdiler, kararli: true };
+      for (const g of b.girdiler) birlesik.set(`${g.klasorMu ? "d" : "f"}:${g.ad}`, g);
     }
+    return { girdiler: [...birlesik.values()], kararli: false };
   }
 }
 
@@ -146,6 +170,7 @@ export async function depoEnvanteri(depo: DepoOkuyucu, veri: VeriOkuyucu, ayar: 
   /** Eksiksiz listelenen her klasörün alt klasör adları: "klasör hiç yok" ile "okunamadı"yı ayırmak için. */
   const altKlasorler = new Map<string, Set<string>>();
   let yarim = false;
+  const gorulenYollar = new Set<string>();
 
   /* ---------- 1. geçiş: depo ---------- */
   const gez = async (klasor: string, derinlik: number): Promise<void> => {
@@ -154,17 +179,29 @@ export async function depoEnvanteri(depo: DepoOkuyucu, veri: VeriOkuyucu, ayar: 
       r.okunamayan_klasor += 1;
       return;
     }
-    const girdiler = await l.hepsi(klasor);
-    if (girdiler === null) {
+    const liste = await l.hepsi(klasor);
+    if (liste === null) {
       r.okunamayan_klasor += 1;
       return;
     }
-    tamKlasorler.add(klasor);
-    altKlasorler.set(klasor, new Set(girdiler.filter((g) => g.klasorMu).map((g) => g.ad)));
+    const girdiler = liste.girdiler;
+    if (liste.kararli) {
+      tamKlasorler.add(klasor);
+      altKlasorler.set(klasor, new Set(girdiler.filter((g) => g.klasorMu).map((g) => g.ad)));
+    } else {
+      // Görülen nesneler sayılır, ama klasör "eksiksiz" sayılmaz: içindeki referans kayıp olamaz.
+      r.degisen_klasor += 1;
+    }
     for (const g of girdiler) {
       const yol = klasor ? `${klasor}/${g.ad}` : g.ad;
       if (g.klasorMu) await gez(yol, derinlik + 1);
       else {
+        // Aynı yol iki kez görülürse (klasör yeniden listelendiyse) bir kez sayılır.
+        if (gorulenYollar.has(yol)) {
+          r.tekrar_ayiklanan += 1;
+          continue;
+        }
+        gorulenYollar.add(yol);
         nesneler.push({ yol, boyut: g.boyut, olusturma: g.olusturma });
         if (nesneler.length >= ayar.enCokNesne) {
           yarim = true;
@@ -240,7 +277,9 @@ export async function depoEnvanteri(depo: DepoOkuyucu, veri: VeriOkuyucu, ayar: 
     const ad = yol.slice(i + 1);
     const g = await l.hepsi(yol.slice(0, i), ad);
     if (g === null) return "bilinmiyor";
-    return g.some((x) => !x.klasorMu && x.ad === ad) ? "var" : "yok";
+    if (g.girdiler.some((x) => !x.klasorMu && x.ad === ad)) return "var";
+    // Kararsız listede görünmemek "yok" demek değildir.
+    return g.kararli ? "yok" : "bilinmiyor";
   };
   const sahipYeniden = async (yol: string): Promise<SahipDurumu> => {
     const y = yolCoz(yol);
@@ -277,6 +316,11 @@ export async function depoEnvanteri(depo: DepoOkuyucu, veri: VeriOkuyucu, ayar: 
     if (k.sinif !== "SAHIPLI") ayrinti.push({ ozet: await ozet(ref.yol), kategori: `ref:${ref.kaynak}`, sinif: k.sinif, sebep: k.sebep, boyut: null });
   }
 
+  kesinligiBelirle(r, {
+    yarim,
+    referansOkunamadi: referanslar === null,
+    sahipOkunamadi: kimlikler.length > 0 && (calismalar === null || profiller === null),
+  });
   return { rapor: r, ayrinti, yarim };
 }
 
