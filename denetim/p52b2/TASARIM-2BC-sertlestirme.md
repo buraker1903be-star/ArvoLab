@@ -26,7 +26,10 @@ Bu belge [`TASARIM-2C-silme-kuyrugu.md`](TASARIM-2C-silme-kuyrugu.md) ile [`TASA
 
 ## 1. PostgreSQL yarış testleri
 
-**17/17 kanıt beklendiği gibi; art arda iki koşu.**
+**Sonuç iki ayrı grupta okunur** (çıktı ve `yaris.json` her senaryo için `tur`, `beklenen`, `gozlenen`, `beklentiye_uydu` alanlarını taşır):
+- **Pozitif, yani önerilen ya da güvenli olması beklenen: 9/9 GÜVENLİ.** Bunlar A1-i3, A1-i4, A2-i1…i4, A3, B2 ve B3.
+- **Negatif, yani anomali beklenen: 8/8 ANOMALİ yeniden üretildi.** Bunlar A1-i1, A1-i2, A2-yanlis-tek-ifade, A2-yanlis-stable, A4, B1, B1b ve C1. Bu tasarımlar **güvensizdir**; "beklentiye uydu" demek "geçti" ya da "güvenli" demek değildir.
+- Beklentiye uymayan senaryo yok. 17 senaryo art arda koşturuldu (16.11 ve 16.11 P52b-2D turu).
 - "Bekledi" kararı süreye bağlı değil: gözcü oturum, `pg_stat_activity.wait_event_type = 'Lock'` ile oturumu kilit beklerken görüyor.
 - Sıralar elle oynatılıyor; zamanlamaya bırakılan bir yarış yok.
 

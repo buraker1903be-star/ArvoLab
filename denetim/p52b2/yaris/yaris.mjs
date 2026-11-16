@@ -14,7 +14,19 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Oturum, kilitBekliyorMu, bitti } from "./oturum.mjs";
+import { spawnSync } from "node:child_process";
+import { Oturum, kilitBekliyorMu, bitti, BAGLANTI } from "./oturum.mjs";
+
+// Veritabanı yoksa psql sessizce çıkar ve ilk ifade hiç bitmez; açık bir hatayla dur.
+{
+  const r = spawnSync("psql", [BAGLANTI, "-X", "-A", "-t", "-c", "select current_setting('server_version') || ' / ' || current_setting('default_transaction_isolation')"], { encoding: "utf8" });
+  if (r.status !== 0) {
+    console.error(`Yarış veritabanına bağlanılamadı (${BAGLANTI.replace(/:[^:@/]+@/, ":***@")}).\n${r.stderr.trim()}`);
+    process.exit(2);
+  }
+  process.env.PG_SURUM = r.stdout.trim();
+  console.log(`PostgreSQL ${process.env.PG_SURUM}\n`);
+}
 
 const burasi = dirname(fileURLToPath(import.meta.url));
 const sonuclar = [];
@@ -100,12 +112,19 @@ async function senaryo(ad, aciklama, kur, govde) {
   try {
     sonuc = await govde({ yeni, gozcu, durum, kurucu });
   } catch (e) {
-    sonuc = { gozlenen: `HATA: ${e.message}`, gecti: false };
+    sonuc = { beklenenSonuc: "?", sonuc: "HATA", ayrinti: `HATA: ${e.message}`, kosul: false };
   }
   for (const o of [...oturumlar, gozcu, kurucu]) o.kapat();
-  const kayit = { ad, aciklama, sema: s, ...sonuc };
+  // "Beklentiye uydu" ile "güvenli" AYRI şeylerdir: negatif bir senaryo anomaliyi
+  // yeniden ürettiğinde beklentiye uyar ama o tasarım GÜVENSİZDİR. Eskiden tek bir
+  // "GEÇTİ" yazılıyordu; yeniden üretilen bir veri kaybı yeşil görünüyordu.
+  const tur = sonuc.beklenenSonuc === "ANOMALI" ? "NEGATIF" : "POZITIF";
+  const uydu = sonuc.sonuc === sonuc.beklenenSonuc && sonuc.kosul !== false;
+  const kayit = { ad, tur, aciklama, sema: s, beklenen: sonuc.beklenenSonuc, gozlenen: sonuc.sonuc, beklentiye_uydu: uydu, beklenen_aciklama: sonuc.beklenenAciklama ?? null, ayrinti: sonuc.ayrinti };
   sonuclar.push(kayit);
-  console.log(`${kayit.gecti ? "GEÇTİ " : "KALDI "} ${ad} — ${kayit.gozlenen}`);
+  const yazi = (x) => ({ GUVENLI: "GÜVENLİ", ANOMALI: "ANOMALİ" })[x] ?? x;
+  const not = tur === "NEGATIF" && uydu ? " — yarış yeniden üretildi: bu tasarım GÜVENSİZ" : "";
+  console.log(`[${tur === "NEGATIF" ? "NEGATİF" : "POZİTİF"}] ${ad.padEnd(24)} beklenen=${yazi(kayit.beklenen).padEnd(8)} gözlenen=${yazi(kayit.gozlenen).padEnd(8)} ${uydu ? "beklentiye uydu" : "BEKLENTİYE UYMADI"}${not}\n    ${kayit.ayrinti}`);
 }
 
 /** Kuyruk + referans son hâli: "SAHIPLI_VE_KUYRUKTA" kalıcı silmeye giden yoldur. */
@@ -151,9 +170,10 @@ for (const [kod, sira] of [
     const h = await sonHal(durum);
     const beklenen = kod === "A1-i1" || kod === "A1-i2" ? "tehlike" : "guvenli";
     return {
-      beklenen: beklenen === "tehlike" ? "ANOMALİ (yol hem bağlı hem kuyrukta)" : "güvenli",
-      gozlenen: `ref=${h.ref} kuyruk=${h.kuyruk} kilit=[${bekleme.join(" ")}]${h.tehlike ? " → ANOMALİ" : ""}`,
-      gecti: (beklenen === "tehlike") === h.tehlike,
+      beklenenSonuc: beklenen === "tehlike" ? "ANOMALI" : "GUVENLI",
+      beklenenAciklama: beklenen === "tehlike" ? "yol hem bağlı hem kuyrukta" : "seri sırada güvenli",
+      sonuc: h.tehlike ? "ANOMALI" : "GUVENLI",
+      ayrinti: `ref=${h.ref} kuyruk=${h.kuyruk} kilit=[${bekleme.join(" ")}]`,
     };
   });
 }
@@ -202,14 +222,20 @@ for (const [kod, sira] of [
       await E2.calistir("commit;");
       bekleme.push(`E2.kuyruga_al=${r2.cikti}`);
       const n = await durum("select count(*) from kuyruk where yol='p';");
-      return { beklenen: "tek satır, ikinci çağrı false", gozlenen: `satır=${n} [${bekleme.join(" ")}]`, gecti: n === "1" && r2.cikti === "f" };
+      return {
+        beklenenSonuc: "GUVENLI", beklenenAciklama: "tek satır; ikinci çağrı kilitte bekler ve false döner",
+        sonuc: n === "1" ? "GUVENLI" : "ANOMALI",
+        kosul: r2.cikti === "f" && bekleme.some((x) => x.endsWith("BEKLEDI")),
+        ayrinti: `satır=${n} [${bekleme.join(" ")}]`,
+      };
     }
     const h = await sonHal(durum);
     const bekledi = bekleme.some((x) => x.endsWith("BEKLEDI"));
     return {
-      beklenen: "güvenli; ikinci işlem kilitte bekler",
-      gozlenen: `ref=${h.ref} kuyruk=${h.kuyruk} [${bekleme.join(" ")}]`,
-      gecti: !h.tehlike && h.ref === 1 && bekledi,
+      beklenenSonuc: "GUVENLI", beklenenAciklama: "ikinci işlem kilitte bekler; yol bağlı ve kuyrukta değil",
+      sonuc: h.tehlike ? "ANOMALI" : "GUVENLI",
+      kosul: h.ref === 1 && bekledi,
+      ayrinti: `ref=${h.ref} kuyruk=${h.kuyruk} [${bekleme.join(" ")}]`,
     };
   });
 }
@@ -234,9 +260,10 @@ await senaryo(
     await E.calistir("commit;");
     const h = await sonHal(durum);
     return {
-      beklenen: "ANOMALİ (kilit beklendi ama karar eski görüntüyle verildi)",
-      gozlenen: `E kilitte ${bekledi ? "bekledi" : "beklemedi"}; ref=${h.ref} kuyruk=${h.kuyruk}${h.tehlike ? " → ANOMALİ" : ""}`,
-      gecti: bekledi && h.tehlike,
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "kilit beklendi ama karar eski görüntüyle verildi",
+      sonuc: h.tehlike ? "ANOMALI" : "GUVENLI",
+      kosul: bekledi,
+      ayrinti: `E kilitte ${bekledi ? "bekledi" : "beklemedi"}; ref=${h.ref} kuyruk=${h.kuyruk}`,
     };
   },
 );
@@ -272,9 +299,10 @@ begin perform yol_kilidi(p);
     await B.calistir("commit;");
     const h = await sonHal(durum);
     return {
-      beklenen: "ANOMALİ (STABLE işlev yeni commit'i görmez)",
-      gozlenen: `B kilitte ${bekledi ? "bekledi" : "beklemedi"}; bağlama ${rb.hata ? "reddedildi" : "geçti"}; ref=${h.ref} kuyruk=${h.kuyruk}${h.tehlike ? " → ANOMALİ" : ""}`,
-      gecti: bekledi && h.tehlike,
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "STABLE işlev kilitten sonraki commit'i görmez",
+      sonuc: h.tehlike ? "ANOMALI" : "GUVENLI",
+      kosul: bekledi,
+      ayrinti: `B kilitte ${bekledi ? "bekledi" : "beklemedi"}; bağlama ${rb.hata ? "reddedildi" : "geçti"}; ref=${h.ref} kuyruk=${h.kuyruk}`,
     };
   },
 );
@@ -296,9 +324,10 @@ await senaryo(
     const hatalar = [rb.hata, ce.hata, cb.hata].filter(Boolean).join(" | ");
     const h = await sonHal(durum);
     return {
-      beklenen: "biri 40001 ile düşer; son hâl güvenli",
-      gozlenen: `ref=${h.ref} kuyruk=${h.kuyruk}; hata: ${hatalar.slice(0, 110) || "yok"}`,
-      gecti: /serializ/i.test(hatalar) && !h.tehlike,
+      beklenenSonuc: "GUVENLI", beklenenAciklama: "biri 40001 ile düşer (çağıran yeniden denemeli)",
+      sonuc: h.tehlike ? "ANOMALI" : "GUVENLI",
+      kosul: /serializ/i.test(hatalar),
+      ayrinti: `ref=${h.ref} kuyruk=${h.kuyruk}; hata: ${hatalar.slice(0, 110) || "yok"}`,
     };
   },
 );
@@ -336,10 +365,10 @@ create trigger bagla before insert on ref for each row execute function bagla();
     const n = await durum("select durum from nesne where yol='p';");
     const ref = await durum("select count(*) from ref where yol='p';");
     return {
-      beklenen: "kayıt satırı kilidi sıralar; ama tek ifadedeki NOT EXISTS yeniden okunmaz → kontrol ayrı ifadede olmalı",
-      gozlenen: `E ${bekledi ? "bekledi" : "beklemedi"}; nesne=${n} ref=${ref}${n === "PENDING_DELETE" && ref === "1" ? " → ANOMALİ (EvalPlanQual alt sorguyu tazelemez)" : " → güvenli"}`,
-      // Bu senaryo bir KANIT: sonucu hangisi olursa olsun kayda geçer; beklenen ANOMALİ.
-      gecti: bekledi && n === "PENDING_DELETE" && ref === "1",
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "satır kilidi sıralar, ama tek ifadedeki NOT EXISTS yeniden okunmaz (EvalPlanQual yalnızca hedef satırı tazeler)",
+      sonuc: n === "PENDING_DELETE" && ref === "1" ? "ANOMALI" : "GUVENLI",
+      kosul: bekledi,
+      ayrinti: `E ${bekledi ? "bekledi" : "beklemedi"}; nesne=${n} ref=${ref}`,
     };
   },
 );
@@ -377,9 +406,9 @@ await senaryo(
     const ref = await durum("select count(*) from ref where yol='p';");
     const sil = await durum("select silindi from depo where yol='p';");
     return {
-      beklenen: "VERİ KAYBI (bağlı dosya silindi)",
-      gozlenen: `kira kuşağı=${kira}, kurtarılan=${kurtarilan}, bağlama=${bag.hata ? "red" : "geçti"}, ref=${ref}, dosya silindi=${sil}${ref === "1" && sil === "t" ? " → VERİ KAYBI" : ""}`,
-      gecti: ref === "1" && sil === "t",
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "veri kaybı: bağlı dosya silinir",
+      sonuc: ref === "1" && sil === "t" ? "ANOMALI" : "GUVENLI",
+      ayrinti: `kira kuşağı=${kira}, kurtarılan=${kurtarilan}, bağlama=${bag.hata ? "red" : "geçti"}, ref=${ref}, dosya silindi=${sil}`,
     };
   },
 );
@@ -401,9 +430,9 @@ await senaryo(
     const C = await yeni("C");
     const c = (await C.calistir("select count(*) from kira_al('isci-2');")).cikti;
     return {
-      beklenen: "ÇİFT KİRA (B hâlâ çalışırken C de aldı)",
-      gozlenen: `A'nın geç yazımı ${r.cikti} satırı (B'nin kirasını) geri aldı; ardından C kira aldı=${c}${c === "1" ? " → ÇİFT KİRA" : ""}`,
-      gecti: c === "1",
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "çift kira: B hâlâ çalışırken C de alır",
+      sonuc: c === "1" ? "ANOMALI" : "GUVENLI",
+      ayrinti: `A'nın geç yazımı ${r.cikti} satırı (B'nin kirasını) geri aldı; ardından C kira aldı=${c}`,
     };
   },
 );
@@ -452,11 +481,12 @@ await senaryo(
     const ref2 = await durum("select count(*) from ref r join depo d using (yol) where r.yol='p2' and not d.silindi;");
     const kan = await durum("select count(*) from kanit where yol='p';");
     const son = await durum("select durum||'/'||kusak from kuyruk where yol='p';");
-    const ok = !!bag.hata && /BAGLAMA_REDDI/.test(bag.hata) && !yeniYol.hata && ref === "0" && ref2 === "1" && isB === "1" && isA === "0" && ddA === "0" && kan === "1" && son === "DELETED/2";
+    const kayipYok = ref === "0" && isA === "0" && ddA === "0" && kan === "1";
     return {
-      beklenen: "bağlama reddi, yeni yolla yükleme, A'nın geç yazımları 0 satır, kanıt 1, son DELETED/2",
-      gozlenen: `bağlama=${bag.hata ? "red" : "geçti"}, yeni yol bağlı=${ref2}, B işaretledi=${isB}, A geç işaret=${isA}, A geç yeniden dene=${ddA}, kanıt=${kan}, son=${son}`,
-      gecti: ok,
+      beklenenSonuc: "GUVENLI", beklenenAciklama: "bağlama reddi, yeni yolla yükleme, A'nın geç yazımları 0 satır, kanıt 1, son DELETED/2",
+      sonuc: kayipYok ? "GUVENLI" : "ANOMALI",
+      kosul: !!bag.hata && /BAGLAMA_REDDI/.test(bag.hata) && !yeniYol.hata && ref2 === "1" && isB === "1" && son === "DELETED/2",
+      ayrinti: `bağlama=${bag.hata ? "red" : "geçti"}, yeni yol bağlı=${ref2}, B işaretledi=${isB}, A geç işaret=${isA}, A geç yeniden dene=${ddA}, kanıt=${kan}, son=${son}`,
     };
   },
 );
@@ -471,9 +501,9 @@ await senaryo(
     await durum("update depo set nesne_kimligi = gen_random_uuid() where yol = 'p';"); // aynı yola yeni dosya
     const ayni = (await W.calistir("select ayni_nesne_mi('p');")).cikti;
     return {
-      beklenen: "ayni_nesne_mi = false → silme yapılmaz, satır elle bakılmalıya",
-      gozlenen: `kuşak=${k}, ayni_nesne_mi=${ayni}`,
-      gecti: ayni === "f",
+      beklenenSonuc: "GUVENLI", beklenenAciklama: "ayni_nesne_mi = false → silme yapılmaz",
+      sonuc: ayni === "f" ? "GUVENLI" : "ANOMALI",
+      ayrinti: `kuşak=${k}, ayni_nesne_mi=${ayni}`,
     };
   },
 );
@@ -504,20 +534,31 @@ await senaryo(
     const goru = t2.join(",").split(",").filter(Boolean);
     const kayip = ["a", "c", "d", "e", "f", "g", "h", "i"].filter((x) => !goru.includes(x));
     return {
-      beklenen: "tur 1'de tekrar eden, tur 2'de hiç görünmeyen bir nesne",
-      gozlenen: `ekleme: [${t1.join(" | ")}] tekrar=${cift.join(",") || "-"}; silme: [${t2.join(" | ")}] görünmeyen=${kayip.join(",") || "-"}`,
-      gecti: cift.length === 1 && kayip.length === 1,
+      beklenenSonuc: "ANOMALI", beklenenAciklama: "ofsetli sayfalama: eklemede bir nesne iki kez, silmede bir nesne hiç görünmez",
+      sonuc: cift.length || kayip.length ? "ANOMALI" : "GUVENLI",
+      kosul: cift.length === 1 && kayip.length === 1,
+      ayrinti: `ekleme: [${t1.join(" | ")}] tekrar=${cift.join(",") || "-"}; silme: [${t2.join(" | ")}] görünmeyen=${kayip.join(",") || "-"}`,
     };
   },
 );
 
 /* ------------------------------------------------------------------- rapor */
-const ozetSatir = { toplam: sonuclar.length, gecen: sonuclar.filter((x) => x.gecti).length };
+const poz = sonuclar.filter((x) => x.tur === "POZITIF");
+const neg = sonuclar.filter((x) => x.tur === "NEGATIF");
+const ozetSatir = {
+  toplam: sonuclar.length,
+  pozitif: { toplam: poz.length, guvenli: poz.filter((x) => x.gozlenen === "GUVENLI").length, beklentiye_uyan: poz.filter((x) => x.beklentiye_uydu).length },
+  negatif: { toplam: neg.length, anomali_yeniden_uretildi: neg.filter((x) => x.gozlenen === "ANOMALI").length, beklentiye_uyan: neg.filter((x) => x.beklentiye_uydu).length },
+  beklentiye_uymayan: sonuclar.filter((x) => !x.beklentiye_uydu).map((x) => x.ad),
+};
 const dosya = join(burasi, "..", "sonuclar", "yaris.json");
 mkdirSync(dirname(dosya), { recursive: true });
 writeFileSync(
   dosya,
   JSON.stringify({ zaman: new Date().toISOString(), postgres: process.env.PG_SURUM ?? "17", izolasyon: "read committed", ...ozetSatir, sonuclar }, null, 2) + "\n",
 );
-console.log(`\n${ozetSatir.gecen}/${ozetSatir.toplam} kanıt beklendiği gibi`);
-process.exit(ozetSatir.gecen === ozetSatir.toplam ? 0 : 1);
+console.log(`
+Pozitif (güvenli olması beklenen) : ${ozetSatir.pozitif.guvenli}/${ozetSatir.pozitif.toplam} güvenli çıktı, ${ozetSatir.pozitif.beklentiye_uyan}/${ozetSatir.pozitif.toplam} bütün koşullarıyla beklentiye uydu
+Negatif (anomali beklenen)        : ${ozetSatir.negatif.anomali_yeniden_uretildi}/${ozetSatir.negatif.toplam} anomaliyi yeniden üretti — bu tasarımlar GÜVENSİZ, kullanılmamalı
+Beklentiye uymayan                : ${ozetSatir.beklentiye_uymayan.length ? ozetSatir.beklentiye_uymayan.join(", ") : "yok"}`);
+process.exit(ozetSatir.beklentiye_uymayan.length === 0 ? 0 : 1);
