@@ -79,3 +79,17 @@ test("çözümleme ve istem", () => {
   assert.match(kayitBaglami, /SAYFALAR: 1, 2, 3/);
   assert.ok(!kayitBaglami.includes("quarterly"), "kayda kaynağın tamamı girmez");
 });
+
+test("seçili pasaj (Yazım Stüdyosu): istemde sayfasıyla yer alır, kayda kısaltılmış girer; seçimsiz istem değişmez", () => {
+  const secim = { sayfa: 3, metin: "The coefficient on unemployment is −0.31" };
+  const ile = kaynakIstemi({ kunye: "Önder (2009)", sayfalar: SAYFALAR, soru: "Bu ne demek?", gecmis: [], dil: "tr", secim });
+  const istem = ile.mesajlar.map((m) => m.metin).join("\n");
+  assert.match(istem, /SEÇTİĞİ PASAJ \(SAYFA 3; kaynaktan doğrulanmış\):\n«The coefficient on unemployment is −0\.31»/);
+  assert.match(ile.kayitBaglami, /SEÇİM \(s\. 3\): The coefficient/);
+  const uzun = kaynakIstemi({ kunye: "Ö", sayfalar: SAYFALAR, soru: "?", gecmis: [], dil: "tr", secim: { sayfa: 1, metin: "x".repeat(1500) } });
+  assert.ok(uzun.kayitBaglami.length < 1500, "kayıt bağlamına seçimin ilk 400 karakteri girer");
+  const siz = kaynakIstemi({ kunye: "Önder (2009)", sayfalar: SAYFALAR, soru: "Bu ne demek?", gecmis: [], dil: "tr" });
+  const sizIstem = siz.mesajlar.map((m) => m.metin).join("\n");
+  assert.doesNotMatch(sizIstem, /SEÇTİĞİ PASAJ/);
+  assert.doesNotMatch(siz.kayitBaglami, /SEÇİM/);
+});

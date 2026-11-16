@@ -92,14 +92,32 @@ KESİN KURALLAR:
 5. Kaynakta geçmeyen bir yazara, çalışmaya ya da künyeye atıf yapma.
 6. Cevabı kullanıcının arayüz diliyle yaz (aşağıda belirtilir); alıntılar kaynağın dilinde kalır.`;
 
+/*
+  SEÇİLİ PASAJ (16.11.2026, Yazım Stüdyosu). Öğrenci PDF görüntüleyicide bir
+  pasaj seçip "analiz et" dediğinde pasaj ayrıca verilir. Pasaj sunucuda
+  sayfa metniyle doğrulanmış ve sunucunun KENDİ metninden kesilmiştir
+  (lib/pdf-secim.ts); istemcinin yazdığı metin asistana gitmez. Cevap yine
+  aynı kurallarla denetlenir: alıntı kaynakta birebir, sayı kaynakta.
+*/
+export type SeciliPasaj = { sayfa: number; metin: string };
+
 export function kaynakIstemi(g: {
   kunye: string;
   sayfalar: Sayfa[];
   soru: string;
   gecmis: KaynakMesaji[];
   dil: Dil;
+  secim?: SeciliPasaj | null;
 }): { mesajlar: Mesaj[]; kaynakMetni: string; kayitBaglami: string } {
   const kaynakMetni = g.sayfalar.map((s) => `--- SAYFA ${s.num} ---\n${s.text.trim()}`).join("\n\n");
+  const secimMesaji: Mesaj[] = g.secim
+    ? [
+        {
+          rol: "sistem",
+          metin: `ÖĞRENCİNİN SEÇTİĞİ PASAJ (SAYFA ${g.secim.sayfa}; kaynaktan doğrulanmış):\n«${g.secim.metin}»\nSoru bu pasajla ilgilidir. Cevabı pasaja ve yukarıdaki kaynak metnine dayandır; alıntıları yine kaynaktan birebir ver.`,
+        },
+      ]
+    : [];
   const ust = `KAYNAK: ${g.kunye.slice(0, 600)}\nCEVAP DİLİ: ${g.dil === "en" ? "İngilizce" : "Türkçe"}`;
   const gecmis: Mesaj[] = g.gecmis.slice(-6).map((m) => ({
     rol: m.rol === "kullanici" ? "kullanici" : "sistem",
@@ -110,12 +128,13 @@ export function kaynakIstemi(g: {
     mesajlar: [
       { rol: "sistem", metin: KAYNAK_ISTEMI },
       { rol: "sistem", metin: `${ust}\n\nKAYNAK METNİ:\n${kaynakMetni}` },
+      ...secimMesaji,
       ...gecmis,
       { rol: "kullanici", metin: soru },
     ],
     kaynakMetni,
     // Kayda kaynağın tamamı değil, soru ve hangi sayfaların okunduğu girer (metin zaten depoda).
-    kayitBaglami: `${ust}\nSAYFALAR: ${g.sayfalar.map((s) => s.num).join(", ")}\n\nSORU: ${soru}`,
+    kayitBaglami: `${ust}\nSAYFALAR: ${g.sayfalar.map((s) => s.num).join(", ")}${g.secim ? `\nSEÇİM (s. ${g.secim.sayfa}): ${g.secim.metin.slice(0, 400)}` : ""}\n\nSORU: ${soru}`,
   };
 }
 

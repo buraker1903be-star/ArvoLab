@@ -137,6 +137,9 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
+ * kaynakSecimiDogrula (Yazım Stüdyosu: seçilen pasajı PDF'in metnine karşı
+ * doğrular; PDF'i her çağrıda indirip çözümler), kaynaklaSohbet (seçimli ya da
+ * seçimsiz; ortak kapı lib/ai/erisim.ts),
  * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
  * kurul sekmesi; tarama PDF/OCR çözümlemesi),
  * cslAtifUret (CSL stilinde belgeye girecek atıf ve künye; stil araması ve
@@ -156,6 +159,9 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    cevap yazabilmeli.
  *  - Okumalar, silmeler ve mevcut kaydın güncellenmesi: kullanıcı kendi
  *    verisini görebilmeli ve yönetebilmeli. Yeni değer üretmiyorlar.
+ *    Yazım Stüdyosu'nun PDF görüntüleyicisi de burada: goruntuleyiciKaynaklari
+ *    (liste) ve /api/kaynak-pdf/[pdfId] (kendi klasöründeki PDF'in baytları,
+ *    çözümleme yok) kapısız; engellenen öğrenci kendi kaynağını okuyabilmeli.
  *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller

@@ -14,9 +14,13 @@ ister).
 |---|---|
 | `kur.sh [hariç.sql …]` | Docker'da Postgres 17 (56432), GoTrue (59998), PostgREST (53001). `supabase/schema.sql` + bütün migration'lar. Argüman olarak verilen migration atlanır (düzeltmeden önceki davranışı yeniden üretmek için). |
 | `roller.sql`, `kabuk.sql` | Supabase rollerinin, `auth.jwt()`'nin ve storage'ın en küçük taklidi. |
-| `gecit.mjs` | Tek adres `127.0.0.1:54401`: `/auth/v1` → GoTrue, `/rest/v1` → PostgREST. `/__gecit/kanca`: eşleşen ilk isteğin cevabı dönmeden önce başka bir oturumun isteğini çalıştırır (yedekle yazma arasındaki yarışı belirlenimci kurmak için). |
+| `kur-depo.sh` | `kur.sh` + storage-api (55000) ve özel `project-files` kovası: dosya isteyen akışlar (kaynak PDF'leri) için. |
+| `gecit.mjs` | Tek adres `127.0.0.1:54401`: `/auth/v1` → GoTrue, `/rest/v1` → PostgREST, `/storage/v1` → storage-api. `/__gecit/kanca`: eşleşen ilk isteğin cevabı dönmeden önce başka bir oturumun isteğini çalıştırır (yedekle yazma arasındaki yarışı belirlenimci kurmak için). |
 | `kayit-butunlugu.mjs <yeni\|eski>` | 14 senaryo; `lib/metin-yazimi.ts`'i (sunucu eylemlerinin kodu) gerçek PostgREST'e karşı koşturur. `eski` = 97a2943'teki eylem gövdelerinin birebir aktarımı. |
 | `kimlik-kabul.mjs <adres>` | Gerçek Next + GoTrue: mevcut kullanıcı, Ayarlar'da mevcut şifre (yanlış/doğru), 12 karakter, diğer oturumların düşmesi, kurtarma, kurtarma sayfası atlatması, davetli kapısı (proxy + panel dışından sunucu işlemi), kayıt, telefon/masaüstü. Sonuç `sonuclar/kimlik-kabul.json`. |
+| `sentetik-pdf.mjs` | Bağımlılıksız, metni bilinen PDF üretici (tek/iki sütun). |
+| `model-taklidi.mjs` | OpenAI uyumlu yerel model taklidi (54900); asistan hattını (kapı, istem, doğrulama, kayıt) sağlayıcısız sınamak için. Cevap KALİTESİNİ ölçmez. Gelen istemleri `STUDYO_ISTEM_KAYDI`'na yazar. |
+| `studyo-kabul.mjs <adres>` | Yazım Stüdyosu: PDF uç noktasının yetkisi, editör + PDF yan yana, sayfa/yakınlaştırma/arama, panel genişliği, AI paneliyle çakışma, seçim doğrulaması (uydurma/yanlış sayfa/kısa/sayfa aşan), DOI ile kesin / belirsiz / eşleşmeyen kaynak, atıf ekleme, otomatik kayıt, asistan analizi (model taklidiyle), büyük PDF, yazdırma ve Word çıktısı, telefon. Sonuç `sonuclar/studyo-kabul.json`. |
 | `kayit-tarayici-kabul.mjs <adres>` | Gerçek Next uygulaması (`next dev`) yığına bağlıyken tarayıcıda: zorla kayıt (yedek düşerken ve meşru), sürüm geri yükleme (yarış ve meşru). |
 
 ## Koşturma
@@ -73,3 +77,23 @@ hesap ilk şifreye düşer. Bilerek böyle (gerekçe:
 `tests/db/eposta-onayi-kimlik.test.mjs`). Panelden şifreyle açılan hesap
 "şifremi unuttum" ile şifresini belirler (K13). Betik mevcut kullanıcıyı bu
 yüzden önce onaylı açıp şifreyi ayrı bir güncellemeyle koyar.
+
+## 16.11.2026 sonucu (Yazım Stüdyosu: PDF + Arvo AI)
+
+`studyo-kabul.mjs`: 43/43 PASS (`sonuclar/studyo-kabul.json`). Koşturma:
+
+```bash
+scripts/yerel-yigin/kur-depo.sh
+node scripts/yerel-yigin/gecit.mjs &
+STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/model-taklidi.mjs &
+AI_TABAN_URL=http://127.0.0.1:54900/v1 AI_MODEL=taklit \
+  NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon JWT> \
+  SUPABASE_SERVICE_ROLE_KEY=<service_role JWT> npx next dev -p 3124
+STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124
+```
+
+Kabul sırasında bulunup düzeltilenler: PDF paneli kapatılıp yeniden
+açılınca görüntüleyici "PDF açılamadı" veriyordu (pdf.js işçisi belgeyle
+birlikte yok ediliyordu); panel en genişe çekilince editör sütunu 420 yerine
+392 px'e iniyordu (ayırıcı ve sütun aralığı hesaba girmiyordu); tek
+sayfalık seçimde asistana gereksiz bir sayfa daha gidiyordu.

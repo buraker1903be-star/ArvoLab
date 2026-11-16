@@ -76,6 +76,7 @@ import {
   TableCellsMerge,
   TableCellsSplit,
   Sparkles,
+  FileText,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -194,6 +195,9 @@ const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
 const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
 const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr: false });
 const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
+/* Yazım Stüdyosu (16.11.2026): editörün yanında kaynak PDF'i, pasaj seçimi, Arvo AI analizi ve doğrulanmış atıf. */
+const KaynakPdfPaneli = dynamic(() => import("./kaynak-pdf-paneli"), { ssr: false });
+const PdfPanelAyirici = dynamic(() => import("./pdf-panel-ayirici"), { ssr: false });
 const OlcumPaneli = dynamic(() => import("./olcum-paneli"), { ssr: false });
 
 // Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
@@ -635,6 +639,15 @@ export default function ManuscriptEditor({
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
   const [yazimAcik, setYazimAcik] = useState(asistanAcikBasla);
+  /*
+    Kaynak PDF paneli (Yazım Stüdyosu). Yazım asistanıyla aynı anda açılmaz:
+    asistan sağa yaslı yüzen bir panel, PDF paneli ise yerleşimin sağ
+    sütunu; ikisi birlikte açılınca asistan PDF'in üstüne biniyordu. Biri
+    açılınca öteki kapanır (iki düğme de araç çubuğunda yan yana).
+  */
+  const [kaynakAcik, setKaynakAcik] = useState(false);
+  const yerlesimRef = useRef<HTMLDivElement>(null);
+  const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -2192,7 +2205,7 @@ export default function ManuscriptEditor({
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout" data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined}>
+    <div className="manuscript-layout" ref={yerlesimRef} data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined} data-pdf={kaynakAcik ? "" : undefined}>
       {/*
         TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
         yazım ekranı örnek; "daha elit, daha akışkan").
@@ -2455,8 +2468,27 @@ export default function ManuscriptEditor({
         </div>
         <div className="arac-grup arac-grup-asistan">
           {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
-          <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
+          <ToolbarButton
+            label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}
+            metin={t({ tr: "Asistan", en: "Assistant" })}
+            active={yazimAcik}
+            onClick={() => {
+              setYazimAcik((acik) => !acik);
+              setKaynakAcik(false);
+            }}
+          >
             <Sparkles size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t({ tr: "Kaynak PDF: editörün yanında oku, pasaj seç, Arvo AI'a sor, doğrulanmış atıf ekle", en: "Source PDF: read beside the editor, select a passage, ask Arvo AI, insert a verified citation" })}
+            metin={t({ tr: "PDF", en: "PDF" })}
+            active={kaynakAcik}
+            onClick={() => {
+              setKaynakAcik((acik) => !acik);
+              setYazimAcik(false);
+            }}
+          >
+            <FileText size={16} />
           </ToolbarButton>
           <ToolbarButton
             label={t({
@@ -3180,6 +3212,9 @@ export default function ManuscriptEditor({
         />
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
       </ManuscriptOutline>
+
+      {kaynakAcik ? <PdfPanelAyirici yerlesim={yerlesimiAl} /> : null}
+      <KaynakPdfPaneli editor={editor} projectId={projectId} acik={kaynakAcik} onKapat={() => setKaynakAcik(false)} onCite={handleCite} />
 
       {/*
         Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık

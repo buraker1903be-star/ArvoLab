@@ -5,8 +5,8 @@ import { aiHataMesaji, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
-import { belgeMetniOku } from "@/lib/document-extract";
-import { PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
+import { kaynakPdfSayfalari, SECIM_RET_METNI } from "@/lib/kaynak-pdf-okuma";
+import { secimSayfalari, secimiDogrula } from "@/lib/pdf-secim";
 import {
   SORU_EN_UZUN,
   ilgiliSayfalar,
@@ -15,6 +15,7 @@ import {
   kaynakIstemi,
   type KaynakAlintisi,
   type KaynakMesaji,
+  type SeciliPasaj,
 } from "@/lib/ai/kaynak-sohbeti";
 
 /*
@@ -30,11 +31,6 @@ import {
 */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/* Kaynak PDF'leri için tek sınır (lib/kaynak-pdf.ts, kovanın sınırıyla
-   aynı). Eskiden burada 25 MB yazıyordu: PDF'ler en fazla 20 MB
-   indirilebildiği ve yüklenebildiği için denetim hiç tetiklenmiyor,
-   tetiklenseydi de yanlış sınırı söylüyordu. */
-const EN_BUYUK_PDF = PDF_EN_FAZLA_BAYT;
 
 export type KaynakSohbetYaniti = {
   hata?: string;
@@ -46,6 +42,12 @@ export type KaynakSohbetYaniti = {
   okunmayanSayfa?: number;
   kayitId?: string | null;
   krediUyarisi?: string;
+  /** Seçim kaynak metninde doğrulanamadı (neden); cevap üretilmedi. */
+  secimReddi?: "kisa" | "uzun" | "sayfa_yok" | "metinde_yok";
+  /** Doğrulanmış seçim: sunucunun kendi metninden kesilen pasaj ve sayfası. */
+  secim?: { sayfa: number; metin: string };
+  /** Cevabın ilişkilendirildiği kaynak (PDF satırının künyesi). */
+  kunye?: string;
 };
 
 export async function kaynaklaSohbet(girdi: {
@@ -53,6 +55,8 @@ export async function kaynaklaSohbet(girdi: {
   pdfId: string;
   soru: string;
   gecmis?: KaynakMesaji[];
+  /** Görüntüleyicide seçilen pasaj (PDF sayfası, 1 tabanlı). Sunucuda doğrulanır. */
+  secim?: { sayfa: number; metin: string } | null;
 }): Promise<KaynakSohbetYaniti> {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -65,42 +69,32 @@ export async function kaynaklaSohbet(girdi: {
   if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   const supabase = await createClient();
-  const { data: satir, error } = await supabase
-    .from("kaynak_pdfleri")
-    .select("id, kunye, depo_yolu")
-    .eq("id", girdi.pdfId)
-    .eq("project_id", girdi.projectId)
-    .maybeSingle();
-  if (error) {
-    console.error("[kaynak-sohbeti] satır okunamadı:", error.message);
-    return { hata: t({ tr: "Kaynak okunamadı; tekrar deneyin.", en: "The source could not be read; try again." }) };
-  }
-  if (!satir?.depo_yolu) return { hata: t({ tr: "Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.", en: "This source has no PDF; find or upload it first." }) };
+  const okuma = await kaynakPdfSayfalari(supabase, girdi.projectId, girdi.pdfId, "[kaynak-sohbeti]");
+  if (!okuma.ok) return { hata: t(okuma.hata) };
+  const { sayfalar } = okuma;
+  const satir = { kunye: okuma.kunye };
 
-  const { data: dosya, error: indirmeHatasi } = await supabase.storage.from("project-files").download(satir.depo_yolu);
-  if (indirmeHatasi || !dosya) {
-    console.error("[kaynak-sohbeti] PDF indirilemedi:", indirmeHatasi?.message);
-    return { hata: t({ tr: "PDF açılamadı; sayfayı yenileyip tekrar deneyin.", en: "The PDF couldn't be opened; refresh and try again." }) };
+  /*
+    SEÇİLİ PASAJ (16.11.2026, Yazım Stüdyosu): görüntüleyicide seçilen metin
+    sunucunun sayfa metninde doğrulanır (lib/pdf-secim.ts); asistana
+    istemcinin metni değil, kaynaktan kesilen kanonik parça gider. Doğrulama
+    model çağrısından ÖNCE: reddedilen seçim asistan hakkı harcamaz.
+  */
+  let secim: SeciliPasaj | null = null;
+  let sonrakiSayfaya = false;
+  if (girdi.secim) {
+    const sonuc = secimiDogrula(String(girdi.secim.metin ?? ""), sayfalar, Number(girdi.secim.sayfa));
+    if (!sonuc.gecti) return { hata: t(SECIM_RET_METNI[sonuc.neden]), secimReddi: sonuc.neden };
+    secim = { sayfa: sonuc.sayfa, metin: sonuc.kanonik };
+    sonrakiSayfaya = Boolean(sonuc.sonrakiSayfaya);
   }
-  if (dosya.size > EN_BUYUK_PDF) return { hata: t({ tr: "PDF çok büyük (en fazla 20 MB).", en: "The PDF is too large (20 MB at most)." }) };
-
-  let sayfalar: { num: number; text: string }[];
-  try {
-    const okunan = await belgeMetniOku(Buffer.from(await dosya.arrayBuffer()), "pdf");
-    sayfalar = okunan.sayfalar ?? [{ num: 1, text: okunan.metin }];
-  } catch (hata) {
-    console.error("[kaynak-sohbeti] metin çıkarılamadı:", hata);
-    return { hata: t({ tr: "PDF'in metni okunamadı.", en: "The PDF's text could not be read." }) };
-  }
-  /* Taranmış PDF: sayfalar resim, metin yok. Boş metinle soran model "kaynakta yok" derdi; doğrusu nedenini söylemek. */
-  if (sayfalar.reduce((n, s) => n + s.text.trim().length, 0) < 200)
-    return { hata: t({ tr: "Bu PDF taranmış bir görüntü gibi görünüyor; içindeki metin okunamıyor.", en: "This PDF looks like a scanned image; its text can't be read." }) };
 
   const gecmis: KaynakMesaji[] = (Array.isArray(girdi.gecmis) ? girdi.gecmis : [])
     .filter((m) => m && (m.rol === "kullanici" || m.rol === "asistan") && typeof m.metin === "string")
     .slice(-6);
-  const { secilen, kirpildi } = ilgiliSayfalar(sayfalar, soru);
-  const { mesajlar, kayitBaglami } = kaynakIstemi({ kunye: satir.kunye, sayfalar: secilen, soru, gecmis, dil });
+  /* Seçim varsa okunacak sayfalar seçimin çevresi (lib/pdf-secim.ts); yoksa soruyla en ilgili sayfalar. */
+  const { secilen, kirpildi } = secim ? { secilen: secimSayfalari(sayfalar, secim.sayfa, sonrakiSayfaya), kirpildi: 0 } : ilgiliSayfalar(sayfalar, soru);
+  const { mesajlar, kayitBaglami } = kaynakIstemi({ kunye: satir.kunye, sayfalar: secilen, soru, gecmis, dil, secim });
 
   const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
@@ -140,6 +134,8 @@ export async function kaynaklaSohbet(girdi: {
       okunmayanSayfa: kirpildi || undefined,
       kayitId,
       krediUyarisi: kapi.uyari ?? undefined,
+      secim: secim ?? undefined,
+      kunye: satir.kunye,
     };
   } catch (hata) {
     const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });

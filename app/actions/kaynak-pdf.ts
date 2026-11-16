@@ -28,6 +28,8 @@ import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { yuklemeYoluMu } from "@/lib/kaynak-pdf-yolu";
 import { baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
 import { YEREL } from "@/lib/dil";
+import { kaynakPdfSayfalari, SECIM_RET_METNI } from "@/lib/kaynak-pdf-okuma";
+import { secimiDogrula } from "@/lib/pdf-secim";
 
 /*
   KAYNAK PDF'LERİ (kaynak_pdfleri, migration 20261026110024).
@@ -68,6 +70,47 @@ export async function kaynakPdfleri(projectId: string): Promise<KaynakPdfSatiri[
     return [];
   }
   return (data ?? []) as KaynakPdfSatiri[];
+}
+
+/*
+  YAZIM STÜDYOSU (16.11.2026): editörün yanındaki PDF görüntüleyicinin
+  listesi. kaynakPdfleri okunamayan listeyi boş döndürüyor (kaynakça
+  penceresi bunu "henüz bakılmadı" diye çiziyor); görüntüleyicide boş liste
+  "bu çalışmada PDF yok" demek olurdu. Okunamazsa hata ayrı döner.
+  Yalnızca PDF'i hazır olan (depoda dosyası bulunan) satırlar.
+*/
+export async function goruntuleyiciKaynaklari(projectId: string): Promise<{ satirlar: KaynakPdfSatiri[] } | { hata: string }> {
+  const t = await ceviri();
+  if (!UUID.test(projectId)) return { hata: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
+  const ctx = await getAuthContext();
+  if (!ctx) return { hata: await oturumYokMesaji() };
+  const { data, error } = await ctx.supabase.from("kaynak_pdfleri").select(SECIM).eq("project_id", projectId).not("depo_yolu", "is", null).order("kunye");
+  if (error) {
+    console.error("[kaynak-pdf] görüntüleyici listesi okunamadı:", error.message);
+    return { hata: t({ tr: "Kaynak PDF'leri okunamadı; sayfayı yenileyin.", en: "Source PDFs couldn't be read; refresh the page." }) };
+  }
+  return { satirlar: ((data ?? []) as KaynakPdfSatiri[]).filter((r) => pdfHazirMi(r.durum)) };
+}
+
+/*
+  GÖRÜNTÜLEYİCİDE SEÇİLEN PASAJIN DOĞRULANMASI (16.11.2026). Alıntı belgeye
+  girmeden önce: seçim sunucunun sayfa metninde aranır (lib/pdf-secim.ts) ve
+  belgeye istemcinin seçimi değil, kaynağın KENDİ metninden kesilen parça
+  gider. PDF'in metni çıkarıldığı için (ağır çözümleme) abonelik kapısından
+  geçer. Sayfa yalnızca PDF sayfasıdır; basılı sayfa numarasını kullanıcı
+  yazar (atıf penceresi).
+*/
+export async function kaynakSecimiDogrula(girdi: { projectId: string; pdfId: string; sayfa: number; metin: string }): Promise<{ sayfa: number; metin: string; sonrakiSayfaya: boolean } | { hata: string }> {
+  const t = await ceviri();
+  if (!UUID.test(String(girdi.projectId ?? "")) || !UUID.test(String(girdi.pdfId ?? ""))) return { hata: t({ tr: "Kaynak bulunamadı.", en: "Source not found." }) };
+  const ctx = await getAuthContext();
+  if (!ctx) return { hata: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { hata: await abonelikKapaliMesaji() };
+  const okuma = await kaynakPdfSayfalari(ctx.supabase, girdi.projectId, girdi.pdfId, "[kaynak-secimi]");
+  if (!okuma.ok) return { hata: t(okuma.hata) };
+  const sonuc = secimiDogrula(String(girdi.metin ?? ""), okuma.sayfalar, Number(girdi.sayfa));
+  if (!sonuc.gecti) return { hata: t(SECIM_RET_METNI[sonuc.neden]) };
+  return { sayfa: sonuc.sayfa, metin: sonuc.kanonik, sonrakiSayfaya: Boolean(sonuc.sonrakiSayfaya) };
 }
 
 type Kunye = { kunye: string; doi?: string | null; dogrulama?: DogrulamaDurumu | null };
