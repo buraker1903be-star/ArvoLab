@@ -1,0 +1,145 @@
+{
+  "zaman": "2026-11-16T13:42:32.743Z",
+  "postgres": "17",
+  "izolasyon": "read committed",
+  "toplam": 17,
+  "gecen": 17,
+  "sonuclar": [
+    {
+      "ad": "A1-i1",
+      "aciklama": "İlk tasarım (INSERT … WHERE NOT EXISTS + tetikleyicide FOR UPDATE). E kuyruğa alır (açık) → B bağlar → E commit → B commit",
+      "sema": "ymwjbc49k_1",
+      "beklenen": "ANOMALİ (yol hem bağlı hem kuyrukta)",
+      "gozlenen": "ref=1 kuyruk=PENDING_DELETE kilit=[E:- B:-] → ANOMALİ",
+      "gecti": true
+    },
+    {
+      "ad": "A1-i2",
+      "aciklama": "İlk tasarım (INSERT … WHERE NOT EXISTS + tetikleyicide FOR UPDATE). B bağlar (açık) → E kuyruğa alır → B commit → E commit",
+      "sema": "ymwjbc4zl_2",
+      "beklenen": "ANOMALİ (yol hem bağlı hem kuyrukta)",
+      "gozlenen": "ref=1 kuyruk=PENDING_DELETE kilit=[B:- E:-] → ANOMALİ",
+      "gecti": true
+    },
+    {
+      "ad": "A1-i3",
+      "aciklama": "İlk tasarım (INSERT … WHERE NOT EXISTS + tetikleyicide FOR UPDATE). E kuyruğa alır, commit → sonra B bağlar (seri)",
+      "sema": "ymwjbc5pp_3",
+      "beklenen": "güvenli",
+      "gozlenen": "ref=1 kuyruk=IPTAL kilit=[E:- B:-]",
+      "gecti": true
+    },
+    {
+      "ad": "A1-i4",
+      "aciklama": "İlk tasarım (INSERT … WHERE NOT EXISTS + tetikleyicide FOR UPDATE). B bağlar, commit → sonra E kuyruğa alır (seri)",
+      "sema": "ymwjbc6gu_4",
+      "beklenen": "güvenli",
+      "gozlenen": "ref=1 kuyruk=- kilit=[B:- E:-]",
+      "gecti": true
+    },
+    {
+      "ad": "A2-i1",
+      "aciklama": "Öneri: yol başına danışma kilidi, kontrol ayrı ifadede. E kuyruğa alır (açık) → B bağlar [BEKLER] → E commit → B iptal eder",
+      "sema": "ymwjbc76k_5",
+      "beklenen": "güvenli; ikinci işlem kilitte bekler",
+      "gozlenen": "ref=1 kuyruk=IPTAL [B:BEKLEDI]",
+      "gecti": true
+    },
+    {
+      "ad": "A2-i2",
+      "aciklama": "Öneri: yol başına danışma kilidi, kontrol ayrı ifadede. B bağlar (açık) → E kuyruğa alır [BEKLER] → B commit → E eklemez",
+      "sema": "ymwjbc79p_6",
+      "beklenen": "güvenli; ikinci işlem kilitte bekler",
+      "gozlenen": "ref=1 kuyruk=- [E:BEKLEDI kuyruga_al=f]",
+      "gecti": true
+    },
+    {
+      "ad": "A2-i3",
+      "aciklama": "Öneri: yol başına danışma kilidi, kontrol ayrı ifadede. Yeniden bağlama (UPDATE ref set yol): E açık → B bekler → E commit → B iptal eder",
+      "sema": "ymwjbc7cx_7",
+      "beklenen": "güvenli; ikinci işlem kilitte bekler",
+      "gozlenen": "ref=1 kuyruk=IPTAL [B:BEKLEDI]",
+      "gecti": true
+    },
+    {
+      "ad": "A2-i4",
+      "aciklama": "Öneri: yol başına danışma kilidi, kontrol ayrı ifadede. İki eşzamanlı kuyruğa alma: tek satır",
+      "sema": "ymwjbc7g1_8",
+      "beklenen": "tek satır, ikinci çağrı false",
+      "gozlenen": "satır=1 [E2:BEKLEDI E2.kuyruga_al=f]",
+      "gecti": true
+    },
+    {
+      "ad": "A2-yanlis-tek-ifade",
+      "aciklama": "Kilit ile NOT EXISTS aynı INSERT ifadesinde: READ COMMITTED anlık görüntüsü kilit beklemesinden ÖNCE alınır",
+      "sema": "ymwjbc7k9_9",
+      "beklenen": "ANOMALİ (kilit beklendi ama karar eski görüntüyle verildi)",
+      "gozlenen": "E kilitte bekledi; ref=1 kuyruk=PENDING_DELETE → ANOMALİ",
+      "gecti": true
+    },
+    {
+      "ad": "A2-yanlis-stable",
+      "aciklama": "Tetikleyici işlevi STABLE: kilit alınsa da kuyruk okuması dış ifadenin (kilitten önceki) görüntüsüyle",
+      "sema": "ymwjbc7nu_10",
+      "beklenen": "ANOMALİ (STABLE işlev yeni commit'i görmez)",
+      "gozlenen": "B kilitte bekledi; bağlama geçti; ref=1 kuyruk=PENDING_DELETE → ANOMALİ",
+      "gecti": true
+    },
+    {
+      "ad": "A3-serializable",
+      "aciklama": "Aynı ilk tasarım, iki taraf da SERIALIZABLE: biri serialization_failure (40001) ile düşmeli",
+      "sema": "ymwjbc7rq_11",
+      "beklenen": "biri 40001 ile düşer; son hâl güvenli",
+      "gozlenen": "ref=0 kuyruk=PENDING_DELETE; hata: ERROR:  could not serialize access due to read/write dependencies among transactions",
+      "gecti": true
+    },
+    {
+      "ad": "A4-kayit-satiri",
+      "aciklama": "Nesne kaydı satırı yükleme anında yazılmışsa her iki taraf onu FOR UPDATE ile kilitler; READ COMMITTED yeniden değerlendirir",
+      "sema": "ymwjbc7v7_12",
+      "beklenen": "kayıt satırı kilidi sıralar; ama tek ifadedeki NOT EXISTS yeniden okunmaz → kontrol ayrı ifadede olmalı",
+      "gozlenen": "E bekledi; nesne=PENDING_DELETE ref=1 → ANOMALİ (EvalPlanQual alt sorguyu tazelemez)",
+      "gecti": true
+    },
+    {
+      "ad": "B1-ilk-tasarim",
+      "aciklama": "Worker A silme isteğinde takılır, kira dolar, yol PENDING_DELETE'e döner, kullanıcı aynı yolu bağlar, A'nın gecikmiş isteği SONRA uygulanır",
+      "sema": "ymwjbc7yo_13",
+      "beklenen": "VERİ KAYBI (bağlı dosya silindi)",
+      "gozlenen": "kira kuşağı=1, kurtarılan=1, bağlama=geçti, ref=1, dosya silindi=t → VERİ KAYBI",
+      "gecti": true
+    },
+    {
+      "ad": "B1b-isim-ile-bitlemeli",
+      "aciklama": "Kuşak yerine kira_sahibi adıyla koşullu geçiş: aynı adla yeniden başlayan worker'ın geç 'yeniden dene'si B'nin kirasını düşürür",
+      "sema": "ymwjbc926_14",
+      "beklenen": "ÇİFT KİRA (B hâlâ çalışırken C de aldı)",
+      "gozlenen": "A'nın geç yazımı 1 satırı (B'nin kirasını) geri aldı; ardından C kira aldı=1 → ÇİFT KİRA",
+      "gecti": true
+    },
+    {
+      "ad": "B2-oneri",
+      "aciklama": "Aynı akış önerilen tasarımla: bir kez kiralanan yol bir daha bağlanamaz, geçişler kuşağa koşullu, kanıt bir kez",
+      "sema": "ymwjbca6f_15",
+      "beklenen": "bağlama reddi, yeni yolla yükleme, A'nın geç yazımları 0 satır, kanıt 1, son DELETED/2",
+      "gozlenen": "bağlama=red, yeni yol bağlı=1, B işaretledi=1, A geç işaret=0, A geç yeniden dene=0, kanıt=1, son=DELETED/2",
+      "gecti": true
+    },
+    {
+      "ad": "B3-nesne-kimligi",
+      "aciklama": "Yol aynı ama nesne değişmiş (belirlenimci yol üzerine yazıldı): worker silmeden önce fark eder ve durur",
+      "sema": "ymwjbcbb6_16",
+      "beklenen": "ayni_nesne_mi = false → silme yapılmaz, satır elle bakılmalıya",
+      "gozlenen": "kuşak=1, ayni_nesne_mi=f",
+      "gecti": true
+    },
+    {
+      "ad": "C1-offset-tekrar-kayip",
+      "aciklama": "storage.search gibi ORDER BY name LIMIT/OFFSET: sayfalar arasında ekleme bir nesneyi İKİ KEZ, silme bir nesneyi HİÇ göstermez",
+      "sema": "ymwjbcbdp_17",
+      "beklenen": "tur 1'de tekrar eden, tur 2'de hiç görünmeyen bir nesne",
+      "gozlenen": "ekleme: [a,b,c | c,d,e | f,g,h | i] tekrar=c; silme: [a,b,c | e,f,g | h,i | ] görünmeyen=d",
+      "gecti": true
+    }
+  ]
+}

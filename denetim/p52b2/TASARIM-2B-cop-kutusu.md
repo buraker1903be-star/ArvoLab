@@ -1,5 +1,7 @@
 # P52b-2B — 30 günlük çöp kutusu: tasarım (UYGULANMADI)
 
+> **16.11.2026 — bu belge düzeltildi:** [`TASARIM-2BC-sertlestirme.md`](TASARIM-2BC-sertlestirme.md). Sahibe silinmiş satırı göstermek 8 tablonun okumasını açık bırakıyordu; consultancy_requests, DELETE politikaları, `<kullanıcı>/` depo klasörleri ve kılavuz senkronu bu belgede eksikti. Uyuşmazlıkta yeni belge geçerlidir.
+
 Bu belge bir öneri. Kod yok, migration dosyası yok.
 
 ## Bugünkü durum (ölçüldü)
