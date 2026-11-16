@@ -11,6 +11,7 @@ import { stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
+import { kosulluYaz, zorlaKayitIcinYedekle } from "@/lib/metin-yazimi";
 import { hasNonPlainAttributes } from "@/lib/format-loss";
 import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import type { StructureIssue } from "@/lib/structure-check";
@@ -141,10 +142,6 @@ export type SaveManuscriptResult =
       abonelik?: boolean;
     };
 
-const isMissingColumn = (error: { code?: string } | null) => error?.code === "PGRST204" || error?.code === "42703";
-// RLS reddi: satır yazılamıyor. Yeniden denemek asla başarmaz.
-const isForbidden = (error: { code?: string } | null) => error?.code === "42501";
-
 // İyimser eşzamanlılık: kayıt yalnızca veritabanındaki sürüm editörün
 // açtığı sürümle aynıysa yapılır. Başka sekme/kişi arada kaydettiyse
 // sessizce üzerine yazmak yerine "conflict" döner.
@@ -196,6 +193,11 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     plain_text: extractPlainText(content),
     word_count: wordCount,
     updated_by: ctx.user.id,
+    /*
+      Damganın asıl yazarı veritabanı (20261115…_metin_surum_damgasi:
+      clock_timestamp, satır başına kesin artan). Bu değer yalnızca o
+      tetikleyici henüz uygulanmamış bir veritabanında kullanılır.
+    */
     updated_at: new Date().toISOString(),
     ...(margins
       ? {
@@ -244,7 +246,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     ayrı ayrı karar verdiği için ikisi ayrışabilir.
   */
   const rlsReddi = (error: { code?: string; message?: string } | null) => {
-    if (!isForbidden(error)) return null;
+    if (error?.code !== "42501") return null;
     const mesaj = error?.message ?? "";
     // Tetikleyicinin açıklaması Türkçe; İngilizcede aynı anlamı taşıyan ortak mesaj gösteriliyor.
     return /abonelik/i.test(mesaj)
@@ -260,90 +262,55 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   };
 
   /*
-    Güncelleme hiçbir satıra değmediğinde iki ayrı sebep var ve ikisi de
-    PostgREST'ten aynı şekilde dönüyor: satır ARADA DEĞİŞTİ (çakışma) ya da
-    RLS satırı yazmaya kapalı (yetki). Ayırt etmeden "başka biri değiştirdi"
-    demek bir hatayı haftalarca gizledi: denetim rolleri başkasının tezini
-    okuyup yazabiliyor ama kaydedemiyordu, kullanıcı çakışma sanıyordu
-    (23.09.2026). Okuma açık olduğu için satırı yeniden okumak ayrımı kesin
-    yapıyor: zaman damgası hâlâ aynıysa kimse değiştirmemiş, demek ki yetki.
-  */
-  const cakismaMi = async (expectedUpdatedAt: string) => {
-    const { data } = await ctx.supabase
-      .from("project_manuscripts")
-      .select("updated_at")
-      .eq("project_id", projectId)
-      .maybeSingle();
-    if (!data) return conflict; // satır silinmiş ya da okunamıyor
-    return data.updated_at === expectedUpdatedAt ? forbidden : conflict;
-  };
+    Yazmanın kendisi lib/metin-yazimi.ts'te (P52a2): her üzerine yazma bir
+    updated_at damgasına KOŞULLU. Normal kayıtta damga editörün açtığı
+    sürüm, zorla kayıtta az önce yedeklenen sürüm.
 
-  /* Eksik sütun: adı okunabildiyse yalnızca o düşürülür (lib/eksik-sutun.ts). */
+    "Benim sürümümü kaydet" başka sekmenin/cihazın kaydettiğinin ÜZERİNE
+    yazar, o yüzden önce o metin yedeklenir. Eskiden yedeğin sonucu hiç
+    okunmuyordu ve yazma upsert'le koşulsuz yapılıyordu: yedek düştüğünde
+    öteki sürüm hiçbir yerde kalmıyordu; yedek alınsa bile yedekle yazma
+    arasında kaydedilen metin ezilip kayboluyordu. Artık yedek alınamazsa
+    yazılmaz, arada değişiklik olduysa çakışma döner (çakışma bandı ve
+    "benim sürümümü kaydet" düğmesi yerinde kalır, kullanıcı yeniden dener).
+  */
+  let beklenen = input.expectedUpdatedAt;
+  if (input.force) {
+    const hazirlik = await zorlaKayitIcinYedekle(
+      ctx.supabase,
+      projectId,
+      ctx.user.id,
+      t({ tr: "Üzerine yazılmadan önce (öteki sürüm)", en: "Before overwrite (the other version)" }),
+    );
+    if (hazirlik.tur === "yedek-alinamadi") {
+      return {
+        error: t({
+          tr: "Öteki sürüm yedeklenemediği için üzerine yazılmadı. Biraz sonra yeniden deneyin.",
+          en: "The other version could not be backed up, so it was not overwritten. Try again shortly.",
+        }),
+        conflict: true,
+      };
+    }
+    beklenen = hazirlik.beklenen;
+  }
+
   type EksikSutun = { eksik: string | null };
   const write = async (row: Record<string, unknown>): Promise<SaveManuscriptResult | EksikSutun> => {
-    if (input.force) {
-      const { data, error } = await ctx.supabase
-        .from("project_manuscripts")
-        .upsert({ project_id: projectId, ...row }, { onConflict: "project_id" })
-        .select("updated_at")
-        .single();
-      if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
-      const reddedildi = rlsReddi(error);
-      if (reddedildi) return reddedildi;
-      if (error || !data) {
-        console.error(error);
+    const sonuc = await kosulluYaz(ctx.supabase, projectId, row, beklenen);
+    switch (sonuc.tur) {
+      case "basarili":
+        return { success: true, updatedAt: sonuc.updatedAt, wordCount };
+      case "eksik-sutun":
+        return { eksik: eksikSutunAdi(sonuc.hata) };
+      case "cakisma":
+        return conflict;
+      case "reddedildi":
+        return rlsReddi(sonuc.hata) ?? forbidden;
+      default:
+        console.error(sonuc.hata);
         return failed;
-      }
-      return { success: true, updatedAt: data.updated_at, wordCount };
     }
-
-    if (input.expectedUpdatedAt) {
-      const { data, error } = await ctx.supabase
-        .from("project_manuscripts")
-        .update(row)
-        .eq("project_id", projectId)
-        .eq("updated_at", input.expectedUpdatedAt)
-        .select("updated_at");
-      if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
-      const reddedildi = rlsReddi(error);
-      if (reddedildi) return reddedildi;
-      if (error) {
-        console.error(error);
-        return failed;
-      }
-      if (!data?.length) return cakismaMi(input.expectedUpdatedAt);
-      return { success: true, updatedAt: data[0].updated_at, wordCount };
-    }
-
-    const { data, error } = await ctx.supabase
-      .from("project_manuscripts")
-      .insert({ project_id: projectId, ...row })
-      .select("updated_at")
-      .single();
-    if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
-    const reddedildi = rlsReddi(error);
-    if (reddedildi) return reddedildi;
-    if (error?.code === "23505") return conflict;
-    if (error || !data) {
-      console.error(error);
-      return failed;
-    }
-    return { success: true, updatedAt: data.updated_at, wordCount };
   };
-
-  /*
-    "Benim sürümümü kaydet" başka sekmenin/cihazın kaydettiğinin ÜZERİNE
-    yazar. Eskiden yedek alınmıyordu: otomatik anlık görüntü yazmadan SONRA
-    ve en çok on dakikada bir alındığı için, öteki sürümün son on dakikası
-    hiçbir yerde kalmıyordu. Word aktarımı ve sürüm geri yükleme zaten
-    önce yedek alıyor; zorla kayıt da artık aynı.
-  */
-  if (input.force) {
-    await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
-      kind: "manual",
-      label: t({ tr: "Üzerine yazılmadan önce (öteki sürüm)", en: "Before overwrite (the other version)" }),
-    });
-  }
 
   /*
     Sonradan eklenen sütunlar migration'dan önce dağıtılabiliyor: metin yine

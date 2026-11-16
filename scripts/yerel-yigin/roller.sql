@@ -1,0 +1,17 @@
+-- Yalnızca yerel, sentetik yığın (p52db). Gerçek bir Supabase projesine bağlanmaz.
+-- Supabase'in sağladığı rollerin taklidi; GoTrue auth şemasını kendisi kurar.
+create role anon nologin noinherit;
+create role authenticated nologin noinherit;
+create role service_role nologin noinherit bypassrls;
+create role authenticator login noinherit password 'yerel-yigin';
+grant anon, authenticated, service_role to authenticator;
+create role supabase_auth_admin login createrole noinherit password 'yerel-yigin';
+create role supabase_admin login superuser password 'yerel-yigin';
+create role dashboard_user nologin;
+create schema if not exists auth authorization supabase_auth_admin;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+create extension if not exists "uuid-ossp" with schema extensions;
+grant usage on schema auth to anon, authenticated, service_role, postgres;
+grant usage on schema public, extensions to anon, authenticated, service_role;
+alter role supabase_auth_admin set search_path = auth;

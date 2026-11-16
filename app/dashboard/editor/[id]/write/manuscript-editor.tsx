@@ -2674,7 +2674,28 @@ export default function ManuscriptEditor({
             >
               {t({ tr: "Diğer sürümü aç", en: "Open the other version" })}
             </button>
-            <button type="button" className="button-danger" onClick={() => void saveNow(true)}>
+            {/*
+              Zorla kayıt artık reddedilebiliyor (P52a2): öteki sürüm
+              yedeklenemezse ya da yedekten sonra metin yeniden değiştiyse
+              hiçbir şey yazılmıyor ve çakışma bandı yerinde kalıyor. Bildirim
+              olmasa düğme "hiçbir şey yapmadı" gibi görünürdü.
+            */}
+            <button
+              type="button"
+              className="button-danger"
+              onClick={() =>
+                void saveNow(true).then((kaydedildi) => {
+                  if (!kaydedildi)
+                    showToast(
+                      "error",
+                      t({
+                        tr: "Sürümünüz kaydedilmedi: öteki sürüm yedeklenemedi ya da metin bu arada yeniden değişti. Hiçbir metin silinmedi; biraz sonra yeniden deneyin.",
+                        en: "Your version was not saved: the other version could not be backed up, or the text changed again in the meantime. Nothing was deleted; try again shortly.",
+                      })
+                    );
+                })
+              }
+            >
               {t({ tr: "Benim sürümümü kaydet", en: "Save my version" })}
             </button>
           </span>
