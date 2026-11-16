@@ -3,6 +3,7 @@ import PasswordForm from "@/app/dashboard/settings/password-form";
 import KimlikYerlesimi from "@/app/_components/kimlik/kimlik-yerlesimi";
 import { Bildirim } from "@/app/_components/ui/bildirim";
 import { ceviri } from "@/lib/dil-sunucu";
+import { EN_KISA_SIFRE, EN_UZUN_SIFRE } from "@/lib/kimlik-kurallari";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -31,12 +32,12 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
         <p>
           {ilk
             ? t({
-                tr: "E-postanız doğrulandı. En az 8 karakterlik bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
-                en: "Your email is verified. Enter a password of at least 8 characters. After saving you will be taken to your dashboard.",
+                tr: `E-postanız doğrulandı. ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} karakterlik bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.`,
+                en: `Your email is verified. Enter a password of ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} characters. After saving you will be taken to your dashboard.`,
               })
             : t({
-                tr: "En az 8 karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
-                en: "Enter a new password of at least 8 characters. After saving you will be taken to your dashboard.",
+                tr: `${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz; diğer cihazlardaki oturumlar kapatılır.`,
+                en: `Enter a new password of ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} characters. After saving you will be taken to your dashboard and sessions on other devices will be signed out.`,
               })}
         </p>
       </header>

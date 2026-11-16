@@ -80,9 +80,16 @@ test("şifre güncellemesi bağlamı doğru geçirir: sıfırlama 'sifirlama', A
 
 test("hata alınınca oturum kendiliğinden kapanmaz ve hata nesnesi günlüğe yazılmaz", () => {
   const uygula = govde(AUTH, "applyNewPassword");
-  assert.doesNotMatch(uygula, /signOut|yerelOturumuKapat|redirect\(/);
+  assert.doesNotMatch(uygula, /yerelOturumuKapat|redirect\(/);
+  /*
+    16.11.2026: başarıdan SONRA diğer oturumlar kapatılır (scope "others");
+    bu cihazın oturumu hiçbir yolda kapanmaz ve hata dönüşü o çağrıdan önce.
+  */
+  assert.deepEqual(uygula.match(/signOut\([^)]*\)/g) ?? [], ['signOut({ scope: "others" })']);
+  assert.ok(uygula.indexOf("sifreHatasi(error.code") < uygula.indexOf('signOut({ scope: "others" })'));
   assert.doesNotMatch(uygula, /console\.\w+\(error\)/);
-  assert.match(uygula, /sifreHatasi\(error\.code, baglam\)/);
+  // G1-C A1: zayıf şifre nedenleri de geçer; yalnızca tanınan neden adları (lib/sifre-hatasi.ts).
+  assert.match(uygula, /sifreHatasi\(error\.code, baglam, zayifSifreNedenleri\(error\)\)/);
 });
 
 test("çıkış ve kurtarma yalnızca bu cihazın oturumunu kapatır (öteki oturumlar korunur)", () => {

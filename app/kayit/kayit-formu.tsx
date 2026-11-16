@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, FileCheck2, MailCheck } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { signUp } from "@/app/actions/auth";
+import { baglantiSuresiMetni } from "@/lib/kimlik-kurallari";
 import type { ActionResult } from "@/lib/auth-guards";
 import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 import { Bildirim } from "@/app/_components/ui/bildirim";
@@ -38,7 +39,7 @@ import { Girdi } from "@/app/_components/ui/girdi";
   sınırını yakar.
 
   Signature OS 5 / Phase 2 (12.11.2026): yalnızca görünüş. Alan adları,
-  kimlikler, autocomplete, minLength (EN_KISA_SIFRE), telefon deseni,
+  kimlikler, autocomplete, telefon deseni,
   sözleşme okuma kuralı, gizli "sozlesmeOkundu" alanı ve signUp eylemi
   AYNI. Şifre ve tekrarı ayrı göster/gizle düğmeleri taşıyor (ortak
   SifreGirdisi); eskiden tek düğme ikisini birden açıyordu. Form tek
@@ -72,8 +73,9 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
           <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
           <p>
             {t({
-              tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
-              en: "We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
+              // Süre Supabase ayarının aynası (lib/kimlik-kurallari.ts); eskiden burada sabit bir gün süresi yazıyordu, bağlantı 1 saatte düşüyordu.
+              tr: `Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı ${baglantiSuresiMetni().tr} geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.`,
+              en: `We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for ${baglantiSuresiMetni().en}; if you don't see the email, check your spam folder.`,
             })}
           </p>
         </header>

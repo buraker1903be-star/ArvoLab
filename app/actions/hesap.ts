@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { ilkSifreEngeli, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { loadCurrentProfile } from "@/lib/current-profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { onayGecerli } from "@/lib/hesap-silme";
@@ -29,6 +29,9 @@ export async function hesapSilmeTalebi(formData: FormData): Promise<ActionResult
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: await oturumYokMesaji() };
+  // İlk şifre kapısı (lib/auth-guards.ts): şifresini belirlemeyen oturum hesabı silemez.
+  const ilkSifre = await ilkSifreEngeli(supabase, user.id);
+  if (ilkSifre) return { error: ilkSifre };
   const t = await ceviri();
 
   const profile = await loadCurrentProfile();

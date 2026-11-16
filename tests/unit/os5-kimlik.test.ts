@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { EN_KISA_SIFRE } from "@/lib/kayit";
+import { EN_KISA_SIFRE } from "@/lib/kimlik-kurallari";
 
 /*
   Signature OS 5 / Phase 2: kimlik ekranları (giriş, kayıt, şifremi
@@ -78,10 +78,12 @@ describe("formlar aynı eylemlere, aynı alan adlarıyla gidiyor", () => {
   test("kayıt: signUp ve bütün alan adları", () => {
     const k = oku("app/kayit/kayit-formu.tsx");
     assert.match(k, /signUp\(_onceki, formData\)/);
-    for (const ad of ["fullName", "email", "phone", "password", "passwordRepeat", "sozlesme", "kvkk", "iletisim", "sozlesmeOkundu"]) {
+    for (const ad of ["fullName", "email", "phone", "sozlesme", "kvkk", "iletisim", "sozlesmeOkundu"]) {
       assert.match(k, new RegExp(`name="${ad}"`), `${ad} alanı`);
     }
     assert.match(k, /pattern="\\\+\?\[\\d\\s\(\)\.\\-\]\{10,20\}"/, "telefon deseni lib/kayit.ts ile aynı kalmalı");
+    // G1: kayıt şifre ALMAZ; şifre doğrulanmış oturumda /reset-password?ilk=1'de belirlenir.
+    assert.doesNotMatch(k, /name="password"|name="passwordRepeat"/);
   });
   test("kayıt: sözleşme okunmadan işaretlenmez (kontrollü kutu aynı)", () => {
     const k = oku("app/kayit/kayit-formu.tsx");
@@ -96,27 +98,27 @@ describe("formlar aynı eylemlere, aynı alan adlarıyla gidiyor", () => {
   });
 });
 
-describe("şifre kuralı ve bağlantı süresi değişmedi", () => {
+describe("şifre kuralı ve bağlantı süresi tek kaynaktan", () => {
   /*
-    Bu faz kural değiştirmez. Kurum sahibinin talimatı "mevcut minimum 12
-    karakter" diyordu; kodda kural 8 (lib/kayit.ts, app/actions/auth.ts —
-    G1 dalları da 8). Kural BİLEREK olduğu gibi bırakıldı: değiştirmek bir
-    Auth kararıdır, sunum fazının işi değil. Kural değişirse bu test de
-    bilinçli olarak güncellenir.
+    16.11.2026 (RELEASE CLOSURE 03): kurum sahibinin "en az 12 karakter"
+    kararı uygulandı. Kural lib/kimlik-kurallari.ts'te; form, sunucu ve
+    metinler oradan okur. Elle yazılmış "8"/"12" kalmamalı.
   */
-  test("kayıtta en kısa şifre 8 ve form aynı sabiti kullanıyor", () => {
-    assert.equal(EN_KISA_SIFRE, 8);
-    const k = oku("app/kayit/kayit-formu.tsx");
-    assert.equal(k.match(/minLength=\{EN_KISA_SIFRE\}/g)?.length, 2);
-  });
-  test("sıfırlamada en kısa şifre 8 (sunucu) ve form aynı sınırı söylüyor", () => {
-    assert.match(oku("app/actions/auth.ts"), /const MIN_PASSWORD_LENGTH = 8;/);
+  test("en kısa şifre 12 ve formun iki görünümü aynı sabiti kullanıyor", () => {
+    assert.equal(EN_KISA_SIFRE, 12);
     const k = oku("app/dashboard/settings/password-form.tsx");
-    assert.ok((k.match(/minLength=\{8\}/g)?.length ?? 0) >= 2);
-    assert.match(oku("app/reset-password/page.tsx"), /En az 8 karakterlik/);
+    assert.equal(k.match(/minLength=\{EN_KISA_SIFRE\}/g)?.length, 4);
+    assert.doesNotMatch(k, /minLength=\{\d+\}/);
   });
-  test("doğrulama bağlantısının süresi metinde 24 saat", () => {
-    assert.match(oku("app/kayit/kayit-formu.tsx"), /Bağlantı 24 saat geçerli/);
+  test("sıfırlama sayfası sınırı sabitten söylüyor", () => {
+    const k = oku("app/reset-password/page.tsx");
+    assert.match(k, /\$\{EN_KISA_SIFRE\}–\$\{EN_UZUN_SIFRE\}/);
+    assert.doesNotMatch(k, /En az 8|at least 8/);
+  });
+  test("doğrulama bağlantısının süresi metinde ayardan türetiliyor", () => {
+    const k = oku("app/kayit/kayit-formu.tsx");
+    assert.match(k, /baglantiSuresiMetni\(\)\.tr/);
+    assert.doesNotMatch(k, /24 saat/);
   });
   test("ortak şifre bileşeni kural taşımıyor", () => {
     assert.doesNotMatch(oku("app/_components/ui/sifre-girdisi.tsx"), /minLength=\{|EN_KISA_SIFRE|MIN_PASSWORD/);

@@ -4,7 +4,9 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { DIL_CEREZI, dilMi, type Metin } from "@/lib/dil";
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createDogrulamaClient } from "@/lib/supabase/server";
+import { ilkSifreDurumu } from "@/lib/supabase/sifre-durumu";
+import { amrKayitlari, sifirlamaKarari } from "@/lib/sifre-yetkisi";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ADRES_SINIRI, GIRIS_PENCERESI_SQL, IP_SINIRI, girisAnahtarlari, girisKilitliMi } from "@/lib/giris-siniri";
 import { sendEmail } from "@/lib/email/resend";
@@ -14,12 +16,12 @@ import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
-import { KURTARMA_YOLU, sifreHatasi, type SifreBaglami } from "@/lib/sifre-hatasi";
+import { KURTARMA_YOLU, sifreHatasi, zayifSifreNedenleri, type SifreBaglami } from "@/lib/sifre-hatasi";
+import { SIFRE_ESLESMEDI, sifreKuraliHatasi } from "@/lib/kimlik-kurallari";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
 
-const MIN_PASSWORD_LENGTH = 8;
 /* Kayıt doğrulamasından sonra şifrenin belirlendiği sayfa (G1). */
 const ILK_SIFRE_YOLU = "/reset-password?ilk=1";
 
@@ -379,16 +381,80 @@ async function sifirlamaBaglantisiGonder(email: string): Promise<void> {
   }
 }
 
+/*
+  MEVCUT ŞİFRENİN DOĞRULANMASI (16.11.2026, RELEASE CLOSURE 03).
+
+  Ayarlar'daki şifre değişikliği artık mevcut şifreyi istiyor; eskiden açık
+  bir oturum tek başına yetiyordu (oturumu ele geçiren, sahibini dışarıda
+  bırakacak şifreyi koyabiliyordu). Doğrulama Supabase'in kendi
+  signInWithPassword'üyle: şifre özetini başka hiçbir yer bilmiyor.
+
+   - Adres FORMDAN DEĞİL oturumdaki kullanıcıdan alınır; dönen kullanıcının
+     kimliği de oturumunkiyle karşılaştırılır. Başkasının şifresini
+     "doğrulatıp" kendi hesabını değiştirmek ya da tersi mümkün olmasın.
+   - Çerezsiz istemci (createDogrulamaClient): tarayıcının oturumu
+     değişmez. Doğrulamanın açtığı oturum hemen kapatılır; kapatılamazsa
+     bile değişiklikten sonraki signOut({ scope: "others" }) onu düşürür.
+   - Hatalı denemeler GİRİŞLE AYNI sayaca yazılır (lib/giris-siniri.ts,
+     adres anahtarı). Ayrı sayaç olsaydı ele geçirilmiş oturumla buradan
+     sınırsız tahmin yapılabilirdi. Sayaç okunamazsa denetim engellenmez
+     (girişteki ilkeyle aynı); Supabase'in kendi hız sınırı yine geçerli.
+*/
+type MevcutSifreSonucu = "dogru" | "yanlis" | "kilitli" | "hata";
+
+async function mevcutSifreyiDogrula(kullanici: { id: string; email?: string | null }, mevcut: string): Promise<MevcutSifreSonucu> {
+  const email = kullanici.email?.trim();
+  if (!email) return "hata";
+
+  const istek = await headers();
+  const ip = (istek.get("x-forwarded-for") ?? "").split(",")[0].trim() || "bilinmiyor";
+  const anahtar = girisAnahtarlari(email, ip);
+  let sayac: ReturnType<typeof createAdminClient> | null = null;
+  try {
+    sayac = createAdminClient();
+  } catch {
+    sayac = null;
+  }
+  if (sayac) {
+    const { data: sayaclar, error: sayacHatasi } = await sayac.from("auth_rate_limits").select("key, count, window_start").eq("key", anahtar.adres);
+    if (sayacHatasi) console.error("[sifre] hız sınırı okunamadı:", sayacHatasi.message);
+    else if (girisKilitliMi((sayaclar ?? [])[0], ADRES_SINIRI, Date.now())) return "kilitli";
+  }
+
+  const dogrulayici = createDogrulamaClient();
+  const { data, error } = await dogrulayici.auth.signInWithPassword({ email, password: mevcut });
+  if (error) {
+    if (error.code === "invalid_credentials") {
+      if (sayac) {
+        const { error: sayHata } = await sayac.rpc("rate_limit_hit", { p_key: anahtar.adres, p_limit: ADRES_SINIRI, p_window: GIRIS_PENCERESI_SQL });
+        if (sayHata) console.error("[sifre] hatalı deneme sayılamadı:", sayHata.message);
+      }
+      return "yanlis";
+    }
+    if (error.status === 429 || error.code === "over_request_rate_limit") return "kilitli";
+    console.error("[sifre] mevcut şifre doğrulanamadı", error.code, error.status);
+    return "hata";
+  }
+  // Doğrulamanın oturumu iş görmez: hemen kapatılır (yalnızca o oturum).
+  const { error: kapatmaHatasi } = await dogrulayici.auth.signOut({ scope: "local" });
+  if (kapatmaHatasi) console.error("[sifre] doğrulama oturumu kapatılamadı", kapatmaHatasi.code, kapatmaHatasi.status);
+  return data.user?.id === kullanici.id ? "dogru" : "hata";
+}
+
 async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promise<ActionResult> {
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const t = await ceviri();
 
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: t({ tr: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`, en: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }) };
-  }
+  /*
+    Şifre politikası tek yerde (lib/kimlik-kurallari.ts): 12–64 karakter, 72 bayt,
+    yaygın şifre yok. Form aynı fonksiyonu tarayıcıda da gösterir; burası
+    atlatılamayan denetim (tarayıcı denetimi kapatılsa da Supabase'e gitmeden ret).
+  */
+  const kuralHatasi = sifreKuraliHatasi(password);
+  if (kuralHatasi) return { error: t(kuralHatasi) };
   if (password !== passwordConfirm) {
-    return { error: t({ tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." }) };
+    return { error: t(SIFRE_ESLESMEDI) };
   }
 
   const supabase = await createClient();
@@ -404,15 +470,79 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
     };
   }
 
+  if (baglam === "ayarlar") {
+    const mevcut = String(formData.get("currentPassword") ?? "");
+    if (!mevcut) return { error: t({ tr: "Mevcut şifrenizi girin.", en: "Enter your current password." }) };
+    const sonuc = await mevcutSifreyiDogrula(user, mevcut);
+    if (sonuc === "yanlis") return { error: t({ tr: "Mevcut şifre yanlış.", en: "The current password is incorrect." }) };
+    if (sonuc === "kilitli") {
+      return { error: t({ tr: "Çok fazla hatalı deneme yapıldı. Birkaç dakika sonra tekrar deneyin.", en: "Too many incorrect attempts. Try again in a few minutes." }) };
+    }
+    if (sonuc === "hata") {
+      return { error: t({ tr: "Mevcut şifreniz şu anda doğrulanamadı. Lütfen tekrar deneyin.", en: "Your current password could not be verified right now. Please try again." }) };
+    }
+  } else {
+    /*
+      Mevcut şifresiz yol yalnızca e-postadaki bağlantıyla açılmış (ya da
+      henüz şifresi olmayan) oturuma açık: lib/sifre-yetkisi.ts. Eskiden
+      şifreyle açılmış her oturum bu işlemi doğrudan çağırıp mevcut şifreyi
+      bilmeden yenisini koyabiliyordu.
+    */
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const kayitlar = amrKayitlari(session?.access_token);
+    const simdi = Math.floor(Date.now() / 1000);
+    let karar = sifirlamaKarari(kayitlar, null, simdi);
+    if (karar !== "izin") karar = sifirlamaKarari(kayitlar, await ilkSifreDurumu(supabase), simdi);
+    if (karar === "suresi-doldu") {
+      return {
+        error: t({
+          tr: "Şifre bağlantınızın süresi doldu. Güvenliğiniz için yeni bir sıfırlama bağlantısı isteyin.",
+          en: "Your password link has expired. For your security, request a new reset link.",
+        }),
+      };
+    }
+    if (karar === "yetkisiz") {
+      return {
+        error: t({
+          tr: "Şifre bu sayfadan yalnızca e-postadaki bağlantıyla belirlenebilir. Oturumunuz açıksa şifrenizi Ayarlar'dan, mevcut şifrenizle değiştirin.",
+          en: "A password can only be set here through the link in your email. If you are signed in, change it in Settings using your current password.",
+        }),
+      };
+    }
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     // Yalnızca kod ve durum: hata nesnesinin tamamı günlüğe gitmesin (oturum ayrıntısı taşımamalı).
     console.error("[sifre] güncellenemedi", error.code, error.status);
     // reauthentication_needed'da oturum KAPATILMAZ; çıkış kullanıcının düğmesidir (reset-password/page.tsx).
-    return { error: t(sifreHatasi(error.code, baglam)) };
+    // Zayıf şifrede yalnızca tanınan neden adları okunur (lib/sifre-hatasi.ts); şifre ve hata iletisi günlüğe de metne de girmez.
+    return { error: t(sifreHatasi(error.code, baglam, zayifSifreNedenleri(error))) };
   }
   // İlk şifre kapısı bu oturumda artık sorgu yapmasın (proxy.ts, lib/ilk-sifre.ts).
   (await cookies()).set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
+
+  /*
+    DİĞER OTURUMLAR (16.11.2026). Şifre değişince bu tarayıcı dışındaki
+    bütün oturumlar kapatılır: değişikliğin sebebi çoğu zaman eski şifrenin
+    başkasında olması, o kişinin açık oturumu da kapanmalı. Kurtarma
+    bağlantısıyla gelen için de aynı. Eskiden bu Ayarlar'da ayrı bir düğmeydi
+    ve kullanıcının hatırlamasına kalmıştı. Kapatılamazsa şifre yine
+    değişmiştir (geri alınmaz); kullanıcıya düğme gösterilir.
+  */
+  const { error: digerHatasi } = await supabase.auth.signOut({ scope: "others" });
+  if (digerHatasi) {
+    console.error("[sifre] diğer oturumlar kapatılamadı", digerHatasi.code, digerHatasi.status);
+    return {
+      success: true,
+      warning: t({
+        tr: "Şifreniz değişti, ancak diğer cihazlardaki oturumlar kapatılamadı. Ayarlar → Diğer cihazlar'dan kapatın.",
+        en: "Your password has changed, but sessions on other devices could not be signed out. Sign them out from Settings → Other devices.",
+      }),
+    };
+  }
   return { success: true };
 }
 
