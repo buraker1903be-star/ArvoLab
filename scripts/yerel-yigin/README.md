@@ -16,6 +16,7 @@ ister).
 | `roller.sql`, `kabuk.sql` | Supabase rollerinin, `auth.jwt()`'nin ve storage'ın en küçük taklidi. |
 | `gecit.mjs` | Tek adres `127.0.0.1:54401`: `/auth/v1` → GoTrue, `/rest/v1` → PostgREST. `/__gecit/kanca`: eşleşen ilk isteğin cevabı dönmeden önce başka bir oturumun isteğini çalıştırır (yedekle yazma arasındaki yarışı belirlenimci kurmak için). |
 | `kayit-butunlugu.mjs <yeni\|eski>` | 14 senaryo; `lib/metin-yazimi.ts`'i (sunucu eylemlerinin kodu) gerçek PostgREST'e karşı koşturur. `eski` = 97a2943'teki eylem gövdelerinin birebir aktarımı. |
+| `kimlik-kabul.mjs <adres>` | Gerçek Next + GoTrue: mevcut kullanıcı, Ayarlar'da mevcut şifre (yanlış/doğru), 12 karakter, diğer oturumların düşmesi, kurtarma, kurtarma sayfası atlatması, davetli kapısı (proxy + panel dışından sunucu işlemi), kayıt, telefon/masaüstü. Sonuç `sonuclar/kimlik-kabul.json`. |
 | `kayit-tarayici-kabul.mjs <adres>` | Gerçek Next uygulaması (`next dev`) yığına bağlıyken tarayıcıda: zorla kayıt (yedek düşerken ve meşru), sürüm geri yükleme (yarış ve meşru). |
 
 ## Koşturma
@@ -45,3 +46,30 @@ node scripts/yerel-yigin/kayit-tarayici-kabul.mjs http://localhost:3124
 |---|---|---|---|
 | `kayit-butunlugu.mjs` | 9/14 (S4, S5, S6, S7, S11 düşüyor) | 12/14 (S4, S11 tetikleyiciye bağlı) | 14/14 |
 | `kayit-tarayici-kabul.mjs` | 2/4 (T1, T3: öteki sekmenin metni kayboluyor) | — | 4/4 |
+
+## 16.11.2026 sonucu (G1 kimlik, RELEASE CLOSURE 03)
+
+| | design/os5 `19ff715` (G1 yok) | Bu dal |
+|---|---|---|
+| `kimlik-kabul.mjs` | 2/10 (`sonuclar/kimlik-kabul-eski-19ff715.json`) | 15/15 (`sonuclar/kimlik-kabul.json`) |
+
+Eski kodda: şifreyle açılmış oturum `/reset-password`'ten mevcut şifresiz
+şifre değiştirdi (K6); davetli şifre belirlemeden panele girdi (K8) ve
+hesap silme işlemi panel dışı bir yoldan çalıştı (K9); kayıt şifre aldı ve
+doğrulanan kullanıcı doğrudan panele düştü (K11). Ayarlar'da mevcut şifre
+alanı olmadığı için K2–K5 ve K12 koşamadı.
+
+Son kabul koşusu, Production/Test'teki uygulama sırasıyla: güncel design/os5
+şeması önce, ardından üç G1 migration'ı SIRA DIŞI ve iki kez (tekrar
+güvenli). Yeni işlev eklendikten sonra PostgREST şema önbelleği yenilenmeli
+(burada `docker restart p52rest`; Supabase'te DDL olayıyla kendiliğinden):
+yenilenmezse `ilk_sifre_gerekli` "bulunamadı" döner ve ilk şifre kapısı
+tasarım gereği AÇIK kalır (kimse kilitlenmez ama kapı da çalışmaz).
+
+G1 tetikleyicisi ve yönetici API'si: GoTrue v2.197.0 yönetici kaydını tek
+işlemde açıp onaylıyor ve şifre verilmese de rastgele bir özet yazıyor.
+Tetikleyici onay anında bu özeti (ve yöneticinin verdiği şifreyi) siler;
+hesap ilk şifreye düşer. Bilerek böyle (gerekçe:
+`tests/db/eposta-onayi-kimlik.test.mjs`). Panelden şifreyle açılan hesap
+"şifremi unuttum" ile şifresini belirler (K13). Betik mevcut kullanıcıyı bu
+yüzden önce onaylı açıp şifreyi ayrı bir güncellemeyle koyar.

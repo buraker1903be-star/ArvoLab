@@ -6,18 +6,21 @@ import { ArrowLeft, ArrowRight, FileCheck2, MailCheck } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { signUp } from "@/app/actions/auth";
+import { baglantiSuresiMetni } from "@/lib/kimlik-kurallari";
 import type { ActionResult } from "@/lib/auth-guards";
-import { EN_KISA_SIFRE } from "@/lib/kayit";
 import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 import { Bildirim } from "@/app/_components/ui/bildirim";
 import { Dugme, DugmeBaglanti } from "@/app/_components/ui/dugme";
 import { Girdi } from "@/app/_components/ui/girdi";
-import { SifreGirdisi } from "@/app/_components/ui/sifre-girdisi";
 
 /*
   KAYIT FORMU (02.11.2026'da yeniden yazıldı, kurum sahibinin isteği:
-  açılır pencerede ad soyad, e-posta, telefon, şifre, şifre tekrarı ve
-  yasal metin kutuları).
+  açılır pencerede ad soyad, e-posta, telefon ve yasal metin kutuları).
+
+  ŞİFRE BURADA ALINMIYOR (G1, 06.11.2026): kayıtta alınan şifreyi adresin
+  sahibi olmayan biri de koyabiliyordu ve gerçek sahip e-postasını
+  doğrulayınca hesap o şifreyle açılıyordu. Şifre, doğrulama bağlantısından
+  sonra açılan "Şifrenizi belirleyin" sayfasında belirleniyor.
 
   Aynı bileşen iki yerde: giriş sayfasındaki "Ücretsiz hesap oluştur"
   penceresi ve /kayit sayfası (sitedeki "Ücretsiz deneyin" bağlantıları
@@ -36,11 +39,17 @@ import { SifreGirdisi } from "@/app/_components/ui/sifre-girdisi";
   sınırını yakar.
 
   Signature OS 5 / Phase 2 (12.11.2026): yalnızca görünüş. Alan adları,
-  kimlikler, autocomplete, minLength (EN_KISA_SIFRE), telefon deseni,
+  kimlikler, autocomplete, telefon deseni,
   sözleşme okuma kuralı, gizli "sozlesmeOkundu" alanı ve signUp eylemi
   AYNI. Şifre ve tekrarı ayrı göster/gizle düğmeleri taşıyor (ortak
   SifreGirdisi); eskiden tek düğme ikisini birden açıyordu. Form tek
   sütun, sayfada da pencerede de (os5-kimlik.css).
+
+  G1 (06.11.2026, design/os5'e 16.11.2026'da taşındı): kayıt artık şifre
+  almıyor. Eskiden şifre kayıt anında konuyordu; başkasının adresiyle kayıt
+  açan biri, adresin sahibi bağlantıya tıkladığı an kendi şifresiyle
+  hazır bekleyen bir hesaba kavuşuyordu. Şifre artık doğrulanmış oturumda,
+  /reset-password?ilk=1 sayfasında belirleniyor.
 */
 export default function KayitFormu({ pencerede = false }: { pencerede?: boolean }) {
   const t = useCeviri();
@@ -49,14 +58,10 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
     async (_onceki, formData) => (await signUp(_onceki, formData)) ?? null,
     null,
   );
-  const [sifre, setSifre] = useState("");
-  const [tekrar, setTekrar] = useState("");
   const [okuyor, setOkuyor] = useState(false);
   const [okundu, setOkundu] = useState(false);
   const [sozlesme, setSozlesme] = useState(false);
   const sozlesmeKutusu = useRef<HTMLInputElement>(null);
-
-  const eslesmiyor = tekrar.length > 0 && tekrar !== sifre;
 
   if (durum?.success) {
     return (
@@ -68,8 +73,9 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
           <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
           <p>
             {t({
-              tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve doğrudan çalışma alanınıza girersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
-              en: "We sent a verification link to your address. Clicking it activates your account and takes you straight to your workspace. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
+              // Süre Supabase ayarının aynası (lib/kimlik-kurallari.ts); eskiden burada sabit bir gün süresi yazıyordu, bağlantı 1 saatte düşüyordu.
+              tr: `Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı ${baglantiSuresiMetni().tr} geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.`,
+              en: `We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for ${baglantiSuresiMetni().en}; if you don't see the email, check your spam folder.`,
             })}
           </p>
         </header>
@@ -157,38 +163,12 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             required
           />
 
-          <SifreGirdisi
-            id="kayit-sifre"
-            name="password"
-            etiket={t({ tr: "Şifre", en: "Password" })}
-            autoComplete="new-password"
-            minLength={EN_KISA_SIFRE}
-            value={sifre}
-            onChange={(e) => setSifre(e.target.value)}
-            aciklama={t({ tr: `En az ${EN_KISA_SIFRE} karakter.`, en: `At least ${EN_KISA_SIFRE} characters.` })}
-            required
-          />
-
-          {/*
-            Eşleşmeme: alan aria-invalid olur ve hata metni aria-describedby ile
-            bağlanır. Duyuru aşağıdaki KALICI canlı bölgeden: sonradan eklenen
-            bir aria-live öğesini ekran okuyucular çoğu zaman okumaz; eskiden
-            de canlı bölge sürekli yerindeydi.
-          */}
-          <SifreGirdisi
-            id="kayit-sifre-tekrar"
-            name="passwordRepeat"
-            etiket={t({ tr: "Şifre tekrarı", en: "Repeat password" })}
-            autoComplete="new-password"
-            minLength={EN_KISA_SIFRE}
-            value={tekrar}
-            onChange={(e) => setTekrar(e.target.value)}
-            hata={eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : undefined}
-            required
-          />
-          <span className="sr-only" aria-live="polite">
-            {eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : ""}
-          </span>
+          <p className="os5-kimlik-not">
+            {t({
+              tr: "Şifrenizi, e-posta adresinizi doğruladıktan sonra belirleyeceksiniz.",
+              en: "You will set your password after verifying your email address.",
+            })}
+          </p>
 
           <fieldset className="os5-kimlik-onaylar">
             <legend className="sr-only">{t({ tr: "Yasal onaylar", en: "Legal consents" })}</legend>
@@ -255,7 +235,7 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             </label>
           </fieldset>
 
-          <Dugme type="submit" tamGenislik yukleniyor={bekliyor} disabled={bekliyor || eslesmiyor}>
+          <Dugme type="submit" tamGenislik yukleniyor={bekliyor} disabled={bekliyor}>
             {bekliyor ? t({ tr: "Hesabınız oluşturuluyor…", en: "Creating your account…" }) : t({ tr: "Ücretsiz hesabımı oluştur", en: "Create my free account" })}
             {bekliyor ? null : <ArrowRight size={18} aria-hidden="true" />}
           </Dugme>

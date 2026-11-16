@@ -169,6 +169,10 @@
 }
 .os5-kimlik-geri:hover { color: var(--primary-ink); }
 .os5-kimlik-metin-baglanti { display: inline; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+/* İlk şifre / sıfırlama ekranının çıkış ve kurtarma düğmeleri (G1 Aşama 8.3). Bağlantı görünümlü <button>: tarayıcı düğme kalıbı sıfırlanır. */
+.os5-kimlik-kurtarma { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.os5-kimlik-kurtarma form { margin: 0; }
+.os5-kimlik-kurtarma button.os5-kimlik-geri { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
 .os5-kimlik-not { margin: 16px 0 0; color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-govde); line-height: 1.55; }
 
 /* ---- Girişin altındaki kayıt bölümü ---- */

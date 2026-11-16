@@ -7,6 +7,7 @@ import { Bildirim } from "@/app/_components/ui/bildirim";
 import { Girdi } from "@/app/_components/ui/girdi";
 import { ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
+import { YENIDEN_DOGRULAMA_NEDENI } from "@/lib/sifre-hatasi";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -30,7 +31,7 @@ const errorMessages: Record<string, Metin> = {
 };
 
 type ForgotPasswordPageProps = {
-  searchParams: Promise<{ error?: string; sent?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; neden?: string }>;
 };
 
 export default async function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {
@@ -38,6 +39,8 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
   const t = await ceviri();
   const hata = params.error ? errorMessages[params.error] : undefined;
   const sent = params.sent === "1";
+  // İlk şifre ekranından "Yeni doğrulama bağlantısı iste" ile gelindi (G1 Aşama 8.3). Değer beyaz listeli; sorgudaki metin yansıtılmaz.
+  const yenidenDogrulama = params.neden === YENIDEN_DOGRULAMA_NEDENI && !sent;
 
   return (
     <KimlikYerlesimi>
@@ -51,13 +54,21 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
         </p>
       </header>
 
-      {sent || hata ? (
+      {sent || hata || yenidenDogrulama ? (
         <div className="os5-kimlik-bildirimler">
           {sent ? (
             <Bildirim ton="basari" rol="status">
               {t({
                 tr: "Bu adres kayıtlıysa birkaç dakika içinde bir sıfırlama bağlantısı gelecek. Bağlantıyı bu cihazda ve aynı tarayıcıda açın; spam klasörünü de kontrol edin.",
                 en: "If this address is registered, a reset link will arrive within a few minutes. Open it on this device in the same browser, and check your spam folder.",
+              })}
+            </Bildirim>
+          ) : null}
+          {yenidenDogrulama ? (
+            <Bildirim ton="uyari" rol="status">
+              {t({
+                tr: "Bu cihazdaki oturumunuz kapatıldı. Şifrenizi belirleyebilmek için e-posta adresinizi girin; size yeni bir doğrulama bağlantısı gönderelim.",
+                en: "You have been signed out on this device. Enter your email address and we will send you a new verification link so you can set your password.",
               })}
             </Bildirim>
           ) : null}
