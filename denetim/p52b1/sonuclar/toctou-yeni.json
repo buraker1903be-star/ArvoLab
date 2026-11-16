@@ -9,7 +9,7 @@
       "bSonrasiNesne": true,
       "a": "Kaydedilemedi; tekrar deneyin.",
       "kayit": [
-        "yuklendi|f73f8565-d727-4177-8b1b-0b791523ca26/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-c7b9931a-3c28-440e-b5e9-bcd25a492aed.pdf"
+        "yuklendi|de272b6f-ed08-4eb8-be40-b1ff4ffb51cc/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-d56a1d9d-5b6d-4618-b4a9-bf771bd20571.pdf"
       ],
       "nesneVar": true,
       "sarkan": []
@@ -25,7 +25,7 @@
       "aSonrasiNesne": false,
       "b": "başarılı",
       "kayit": [
-        "yuklendi|bb1857a3-5502-41fe-b8fb-492c1312e3c7/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-f91d0200-7c6f-4a47-8793-5bcd20859c51.pdf"
+        "yuklendi|c6c19b37-25fc-4336-925a-3dfbd05a8956/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-71bed042-6680-4784-8832-37d777779891.pdf"
       ],
       "nesneVar": true,
       "sarkan": []
@@ -37,8 +37,8 @@
     "sonuc": "PASS",
     "sorun": null,
     "kanit": {
-      "y1": "15f8c3bd-894c-49f1-8068-1556506276ba/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-bb757d7a-dd73-4e82-9c1b-a7ad37a59d52.pdf",
-      "y2": "15f8c3bd-894c-49f1-8068-1556506276ba/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-52cb5780-8d8f-4bc1-b7b1-2b7f462f2162.pdf",
+      "y1": "8e706c7f-1656-4153-8407-1eca72b31594/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-3c87cb03-081a-4c49-96a9-93dde8c1a3be.pdf",
+      "y2": "8e706c7f-1656-4153-8407-1eca72b31594/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-46a33951-f002-4bcf-8ee3-adbd35416a68.pdf",
       "ayni": false,
       "h1": null,
       "h2": null
@@ -56,8 +56,8 @@
       "rA": "başarılı",
       "rB": "başarılı",
       "kayit": [
-        "yuklendi|833811d3-d1a1-4b82-b1fe-f0ef86b2071b/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-ea6c8f39-ac88-40bf-bdbc-1035f9fd0d5c.pdf",
-        "yuklendi|833811d3-d1a1-4b82-b1fe-f0ef86b2071b/kaynak-pdf/y-907b0811-c905-418c-860d-444e40ebc5e3-53ad60b0-9d11-4886-943a-29390ac333b0.pdf"
+        "yuklendi|a2ab1f6d-5738-4fde-b625-90869bb004b4/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-082bd64c-5d56-4014-91a2-8bc8f81843a5.pdf",
+        "yuklendi|a2ab1f6d-5738-4fde-b625-90869bb004b4/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-b74da05a-0e32-4ab1-a1f6-ca8cad4311c9.pdf"
       ],
       "kendiPdfi": {
         "Ali, B. ": true,
@@ -84,9 +84,72 @@
         "beklenmeyen": 0
       },
       "kayit": [
-        "indirildi|4793468e-f49b-4cbf-8036-d20714a4c7ed/kaynak-pdf/c0459901e985bf7a-62f88dc4-2bb0-4f78-932f-22ac47a08959.pdf"
+        "indirildi|e7420cf8-c9b0-478f-9c48-b9de21e9a38f/kaynak-pdf/c0459901e985bf7a-06eec6af-12fe-4efd-9dc1-36667a949f6c.pdf"
       ],
       "nesne": 1,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y4",
+    "ad": "Geri yükleme başka işlemin dosyasını DEĞİŞTİRMEZ: silmeden sonra aynı yola başka bayt yazıldıysa korunur",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "icerik": "%PDF-1.7\n% B islemi\n%%EOF\n"
+    }
+  },
+  {
+    "kimlik": "Y5",
+    "ad": "Otomatik indirme: kayıt yazıldı, dosya depodan kayboldu ve geri yüklenemedi → başarı listesinde YOK, kayıt 'erişilemedi', 'depo' sorunu",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "erisilemedi|-"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 1,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "erisilemedi|-"
+      ],
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y6",
+    "ad": "Yükleme ile değiştirme: kayıt yazıldı, yeni dosya kayboldu ve geri yüklenemedi → hata, kayıt ÖNCEKİ PDF'e döner, önceki PDF yerinde",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "PDF depoya ulaşmadı; yeniden yükleyin.",
+      "kayit": [
+        "yuklendi|476bbeaf-dbb2-4879-ac25-b69516bd72eb/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-6551e527-6939-49d1-bd38-4bc4aa6f305e.pdf"
+      ],
+      "oncekiVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y7",
+    "ad": "Geri alma DAHA YENİ kaydı ezmez: otomatik indirme 'kayıp'ı geri alırken öğrenci aynı künyeye yeni PDF yüklemiş",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ogrenci": "başarılı",
+      "satirlar": [
+        "yuklendi|cf66ddd0-3f1a-49dc-86a9-6d3d43c7cb12/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-88ba0c9d-2228-43a7-8ac6-0f4154e1e1e4.pdf"
+      ],
+      "kayit": [
+        "yuklendi|cf66ddd0-3f1a-49dc-86a9-6d3d43c7cb12/kaynak-pdf/y-c6005267-0c92-4603-9cea-ffd7686894bc-88ba0c9d-2228-43a7-8ac6-0f4154e1e1e4.pdf"
+      ],
+      "yeniVar": true,
       "sarkan": []
     }
   }

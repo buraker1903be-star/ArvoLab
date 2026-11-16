@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { KAYIP_IZI, YETIM_IZI, baglantiyiDogrula, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
+import { KAYIP_IZI, YETIM_IZI, baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
 
 /*
   P52b-1 karar testleri. İstemci SAHTE: burada sınanan, hangi yanıtta hangi
@@ -22,7 +22,7 @@ function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false, depo: { var?: bool
     const c: Cagri = { tablo, adimlar: [] };
     cagrilar.push(c);
     const zincir: Record<string, unknown> = {};
-    for (const ad of ["select", "eq", "neq", "not", "is", "limit", "upsert", "update", "maybeSingle"]) {
+    for (const ad of ["select", "eq", "neq", "not", "is", "limit", "upsert", "update", "delete", "maybeSingle"]) {
       zincir[ad] = (...a: unknown[]) => {
         c.adimlar.push([ad, ...a]);
         return zincir;
@@ -116,7 +116,7 @@ test("otomatik: her adımın hatası 'hata' olarak döner (sessiz başarı yok)"
 test("yükleme: güncelleme OKUNAN eski yola koşullu; eski yol sonuçla döner", async () => {
   const s = sahteIstemci([{ data: { depo_yolu: ESKI } }, { data: [{ id: 1 }] }]);
   const r = await yuklemeyiYaz(s.sb, kayit({ durum: "yuklendi", depo_yolu: YOL }), "id");
-  assert.deepEqual(r, { tur: "yazildi", satir: { id: 1 }, eskiYol: ESKI });
+  assert.deepEqual(r, { tur: "yazildi", satir: { id: 1 }, eskiYol: ESKI, onceki: { depo_yolu: ESKI } });
   assert.deepEqual(s.cagrilar[1].adimlar.at(-2), ["eq", "depo_yolu", ESKI]);
 });
 
@@ -130,7 +130,7 @@ test("yükleme: dosyasız satırda koşul 'depo_yolu is null'", async () => {
 test("yükleme: arada satır değişirse yeniden okur; üç denemede de değişirse 'yarisma' (eski dosya silinmesin diye yazmaz)", async () => {
   const bir = sahteIstemci([{ data: { depo_yolu: ESKI } }, { data: [] }, { data: { depo_yolu: YOL + "x" } }, { data: [{ id: 2 }] }]);
   const r1 = await yuklemeyiYaz(bir.sb, kayit({ durum: "yuklendi", depo_yolu: YOL }), "id");
-  assert.deepEqual(r1, { tur: "yazildi", satir: { id: 2 }, eskiYol: YOL + "x" });
+  assert.deepEqual(r1, { tur: "yazildi", satir: { id: 2 }, eskiYol: YOL + "x", onceki: { depo_yolu: YOL + "x" } });
 
   const uc = sahteIstemci([{ data: { depo_yolu: ESKI } }, { data: [] }, { data: { depo_yolu: ESKI } }, { data: [] }, { data: { depo_yolu: ESKI } }, { data: [] }]);
   assert.deepEqual(await yuklemeyiYaz(uc.sb, kayit({ durum: "yuklendi", depo_yolu: YOL }), "id"), { tur: "yarisma" });
@@ -139,7 +139,7 @@ test("yükleme: arada satır değişirse yeniden okur; üç denemede de değişi
 test("yükleme: satır yokken eşzamanlı eklenirse (ignoreDuplicates 0 satır) yeniden okunup koşullu güncellenir", async () => {
   const s = sahteIstemci([{ data: null }, { data: [] }, { data: { depo_yolu: ESKI } }, { data: [{ id: 3 }] }]);
   const r = await yuklemeyiYaz(s.sb, kayit({ durum: "yuklendi", depo_yolu: YOL }), "id");
-  assert.deepEqual(r, { tur: "yazildi", satir: { id: 3 }, eskiYol: ESKI });
+  assert.deepEqual(r, { tur: "yazildi", satir: { id: 3 }, eskiYol: ESKI, onceki: { depo_yolu: ESKI } });
 });
 
 test("sahipsizseSil: başka kayıt gösteriyorsa SİLMEZ", async () => {
@@ -240,6 +240,42 @@ test("baglantiyiDogrula: dosya yerindeyse dokunmaz; yoksa geri yükler (Y2); ger
     // Varlık sorusu düşerse "zaten var" cevabı dosyanın yerinde olduğunu söyler.
     const bilinmez = sahteIstemci([], false, { var: "firlat", yuklemeHatasi: "The resource already exists" });
     assert.equal(await baglantiyiDogrula(bilinmez.sb, YOL, BAYT, "deneme"), "yerinde");
+  } finally {
+    g.birak();
+  }
+});
+
+const ONCEKI = { durum: "yuklendi", depo_yolu: ESKI, kaynak_adres: null, baslik_eslesti: true, bakildi: "2026-11-01T00:00:00Z" };
+
+test("baglamayiGeriAl: önceki hâle döner, YALNIZCA satır hâlâ bizim yolumuzu gösteriyorsa (depo_yolu = yol koşulu)", async () => {
+  const s = sahteIstemci([{ data: [{ id: 1, depo_yolu: ESKI }] }]);
+  const r = await baglamayiGeriAl(s.sb, P, "yilmaz 2020", YOL, ONCEKI, "id, depo_yolu");
+  assert.deepEqual(r, { tur: "geri_alindi", satir: { id: 1, depo_yolu: ESKI } });
+  const adimlar = s.cagrilar[0].adimlar;
+  assert.deepEqual(adimlar.find(([a]) => a === "update")?.[1], ONCEKI);
+  assert.ok(adimlar.some(([a, k, v]) => a === "eq" && k === "depo_yolu" && v === YOL), "koşul bizim yolumuz");
+});
+
+test("baglamayiGeriAl: satırı biz açtıysak (önceki yok) koşullu SİLER", async () => {
+  const s = sahteIstemci([{ data: [{ id: 1 }] }]);
+  const r = await baglamayiGeriAl(s.sb, P, "yilmaz 2020", YOL, null, "id");
+  assert.deepEqual(r, { tur: "geri_alindi", satir: null });
+  const adimlar = s.cagrilar[0].adimlar;
+  assert.ok(adimlar.some(([a]) => a === "delete"));
+  assert.ok(adimlar.some(([a, k, v]) => a === "eq" && k === "depo_yolu" && v === YOL));
+});
+
+test("baglamayiGeriAl: daha yeni bir yazma varsa (0 satır) 'degismis' — hiçbir şeye dokunulmadı", async () => {
+  const s = sahteIstemci([{ data: [] }]);
+  assert.deepEqual(await baglamayiGeriAl(s.sb, P, "yilmaz 2020", YOL, ONCEKI, "id"), { tur: "degismis" });
+});
+
+test("baglamayiGeriAl: yazılamazsa 'hata' ve KAYIP izi (sessiz değil)", async () => {
+  const g = gunlukYakala();
+  try {
+    const s = sahteIstemci([{ error: { message: "ağ" } }]);
+    assert.equal((await baglamayiGeriAl(s.sb, P, "yilmaz 2020", YOL, ONCEKI, "id")).tur, "hata");
+    assert.ok(g.satirlar.some((x) => x.includes(KAYIP_IZI) && x.includes(YOL)));
   } finally {
     g.birak();
   }

@@ -218,8 +218,18 @@ export async function otomatikSonucuYaz<T>(sb: SupabaseClient, kayit: KaynakPdfK
   return { tur: "korundu", satir: (simdiki as T | null) ?? null };
 }
 
+/** Yüklemenin yerine geçtiği satırın hâli: bağlantı geri alınırsa bu hâle dönülür. */
+export type OncekiDurum = {
+  durum: string;
+  depo_yolu: string | null;
+  kaynak_adres: string | null;
+  baslik_eslesti: boolean | null;
+  bakildi: string;
+};
+const ONCEKI_SECIM = "durum, depo_yolu, kaynak_adres, baslik_eslesti, bakildi";
+
 export type YuklemeSonuc<T> =
-  | { tur: "yazildi"; satir: T; eskiYol: string | null }
+  | { tur: "yazildi"; satir: T; eskiYol: string | null; onceki: OncekiDurum | null }
   /** Üç denemede de satır başka biri tarafından değiştirildi. */
   | { tur: "yarisma" }
   | { tur: "hata"; hata: PostgrestHatasi };
@@ -236,7 +246,7 @@ export async function yuklemeyiYaz<T>(sb: SupabaseClient, kayit: KaynakPdfKaydi,
   for (let deneme = 0; deneme < 3; deneme++) {
     const { data: mevcut, error: okumaHatasi } = await sb
       .from(TABLO)
-      .select("depo_yolu")
+      .select(ONCEKI_SECIM)
       .eq("project_id", kayit.project_id)
       .eq("kunye_anahtari", kayit.kunye_anahtari)
       .maybeSingle();
@@ -248,7 +258,7 @@ export async function yuklemeyiYaz<T>(sb: SupabaseClient, kayit: KaynakPdfKaydi,
         .upsert(kayit, { onConflict: "project_id,kunye_anahtari", ignoreDuplicates: true })
         .select(secim);
       if (ekle.error) return { tur: "hata", hata: ekle.error };
-      if (ekle.data?.length) return { tur: "yazildi", satir: ekle.data[0] as T, eskiYol: null };
+      if (ekle.data?.length) return { tur: "yazildi", satir: ekle.data[0] as T, eskiYol: null, onceki: null };
       continue; // arada biri ekledi: yeniden oku
     }
 
@@ -261,7 +271,46 @@ export async function yuklemeyiYaz<T>(sb: SupabaseClient, kayit: KaynakPdfKaydi,
     sorgu = eskiYol === null ? sorgu.is("depo_yolu", null) : sorgu.eq("depo_yolu", eskiYol);
     const guncelle = await sorgu.select(secim);
     if (guncelle.error) return { tur: "hata", hata: guncelle.error };
-    if (guncelle.data?.length) return { tur: "yazildi", satir: guncelle.data[0] as T, eskiYol };
+    if (guncelle.data?.length) return { tur: "yazildi", satir: guncelle.data[0] as T, eskiYol, onceki: mevcut as unknown as OncekiDurum };
   }
   return { tur: "yarisma" };
+}
+
+export type GeriAlmaSonucu<T> =
+  | { tur: "geri_alindi"; satir: T | null }
+  /** Satır artık bu yolu göstermiyor: daha yeni bir yazma var, ona dokunulmadı. */
+  | { tur: "degismis" }
+  | { tur: "hata"; hata: PostgrestHatasi };
+
+/*
+  Bağlantıyı GERİ ALMA: kayıt yazıldı ama dosya depoda yok ve geri
+  yüklenemedi (baglantiyiDogrula → "kayip"). Kullanıcıya hata göstermek
+  YETMİYOR: kayıt "PDF hazır" demeye devam ederse teslim paketi, "PDF'i aç"
+  ve "Kaynağa sor" olmayan bir dosyaya gider, otomatik arama da o künyeyi
+  hazır sayıp bir daha denemez. Bu yüzden kaydın kendisi düzeltilir.
+
+  Düzeltme YALNIZCA satır hâlâ bizim yolumuzu gösteriyorsa yapılır
+  (`depo_yolu = yol` koşullu, tek ifade): arada başka bir istek daha yeni
+  bir PDF yazdıysa satır başka yolu gösterir ve hiçbir şey değişmez.
+  `hedef` null: satırı biz açmıştık, silinir. Değilse satır o hâle döner
+  (öğrenci yüklemesinde önceki hâl, otomatik aramada "erişilemedi").
+*/
+export async function baglamayiGeriAl<T>(
+  sb: SupabaseClient,
+  projectId: string,
+  kunyeAnahtari: string,
+  yol: string,
+  hedef: OncekiDurum | null,
+  secim: string,
+): Promise<GeriAlmaSonucu<T>> {
+  const sorgu = hedef
+    ? sb.from(TABLO).update(hedef).eq("project_id", projectId).eq("kunye_anahtari", kunyeAnahtari).eq("depo_yolu", yol).select(secim)
+    : sb.from(TABLO).delete().eq("project_id", projectId).eq("kunye_anahtari", kunyeAnahtari).eq("depo_yolu", yol).select(secim);
+  const { data, error } = await sorgu;
+  if (error) {
+    console.error(`${KAYIP_IZI} bağlantı geri alınamadı, kayıt depoda olmayan dosyayı gösteriyor:`, yol, error.message);
+    return { tur: "hata", hata: error };
+  }
+  if (!data?.length) return { tur: "degismis" };
+  return { tur: "geri_alindi", satir: hedef ? (data[0] as T) : null };
 }

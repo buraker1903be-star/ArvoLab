@@ -26,7 +26,7 @@ import {
 } from "@/lib/kaynak-pdf";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { yuklemeYoluMu } from "@/lib/kaynak-pdf-yolu";
-import { baglantiyiDogrula, otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
+import { baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
 import { YEREL } from "@/lib/dil";
 
 /*
@@ -205,7 +205,34 @@ export async function kaynakPdfleriniBul(
       return { error: sonuc.hata?.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "PDF durumu kaydedilemedi; tekrar deneyin.", en: "Couldn't save the PDF status; please try again." }) };
     }
     // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
-    if (sonuc.tur === "yazildi" && yol && yolBayti) await baglantiyiDogrula(supabase, yol, yolBayti, "otomatik indirme bağlandı");
+    if (sonuc.tur === "yazildi" && yol && yolBayti && (await baglantiyiDogrula(supabase, yol, yolBayti, "otomatik indirme bağlandı")) === "kayip") {
+      /* Dosya depoda yok ve geri yüklenemedi. Eskiden bu sonuç okunmuyordu:
+         satır "PDF hazır" diye listeye giriyor, öğrenci açamadığı bir PDF
+         görüyor, sonraki aramalar da künyeyi hazır sayıp atlıyordu. Artık
+         bu künye BAŞARI listesine girmez; kayıt, hâlâ bizim yolumuzu
+         gösteriyorsa "erişilemedi"ye döner (adres korunur: "Kaynağa git").
+         Sorun "depo" sayılır: kullanıcı "bizim tarafımızdaki bir sorun"
+         hatasını görür (lib/kaynak-pdf → indirmeSorunuBildirimleri). */
+      sorunlar.depo += 1;
+      const geri = await baglamayiGeriAl<KaynakPdfSatiri>(
+        supabase,
+        projectId,
+        anahtar,
+        yol,
+        { durum: "erisilemedi", depo_yolu: null, kaynak_adres: kaynakAdres, baslik_eslesti: null, bakildi: kayit.bakildi },
+        SECIM,
+      );
+      if (geri.tur === "hata") {
+        return { error: t({ tr: "PDF depoya ulaşmadı ve durumu düzeltilemedi; tekrar deneyin.", en: "The PDF didn't reach storage and its status couldn't be corrected; please try again." }) };
+      }
+      if (geri.tur === "geri_alindi" && geri.satir) satirlar.push(geri.satir);
+      if (geri.tur === "degismis") {
+        // Arada daha yeni bir yazma oldu: onu olduğu gibi göster, dokunma.
+        const { data: guncel } = await supabase.from("kaynak_pdfleri").select(SECIM).eq("project_id", projectId).eq("kunye_anahtari", anahtar).maybeSingle();
+        if (guncel) satirlar.push(guncel as KaynakPdfSatiri);
+      }
+      continue;
+    }
     if (sonuc.satir) satirlar.push(sonuc.satir);
     /* Eskiden burada "önceki indirme" siliniyordu. Hazır olmayan satırın
        dosyası yok (tablonun check kısıtı), hazır satıra da artık
@@ -299,7 +326,12 @@ export async function kaynakPdfiYuklendi(
      gösteriyorsa onun PDF'i gidiyordu (denetim B-PATH-1). */
   // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
   if ((await baglantiyiDogrula(supabase, yol, bayt, "yükleme bağlandı")) === "kayip") {
-    // Kayıt yazıldı ama dosya depoda yok ve geri yüklenemedi: "yüklendi" demek veri kaybını gizlemek olur.
+    /* Kayıt yazıldı ama dosya depoda yok ve geri yüklenemedi: "yüklendi"
+       demek veri kaybını gizlemek olur. Kayıt da düzeltilir: hâlâ bizim
+       yolumuzu gösteriyorsa ÖNCEKİ hâline döner (eski PDF henüz silinmedi,
+       yerinde) ya da satırı biz açtıysak silinir. Daha yeni bir yazma
+       varsa ona dokunulmaz. */
+    await baglamayiGeriAl(supabase, projectId, anahtar, yol, sonuc.onceki, SECIM);
     yenile();
     return { error: t({ tr: "PDF depoya ulaşmadı; yeniden yükleyin.", en: "The PDF didn't reach storage; please upload it again." }) };
   }

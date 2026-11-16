@@ -94,3 +94,37 @@ test("RLS: yabancı kullanıcının koşullu yazması da kullanım sorgusu da hi
     await rol(db, "postgres");
     assert.deepEqual(await durum("k5"), { durum: "bulunamadi", depo_yolu: null });
   }));
+
+// baglamayiGeriAl: dosya depoda yoksa kaydın düzeltilmesi, yalnızca satır hâlâ o yolu gösteriyorsa.
+test("bağlantıyı geri alma koşullu: yol değişmişse (daha yeni yazma) 0 satır; değişmemişse önceki hâle döner ya da silinir", () =>
+  islem(db, async () => {
+    await tohum();
+    await rol(db, "authenticated", OGRENCI);
+    const YENI = `${TEZ}/kaynak-pdf/y-${OGRENCI}-1763200000010.pdf`;
+    const GERI = `update public.kaynak_pdfleri set durum = $3, depo_yolu = $4 where project_id = $1 and kunye_anahtari = 'k6' and depo_yolu = $2 returning id`;
+    await db.query(EKLE_YOKSA, [TEZ, OGRENCI, "k6", "indirildi", OTOMATIK]);
+    // Arada öğrenci yeni PDF yükledi: geri alma onu EZMEZ.
+    await db.query(`update public.kaynak_pdfleri set durum = 'yuklendi', depo_yolu = $1 where kunye_anahtari = 'k6'`, [YENI]);
+    assert.equal((await db.query(GERI, [TEZ, OTOMATIK, "erisilemedi", null])).rows.length, 0);
+    assert.deepEqual(await durum("k6"), { durum: "yuklendi", depo_yolu: YENI });
+    // Yol hâlâ bizimse geri alınır.
+    assert.equal((await db.query(GERI, [TEZ, YENI, "erisilemedi", null])).rows.length, 1);
+    assert.deepEqual(await durum("k6"), { durum: "erisilemedi", depo_yolu: null });
+    // Satırı biz açtıysak koşullu silme (RLS: çalışmaya yazabilen siler).
+    await db.query(EKLE_YOKSA, [TEZ, OGRENCI, "k7", "yuklendi", YUKLEME]);
+    const SIL = `delete from public.kaynak_pdfleri where project_id = $1 and kunye_anahtari = 'k7' and depo_yolu = $2 returning id`;
+    assert.equal((await db.query(SIL, [TEZ, OTOMATIK])).rows.length, 0);
+    assert.equal((await db.query(SIL, [TEZ, YUKLEME])).rows.length, 1);
+  }));
+
+test("RLS: yabancı kullanıcının geri alması/silmesi hiçbir satıra değmez", () =>
+  islem(db, async () => {
+    await tohum();
+    await rol(db, "authenticated", OGRENCI);
+    await db.query(EKLE_YOKSA, [TEZ, OGRENCI, "k9", "yuklendi", YUKLEME]);
+    await rol(db, "authenticated", BASKA);
+    assert.equal((await db.query(`update public.kaynak_pdfleri set durum = 'erisilemedi', depo_yolu = null where project_id = $1 and depo_yolu = $2 returning id`, [TEZ, YUKLEME])).rows.length, 0);
+    assert.equal((await db.query(`delete from public.kaynak_pdfleri where project_id = $1 and depo_yolu = $2 returning id`, [TEZ, YUKLEME])).rows.length, 0);
+    await rol(db, "postgres");
+    assert.deepEqual(await durum("k9"), { durum: "yuklendi", depo_yolu: YUKLEME });
+  }));

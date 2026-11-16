@@ -209,3 +209,52 @@ Silmeyi veritabanında sıraya koymak, yani bir **silme kuyruğu / mezar taşı 
 
 Bu yapı P52b-2'nin yetim taramasıyla aynı yere oturur ve `YETIM_DOSYA` / `KAYIP_DOSYA`
 izlerinin yerini kalıcı bir tablo alır.
+
+---
+
+## "Kayıp" sonucunun ele alınması (828e899 sonrası)
+
+`kaynakPdfleriniBul`, `baglantiyiDogrula` sonucunu okumuyordu. Kayıt yazıldıktan sonra dosya
+depoda yoksa ve geri yüklenemiyorsa, künye yine de "PDF hazır" olarak başarı listesine giriyordu.
+Senaryolar `toctou.mjs` dosyasında; gerçek Storage API üzerinde varlık bakışından hemen önce dosya
+siliniyor, geri yükleme isteği ağda düşürülüyor.
+
+| # | Senaryo | 828e899 | Sonra |
+|---|---|---|---|
+| Y5 | Otomatik indirme: kayıt yazıldı, dosya kayboldu, geri yüklenemedi | **FAIL** — başarı listesinde `indirildi`, kayıt depoda olmayan dosyayı gösteriyor, kullanıcıya hata yok | PASS — kayıt `erisilemedi`ye döndü (adres korundu), "depo" sorunu → "bizim tarafımızdaki bir sorun" hatası |
+| Y6 | Yükleme ile değiştirme: yeni dosya kayboldu, geri yüklenemedi | **FAIL** — hata dönüyordu ama kayıt depoda olmayan yeni dosyayı gösteriyordu | PASS — hata + kayıt ÖNCEKİ PDF'e döndü, önceki PDF yerinde |
+| Y7 | Geri alma sırasında öğrenci aynı künyeye yeni PDF yüklemiş | FAIL¹ | PASS — geri alma 0 satıra değdi, öğrencinin yeni PDF'i korundu |
+| Y4 | Geri yükleme, aynı yola sonradan yazılmış başka bayta dokunuyor mu | PASS | PASS (`upsert: false`: var olan nesne değişmiyor) |
+
+¹ 828e899 geri alma yapmıyordu. Bu yüzden sınanan yarış oluşmadı; kayıt, depoda olmayan dosyayı göstererek kaldı.
+
+**Yalnızca hata döndürmek yeterli mi? Hayır.** Kayıt "PDF hazır" demeye devam ederse:
+- teslim paketi (ZIP), "PDF'i aç" ve "Kaynağa sor" olmayan bir dosyaya gider;
+- otomatik arama künyeyi hazır sayıp bir daha denemez;
+- öğrenci "yükledim" sanır.
+
+Bu yüzden kaydın kendisi düzeltiliyor (`baglamayiGeriAl`). Düzeltme tek bir koşullu ifade:
+`… WHERE depo_yolu = <bizim yolumuz>`. Satır başka bir yolu gösteriyorsa (daha yeni bir yazma
+varsa) hiçbir şey değişmez.
+
+| | Otomatik indirme | Öğrenci yüklemesi |
+|---|---|---|
+| Kayıt yazılamadı | Hata; yalnızca kendi dosyası temizlenir | Hata; yalnızca kendi dosyası temizlenir |
+| Kayıt yazıldı, dosya yok, geri yüklendi | Başarı (dosya geri geldi) | Başarı |
+| Kayıt yazıldı, dosya yok, geri yüklenemedi | Künye başarı listesine girmez. Kayıt koşullu olarak `erisilemedi` olur (kaynak adresi korunur, "Kaynağa git" çalışır). "depo" sorunu: kullanıcı hata bildirimi görür. Partideki öteki künyeler etkilenmez. | "PDF depoya ulaşmadı; yeniden yükleyin." Kayıt koşullu olarak ÖNCEKİ hâline döner; eski PDF henüz silinmediği için yerinde. Satırı biz açtıysak koşullu olarak silinir. |
+| Geri alma da yazılamadı | Çağrı hata döner; `KAYIP_DOSYA` izi | Hata; `KAYIP_DOSYA` izi |
+| Arada daha yeni bir yazma oldu | Ona dokunulmaz; güncel satır gösterilir | Ona dokunulmaz |
+
+Fark bilerek böyle: otomatik aramada "erişilemedi" hâli kullanıcıya bir yol gösteriyor (kendisi
+yüklesin). Öğrenci yüklemesinde ise kullanıcının önceki PDF'i korunmalı.
+
+Kalıcı testler:
+- `tests/unit/kaynak-pdf-yazimi.test.ts`: `baglamayiGeriAl` için koşul, silme, değişmiş ve hata dalları.
+- `tests/db/kaynak-pdf-kosullu-yazma.test.mjs`: koşullu geri almanın daha yeni yazmayı ezmediği ve RLS (yabancı geri alamaz, silemez) sınanıyor.
+
+Migration gerekmedi.
+
+Kalan risk: geri alma ile daha yeni bir yazma arasında koşul tek ifadede değerlendiriliyor, pencere
+yok. Geri almanın kendisi düşerse (DB kapalı) kayıt depoda olmayan dosyayı göstermeye devam eder.
+Bu durum `KAYIP_DOSYA` izinde ve kullanıcıya hata olarak dönüyor. Kalıcı onarım P52b-2'nin
+taramasına kalıyor.
