@@ -8,6 +8,7 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { EN_COK_BELGE, type BelgeDurumu, type EtikBelge } from "@/lib/etik/belgeler";
 import type { Metin } from "@/lib/dil";
+import { benzersizDosyaAdi, guvenliAd } from "@/lib/depo-dosya-adi";
 
 /*
   ETİK KURUL BELGE KONTROL LİSTESİ (02.11.2026).
@@ -75,7 +76,7 @@ export default function EtikBelgeleri({ projectId, baslangic, yonergeAdi }: { pr
           showToast("error", t({ tr: "Oturumunuz sona erdi. Yeniden giriş yapın.", en: "Your session has expired. Sign in again." }));
           return;
         }
-        const yol = `${user.id}/etik/${Date.now()}-${dosya.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const yol = `${user.id}/etik/${benzersizDosyaAdi(guvenliAd(dosya.name))}`;
         const { error } = await supabase.storage.from("project-files").upload(yol, dosya, { contentType: dosya.type || undefined, upsert: false });
         if (error) {
           console.error(error);

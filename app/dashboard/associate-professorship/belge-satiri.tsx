@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { belgeKaldir, belgeYuklendi } from "@/app/actions/scoring";
 import { PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
 import { showToast } from "../_components/toast-events";
+import { benzersizDosyaAdi } from "@/lib/depo-dosya-adi";
 
 /*
   Faaliyetin kanıt belgesi (yayın, kabul yazısı, proje sözleşmesi).
@@ -40,7 +41,7 @@ export default function BelgeSatiri({ entryId, ownerId, belgeYolu }: { entryId: 
     }
     setMesgul(true);
     try {
-      const yol = `${ownerId}/docentlik/${entryId}-${Date.now()}.pdf`;
+      const yol = `${ownerId}/docentlik/${benzersizDosyaAdi(".pdf", { on: entryId })}`;
       const { error } = await createClient().storage.from("project-files").upload(yol, dosya, { contentType: "application/pdf", upsert: false });
       if (error) {
         console.error(error);

@@ -7,6 +7,7 @@ import { UploadCloud } from "lucide-react";
 import { analyzeUploadedDocument } from "@/app/actions/document-upload";
 import { createClient } from "@/lib/supabase/client";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { benzersizDosyaAdi, guvenliAd } from "@/lib/depo-dosya-adi";
 
 interface Project {
   id: string;
@@ -96,8 +97,9 @@ export default function DocumentUploadForm({
       // ayarla aşılamayan bir istek boyutu sınırı vardır. Gerçek tez/
       // makale dosyaları bunu kolayca aşabildiği için, dosya transferi
       // tamamen Vercel'i atlayarak doğrudan Supabase'e yapılır.
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storagePath = `${user.id}/${Date.now()}-${safeName}`;
+      // Ad tekil ve tahmin edilemez (lib/depo-dosya-adi.ts). Eskiden
+      // `<zaman>-<ad>` idi: aynı milisaniyede aynı adla ikinci yükleme düşüyordu.
+      const storagePath = `${user.id}/${benzersizDosyaAdi(guvenliAd(file.name))}`;
 
       const { error: uploadError } = await supabase.storage
         .from("project-files")

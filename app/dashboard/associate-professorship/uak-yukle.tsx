@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uakPdfiKaydet } from "@/app/actions/uak-tablosu";
 import { PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
 import { announceActionSuccess, showToast } from "../_components/toast-events";
+import { benzersizDosyaAdi } from "@/lib/depo-dosya-adi";
 
 /*
   ÜAK PDF'ini yükleme formu. Dosya tarayıcıdan doğrudan kullanıcının
@@ -49,7 +50,7 @@ export default function UakYukle({
     setHata(null);
     setMesgul(true);
     try {
-      const yol = `${kullaniciId}/uak/${Date.now()}.pdf`;
+      const yol = `${kullaniciId}/uak/${benzersizDosyaAdi(".pdf")}`;
       const { error } = await createClient().storage.from("project-files").upload(yol, dosya, { contentType: "application/pdf", upsert: false });
       if (error) {
         console.error(error);

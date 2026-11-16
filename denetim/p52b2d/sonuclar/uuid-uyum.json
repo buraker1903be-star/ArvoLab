@@ -1,0 +1,56 @@
+[
+  {
+    "kimlik": "U1",
+    "ad": "ESKİ biçim, aynı ms + aynı ad → ikinci yükleme düşer (çakışma yeniden üretildi)",
+    "sonuc": "PASS",
+    "ayrinti": "1.: geçti; 2.: The resource already exists"
+  },
+  {
+    "kimlik": "U2",
+    "ad": "YENİ biçim, aynı ms + aynı ad → ikisi de geçer, iki ayrı yol",
+    "sonuc": "PASS",
+    "ayrinti": "1.: geçti; 2.: geçti"
+  },
+  {
+    "kimlik": "U3-belge",
+    "ad": "belge: yeni yol depo politikasından geçer",
+    "sonuc": "PASS",
+    "ayrinti": "yüklendi"
+  },
+  {
+    "kimlik": "U3-imports",
+    "ad": "imports: yeni yol depo politikasından geçer",
+    "sonuc": "PASS",
+    "ayrinti": "yüklendi"
+  },
+  {
+    "kimlik": "U3-etik",
+    "ad": "etik: yeni yol depo politikasından geçer",
+    "sonuc": "PASS",
+    "ayrinti": "yüklendi"
+  },
+  {
+    "kimlik": "U3-uak",
+    "ad": "uak: yeni yol depo politikasından geçer",
+    "sonuc": "PASS",
+    "ayrinti": "yüklendi"
+  },
+  {
+    "kimlik": "U3-docentlik",
+    "ad": "docentlik: yeni yol depo politikasından geçer",
+    "sonuc": "PASS",
+    "ayrinti": "yüklendi"
+  },
+  {
+    "kimlik": "U4-docentlik",
+    "ad": "academic_score_entries.belge_yolu kısıt ifadesi yeni yolu kabul eder, başka sahibin önekini reddeder",
+    "sonuc": "PASS",
+    "ayrinti": "true/false (kısıt: CHECK (((belge_yolu IS NULL) OR (belge_yolu ~~ ((owner_id)::text || '/docentlik/%'::text)))))"
+  },
+  {
+    "kimlik": "U4-uak",
+    "ad": "uak_tablolari.depo_yolu (≤500) ve önek",
+    "sonuc": "PASS",
+    "ayrinti": "t"
+  }
+]
