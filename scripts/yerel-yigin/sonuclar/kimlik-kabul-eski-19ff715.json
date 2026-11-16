@@ -1,0 +1,72 @@
+[
+  {
+    "kimlik": "K1",
+    "ad": "Mevcut kullanıcı (12 altı eski şifre) giriş yapar, kapıya takılmaz",
+    "beklenen": "/dashboard/settings açılır",
+    "gozlenen": "/dashboard/settings",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K2–K5",
+    "ad": "senaryo tamamlanamadı",
+    "beklenen": "senaryo koşar",
+    "gozlenen": "page.waitForSelector: Timeout 30000ms exceeded.",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K6",
+    "ad": "Şifre oturumu, kurtarma sayfasından mevcut şifresiz değiştiremez (atlatma kapalı)",
+    "beklenen": "ret metni + eski şifre geçerli",
+    "gozlenen": "ret=false, eski=false, yeni=true",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K7",
+    "ad": "senaryo tamamlanamadı",
+    "beklenen": "senaryo koşar",
+    "gozlenen": "page.fill: Timeout 30000ms exceeded.",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K8a",
+    "ad": "Kontrol: hesap silme işlemi panel dışı bir yoldan (Next-Action, /reset-password) çağrılabiliyor — saldırı yolu gerçek",
+    "beklenen": "şifreli kullanıcıda silme talebi yazılır",
+    "gozlenen": "eylem bulundu=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K8",
+    "ad": "Davetli: bağlantıdan sonra şifre sayfası; panel yolları ilk şifreye yönlenir",
+    "beklenen": "/reset-password, /dashboard ve /dashboard/settings → /reset-password?ilk=1",
+    "gozlenen": "ilk=/reset-password, dashboard→/dashboard, settings→/dashboard/settings",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K9",
+    "ad": "Davetli (şifresiz): sunucu işlemi panel dışından çağrılsa da hesap silinemez",
+    "beklenen": "silme_talebi_at boş",
+    "gozlenen": "http=200, silme_talebi_at='2026-11-16 17:30:50.756+00'",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K8–K10 davetli",
+    "ad": "senaryo tamamlanamadı",
+    "beklenen": "senaryo koşar",
+    "gozlenen": "page.evaluate: TypeError: Cannot read properties of null (reading 'removeAttribute')",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K11",
+    "ad": "Kayıt formu şifre istemez; doğrulanan yeni kullanıcı panele değil ilk şifreye gider",
+    "beklenen": "şifre alanı yok + /reset-password?ilk=1",
+    "gozlenen": "şifre alanı=1, panel denemesi→/dashboard",
+    "sonuc": "FAIL"
+  },
+  {
+    "kimlik": "K12",
+    "ad": "senaryo tamamlanamadı",
+    "beklenen": "senaryo koşar",
+    "gozlenen": "page.waitForSelector: Timeout 30000ms exceeded.",
+    "sonuc": "FAIL"
+  }
+]

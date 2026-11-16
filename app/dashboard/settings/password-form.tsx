@@ -76,32 +76,32 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
     (açık bırakılmış bilgisayar, çalınan çerez) şifreyi değiştirip asıl
     sahibini dışarıda bırakabiliyordu. Sunucu (changePassword) mevcut
     şifreyi Supabase'e karşı doğrular; buradaki alan yalnızca onu taşır.
+    Görünüm kurtarma formuyla aynı tek sütun (os5-kimlik-formu): eskiden
+    project-form-grid iki sütun yapıyor, "tekrar" kutusu mevcut şifrenin
+    altına düşüyor ve zorunlu işareti etiketten ayrı satıra kayıyordu.
   */
   return (
-    <form className="project-form-grid" action={formAction}>
+    <form className="os5-kimlik-formu" data-sifre-formu="ayarlar" action={formAction}>
+      {state?.error ? (
+        <Bildirim ton="hata" rol="alert">
+          {state.error}
+        </Bildirim>
+      ) : state?.success && state.warning ? (
+        <Bildirim ton="uyari" rol="alert">
+          {state.warning}
+        </Bildirim>
+      ) : state?.success ? (
+        <Bildirim ton="basari" rol="status">
+          {t({ tr: "Şifreniz güncellendi. Diğer cihazlardaki oturumlar kapatıldı.", en: "Your password has been updated. Sessions on other devices have been signed out." })}
+        </Bildirim>
+      ) : null}
       <SifreGirdisi id="currentPassword" name="currentPassword" etiket={t({ tr: "Mevcut şifre", en: "Current password" })} autoComplete="current-password" required />
       <SifreGirdisi id="newPassword" name="password" etiket={t({ tr: "Yeni şifre", en: "New password" })} autoComplete="new-password" minLength={EN_KISA_SIFRE} onInput={sifreDenetle} aciklama={kuralAciklamasi} required />
       <SifreGirdisi id="newPasswordConfirm" name="passwordConfirm" etiket={t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })} autoComplete="new-password" minLength={EN_KISA_SIFRE} onInput={tekrarDenetle} required />
-      <div className="project-form-actions">
-        <button type="submit" className="projects-primary-button" disabled={pending}>
-          <KeyRound size={16} aria-hidden="true" />
-          {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
-        </button>
-      </div>
-      {state?.error ? (
-        <p role="alert" className="action-form-message action-form-error">
-          {state.error}
-        </p>
-      ) : null}
-      {state?.success && state.warning ? (
-        <p role="alert" className="action-form-message action-form-error">
-          {state.warning}
-        </p>
-      ) : state?.success ? (
-        <p role="status" className="action-form-message action-form-success">
-          {t({ tr: "Şifreniz güncellendi. Diğer cihazlardaki oturumlar kapatıldı.", en: "Your password has been updated. Sessions on other devices have been signed out." })}
-        </p>
-      ) : null}
+      <Dugme type="submit" yukleniyor={pending} disabled={pending}>
+        <KeyRound size={16} aria-hidden="true" />
+        {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
+      </Dugme>
     </form>
   );
 }

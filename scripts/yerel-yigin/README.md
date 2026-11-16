@@ -16,6 +16,7 @@ ister).
 | `roller.sql`, `kabuk.sql` | Supabase rollerinin, `auth.jwt()`'nin ve storage'ın en küçük taklidi. |
 | `gecit.mjs` | Tek adres `127.0.0.1:54401`: `/auth/v1` → GoTrue, `/rest/v1` → PostgREST. `/__gecit/kanca`: eşleşen ilk isteğin cevabı dönmeden önce başka bir oturumun isteğini çalıştırır (yedekle yazma arasındaki yarışı belirlenimci kurmak için). |
 | `kayit-butunlugu.mjs <yeni\|eski>` | 14 senaryo; `lib/metin-yazimi.ts`'i (sunucu eylemlerinin kodu) gerçek PostgREST'e karşı koşturur. `eski` = 97a2943'teki eylem gövdelerinin birebir aktarımı. |
+| `kimlik-kabul.mjs <adres>` | Gerçek Next + GoTrue: mevcut kullanıcı, Ayarlar'da mevcut şifre (yanlış/doğru), 12 karakter, diğer oturumların düşmesi, kurtarma, kurtarma sayfası atlatması, davetli kapısı (proxy + panel dışından sunucu işlemi), kayıt, telefon/masaüstü. Sonuç `sonuclar/kimlik-kabul.json`. |
 | `kayit-tarayici-kabul.mjs <adres>` | Gerçek Next uygulaması (`next dev`) yığına bağlıyken tarayıcıda: zorla kayıt (yedek düşerken ve meşru), sürüm geri yükleme (yarış ve meşru). |
 
 ## Koşturma
@@ -45,3 +46,21 @@ node scripts/yerel-yigin/kayit-tarayici-kabul.mjs http://localhost:3124
 |---|---|---|---|
 | `kayit-butunlugu.mjs` | 9/14 (S4, S5, S6, S7, S11 düşüyor) | 12/14 (S4, S11 tetikleyiciye bağlı) | 14/14 |
 | `kayit-tarayici-kabul.mjs` | 2/4 (T1, T3: öteki sekmenin metni kayboluyor) | — | 4/4 |
+
+## 16.11.2026 sonucu (G1 kimlik, RELEASE CLOSURE 03)
+
+| | design/os5 `19ff715` (G1 yok) | Bu dal |
+|---|---|---|
+| `kimlik-kabul.mjs` | 2/10 (`sonuclar/kimlik-kabul-eski-19ff715.json`) | 13/13 (`sonuclar/kimlik-kabul.json`) |
+
+Eski kodda: şifreyle açılmış oturum `/reset-password`'ten mevcut şifresiz
+şifre değiştirdi (K6); davetli şifre belirlemeden panele girdi (K8) ve
+hesap silme işlemi panel dışı bir yoldan çalıştı (K9); kayıt şifre aldı ve
+doğrulanan kullanıcı doğrudan panele düştü (K11). Ayarlar'da mevcut şifre
+alanı olmadığı için K2–K5 ve K12 koşamadı.
+
+Not: G1 tetikleyicisi (`20261106184046`) onay anında, onaydan ÖNCE konmuş
+şifreyi siler. GoTrue yönetici API'si `email_confirm: true` + `password` ile
+açarken onayı ayrı bir güncellemeyle yazdığı için şifre de düşer; betik bu
+yüzden şifreyi onaydan sonra koyar. Uygulama kodunda bu biçimde hesap açan
+yol yok (kayıt ve davet şifreyi bağlantıdan sonra alıyor).

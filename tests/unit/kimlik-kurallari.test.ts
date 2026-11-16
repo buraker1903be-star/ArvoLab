@@ -339,8 +339,8 @@ test("üç ekran da aynı şifre kuralından geçer: ilk şifre, kurtarma, Ayarl
 
   // Formun iki görünümü de iki kutusunda aynı sabiti kullanır.
   const form = oku("app/dashboard/settings/password-form.tsx");
-  const login = form.slice(form.indexOf('if (variant === "login")'), form.indexOf('className="project-form-grid"'));
-  const panel = form.slice(form.indexOf('className="project-form-grid"'));
+  const login = form.slice(form.indexOf('if (variant === "login")'), form.indexOf('data-sifre-formu="ayarlar"'));
+  const panel = form.slice(form.indexOf('data-sifre-formu="ayarlar"'));
   for (const [ad, parca] of [["login", login], ["panel", panel]] as const) {
     // os5: kutular ortak SifreGirdisi (type'ı bileşen koyar); yeni şifre ve tekrarı aynı sabiti kullanır.
     assert.equal((parca.match(/minLength=\{EN_KISA_SIFRE\}/g) ?? []).length, 2, ad);
