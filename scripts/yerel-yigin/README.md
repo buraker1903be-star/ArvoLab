@@ -51,7 +51,7 @@ node scripts/yerel-yigin/kayit-tarayici-kabul.mjs http://localhost:3124
 
 | | design/os5 `19ff715` (G1 yok) | Bu dal |
 |---|---|---|
-| `kimlik-kabul.mjs` | 2/10 (`sonuclar/kimlik-kabul-eski-19ff715.json`) | 13/13 (`sonuclar/kimlik-kabul.json`) |
+| `kimlik-kabul.mjs` | 2/10 (`sonuclar/kimlik-kabul-eski-19ff715.json`) | 15/15 (`sonuclar/kimlik-kabul.json`) |
 
 Eski kodda: şifreyle açılmış oturum `/reset-password`'ten mevcut şifresiz
 şifre değiştirdi (K6); davetli şifre belirlemeden panele girdi (K8) ve
@@ -59,8 +59,17 @@ hesap silme işlemi panel dışı bir yoldan çalıştı (K9); kayıt şifre ald
 doğrulanan kullanıcı doğrudan panele düştü (K11). Ayarlar'da mevcut şifre
 alanı olmadığı için K2–K5 ve K12 koşamadı.
 
-Not: G1 tetikleyicisi (`20261106184046`) onay anında, onaydan ÖNCE konmuş
-şifreyi siler. GoTrue yönetici API'si `email_confirm: true` + `password` ile
-açarken onayı ayrı bir güncellemeyle yazdığı için şifre de düşer; betik bu
-yüzden şifreyi onaydan sonra koyar. Uygulama kodunda bu biçimde hesap açan
-yol yok (kayıt ve davet şifreyi bağlantıdan sonra alıyor).
+Son kabul koşusu, Production/Test'teki uygulama sırasıyla: güncel design/os5
+şeması önce, ardından üç G1 migration'ı SIRA DIŞI ve iki kez (tekrar
+güvenli). Yeni işlev eklendikten sonra PostgREST şema önbelleği yenilenmeli
+(burada `docker restart p52rest`; Supabase'te DDL olayıyla kendiliğinden):
+yenilenmezse `ilk_sifre_gerekli` "bulunamadı" döner ve ilk şifre kapısı
+tasarım gereği AÇIK kalır (kimse kilitlenmez ama kapı da çalışmaz).
+
+G1 tetikleyicisi ve yönetici API'si: GoTrue v2.197.0 yönetici kaydını tek
+işlemde açıp onaylıyor ve şifre verilmese de rastgele bir özet yazıyor.
+Tetikleyici onay anında bu özeti (ve yöneticinin verdiği şifreyi) siler;
+hesap ilk şifreye düşer. Bilerek böyle (gerekçe:
+`tests/db/eposta-onayi-kimlik.test.mjs`). Panelden şifreyle açılan hesap
+"şifremi unuttum" ile şifresini belirler (K13). Betik mevcut kullanıcıyı bu
+yüzden önce onaylı açıp şifreyi ayrı bir güncellemeyle koyar.

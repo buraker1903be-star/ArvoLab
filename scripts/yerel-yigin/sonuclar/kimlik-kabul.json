@@ -84,10 +84,24 @@
     "sonuc": "PASS"
   },
   {
+    "kimlik": "K13",
+    "ad": "Yöneticinin tek istekte şifreli+onaylı açtığı hesap: verilen şifre geçersiz (G1), kurtarmayla şifre belirlenip girilir (kilitlenme yok)",
+    "beklenen": "verilen şifre geçersiz + kurtarma sonrası panel + yeni şifre geçerli",
+    "gozlenen": "verilen geçerli=false, panel=/dashboard, yeni=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K14",
+    "ad": "ArvoOS üyesi (şifresiz, magic link) panele girer, ilk şifreye yönlenmez, kuruma bağlı",
+    "beklenen": "/dashboard/settings + şifresiz + kurum bağı",
+    "gozlenen": "yol=/dashboard/settings, şifre var=false, kurum bağlı=true",
+    "sonuc": "PASS"
+  },
+  {
     "kimlik": "K12",
     "ad": "Telefon ve masaüstü: üç şifre alanı görünür, yatay taşma yok (Ayarlar + sıfırlama)",
     "beklenen": "alanlar görünür, taşma yok",
-    "gozlenen": "[{\"ad\":\"telefon\",\"alanlar\":true,\"olcu\":\"currentPassword:350x40@20-370 password:350x40@20-370 passwordConfirm:350x40@20-370\",\"tasma\":false,\"tasma2\":false},{\"ad\":\"masaustu\",\"alanlar\":true,\"olcu\":\"currentPassword:607x39@416-1024 password:607x39@416-1024 passwordConfirm:607x39@416-1024\",\"tasma\":false,\"tasma2\":false}]",
+    "gozlenen": "[{\"ad\":\"telefon\",\"alanlar\":true,\"olcu\":\"currentPassword:350x40@20-370 password:350x40@20-370 passwordConfirm:350x40@20-370\",\"tasma\":false,\"tasma2\":false},{\"ad\":\"masaustu\",\"alanlar\":true,\"olcu\":\"currentPassword:610x39@415-1025 password:610x39@415-1025 passwordConfirm:610x39@415-1025\",\"tasma\":false,\"tasma2\":false}]",
     "sonuc": "PASS"
   }
 ]

@@ -401,6 +401,52 @@ try {
     await b.close();
   });
 
+  /* ---------- K13 yönetici API'si: şifre + onay tek istekte (panelde "Create user + Auto Confirm") ---------- */
+  // G1 tetikleyicisi bu şifreyi siler (bilerek; gerekçe tests/db/eposta-onayi-kimlik.test.mjs). Kullanıcı kilitlenmemeli: kurtarmayla şifresini belirler.
+  await senaryo("K13", async () => {
+    const adres = eposta("yonetici");
+    const verilen = sifre();
+    const yeni = sifre();
+    const r = await yonetici("/admin/users", { email: adres, password: verilen, email_confirm: true });
+    sozlesmeOnayla(r.json.id);
+    const verilenGecerli = await sifreGecerli(adres, verilen);
+    const belirtec = await baglanti("recovery", adres);
+    const b = await yeniBaglam();
+    const s = await b.newPage();
+    await baglantiyiAc(s, belirtec, "recovery");
+    await s.fill('input[name="password"]', yeni);
+    await s.fill('input[name="passwordConfirm"]', yeni);
+    await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 30000 }).catch(() => null), s.locator('form.os5-kimlik-formu button[type="submit"]').click()]);
+    kayit(
+      "K13",
+      "Yöneticinin tek istekte şifreli+onaylı açtığı hesap: verilen şifre geçersiz (G1), kurtarmayla şifre belirlenip girilir (kilitlenme yok)",
+      "verilen şifre geçersiz + kurtarma sonrası panel + yeni şifre geçerli",
+      `verilen geçerli=${verilenGecerli}, panel=${new URL(s.url()).pathname}, yeni=${await sifreGecerli(adres, yeni)}`,
+      !verilenGecerli && new URL(s.url()).pathname.startsWith("/dashboard") && (await sifreGecerli(adres, yeni)),
+    );
+    await b.close();
+  });
+
+  /* ---------- K14 ArvoOS üyesi: şifresiz, magic link ile girer, kapıya takılmaz, kuruma bağlanır ---------- */
+  await senaryo("K14", async () => {
+    const adres = eposta("arvoos");
+    const kurum = crypto.randomUUID();
+    psql(`insert into public.organizations (id, name) values ('${kurum}', 'kimlik-kabul')`);
+    psql(`insert into public.arvoos_members (email, organization_id, full_name) values ('${adres}', '${kurum}', 'Sentetik Üye')`);
+    // ArvoOS'un yaptığı gibi (arvoos/lib/arvolab.ts): şifresiz, onaylı hesap + magic link.
+    const r = await yonetici("/admin/users", { email: adres, email_confirm: true });
+    sozlesmeOnayla(r.json.id);
+    const belirtec = await baglanti("magiclink", adres);
+    const b = await yeniBaglam();
+    const s = await b.newPage();
+    await baglantiyiAc(s, belirtec, "magiclink", "/dashboard");
+    await s.goto("/dashboard/settings");
+    const yol = new URL(s.url()).pathname;
+    const bagli = psql(`select coalesce(organization_id::text,'') from public.profiles where id='${r.json.id}'`) === kurum;
+    kayit("K14", "ArvoOS üyesi (şifresiz, magic link) panele girer, ilk şifreye yönlenmez, kuruma bağlı", "/dashboard/settings + şifresiz + kurum bağı", `yol=${yol}, şifre var=${sifreVarMi(r.json.id)}, kurum bağlı=${bagli}`, yol === "/dashboard/settings" && !sifreVarMi(r.json.id) && bagli);
+    await b.close();
+  });
+
   /* ---------- K12 görünüm: telefon ve masaüstü ---------- */
   await senaryo("K12", async () => {
     fs.mkdirSync(CIKTI, { recursive: true });

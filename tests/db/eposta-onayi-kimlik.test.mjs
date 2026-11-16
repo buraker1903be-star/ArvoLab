@@ -174,3 +174,56 @@ describe("G1: ilk_sifre_gerekli (20261107120542)", () => {
       assert.equal((await tek(`select count(*)::int as n from pg_proc where proname = 'sifre_durumum'`)).n, 0);
     }));
 });
+
+/*
+  YÖNETİCİ API'Sİ (16.11.2026, RELEASE CLOSURE 03 incelemesi). GoTrue
+  v2.197.0'ın yönetici API'si hesabı TEK İŞLEMDE iki adımda açıyor: önce
+  onaysız INSERT, sonra aynı işlemde email_confirmed_at UPDATE'i (yerel
+  yığında sorgu günlüğüyle görüldü). Şifre VERİLMESE de INSERT'e GoTrue'nun
+  ürettiği rastgele bir özet yazılıyor (60 karakter, yerelde ölçüldü).
+
+  Tetikleyici bu UPDATE'i onay anı sayıp özeti siliyor. Bu BİLEREK böyle
+  bırakıldı: "aynı işlemde açılan hesabın şifresini koru" istisnası
+  denendi (yönetici panelinde "Create user + şifre + Auto Confirm" için) ve
+  geri alındı — GoTrue'nun rastgele özetini de koruyordu; şifresiz açılmış
+  ArvoOS dışı hesap ilk şifre kapısından (ilk_sifre_gerekli: şifre yok)
+  geçip kimsenin bilmediği bir şifreyle kalıyordu. Panelden şifreyle açılan
+  hesap "şifremi unuttum" ile şifresini belirler (kilitlenmez).
+*/
+describe("G1: yönetici API'sinin tek işlemde açıp onayladığı hesap", () => {
+  const YONETICI = "00000000-0000-4000-8000-0000000000e7";
+  const ONAYLI_SONRA = "00000000-0000-4000-8000-0000000000e8";
+
+  test("aynı işlemde INSERT (GoTrue'nun rastgele özeti) + onay: özet silinir, hesap ilk şifreye düşer", () =>
+    islem(db, async () => {
+      await rol(db, "postgres");
+      await db.query(`insert into auth.users (id, email, email_confirmed_at, encrypted_password) values ($1, 'yonetici@ornek.com', null, '$2a$10$gotruenunrastgeleozeti000000000000000000000000000000')`, [YONETICI]);
+      await db.query(`update auth.users set raw_user_meta_data = '{}'::jsonb where id = $1`, [YONETICI]); // GoTrue araya başka güncellemeler de koyuyor
+      await onayla(YONETICI);
+      assert.equal((await tek(`select encrypted_password from auth.users where id = $1`, [YONETICI])).encrypted_password, null);
+      await rol(db, "authenticated", YONETICI);
+      assert.equal((await tek(`select public.ilk_sifre_gerekli() as gerekli`)).gerekli, true);
+    }));
+
+  test("onaylı hesaba SONRADAN konan şifre kalır (yönetici güncellemesi, kurtarma, ilk şifre)", () =>
+    islem(db, async () => {
+      await rol(db, "postgres");
+      await db.query(`insert into auth.users (id, email, email_confirmed_at) values ($1, 'sonra@ornek.com', null)`, [ONAYLI_SONRA]);
+      await onayla(ONAYLI_SONRA);
+      await db.query(`update auth.users set encrypted_password = 'yoneticinin-koydugu' where id = $1`, [ONAYLI_SONRA]);
+      assert.equal((await tek(`select encrypted_password from auth.users where id = $1`, [ONAYLI_SONRA])).encrypted_password, "yoneticinin-koydugu");
+      await rol(db, "authenticated", ONAYLI_SONRA);
+      assert.equal((await tek(`select public.ilk_sifre_gerekli() as gerekli`)).gerekli, false);
+    }));
+
+  test("ArvoOS'un açtığı hesap (şifresiz + onaylı) üye listesindeyse ilk şifre istenmez ve kuruma bağlanır", () =>
+    islem(db, async () => {
+      await kurumVeUye("uye@akademikmerkez.com", "Gerçek Üye");
+      await rol(db, "postgres");
+      await db.query(`insert into auth.users (id, email, email_confirmed_at, encrypted_password) values ($1, 'uye@akademikmerkez.com', null, '$2a$10$gotruenunrastgeleozeti000000000000000000000000000000')`, [YONETICI]);
+      await onayla(YONETICI);
+      assert.equal((await tek(`select organization_id from public.profiles where id = $1`, [YONETICI])).organization_id, KURUM);
+      await rol(db, "authenticated", YONETICI);
+      assert.equal((await tek(`select public.ilk_sifre_gerekli() as gerekli`)).gerekli, false);
+    }));
+});
