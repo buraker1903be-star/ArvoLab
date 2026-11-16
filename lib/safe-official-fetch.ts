@@ -145,11 +145,25 @@ async function assertOfficialUrl(rawUrl: string): Promise<URL> {
 */
 export const EN_FAZLA_KAYNAK_BAYT = 40 * 1024 * 1024;
 
+/*
+  Boyut sınırı aşıldı. Ayrı sınıf, çünkü çağıran (lib/guvenli-indir.ts) bunu
+  "karşı tarafın sonucu" diye sınıflıyor ve bunu metne bakmadan yapabilmeli:
+  okuma sırasındaki herhangi bir hatayı aynı kefeye koymak, bizim bir
+  programlama hatamızı "kaynağa erişilemedi" diye örterdi. Hâlâ bir Error;
+  mesajı ve öteki çağıranların (guideline-scan) davranışı değişmedi.
+*/
+export class BoyutSiniriHatasi extends Error {
+  constructor(mesaj: string) {
+    super(mesaj);
+    this.name = "BoyutSiniriHatasi";
+  }
+}
+
 export async function kaynagiOku(response: Response, enFazla = EN_FAZLA_KAYNAK_BAYT): Promise<ArrayBuffer> {
   // Sunucu boyutu bildiriyorsa hiç indirmeden reddedilir.
   const bildirilen = Number(response.headers.get("content-length") ?? "");
   if (Number.isFinite(bildirilen) && bildirilen > enFazla) {
-    throw new Error(`Kaynak dosya çok büyük (${Math.round(bildirilen / 1024 / 1024)} MB); en fazla ${Math.round(enFazla / 1024 / 1024)} MB okunur.`);
+    throw new BoyutSiniriHatasi(`Kaynak dosya çok büyük (${Math.round(bildirilen / 1024 / 1024)} MB); en fazla ${Math.round(enFazla / 1024 / 1024)} MB okunur.`);
   }
 
   // Content-Length yoksa ya da yanlışsa akış sayılarak okunur.
@@ -164,7 +178,7 @@ export async function kaynagiOku(response: Response, enFazla = EN_FAZLA_KAYNAK_B
       toplam += value.byteLength;
       if (toplam > enFazla) {
         await reader.cancel();
-        throw new Error(`Kaynak dosya çok büyük; en fazla ${Math.round(enFazla / 1024 / 1024)} MB okunur.`);
+        throw new BoyutSiniriHatasi(`Kaynak dosya çok büyük; en fazla ${Math.round(enFazla / 1024 / 1024)} MB okunur.`);
       }
       parcalar.push(value);
     }

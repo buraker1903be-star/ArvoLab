@@ -1,0 +1,65 @@
+{
+  "sonuclar": [
+    {
+      "ad": "T1 PDF yükle: gerçek depoya yüklenir, kayıt 'yuklendi', yol kullanıcıya bağlı kalıpta",
+      "sonuc": "FAIL",
+      "sorun": "yol kalıp dışı: 9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787642808.pdf",
+      "kanit": {
+        "kayit": [
+          "yuklendi|9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787642808.pdf"
+        ],
+        "nesne": [
+          "9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787642808.pdf"
+        ],
+        "bildirim": "PDF yüklendi.İşlem başarıyla tamamlandı."
+      }
+    },
+    {
+      "ad": "T2 Değiştir: yeni nesne kayıtlı, eski nesne depodan silindi, yetim yok",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "once": "9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787642808.pdf",
+        "kayit": [
+          "yuklendi|9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf"
+        ],
+        "nesne": [
+          "9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf"
+        ]
+      }
+    },
+    {
+      "ad": "T3 PDF'i aç: imzalı bağlantı gerçek depodan alınır ve PDF döner",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "adres": "http://127.0.0.1:54401/storage/v1/object/sign/project-files/9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf?token=…",
+        "durum": 200,
+        "bas": "%PDF-"
+      }
+    },
+    {
+      "ad": "T4 DB yazımı düşerken Değiştir: hata bildirimi, eski PDF ve kayıt yerinde, yeni nesne temizlendi",
+      "sonuc": "FAIL",
+      "sorun": "yetim nesne: 9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787644872.pdf",
+      "kanit": {
+        "bildirim": "!İşlem tamamlanamadıBu çalışmaya yazma yetkiniz yok.",
+        "once": "yuklendi|9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf",
+        "kayit": [
+          "yuklendi|9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf"
+        ],
+        "nesne": [
+          "9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787643872.pdf",
+          "9bdf3b0a-7d20-482c-9427-471640e269d4/kaynak-pdf/y-1794787644872.pdf"
+        ],
+        "basariBildirimi": null
+      }
+    }
+  ],
+  "konsol": [
+    "istek düştü: POST http://localhost:3126/dashboard net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3126/dashboard/editor/9bdf3b0a-7d20-482c-9427-471640e269d4 net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3126/dashboard/editor?sec=9bdf3b0a-7d20-482c-9427-471640e269d4 net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3126/dashboard/editor?sec=9bdf3b0a-7d20-482c-9427-471640e269d4 net::ERR_ABORTED"
+  ]
+}

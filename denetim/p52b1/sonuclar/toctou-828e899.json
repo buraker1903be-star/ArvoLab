@@ -1,0 +1,162 @@
+[
+  {
+    "kimlik": "Y1",
+    "ad": "TOCTOU (silen taraf): A'nın telafisi 'kullanılmıyor' dedikten sonra, silmeden hemen önce B aynı yolu sahipleniyor",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "b": "başarılı",
+      "bSonrasiNesne": true,
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "kayit": [
+        "yuklendi|77036e5d-ef4b-4bb0-885a-e1be58f811ee/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-61a3233b-4a8e-41ff-949d-e22e35f3c8be.pdf"
+      ],
+      "nesneVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y2",
+    "ad": "TOCTOU (bağlayan taraf): B dosyayı okudu, A'nın telafisi tamamen bitti (sildi), sonra B kaydını yazıyor",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "aSonrasiNesne": false,
+      "b": "başarılı",
+      "kayit": [
+        "yuklendi|7443c139-ad49-413b-94b7-8cab174c5397/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-1908cb29-7c2f-4d77-88b8-477568b4bf8c.pdf"
+      ],
+      "nesneVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y3a",
+    "ad": "Aynı milisaniyede iki yükleme yolu (iki künye, iki sekme) → ikinci yükleme 'zaten var' ile düşmemeli",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "y1": "3bbe14c2-339e-4379-a3db-d05088d43509/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-b95b4442-08ab-431d-b2be-ebad02b6ebf6.pdf",
+      "y2": "3bbe14c2-339e-4379-a3db-d05088d43509/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-32e7bbfe-5146-4cc3-bba3-bc2eef58f014.pdf",
+      "ayni": false,
+      "h1": null,
+      "h2": null
+    }
+  },
+  {
+    "kimlik": "Y3b",
+    "ad": "Aynı milisaniyede İKİ künyeye EŞZAMANLI iki yükleme (iki sekme) → her künye kendi PDF'ini taşımalı",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ayniYol": false,
+      "hA": null,
+      "hB": null,
+      "rA": "başarılı",
+      "rB": "başarılı",
+      "kayit": [
+        "yuklendi|31eb70d6-4322-435a-a446-eb66c7c6c28e/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-dd580ea8-3556-4f13-bfcf-2ea9481e32d4.pdf",
+        "yuklendi|31eb70d6-4322-435a-a446-eb66c7c6c28e/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-369f02e2-ec1a-40f0-9025-b7b3d03193cd.pdf"
+      ],
+      "kendiPdfi": {
+        "Ali, B. ": true,
+        "Bora, C.": true
+      }
+    }
+  },
+  {
+    "kimlik": "Y3c",
+    "ad": "Aynı milisaniyede aynı künyeye iki otomatik indirme → ikisi de depoya yazabilmeli, sonuç tek kayıt, yetim yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "r2": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|7d43dd2c-3a62-46b1-9fcb-d6bf54f59868/kaynak-pdf/c0459901e985bf7a-0096c168-5ec9-4c17-b152-4ab8131394eb.pdf"
+      ],
+      "nesne": 1,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y4",
+    "ad": "Geri yükleme başka işlemin dosyasını DEĞİŞTİRMEZ: silmeden sonra aynı yola başka bayt yazıldıysa korunur",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "icerik": "%PDF-1.7\n% B islemi\n%%EOF\n"
+    }
+  },
+  {
+    "kimlik": "Y5",
+    "ad": "Otomatik indirme: kayıt yazıldı, dosya depodan kayboldu ve geri yüklenemedi → başarı listesinde YOK, kayıt 'erişilemedi', 'depo' sorunu",
+    "sonuc": "FAIL",
+    "sorun": "başarı listesinde 'indirildi' döndü: indirildi|bac8bda6-40b4-464e-85a4-43672a560837/kaynak-pdf/c0459901e985bf7a-b228e8c3-36ab-4be4-9824-14e72e07e606.pdf",
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "indirildi|bac8bda6-40b4-464e-85a4-43672a560837/kaynak-pdf/c0459901e985bf7a-b228e8c3-36ab-4be4-9824-14e72e07e606.pdf"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|bac8bda6-40b4-464e-85a4-43672a560837/kaynak-pdf/c0459901e985bf7a-b228e8c3-36ab-4be4-9824-14e72e07e606.pdf"
+      ],
+      "sarkan": [
+        "bac8bda6-40b4-464e-85a4-43672a560837/kaynak-pdf/c0459901e985bf7a-b228e8c3-36ab-4be4-9824-14e72e07e606.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "Y6",
+    "ad": "Yükleme ile değiştirme: kayıt yazıldı, yeni dosya kayboldu ve geri yüklenemedi → hata, kayıt ÖNCEKİ PDF'e döner, önceki PDF yerinde",
+    "sonuc": "FAIL",
+    "sorun": "kayıt depoda olmayan dosyayı gösteriyor: 051a5db4-7d43-4189-8b96-fa79a7207277/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-de06f0fa-93a7-4aa6-9073-7bcc8464ab7c.pdf",
+    "kanit": {
+      "donus": "PDF depoya ulaşmadı; yeniden yükleyin.",
+      "kayit": [
+        "yuklendi|051a5db4-7d43-4189-8b96-fa79a7207277/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-de06f0fa-93a7-4aa6-9073-7bcc8464ab7c.pdf"
+      ],
+      "oncekiVar": true,
+      "sarkan": [
+        "051a5db4-7d43-4189-8b96-fa79a7207277/kaynak-pdf/y-9d48dbbf-0562-42ed-ae86-21de198c1c9a-de06f0fa-93a7-4aa6-9073-7bcc8464ab7c.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "Y7",
+    "ad": "Geri alma DAHA YENİ kaydı ezmez: otomatik indirme 'kayıp'ı geri alırken öğrenci aynı künyeye yeni PDF yüklemiş",
+    "sonuc": "FAIL",
+    "sorun": "öğrencinin yeni PDF'i ezildi: indirildi|b73dc86f-9b97-48e8-a1ea-ce43701dd687/kaynak-pdf/c0459901e985bf7a-c0bd1e45-c5f3-4716-85e9-53f3bb4836fd.pdf",
+    "kanit": {
+      "satirlar": [
+        "indirildi|b73dc86f-9b97-48e8-a1ea-ce43701dd687/kaynak-pdf/c0459901e985bf7a-c0bd1e45-c5f3-4716-85e9-53f3bb4836fd.pdf"
+      ],
+      "kayit": [
+        "indirildi|b73dc86f-9b97-48e8-a1ea-ce43701dd687/kaynak-pdf/c0459901e985bf7a-c0bd1e45-c5f3-4716-85e9-53f3bb4836fd.pdf"
+      ],
+      "yeniVar": true,
+      "sarkan": [
+        "b73dc86f-9b97-48e8-a1ea-ce43701dd687/kaynak-pdf/c0459901e985bf7a-c0bd1e45-c5f3-4716-85e9-53f3bb4836fd.pdf"
+      ],
+      "not": "geri alma isteği hiç gönderilmedi (eski kod geri almıyor)"
+    }
+  }
+]

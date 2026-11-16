@@ -1,15 +1,17 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { varsayilanGetir } from "@/lib/kanit/dizin";
-import { guvenliIndir } from "@/lib/guvenli-indir";
+import { guvenliIndir, indirmeHatasiTuru } from "@/lib/guvenli-indir";
 import { extractTextFromBuffer } from "@/lib/document-extract";
 import {
   PDF_EN_FAZLA_BAYT,
+  agirSorun,
+  bosIndirmeSorunlari,
   pdfBaslangicKarari,
+  pdfHazirMi,
   baslikPdfteGeciyor,
   kaynakRaporu,
   kunyeAnahtari,
@@ -17,10 +19,14 @@ import {
   pdfAdaylari,
   pdfMi,
   type DogrulamaDurumu,
+  type IndirmeSorunlari,
+  type IndirmeSorunu,
   type KaynakPdfSatiri,
   type PdfDurumu,
 } from "@/lib/kaynak-pdf";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
+import { yuklemeYoluMu } from "@/lib/kaynak-pdf-yolu";
+import { baglamayiGeriAl, baglantiyiDogrula, otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
 import { YEREL } from "@/lib/dil";
 
 /*
@@ -49,11 +55,6 @@ const KOVA = "project-files";
 
 const SECIM = "id, kunye_anahtari, kunye, doi, durum, depo_yolu, kaynak_adres, baslik_eslesti, bakildi";
 
-/* Depodaki ad: künyenin özeti + zaman. Okunur ad ZIP'te künyeden kurulur
-   (lib/kaynak-pdf.ts, pdfDosyaAdi); burada çakışmamak yeter. */
-const depoYolu = (projectId: string, anahtar: string) =>
-  `${projectId}/kaynak-pdf/${createHash("sha1").update(anahtar).digest("hex").slice(0, 16)}-${Date.now()}.pdf`;
-
 const yenile = () => revalidatePath("/dashboard/editor");
 
 /** Çalışmanın bütün PDF kayıtları (sınırsız: ZIP de buradan kuruluyor). */
@@ -78,7 +79,7 @@ type Kunye = { kunye: string; doi?: string | null; dogrulama?: DogrulamaDurumu |
 export async function kaynakPdfleriniBul(
   projectId: string,
   kunyeler: Kunye[],
-): Promise<{ error?: string; satirlar?: KaynakPdfSatiri[] }> {
+): Promise<{ error?: string; satirlar?: KaynakPdfSatiri[]; sorunlar?: IndirmeSorunlari }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   // Dış sunuculara gidiyor ve depolamaya yazıyor: kapı burada da.
@@ -98,15 +99,18 @@ export async function kaynakPdfleriniBul(
     console.error("[kaynak-pdf] okunamadı:", okumaHatasi.message);
     return { error: t({ tr: "PDF kayıtları okunamadı; tekrar deneyin.", en: "Couldn't read the PDF records; please try again." }) };
   }
-  const yuklenmis = new Set((mevcut ?? []).filter((m) => m.durum === "yuklendi").map((m) => m.kunye_anahtari));
-  const eskiYol = new Map((mevcut ?? []).map((m) => [m.kunye_anahtari, m.depo_yolu as string | null]));
+  /* PDF'i hazır olan künyeye boşuna gidilmez. Bu küme yalnızca bir KISAYOL:
+     arama sürerken durum değişebilir, asıl koruma yazmadaki koşul
+     (lib/kaynak-pdf-yazimi.ts → otomatikSonucuYaz). */
+  const hazir = new Set((mevcut ?? []).filter((m) => pdfHazirMi(m.durum as PdfDurumu)).map((m) => m.kunye_anahtari));
 
   const satirlar: KaynakPdfSatiri[] = [];
+  const sorunlar = bosIndirmeSorunlari();
   const butceSonu = Date.now() + SURE_BUTCESI_MS;
   for (const k of parti) {
     if (Date.now() > butceSonu) break;
     const anahtar = kunyeAnahtari(k.kunye);
-    if (!anahtar || yuklenmis.has(anahtar)) continue;
+    if (!anahtar || hazir.has(anahtar)) continue;
     const doi = k.doi?.trim().slice(0, 300) || null;
     // Başlangıç kararı saf ve testli (lib/kaynak-pdf.ts). "ertele": hüküm yazılmaz.
     const baslangic = pdfBaslangicKarari(k.dogrulama ?? null, doi);
@@ -123,7 +127,9 @@ export async function kaynakPdfleriniBul(
 
     let durum: PdfDurumu;
     let yol: string | null = null;
+    let yolBayti: Uint8Array | null = null;
     let kaynakAdres: string | null = null;
+    let sorun: IndirmeSorunu | null = null;
 
     if (baslangic === "kayit_yok") {
       durum = "kayit_yok";
@@ -142,48 +148,99 @@ export async function kaynakPdfleriniBul(
       }
 
       durum = adaylar.length ? "erisilemedi" : dizinHatasi ? "erisilemedi" : "bulunamadi";
+      if (!adaylar.length && dizinHatasi) sorun = "erisim";
       for (const aday of adaylar) {
         if (Date.now() > butceSonu) break;
         try {
           const indirilen = await guvenliIndir(aday, PDF_EN_FAZLA_BAYT);
-          // Yayınevinin giriş sayfası ya da "erişiminiz yok" HTML'i PDF değil.
-          if (!pdfMi(indirilen.bayt)) continue;
-          const hedef = depoYolu(projectId, anahtar);
+          /* Yayınevinin giriş sayfası ya da "erişiminiz yok" HTML'i PDF değil.
+             Adres yine saklanır: öğrenci "Kaynağa git" ile açıp kendisi
+             indirebilsin (eskiden bu durumda bağlantı da kayboluyordu). */
+          if (!pdfMi(indirilen.bayt)) {
+            sorun = agirSorun(sorun, "pdf_degil");
+            kaynakAdres = indirilen.sonAdres;
+            continue;
+          }
+          const hedef = otomatikYol(projectId, anahtar);
           const { error: yuklemeHatasi } = await supabase.storage
             .from(KOVA)
             .upload(hedef, indirilen.bayt, { contentType: "application/pdf", upsert: false });
           if (yuklemeHatasi) {
+            // PDF indi ama BİZİM depomuza yazılamadı: öğrenciye "yayıncı izin vermedi" denmez.
             console.error("[kaynak-pdf] depoya yazılamadı:", yuklemeHatasi.message);
+            sorun = agirSorun(sorun, "depo");
+            kaynakAdres = indirilen.sonAdres;
             continue;
           }
           durum = "indirildi";
           yol = hedef;
+          yolBayti = indirilen.bayt;
           kaynakAdres = indirilen.sonAdres;
           break;
         } catch (hata) {
-          console.warn("[kaynak-pdf] indirilemedi:", aday, hata instanceof Error ? hata.message : hata);
+          const tur = indirmeHatasiTuru(hata);
+          // Beklenmeyen hata BİZİM sorunumuz: uyarı değil hata olarak log'a gider.
+          (tur === "beklenmeyen" ? console.error : console.warn)("[kaynak-pdf] indirilemedi:", tur, aday, hata instanceof Error ? hata.message : hata);
+          sorun = agirSorun(sorun, tur);
           kaynakAdres = aday;
         }
       }
     }
+    if (durum !== "indirildi" && sorun) sorunlar[sorun] += 1;
 
-    const { data, error } = await supabase
-      .from("kaynak_pdfleri")
-      .upsert({ ...kayit, durum, depo_yolu: yol, kaynak_adres: kaynakAdres }, { onConflict: "project_id,kunye_anahtari" })
-      .select(SECIM)
-      .single();
-    if (error) {
-      console.error("[kaynak-pdf] kaydedilemedi:", error.message);
-      return { error: error.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "PDF durumu kaydedilemedi; tekrar deneyin.", en: "Couldn't save the PDF status; please try again." }) };
+    const sonuc = await otomatikSonucuYaz<KaynakPdfSatiri>(
+      supabase,
+      { ...kayit, durum, depo_yolu: yol, kaynak_adres: kaynakAdres },
+      SECIM,
+    );
+    if (sonuc.tur !== "yazildi" && yol) {
+      /* Bu çağrının indirdiği dosya kayda bağlanamadı (yazma düştü ya da
+         arada hazır bir PDF geldi): yalnızca kendi dosyamızı, o da hiçbir
+         kayıt göstermiyorsa temizleriz. Eskiden yazma düşünce dosya yetim
+         kalıyordu (denetim B-DB-1). */
+      await sahipsizseSil(supabase, projectId, yol, "otomatik indirme kayda bağlanamadı", yolBayti ?? undefined);
     }
-    satirlar.push(data as KaynakPdfSatiri);
-    // Yeniden bakıldıysa önceki indirme artık kullanılmıyor.
-    const eski = eskiYol.get(anahtar);
-    if (eski && eski !== yol) await supabase.storage.from(KOVA).remove([eski]);
+    if (sonuc.tur === "hata") {
+      console.error("[kaynak-pdf] kaydedilemedi:", sonuc.hata?.message);
+      return { error: sonuc.hata?.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "PDF durumu kaydedilemedi; tekrar deneyin.", en: "Couldn't save the PDF status; please try again." }) };
+    }
+    // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
+    if (sonuc.tur === "yazildi" && yol && yolBayti && (await baglantiyiDogrula(supabase, yol, yolBayti, "otomatik indirme bağlandı")) === "kayip") {
+      /* Dosya depoda yok ve geri yüklenemedi. Eskiden bu sonuç okunmuyordu:
+         satır "PDF hazır" diye listeye giriyor, öğrenci açamadığı bir PDF
+         görüyor, sonraki aramalar da künyeyi hazır sayıp atlıyordu. Artık
+         bu künye BAŞARI listesine girmez; kayıt, hâlâ bizim yolumuzu
+         gösteriyorsa "erişilemedi"ye döner (adres korunur: "Kaynağa git").
+         Sorun "depo" sayılır: kullanıcı "bizim tarafımızdaki bir sorun"
+         hatasını görür (lib/kaynak-pdf → indirmeSorunuBildirimleri). */
+      sorunlar.depo += 1;
+      const geri = await baglamayiGeriAl<KaynakPdfSatiri>(
+        supabase,
+        projectId,
+        anahtar,
+        yol,
+        { durum: "erisilemedi", depo_yolu: null, kaynak_adres: kaynakAdres, baslik_eslesti: null, bakildi: kayit.bakildi },
+        SECIM,
+      );
+      if (geri.tur === "hata") {
+        return { error: t({ tr: "PDF depoya ulaşmadı ve durumu düzeltilemedi; tekrar deneyin.", en: "The PDF didn't reach storage and its status couldn't be corrected; please try again." }) };
+      }
+      if (geri.tur === "geri_alindi" && geri.satir) satirlar.push(geri.satir);
+      if (geri.tur === "degismis") {
+        // Arada daha yeni bir yazma oldu: onu olduğu gibi göster, dokunma.
+        const { data: guncel } = await supabase.from("kaynak_pdfleri").select(SECIM).eq("project_id", projectId).eq("kunye_anahtari", anahtar).maybeSingle();
+        if (guncel) satirlar.push(guncel as KaynakPdfSatiri);
+      }
+      continue;
+    }
+    if (sonuc.satir) satirlar.push(sonuc.satir);
+    /* Eskiden burada "önceki indirme" siliniyordu. Hazır olmayan satırın
+       dosyası yok (tablonun check kısıtı), hazır satıra da artık
+       dokunulmuyor: silinecek eski dosya kalmadı. */
   }
 
   yenile();
-  return { satirlar };
+  return { satirlar, sorunlar };
 }
 
 /**
@@ -199,17 +256,31 @@ export async function kaynakPdfiYuklendi(
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const t = await ceviri();
-  if (!UUID.test(projectId) || !girdi.depoYolu.startsWith(`${projectId}/kaynak-pdf/`)) return { error: t({ tr: "Dosya yolu geçersiz.", en: "Invalid file path." }) };
   const { supabase, user } = ctx;
+  const anahtar = typeof girdi?.kunye === "string" ? kunyeAnahtari(girdi.kunye) : "";
+  /* Yol TAM kalıba uymalı ve yükleyen bu oturumun kullanıcısı olmalı
+     (lib/kaynak-pdf-yolu.ts). Eskiden yalnızca önek denetleniyordu: aynı
+     çalışmadaki başka bir künyenin dosyası da kabul ediliyordu. Geçersiz
+     yolda dosyaya HİÇ dokunulmaz: kimin olduğu bilinmiyor. */
+  if (!UUID.test(projectId) || !anahtar || !yuklemeYoluMu(girdi.depoYolu, projectId, user.id)) {
+    // Dağıtımdan önce açılmış bir sekme eski biçimde yol üretir: yenilemek yeter.
+    return { error: t({ tr: "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.", en: "Invalid file path. Reload the page and upload again." }) };
+  }
+  const yol = girdi.depoYolu;
 
-  const { data: dosya, error: indirmeHatasi } = await supabase.storage.from(KOVA).download(girdi.depoYolu);
+  // Başka bir künyenin kaydı bu dosyayı gösteriyorsa onu bu künyeye bağlamak ikisini birbirine düğümler.
+  const baskasinda = await yolKullaniliyorMu(supabase, projectId, yol, anahtar);
+  if (baskasinda === null) return { error: t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Couldn't save; please try again." }) };
+  if (baskasinda) return { error: t({ tr: "Bu dosya başka bir kaynağa bağlı.", en: "This file is attached to another source." }) };
+
+  const { data: dosya, error: indirmeHatasi } = await supabase.storage.from(KOVA).download(yol);
   if (indirmeHatasi || !dosya) {
     console.error("[kaynak-pdf] yüklenen dosya okunamadı:", indirmeHatasi?.message);
     return { error: t({ tr: "Yüklenen dosya okunamadı; tekrar deneyin.", en: "Couldn't read the uploaded file; please try again." }) };
   }
   const bayt = new Uint8Array(await dosya.arrayBuffer());
   if (!pdfMi(bayt)) {
-    await supabase.storage.from(KOVA).remove([girdi.depoYolu]);
+    await sahipsizseSil(supabase, projectId, yol, "yüklenen dosya PDF değil", bayt);
     return { error: t({ tr: "Dosya PDF değil. Kaynağın PDF'ini yükleyin.", en: "The file isn't a PDF. Upload the source's PDF." }) };
   }
 
@@ -223,42 +294,51 @@ export async function kaynakPdfiYuklendi(
     baslikEslesti = null;
   }
 
-  const anahtar = kunyeAnahtari(girdi.kunye);
-  const { data: eski } = await supabase
-    .from("kaynak_pdfleri")
-    .select("depo_yolu")
-    .eq("project_id", projectId)
-    .eq("kunye_anahtari", anahtar)
-    .maybeSingle();
-
-  const { data, error } = await supabase
-    .from("kaynak_pdfleri")
-    .upsert(
-      {
-        project_id: projectId,
-        olusturan: user.id,
-        kunye_anahtari: anahtar,
-        kunye: girdi.kunye.trim().slice(0, 2000),
-        doi: girdi.doi?.trim().slice(0, 300) || null,
-        durum: "yuklendi",
-        depo_yolu: girdi.depoYolu,
-        kaynak_adres: null,
-        baslik_eslesti: baslikEslesti,
-        bakildi: new Date().toISOString(),
-      },
-      { onConflict: "project_id,kunye_anahtari" },
-    )
-    .select(SECIM)
-    .single();
-  if (error) {
-    console.error("[kaynak-pdf] kaydedilemedi:", error.message);
-    return { error: error.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Couldn't save; please try again." }) };
+  const sonuc = await yuklemeyiYaz<KaynakPdfSatiri>(
+    supabase,
+    {
+      project_id: projectId,
+      olusturan: user.id,
+      kunye_anahtari: anahtar,
+      kunye: girdi.kunye.trim().slice(0, 2000),
+      doi: girdi.doi?.trim().slice(0, 300) || null,
+      durum: "yuklendi",
+      depo_yolu: yol,
+      kaynak_adres: null,
+      baslik_eslesti: baslikEslesti,
+      bakildi: new Date().toISOString(),
+    },
+    SECIM,
+  );
+  if (sonuc.tur !== "yazildi") {
+    // Telafi: dosya bu işlemin; hiçbir kayıt göstermiyorsa silinir (eskiden yetim kalıyordu).
+    await sahipsizseSil(supabase, projectId, yol, "yükleme kayda bağlanamadı", bayt);
+    if (sonuc.tur === "hata") console.error("[kaynak-pdf] kaydedilemedi:", sonuc.hata?.message);
+    return {
+      error:
+        sonuc.tur === "hata" && sonuc.hata?.code === "42501"
+          ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." })
+          : t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Couldn't save; please try again." }),
+    };
   }
-  // Eski dosya (önceki indirme ya da yükleme) artık kullanılmıyor.
-  if (eski?.depo_yolu && eski.depo_yolu !== girdi.depoYolu) await supabase.storage.from(KOVA).remove([eski.depo_yolu]);
+  /* Yerine geçilen dosya: yalnızca artık hiçbir kayıt göstermiyorsa silinir.
+     Eskiden koşulsuz siliniyordu; kayıt başka künyenin dosyasını
+     gösteriyorsa onun PDF'i gidiyordu (denetim B-PATH-1). */
+  // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
+  if ((await baglantiyiDogrula(supabase, yol, bayt, "yükleme bağlandı")) === "kayip") {
+    /* Kayıt yazıldı ama dosya depoda yok ve geri yüklenemedi: "yüklendi"
+       demek veri kaybını gizlemek olur. Kayıt da düzeltilir: hâlâ bizim
+       yolumuzu gösteriyorsa ÖNCEKİ hâline döner (eski PDF henüz silinmedi,
+       yerinde) ya da satırı biz açtıysak silinir. Daha yeni bir yazma
+       varsa ona dokunulmaz. */
+    await baglamayiGeriAl(supabase, projectId, anahtar, yol, sonuc.onceki, SECIM);
+    yenile();
+    return { error: t({ tr: "PDF depoya ulaşmadı; yeniden yükleyin.", en: "The PDF didn't reach storage; please upload it again." }) };
+  }
+  if (sonuc.eskiYol && sonuc.eskiYol !== yol) await sahipsizseSil(supabase, projectId, sonuc.eskiYol, "yerine yenisi yüklendi");
 
   yenile();
-  return { satir: data as KaynakPdfSatiri };
+  return { satir: sonuc.satir };
 }
 
 /**

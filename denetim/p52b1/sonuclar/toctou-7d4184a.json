@@ -1,0 +1,95 @@
+[
+  {
+    "kimlik": "Y1",
+    "ad": "TOCTOU (silen taraf): A'nın telafisi 'kullanılmıyor' dedikten sonra, silmeden hemen önce B aynı yolu sahipleniyor",
+    "sonuc": "FAIL",
+    "sorun": "B'nin kaydı depoda olmayan dosyayı gösteriyor: ddb8f04d-0dc9-402d-a717-f559ddcd1cc3/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273529.pdf",
+    "kanit": {
+      "b": "başarılı",
+      "bSonrasiNesne": true,
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "kayit": [
+        "yuklendi|ddb8f04d-0dc9-402d-a717-f559ddcd1cc3/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273529.pdf"
+      ],
+      "nesneVar": false,
+      "sarkan": [
+        "ddb8f04d-0dc9-402d-a717-f559ddcd1cc3/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273529.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "Y2",
+    "ad": "TOCTOU (bağlayan taraf): B dosyayı okudu, A'nın telafisi tamamen bitti (sildi), sonra B kaydını yazıyor",
+    "sonuc": "FAIL",
+    "sorun": "B'nin kaydı depoda olmayan dosyayı gösteriyor: 92e2b12a-f9bc-45fb-9926-771aadd2346e/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273966.pdf",
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "aSonrasiNesne": false,
+      "b": "başarılı",
+      "kayit": [
+        "yuklendi|92e2b12a-f9bc-45fb-9926-771aadd2346e/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273966.pdf"
+      ],
+      "nesneVar": false,
+      "sarkan": [
+        "92e2b12a-f9bc-45fb-9926-771aadd2346e/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1794801273966.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "Y3a",
+    "ad": "Aynı milisaniyede iki yükleme yolu (iki künye, iki sekme) → ikinci yükleme 'zaten var' ile düşmemeli",
+    "sonuc": "FAIL",
+    "sorun": "iki işlem aynı adı üretti, ikinci yükleme düştü: The resource already exists",
+    "kanit": {
+      "y1": "d6bae146-390f-4569-8e2c-38f71114a4de/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1763200000000.pdf",
+      "y2": "d6bae146-390f-4569-8e2c-38f71114a4de/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1763200000000.pdf",
+      "ayni": true,
+      "h1": null,
+      "h2": "The resource already exists"
+    }
+  },
+  {
+    "kimlik": "Y3b",
+    "ad": "Aynı milisaniyede İKİ künyeye EŞZAMANLI iki yükleme (iki sekme) → her künye kendi PDF'ini taşımalı",
+    "sonuc": "FAIL",
+    "sorun": "künye BAŞKA künyenin PDF'ini gösteriyor: Ali, B. ",
+    "kanit": {
+      "ayniYol": true,
+      "hA": null,
+      "hB": null,
+      "rA": "başarılı",
+      "rB": "Bu dosya başka bir kaynağa bağlı.",
+      "kayit": [
+        "yuklendi|0c89f9f2-df7b-4640-8894-9a116523e33e/kaynak-pdf/y-12bea9b9-a232-48e2-8249-c85e8b452466-1763200000000.pdf"
+      ],
+      "kendiPdfi": {
+        "Ali, B. ": false
+      }
+    }
+  },
+  {
+    "kimlik": "Y3c",
+    "ad": "Aynı milisaniyede aynı künyeye iki otomatik indirme → ikisi de depoya yazabilmeli, sonuç tek kayıt, yetim yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "r2": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|82a5b1ff-db04-400d-b57a-f04fb11533a5/kaynak-pdf/c0459901e985bf7a-1763200000000.pdf"
+      ],
+      "nesne": 1,
+      "sarkan": []
+    }
+  }
+]

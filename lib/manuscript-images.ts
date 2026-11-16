@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { calismaResimKlasorleri, isWriterImagePath, storagePathFromUrl } from "@/lib/editor-resim-yolu";
+
+export { calismaResimKlasorleri, isWriterImagePath, storagePathFromUrl };
 
 // Editördeki resimler depoda (project-files/<klasör>/editor-images/...) durur ve metne
 // imzalı bağlantıyla eklenir. İmzanın süresi dolsa da resim kaybolmasın diye editör,
@@ -11,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // görünüyordu. Yükleyenin klasörü de kabul edilmeye devam eder — eski resimler yerinde.
 //
 // Güvenlik: metin kullanıcı tarafından yazılabildiği için yalnızca BU ÇALIŞMAYA ait
-// klasörler (çalışmanın kendisi, sahibi, atanan uzman) işlenir; başka bir çalışmanın ya
+// klasörler (çalışmanın kendisi, sahibi; calismaResimKlasorleri) işlenir; başka bir çalışmanın ya
 // da başka birinin dosya yolunu metne yazmak o dosyaya erişim sağlamaz. Sunucu dış
 // adreslere istek atmaz.
 
@@ -31,36 +34,12 @@ export const IMAGE_BUCKET = "project-files";
 */
 export const SIGNED_URL_TTL_SECONDS = 2 * 60 * 60;
 
-const EDITOR_IMAGE_PATH = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/editor-images\/[^/]+$/i;
-
 type StorageClient = Pick<SupabaseClient, "storage">;
 
 interface DocNode {
   type?: string;
   attrs?: Record<string, unknown>;
   content?: DocNode[];
-}
-
-/** Kendi Supabase depomuzdaki dosya bağlantısından depo yolunu çıkarır (başka adresler: null) */
-export function storagePathFromUrl(src: string): string | null {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base) return null;
-  try {
-    const url = new URL(src);
-    if (url.origin !== new URL(base).origin) return null;
-    const match = url.pathname.match(/^\/storage\/v1\/object\/(?:sign|public|authenticated)\/project-files\/(.+)$/);
-    return match ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** writerIds: bu çalışmanın kabul edilen klasörleri — çalışma kimliği, sahibi, atanan uzman */
-export function isWriterImagePath(path: string, writerIds: (string | null | undefined)[]): boolean {
-  const match = path.match(EDITOR_IMAGE_PATH);
-  if (!match) return false;
-  const owner = match[1].toLowerCase();
-  return writerIds.some((id) => id?.toLowerCase() === owner);
 }
 
 function imagePath(node: DocNode, writerIds: (string | null | undefined)[]): string | null {
