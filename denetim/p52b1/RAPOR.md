@@ -138,3 +138,74 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE
 node --import ./tests/register.mjs denetim/p52b1/tarayici-kabul.mjs http://localhost:3125
 ```
 Eski kod için: `git worktree add ../eski 3d02235`, `denetim/p52b1/*.mjs` kopyalanıp aynı komutlar.
+
+---
+
+## Son güvenlik incelemesi (7d4184a sonrası): TOCTOU ve ad çakışması
+
+`toctou.mjs` — gerçek PG17 + PostgREST + GoTrue + **gerçek Storage API**. Sıra istemcinin fetch
+katmanındaki kapılarla kuruluyor (belirli bir istekten hemen önce ötekinin eylemi çalışıyor;
+zamanlama tahmini yok), aynı milisaniye `Date.now` sabitlenerek kuruluyor.
+
+| # | Senaryo | 7d4184a | Sonra |
+|---|---|---|---|
+| Y1 | TOCTOU, silen taraf: telafinin "kullanılmıyor" denetiminden SONRA, Storage silmesinden ÖNCE B aynı yolu sahipleniyor | **FAIL** (B'nin kaydı depoda olmayan dosyayı gösteriyor) | PASS (silmeden sonra yeniden bakılıyor, baytlar geri yüklendi) |
+| Y2 | TOCTOU, bağlayan taraf: B dosyayı okudu; A'nın telafisi tamamen bitti ve sildi; sonra B kaydını yazıyor | **FAIL** (sarkan kayıt) | PASS (B yazdıktan sonra dosyanın varlığına bakıyor, geri yüklüyor) |
+| Y3a | Aynı milisaniyede iki yükleme yolu | **FAIL** (aynı ad, ikinci yükleme "zaten var") | PASS (rastgele ad) |
+| Y3b | Aynı milisaniyede İKİ künyeye EŞZAMANLI yükleme | **FAIL** (Storage ikincisini hata vermeden üzerine yazdı: **künye başka künyenin PDF'ini gösteriyor**) | PASS |
+| Y3c | Aynı milisaniyede aynı künyeye iki otomatik indirme | PASS¹ | PASS |
+| G8 | Eski biçimli (`y-<zaman>.pdf`) mevcut PDF değiştirilir | **FAIL** (7d4184a eski biçimi tanımıyordu: eski nesne yetim kaldı) | PASS (eski biçim yalnızca SİLİNEBİLİR olarak tanınıyor) |
+| T5 | Tarayıcı: eski sekmeden gelen yol | — | PASS: "İşlem tamamlanamadı · Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin." Başarı bildirimi yok, kayıt ve mevcut PDF değişmedi |
+
+¹ Aynı künyenin baytları aynı kaynaktan geldiği için üzerine yazma zararsız sonuçlandı.
+
+### Düzeltme
+
+1. **Rastgele ad** (`lib/kaynak-pdf-yolu.ts`, `otomatikYol`): yollar
+   `…/y-<kullanıcı>-<uuid>.pdf` ve `…/<16hex>-<uuid>.pdf` (`crypto.randomUUID`, 122 bit).
+   Ad çakışması pratikte imkânsız. Bir dosyanın yolunu yalnızca onu üreten işlem bilir: telafinin
+   silmeye karar verdiği dosyayı meşru başka bir işlem sahiplenemez. Eski biçimler (bu değişiklikten
+   önce yazılmış kayıtlar) yalnızca silinebilir olarak tanınır, yeni kayda bağlanamaz.
+2. **Silen taraf** (`sahipsizseSil`): silmeden SONRA kullanım yeniden okunur. Yol sahiplenilmişse
+   ya da okunamıyorsa ve baytlar elimizdeyse dosya aynı yola geri yüklenir (`upsert: false`;
+   "zaten var" yanıtı da başarı sayılır). Baytlar yoksa durum `[kaynak-pdf] KAYIP_DOSYA` iziyle
+   yoluyla günlüğe yazılır.
+3. **Bağlayan taraf** (`baglantiyiDogrula`): kayıt yazıldıktan SONRA dosyanın depoda olduğuna
+   bakılır (`exists`), yoksa baytlar geri yüklenir. Geri yüklenemezse kullanıcıya başarı
+   gösterilmez: "PDF depoya ulaşmadı; yeniden yükleyin."
+
+Neden yeterli: her iki taraf da kendi işinden SONRA karşı tarafın deposuna bakıyor. B'nin yazması
+A'nın son bakışından önceyse A geri yükler; sonraysa B'nin yazması A'nın silmesinden sonradır ve
+B'nin varlık bakışı bunu görür. Baytları elinde tutan her yolda dosya ya yerinde kalır ya da geri
+gelir.
+
+Migration yok. RLS ve sahiplik denetimleri aynı: senaryolar 24/24, gerçek Storage 8/8
+(G1–G7 değişmedi), tarayıcı 5/5.
+
+### Kalan risk (tam atomiklik yok)
+
+- **Baytları elde olmayan silme:** yerine geçilen ESKİ PDF silinirken, kullanım denetimi ile
+  silme arasında başka bir kayıt o eski yolu sahiplenirse kayıt sarkar. Rastgele adlarla bu yolu
+  yalnızca API'ye doğrudan yazan biri bilebilir. Bu kişi çalışmaya yazma yetkisi olan biridir
+  (RLS), yani kendi çalışmasındaki kaydı bozar. Durum `KAYIP_DOSYA` iziyle günlüğe yazılır.
+- **Geri yükleme penceresi:** silme ile geri yükleme arasındaki milisaniyelerde "PDF'i aç"
+  başarısız olabilir; sonra düzelir.
+- **Varlık bakışı da düşerse** (Storage kapalı): bağlayan taraf geri yüklemeyi dener. Bu da
+  düşerse kullanıcıya hata döner ama kayıt yazılmış kalır (`KAYIP_DOSYA`).
+
+### Ayrı tasarım önerisi (bu PR'da değil; migration ister)
+
+Silmeyi veritabanında sıraya koymak, yani bir **silme kuyruğu / mezar taşı tablosu**:
+
+1. `kaynak_pdf_silinecek(yol, project_id, istendi, deneme)` tablosu ekle. Unique `yol`, RLS açık.
+2. Telafi Storage'ı doğrudan silmez. Tek işlemde kaynak_pdfleri'nde yolu gösteren satır yoksa
+   kuyruğa ekler. Koşullu INSERT … WHERE NOT EXISTS, `kaynak_pdfleri` satırına `FOR UPDATE`
+   ile birlikte.
+3. Bağlama (`kaynak_pdfleri` INSERT/UPDATE) bir tetikleyiciyle aynı yolu kuyruktan siler.
+   Kuyruktaki yolu sahiplenmek silmeyi iptal eder. İkisi aynı satırı kilitlediği için TOCTOU
+   kalmaz.
+4. Bir zamanlanmış iş (service_role) kuyruğu boşaltır: satırı `FOR UPDATE SKIP LOCKED` ile alır,
+   hâlâ sahipsizse Storage'dan siler, sonra satırı siler.
+
+Bu yapı P52b-2'nin yetim taramasıyla aynı yere oturur ve `YETIM_DOSYA` / `KAYIP_DOSYA`
+izlerinin yerini kalıcı bir tablo alır.

@@ -5,10 +5,10 @@
     "sonuc": "PASS",
     "sorun": null,
     "kanit": {
-      "bekleme_ms": 1246,
+      "bekleme_ms": 1244,
       "oturum2": "guncellenen=0",
       "son": [
-        "yuklendi|6228bf97-2d4b-4998-8c77-ae22afe348f7/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-0000000000001.pdf"
+        "yuklendi|8c653320-b52a-4827-9845-71689278a820/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-0000000000001.pdf"
       ]
     }
   },
@@ -33,10 +33,10 @@
       "tur": "korundu",
       "satir": {
         "durum": "yuklendi",
-        "depo_yolu": "b67f4d82-8c44-42bd-aee7-b13328b0d5aa/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-0000000000002.pdf"
+        "depo_yolu": "72e0edaa-aab5-4c9b-94ab-93d437ea3376/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-0000000000002.pdf"
       },
       "son": [
-        "yuklendi|b67f4d82-8c44-42bd-aee7-b13328b0d5aa/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-0000000000002.pdf"
+        "yuklendi|72e0edaa-aab5-4c9b-94ab-93d437ea3376/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-0000000000002.pdf"
       ]
     }
   },
@@ -49,7 +49,7 @@
       "yukleme": "başarılı",
       "bul": "başarılı",
       "son": [
-        "yuklendi|a5dc8de6-404b-4a53-89e1-006a22ed4f78/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787680333.pdf"
+        "yuklendi|3843c9a0-57a5-41ef-a73c-a3984a7e718c/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-473a9c9d-0053-4e01-8bd1-c37bf8ae4bda.pdf"
       ],
       "dosyaVar": true,
       "yetim": []
@@ -64,7 +64,7 @@
       "r1": "başarılı",
       "r2": "başarılı",
       "kayit": [
-        "indirildi|9c8149fb-a846-42d1-93e8-3ea6521726bb/kaynak-pdf/3f54f789261aed2f-1794787681527.pdf"
+        "indirildi|0d249c10-9e3a-4b24-8983-f4c75f63e791/kaynak-pdf/3f54f789261aed2f-af77302c-8f7f-4bb7-82de-5ac0bc565399.pdf"
       ],
       "dosya": 1,
       "yetim": []
@@ -77,13 +77,13 @@
     "sorun": null,
     "kanit": {
       "hizliSonrasi": [
-        "indirildi|e05f70d9-0071-4069-a888-b6dd4d3b10ea/kaynak-pdf/3f54f789261aed2f-1794787681833.pdf"
+        "indirildi|04ddba69-078c-4cfc-9a16-5612983de8ce/kaynak-pdf/3f54f789261aed2f-43ec0ad7-5f98-4b86-b40a-4bda826e4a48.pdf"
       ],
       "yavasDonus": [
         "indirildi"
       ],
       "son": [
-        "indirildi|e05f70d9-0071-4069-a888-b6dd4d3b10ea/kaynak-pdf/3f54f789261aed2f-1794787681833.pdf"
+        "indirildi|04ddba69-078c-4cfc-9a16-5612983de8ce/kaynak-pdf/3f54f789261aed2f-43ec0ad7-5f98-4b86-b40a-4bda826e4a48.pdf"
       ],
       "yetim": []
     }
@@ -117,7 +117,7 @@
     "kanit": {
       "donus": "Bu çalışmaya yazma yetkiniz yok.",
       "yetim": [
-        "95a0da07-c906-4171-8af7-ae8f4ab59b2b/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787682971.pdf"
+        "774aaf4f-0f0f-4998-84a7-fc83a56ab5fe/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-b25ee4d7-34bd-4067-863b-8cdf17ca32df.pdf"
       ],
       "raporlandi": true,
       "silmeDenendi": true
@@ -131,11 +131,11 @@
     "kanit": {
       "donus": "başarılı",
       "kayit": [
-        "yuklendi|38c77f20-214d-4e12-ac09-f8f891cf2a13/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683177.pdf"
+        "yuklendi|b592aa46-0354-4295-aacf-3717bbb0a3b7/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-4d0943f2-3f01-4044-b5a2-1b205eddd501.pdf"
       ],
       "yeniVar": true,
       "yetim": [
-        "38c77f20-214d-4e12-ac09-f8f891cf2a13/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683160.pdf"
+        "b592aa46-0354-4295-aacf-3717bbb0a3b7/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-1875e55b-45bd-4acc-b460-01076546be74.pdf"
       ],
       "raporlandi": true
     }
@@ -148,7 +148,7 @@
     "kanit": {
       "donus": "Bu çalışmaya yazma yetkiniz yok.",
       "kayit": [
-        "yuklendi|5ba17bd2-b138-4a88-8351-cdeb447ea02f/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683362.pdf"
+        "yuklendi|bf560d0f-49d2-4c82-a8d0-1726d4fd243f/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-0bee7b0c-de2a-48a0-94a1-9d79bdf04193.pdf"
       ],
       "eskiVar": true,
       "yetim": []
@@ -162,8 +162,8 @@
     "kanit": {
       "donus": "Bu dosya başka bir kaynağa bağlı.",
       "kayit": [
-        "yuklendi|193596ec-f56d-42c5-998d-465463a378af/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683682.pdf",
-        "yuklendi|193596ec-f56d-42c5-998d-465463a378af/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683656.pdf"
+        "yuklendi|f49693bc-721f-4b07-853a-46d75d2de993/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-919ff055-f85d-432a-9e45-a37699b3597e.pdf",
+        "yuklendi|f49693bc-721f-4b07-853a-46d75d2de993/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-24401ef6-7b43-48fe-a074-b8d4a672a584.pdf"
       ],
       "bDosyasiVar": true
     }
@@ -177,8 +177,8 @@
       "kurcalama": "yazıldı",
       "donus": "başarılı",
       "kayit": [
-        "yuklendi|f068e2df-2f25-441a-8151-6310e2e6560f/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683864.pdf",
-        "yuklendi|f068e2df-2f25-441a-8151-6310e2e6560f/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787683825.pdf"
+        "yuklendi|7ecf2459-5f77-4554-939c-883ccdcce244/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-2da48fce-3c25-490c-80d4-016c8e7f8be0.pdf",
+        "yuklendi|7ecf2459-5f77-4554-939c-883ccdcce244/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-1f764456-dec6-481a-a10f-2d90ae758410.pdf"
       ],
       "bDosyasiVar": true
     }
@@ -222,6 +222,10 @@
           "reddedildi": true,
           "depoyaDokundu": false
         },
+        "zamanli_ad": {
+          "reddedildi": true,
+          "depoyaDokundu": false
+        },
         "baska_kullanici": {
           "reddedildi": true,
           "depoyaDokundu": false
@@ -244,7 +248,7 @@
       "yazma": "Bu çalışmaya yazma yetkiniz yok.",
       "yukleme": "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
       "kayit": [
-        "yuklendi|4012d0c3-8b9a-4623-af90-6378423db408/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787684216.pdf"
+        "yuklendi|6c38769a-7b8b-4163-8884-db471736cf55/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-d3f0bd89-6e39-4d92-9ce4-13dd90e7df6f.pdf"
       ],
       "sahibinDosyasi": true,
       "yetim": []
@@ -269,7 +273,7 @@
     "kanit": {
       "donus": "Bu çalışmaya yazma yetkiniz yok.",
       "kayit": [
-        "yuklendi|07e3bc77-90dc-4100-b841-af83d33b194a/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787684543.pdf"
+        "yuklendi|1688916e-a617-4db9-a760-67e01c7b9952/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-48947287-077d-4ab0-bbfe-75e69979fee9.pdf"
       ],
       "dosyaVar": true
     }
@@ -283,7 +287,7 @@
       "donus": "Bu dosya başka bir kaynağa bağlı.",
       "dosyaVar": true,
       "kayit": [
-        "yuklendi|67cfd617-b63e-4179-9c5b-1db7ba0cf54f/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787684823.pdf"
+        "yuklendi|d8d5bd1c-12ff-4be1-8fa2-9c65bde95e59/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-8a699b00-c0fb-4d16-83dc-074f93124593.pdf"
       ]
     }
   },
@@ -304,7 +308,7 @@
       },
       "r2": "başarılı",
       "son": [
-        "indirildi|64bec653-516a-443d-9671-687ee5ddfc3a/kaynak-pdf/3f54f789261aed2f-1794787685042.pdf"
+        "indirildi|0cbfd20e-5b61-412c-86e0-f7d24a732bdf/kaynak-pdf/3f54f789261aed2f-498c725a-7153-4455-804b-242e900cb0ae.pdf"
       ],
       "dosya": 1,
       "yetim": []
@@ -320,7 +324,7 @@
       "r1": "PDF durumu kaydedilemedi; tekrar deneyin.",
       "r2": "başarılı",
       "son": [
-        "indirildi|47b6e509-65c1-4c25-9583-b4ed36d8e10c/kaynak-pdf/3f54f789261aed2f-1794787685295.pdf"
+        "indirildi|76d04b5d-d85e-4951-9690-df2517cd0cba/kaynak-pdf/3f54f789261aed2f-2a40f774-8423-4031-9477-65cd04c86190.pdf"
       ],
       "dosya": 1,
       "yetim": []
@@ -335,10 +339,10 @@
       "r1": "PDF durumu kaydedilemedi; tekrar deneyin.",
       "r2": "başarılı",
       "son": [
-        "indirildi|e5bfbb1e-6e8e-4484-9ddf-4a69dd026ea1/kaynak-pdf/3f54f789261aed2f-1794787692501.pdf"
+        "indirildi|7a8aa94e-3dbd-46e8-9c03-5cd9e1a119ed/kaynak-pdf/3f54f789261aed2f-a76d90cd-5f8a-48de-b870-b4c691a2ae05.pdf"
       ],
       "yetim": [
-        "e5bfbb1e-6e8e-4484-9ddf-4a69dd026ea1/kaynak-pdf/3f54f789261aed2f-1794787685488.pdf"
+        "7a8aa94e-3dbd-46e8-9c03-5cd9e1a119ed/kaynak-pdf/3f54f789261aed2f-a6426bd9-f32b-4efb-bc6f-384c52b4c5d9.pdf"
       ],
       "raporlanan": 1
     }
@@ -350,10 +354,10 @@
     "sorun": null,
     "kanit": {
       "ilk": [
-        "indirildi|856bfd10-6c31-4c48-b80a-3a52ca187466/kaynak-pdf/3f54f789261aed2f-1794787692682.pdf"
+        "indirildi|7f056b15-3352-4a75-864f-fa59d5a015ee/kaynak-pdf/3f54f789261aed2f-406213b0-b2eb-4f6e-b1fc-af34783a06c3.pdf"
       ],
       "son": [
-        "indirildi|856bfd10-6c31-4c48-b80a-3a52ca187466/kaynak-pdf/3f54f789261aed2f-1794787692682.pdf"
+        "indirildi|7f056b15-3352-4a75-864f-fa59d5a015ee/kaynak-pdf/3f54f789261aed2f-406213b0-b2eb-4f6e-b1fc-af34783a06c3.pdf"
       ],
       "dosya": 1,
       "yetim": []
@@ -371,7 +375,7 @@
         "başarılı"
       ],
       "son": [
-        "yuklendi|2d7e0d63-b479-42c9-9697-41410f011855/kaynak-pdf/y-25722dc2-b04a-4db5-bc43-c3daa64aaf1d-1794787692910.pdf"
+        "yuklendi|6fedb9e2-f657-4f71-b7b8-d830b1989e76/kaynak-pdf/y-57d73ff8-3309-4161-b9ab-4663f249383a-f35805e1-eaf8-4921-8004-d1e7f1d1dc5d.pdf"
       ],
       "dosyaVar": true
     }

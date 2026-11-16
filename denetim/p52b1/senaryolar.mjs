@@ -86,6 +86,10 @@ function sahteDepo() {
       for (const y of yollar) nesneler.delete(y);
       return { data: yollar.map((name) => ({ name })), error: null };
     },
+    async exists(yol) {
+      erisim.push(["exists", yol]);
+      return nesneler.has(yol) ? { data: true, error: null } : { data: false, error: { message: "not found" } };
+    },
     async download(yol) {
       erisim.push(["download", yol]);
       if (ayar.indirmeKancasi) await ayar.indirmeKancasi(yol);
@@ -118,7 +122,8 @@ const DOI = "10.1/denetim";
 const OTO = [{ kunye: KUNYE, doi: DOI, dogrulama: "verified" }];
 let sayac = 0;
 /* Yeni kalıpta yükleme yolu (lib/kaynak-pdf-yolu.ts → yuklemeYolu). Eski kod önek denetlediği için bunu da kabul eder. */
-const yy = (pid, uid = SAHIP) => `${pid}/kaynak-pdf/y-${uid}-${String(Date.now() + ++sayac).padStart(13, "0")}.pdf`;
+void sayac;
+const yy = (pid, uid = SAHIP) => `${pid}/kaynak-pdf/y-${uid}-${crypto.randomUUID()}.pdf`;
 const kayitlar = (pid) => psql(`select durum||'|'||coalesce(depo_yolu,'-') from public.kaynak_pdfleri where project_id='${pid}' order by kunye_anahtari`).split("\n").filter(Boolean);
 const yetimler = (depo, pid) => {
   const kayitli = new Set(psql(`select depo_yolu from public.kaynak_pdfleri where project_id='${pid}' and depo_yolu is not null`).split("\n").filter(Boolean));
@@ -383,7 +388,7 @@ await senaryo("S6c", "Bozuk/yabancı yollar (.., ters bölü, çift bölü, büy
   const pid2 = proje();
   const depo = sahteDepo();
   globalThis.__denetim.ctx = baglam(SAHIP, depo);
-  const z = "1763200000000";
+  const z = crypto.randomUUID();
   const yollar = {
     nokta_nokta: `${pid}/kaynak-pdf/../${pid2}/kaynak-pdf/y-${SAHIP}-${z}.pdf`,
     nokta_nokta_ad: `${pid}/kaynak-pdf/y-${SAHIP}-${z}/../../x.pdf`,
@@ -392,7 +397,8 @@ await senaryo("S6c", "Bozuk/yabancı yollar (.., ters bölü, çift bölü, büy
     buyuk_harf: `${pid.toUpperCase()}/kaynak-pdf/y-${SAHIP}-${z}.pdf`,
     baska_calisma: `${pid2}/kaynak-pdf/y-${SAHIP}-${z}.pdf`,
     otomatik_kalip: `${pid}/kaynak-pdf/0123456789abcdef-${z}.pdf`,
-    kisa_eski_bicim: `${pid}/kaynak-pdf/y-${z}.pdf`,
+    kisa_eski_bicim: `${pid}/kaynak-pdf/y-1763200000000.pdf`,
+    zamanli_ad: `${pid}/kaynak-pdf/y-${SAHIP}-1763200000000.pdf`,
     baska_kullanici: `${pid}/kaynak-pdf/y-${YABANCI}-${z}.pdf`,
     sondaki_ek: `${pid}/kaynak-pdf/y-${SAHIP}-${z}.pdf.html`,
   };

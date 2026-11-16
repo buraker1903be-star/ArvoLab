@@ -136,7 +136,7 @@ await senaryo("T1 PDF yükle: gerçek depoya yüklenir, kayıt 'yuklendi', yol k
   Object.assign(k, { kayit: kayitlar(PID), nesne: nesneler(PID), bildirim: await bildirim(/PDF yüklendi/) });
   if (!tamam) return "kayıt yazılmadı";
   const yol = k.kayit[0].split("|")[1];
-  if (!new RegExp(`^${PID}/kaynak-pdf/y-${KULLANICI}-\\d{13}\\.pdf$`).test(yol)) return `yol kalıp dışı: ${yol}`;
+  if (!new RegExp(`^${PID}/kaynak-pdf/y-${KULLANICI}-[0-9a-f-]{36}\\.pdf$`).test(yol)) return `yol kalıp dışı: ${yol}`;
   if (k.nesne.length !== 1 || k.nesne[0] !== yol) return `nesneler: ${k.nesne.join(",")}`;
   if (!(await sayfa.locator(".kaynak-pdf-satiri").first().textContent()).includes("PDF yüklendi")) return "satır durumu güncellenmedi";
 });
@@ -177,6 +177,38 @@ await senaryo("T4 DB yazımı düşerken Değiştir: hata bildirimi, eski PDF ve
   if (k.kayit[0] !== once) return `kayıt değişti: ${k.kayit[0]}`;
   if (!k.nesne.includes(once.split("|")[1])) return "eski PDF silindi";
   if (k.nesne.length !== 1) return `yetim nesne: ${k.nesne.filter((n) => n !== once.split("|")[1]).join(",")}`;
+});
+
+await senaryo("T5 Eski sekme: dağıtımdan önceki biçimde yol (y-<zaman>.pdf) → açık hata bildirimi, kayıt ve PDF değişmez", async (k) => {
+  const once = kayitlar(PID)[0];
+  const onceNesneler = nesneler(PID);
+  // Eski istemciyi taklit: sunucu eylemine giden istekteki yol, dağıtımdan önceki biçime çevrilir.
+  const eskiYol = `${PID}/kaynak-pdf/y-${Date.now()}.pdf`;
+  let yeniden = 0;
+  await sayfa.route("**/*", async (route) => {
+    const istek = route.request();
+    const govde = istek.method() === "POST" && istek.headers()["next-action"] ? istek.postData() : null;
+    if (govde && govde.includes('"depoYolu"')) {
+      yeniden++;
+      return route.continue({ postData: govde.replace(/"depoYolu":"[^"]+"/, `"depoYolu":"${eskiYol}"`) });
+    }
+    return route.continue();
+  });
+  try {
+    await dosyaSec("eski-sekme.pdf");
+    k.bildirim = await bildirim(/Dosya yolu geçersiz/, 30000);
+  } finally {
+    await sayfa.unroute("**/*");
+  }
+  await bekle(1000);
+  Object.assign(k, { yeniden, once, kayit: kayitlar(PID), nesne: nesneler(PID), basariBildirimi: await bildirim(/^PDF yüklendi\.?$/, 500) });
+  if (!yeniden) return "ön koşul kurulamadı: sunucu eylemi isteği yakalanmadı";
+  if (!k.bildirim || !/yenile/i.test(k.bildirim)) return `açık hata bildirimi görünmedi (${k.bildirim})`;
+  if (k.basariBildirimi) return "başarı bildirimi gösterildi";
+  if (k.kayit[0] !== once) return `kayıt değişti: ${k.kayit[0]}`;
+  if (!onceNesneler.every((n) => k.nesne.includes(n))) return "mevcut PDF silindi";
+  // Tarayıcının yeni biçimde yüklediği nesne bağlanamadı: yetim (raporlanan risk).
+  k.yetim = k.nesne.filter((n) => !onceNesneler.includes(n));
 });
 
 await tarayici.close();

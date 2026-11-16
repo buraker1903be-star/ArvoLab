@@ -26,7 +26,7 @@ import {
 } from "@/lib/kaynak-pdf";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { yuklemeYoluMu } from "@/lib/kaynak-pdf-yolu";
-import { otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
+import { baglantiyiDogrula, otomatikSonucuYaz, otomatikYol, sahipsizseSil, yolKullaniliyorMu, yuklemeyiYaz } from "@/lib/kaynak-pdf-yazimi";
 import { YEREL } from "@/lib/dil";
 
 /*
@@ -127,6 +127,7 @@ export async function kaynakPdfleriniBul(
 
     let durum: PdfDurumu;
     let yol: string | null = null;
+    let yolBayti: Uint8Array | null = null;
     let kaynakAdres: string | null = null;
     let sorun: IndirmeSorunu | null = null;
 
@@ -173,6 +174,7 @@ export async function kaynakPdfleriniBul(
           }
           durum = "indirildi";
           yol = hedef;
+          yolBayti = indirilen.bayt;
           kaynakAdres = indirilen.sonAdres;
           break;
         } catch (hata) {
@@ -196,12 +198,14 @@ export async function kaynakPdfleriniBul(
          arada hazır bir PDF geldi): yalnızca kendi dosyamızı, o da hiçbir
          kayıt göstermiyorsa temizleriz. Eskiden yazma düşünce dosya yetim
          kalıyordu (denetim B-DB-1). */
-      await sahipsizseSil(supabase, projectId, yol, "otomatik indirme kayda bağlanamadı");
+      await sahipsizseSil(supabase, projectId, yol, "otomatik indirme kayda bağlanamadı", yolBayti ?? undefined);
     }
     if (sonuc.tur === "hata") {
       console.error("[kaynak-pdf] kaydedilemedi:", sonuc.hata?.message);
       return { error: sonuc.hata?.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "PDF durumu kaydedilemedi; tekrar deneyin.", en: "Couldn't save the PDF status; please try again." }) };
     }
+    // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
+    if (sonuc.tur === "yazildi" && yol && yolBayti) await baglantiyiDogrula(supabase, yol, yolBayti, "otomatik indirme bağlandı");
     if (sonuc.satir) satirlar.push(sonuc.satir);
     /* Eskiden burada "önceki indirme" siliniyordu. Hazır olmayan satırın
        dosyası yok (tablonun check kısıtı), hazır satıra da artık
@@ -249,7 +253,7 @@ export async function kaynakPdfiYuklendi(
   }
   const bayt = new Uint8Array(await dosya.arrayBuffer());
   if (!pdfMi(bayt)) {
-    await sahipsizseSil(supabase, projectId, yol, "yüklenen dosya PDF değil");
+    await sahipsizseSil(supabase, projectId, yol, "yüklenen dosya PDF değil", bayt);
     return { error: t({ tr: "Dosya PDF değil. Kaynağın PDF'ini yükleyin.", en: "The file isn't a PDF. Upload the source's PDF." }) };
   }
 
@@ -281,7 +285,7 @@ export async function kaynakPdfiYuklendi(
   );
   if (sonuc.tur !== "yazildi") {
     // Telafi: dosya bu işlemin; hiçbir kayıt göstermiyorsa silinir (eskiden yetim kalıyordu).
-    await sahipsizseSil(supabase, projectId, yol, "yükleme kayda bağlanamadı");
+    await sahipsizseSil(supabase, projectId, yol, "yükleme kayda bağlanamadı", bayt);
     if (sonuc.tur === "hata") console.error("[kaynak-pdf] kaydedilemedi:", sonuc.hata?.message);
     return {
       error:
@@ -293,6 +297,12 @@ export async function kaynakPdfiYuklendi(
   /* Yerine geçilen dosya: yalnızca artık hiçbir kayıt göstermiyorsa silinir.
      Eskiden koşulsuz siliniyordu; kayıt başka künyenin dosyasını
      gösteriyorsa onun PDF'i gidiyordu (denetim B-PATH-1). */
+  // Kayıt yazıldı: dosya hâlâ depoda mı (telafi yarışı, lib/kaynak-pdf-yazimi.ts → baglantiyiDogrula).
+  if ((await baglantiyiDogrula(supabase, yol, bayt, "yükleme bağlandı")) === "kayip") {
+    // Kayıt yazıldı ama dosya depoda yok ve geri yüklenemedi: "yüklendi" demek veri kaybını gizlemek olur.
+    yenile();
+    return { error: t({ tr: "PDF depoya ulaşmadı; yeniden yükleyin.", en: "The PDF didn't reach storage; please upload it again." }) };
+  }
   if (sonuc.eskiYol && sonuc.eskiYol !== yol) await sahipsizseSil(supabase, projectId, sonuc.eskiYol, "yerine yenisi yüklendi");
 
   yenile();

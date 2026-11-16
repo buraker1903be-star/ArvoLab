@@ -1,0 +1,127 @@
+[
+  {
+    "kimlik": "G1",
+    "ad": "Meşru yükleme ve değiştirme: yeni nesne kayıtlı, eski nesne gerçek depodan silindi",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": "başarılı",
+      "r2": "başarılı",
+      "kayit": [
+        "yuklendi|8f8d4ff3-1473-4f97-8b89-558b206a3ebb/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801275730.pdf"
+      ],
+      "nesne": [
+        "8f8d4ff3-1473-4f97-8b89-558b206a3ebb/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801275730.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G2",
+    "ad": "Meşru otomatik indirme (gerçek depoya yazar) ve eşzamanlı ikinci arama → tek kayıt, tek nesne",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "başarılı",
+      "b": "başarılı",
+      "kayit": [
+        "indirildi|bc185c24-72c0-4299-b75d-7f3bf0d85d41/kaynak-pdf/c0459901e985bf7a-1794801276276.pdf"
+      ],
+      "nesne": [
+        "bc185c24-72c0-4299-b75d-7f3bf0d85d41/kaynak-pdf/c0459901e985bf7a-1794801276276.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G3",
+    "ad": "Kullanıcı yüklerken otomatik arama (gerçek depo) → yükleme korunur, yetim yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "başarılı",
+      "kayit": [
+        "yuklendi|47a77167-498c-4283-94c7-94ee7257d5a8/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801276700.pdf"
+      ],
+      "nesne": [
+        "47a77167-498c-4283-94c7-94ee7257d5a8/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801276700.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G4",
+    "ad": "DB yazımı düştü → yüklenen nesne gerçek depodan temizlendi; hata döndü",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "Bu çalışmaya yazma yetkiniz yok.",
+      "nesne": []
+    }
+  },
+  {
+    "kimlik": "G5",
+    "ad": "A'nın kaydı API'den B'nin yoluna çevrilip A değiştirilir → B'nin nesnesi gerçek depoda kalır",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "başarılı",
+      "r2": "Bu dosya başka bir kaynağa bağlı.",
+      "kayit": [
+        "yuklendi|428905d4-710e-4948-b0e8-322118d07a51/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801277952.pdf",
+        "yuklendi|428905d4-710e-4948-b0e8-322118d07a51/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801277873.pdf"
+      ],
+      "nesne": [
+        "428905d4-710e-4948-b0e8-322118d07a51/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801277845.pdf",
+        "428905d4-710e-4948-b0e8-322118d07a51/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801277873.pdf",
+        "428905d4-710e-4948-b0e8-322118d07a51/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801277952.pdf"
+      ],
+      "bVar": true
+    }
+  },
+  {
+    "kimlik": "G6",
+    "ad": "Yabancı kullanıcı: çalışmanın klasörüne YÜKLEYEMEZ, sahibin nesnesini SİLEMEZ, eylem reddeder (gerçek depo politikası)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "yukleme": "new row violates row-level security policy",
+      "silinen": 0,
+      "indirme": "Object not found",
+      "eylem": "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+      "nesne": [
+        "8f36aa80-4548-4fac-a500-5d18ffeb3585/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801278253.pdf"
+      ],
+      "kayit": [
+        "yuklendi|8f36aa80-4548-4fac-a500-5d18ffeb3585/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801278253.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G7",
+    "ad": "Eski istemcinin yolu (y-<zaman>.pdf) reddedilir, nesneye dokunulmaz (dağıtım geçişi)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+      "nesne": [
+        "39638c37-159c-4217-a9fc-c42bae354613/kaynak-pdf/y-1794801278541.pdf"
+      ],
+      "kayit": [],
+      "not": "Yeni kodda reddedilir ve nesne yetim kalır: dağıtım sırasında açık kalmış eski sekmenin tek yüklemesi. Eski kodda kabul edilir (beklenen)."
+    }
+  },
+  {
+    "kimlik": "G8",
+    "ad": "Eski biçimli (y-<zaman>.pdf) mevcut PDF değiştirilir → eski nesne temizlenir, yetim kalmaz",
+    "sonuc": "FAIL",
+    "sorun": "eski biçimli nesne temizlenmedi (yetim)",
+    "kanit": {
+      "r": "başarılı",
+      "kayit": [
+        "yuklendi|6f7a444e-dddc-4937-9b30-38b105f1f37c/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801278801.pdf"
+      ],
+      "nesne": [
+        "6f7a444e-dddc-4937-9b30-38b105f1f37c/kaynak-pdf/y-1794801278733.pdf",
+        "6f7a444e-dddc-4937-9b30-38b105f1f37c/kaynak-pdf/y-607179cd-2def-456d-8b81-fb49653129ed-1794801278801.pdf"
+      ]
+    }
+  }
+]

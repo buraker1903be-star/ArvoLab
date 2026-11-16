@@ -196,6 +196,23 @@ await senaryo("G7", "Eski istemcinin yolu (y-<zaman>.pdf) reddedilir, nesneye do
   if (!r.error) return "eski biçim kabul edildi (eski kodda beklenen)";
 });
 
+await senaryo("G8", "Eski biçimli (y-<zaman>.pdf) mevcut PDF değiştirilir → eski nesne temizlenir, yetim kalmaz", async (k) => {
+  const pid = proje();
+  globalThis.__denetim.ctx = baglam(SAHIP);
+  // Bu değişiklikten önce yazılmış bir kayıt: eski istemcinin yolu.
+  const eski = `${pid}/kaynak-pdf/y-${Date.now()}.pdf`;
+  const { error: yh } = await istemci(SAHIP).storage.from("project-files").upload(eski, new Blob([PDF], { type: "application/pdf" }), { contentType: "application/pdf", upsert: false });
+  if (yh) throw new Error(`depo yüklemesi reddedildi: ${yh.message}`);
+  const { kunyeAnahtari } = await import("../../lib/kaynak-pdf.ts");
+  psql(`insert into public.kaynak_pdfleri (project_id, olusturan, kunye_anahtari, kunye, durum, depo_yolu) values ('${pid}','${SAHIP}','${kunyeAnahtari(KUNYE_A).replace(/'/g, "''")}','${KUNYE_A.replace(/'/g, "''")}','yuklendi','${eski}')`);
+  const yeni = await tarayiciYuklemesi(SAHIP, pid);
+  const r = await kaynakPdfiYuklendi(pid, { kunye: KUNYE_A, depoYolu: yeni });
+  Object.assign(k, { r: r.error ?? "başarılı", kayit: kayitlar(pid), nesne: nesneler(pid) });
+  if (r.error) return `değiştirme düştü: ${r.error}`;
+  if (k.nesne.includes(eski)) return "eski biçimli nesne temizlenmedi (yetim)";
+  if (k.kayit[0] !== `yuklendi|${yeni}`) return `kayıt ${k.kayit[0]}`;
+});
+
 const fail = sonuclar.filter((s) => s.sonuc !== "PASS").length;
 console.log(`\n${sonuclar.length - fail}/${sonuclar.length} PASS`);
 if (process.argv[2]) fs.writeFileSync(process.argv[2], JSON.stringify(sonuclar, null, 2));

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calismaninKaynakPdfYoluMu } from "@/lib/kaynak-pdf-yolu";
 
@@ -35,10 +35,10 @@ const HAZIR = "(indirildi,yuklendi)";
 
 type PostgrestHatasi = { code?: string; message?: string } | null;
 
-/** Otomatik indirmenin depo yolu (lib/kaynak-pdf-yolu.ts, "otomatik" kalıbı). */
-export function otomatikYol(projectId: string, anahtar: string, zaman: number = Date.now()): string {
+/** Otomatik indirmenin depo yolu (lib/kaynak-pdf-yolu.ts, "otomatik" kalıbı). Ad rastgele kimlikle biter, zamanla değil (gerekçe orada). */
+export function otomatikYol(projectId: string, anahtar: string, kimlik: string = randomUUID()): string {
   const ozet = createHash("sha1").update(anahtar).digest("hex").slice(0, 16);
-  return `${projectId.toLowerCase()}/kaynak-pdf/${ozet}-${String(Math.trunc(zaman)).padStart(13, "0")}.pdf`;
+  return `${projectId.toLowerCase()}/kaynak-pdf/${ozet}-${kimlik.toLowerCase()}.pdf`;
 }
 
 /**
@@ -70,15 +70,47 @@ export async function yolKullaniliyorMu(
 */
 export const YETIM_IZI = "[kaynak-pdf] YETIM_DOSYA";
 
-export type SilmeSonucu = "silindi" | "kullaniliyor" | "gecersiz" | "okunamadi" | "silinemedi";
+/*
+  Kayıt gösterdiği hâlde depoda olmayan dosya: kullanıcı "PDF'i aç" der ve
+  hata alır. Telafi bunu yalnızca baytlar elinde değilse üretebilir (aşağıda);
+  bu iz o durumu yoluyla yazar.
+*/
+export const KAYIP_IZI = "[kaynak-pdf] KAYIP_DOSYA";
+
+export type SilmeSonucu = "silindi" | "kullaniliyor" | "gecersiz" | "okunamadi" | "silinemedi" | "geri_yuklendi" | "kayip";
+
+const geriYukle = async (sb: SupabaseClient, yol: string, bayt: Uint8Array) => {
+  const { error } = await sb.storage
+    .from(KOVA)
+    .upload(yol, new Blob([bayt as BlobPart], { type: "application/pdf" }), { contentType: "application/pdf", upsert: false });
+  // "Zaten var": karşı taraf da geri yükledi, dosya yerinde.
+  return !error || /exist/i.test(error.message);
+};
 
 /*
   Yalnızca SAHİPSİZ dosya silinir. Kalıba uymayan yol hiç silinmez (önekle
   başlayan ama başka bir şey olan yol dahil). Kullanım okunamazsa da silinmez:
   emin olmadan silmek, yetim bırakmaktan pahalıdır. Silme düşerse hata
   günlüğe yazılır; dosya yetim kalır ve P52b-2 taraması onu bulur.
+
+  DB ile Storage arasında ortak işlem yok: "kimse göstermiyor" denetimi ile
+  silme arasında başka bir kayıt aynı yolu sahiplenebilir (TOCTOU). Eskiden
+  bu pencerede sahiplenen kaydın dosyası siliniyor, kayıt depoda olmayan bir
+  dosyayı gösteriyordu (denetim/p52b1/toctou.mjs, Y1). Artık silmeden SONRA
+  bir kez daha bakılıyor; yol sahiplenilmişse (ya da bakılamıyorsa) ve
+  dosyanın baytları elimizdeyse dosya aynı yola geri yüklenir. Baytlar
+  yalnızca telafide elde (yeni yüklenen/indirilen dosya); yerine geçilen
+  eski dosyada yok, o durum KAYIP iziyle günlüğe yazılır. Rastgele dosya
+  adları sayesinde eski bir dosyanın yolunu meşru bir işlem bilemez, o yolu
+  ancak API'ye doğrudan yazan biri sahiplenebilir.
 */
-export async function sahipsizseSil(sb: SupabaseClient, projectId: string, yol: string, neden: string): Promise<SilmeSonucu> {
+export async function sahipsizseSil(
+  sb: SupabaseClient,
+  projectId: string,
+  yol: string,
+  neden: string,
+  bayt?: Uint8Array,
+): Promise<SilmeSonucu> {
   if (!calismaninKaynakPdfYoluMu(yol, projectId)) {
     console.error("[kaynak-pdf] kalıba uymayan yol silinmedi:", neden);
     return "gecersiz";
@@ -94,7 +126,39 @@ export async function sahipsizseSil(sb: SupabaseClient, projectId: string, yol: 
     console.error(`${YETIM_IZI} silinemedi:`, neden, yol, error.message);
     return "silinemedi";
   }
-  return "silindi";
+  const sonra = await yolKullaniliyorMu(sb, projectId, yol);
+  if (sonra === false) return "silindi";
+  if (bayt && (await geriYukle(sb, yol, bayt))) {
+    // Okunamadıysa da geri yüklendi: sahipsizse yetim kalır (izde), sahipliyse kayıt sağlam.
+    if (sonra === null) console.error(`${YETIM_IZI} silmeden sonra kullanım okunamadı, dosya geri yüklendi:`, neden, yol);
+    return "geri_yuklendi";
+  }
+  console.error(`${KAYIP_IZI} silindikten sonra bir kayıt bu yolu sahiplendi${sonra === null ? " (kullanım okunamadı)" : ""}:`, neden, yol);
+  return "kayip";
+}
+
+/*
+  Bağlayan tarafın yarısı: kayıt yazıldıktan SONRA dosya hâlâ depoda mı?
+  Silen taraf son bakışını yaptıktan sonra yazılan bir kayıt, o bakışın
+  göremediği tek durum (denetim Y2). Her iki taraf da yazma/silme SONRASI
+  karşı tarafın deposuna bakınca her sıralamada dosya ya yerinde kalır ya da
+  geri yüklenir. Baytlar bağlayanın elinde (yüklenen ya da indirilen dosya).
+*/
+export async function baglantiyiDogrula(sb: SupabaseClient, yol: string, bayt: Uint8Array, neden: string): Promise<"yerinde" | "geri_yuklendi" | "kayip"> {
+  let var_: boolean | null = null;
+  try {
+    const { data, error } = await sb.storage.from(KOVA).exists(yol);
+    var_ = error && !data ? false : Boolean(data);
+  } catch {
+    var_ = null;
+  }
+  if (var_ === true) return "yerinde";
+  if (await geriYukle(sb, yol, bayt)) {
+    if (var_ === false) console.error("[kaynak-pdf] bağlanan dosya depoda yoktu, geri yüklendi:", neden, yol);
+    return var_ === null ? "yerinde" : "geri_yuklendi";
+  }
+  console.error(`${KAYIP_IZI} bağlanan dosya depoda yok ve geri yüklenemedi:`, neden, yol);
+  return "kayip";
 }
 
 export type KaynakPdfKaydi = {

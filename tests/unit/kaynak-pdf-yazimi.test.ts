@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { YETIM_IZI, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
+import { KAYIP_IZI, YETIM_IZI, baglantiyiDogrula, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakPdfKaydi } from "@/lib/kaynak-pdf-yazimi";
 
 /*
   P52b-1 karar testleri. İstemci SAHTE: burada sınanan, hangi yanıtta hangi
@@ -14,9 +14,10 @@ import { YETIM_IZI, otomatikSonucuYaz, sahipsizseSil, yuklemeyiYaz, type KaynakP
 type Yanit = { data?: unknown; error?: { code?: string; message?: string } | null };
 type Cagri = { tablo: string; adimlar: [string, ...unknown[]][] };
 
-function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false) {
+function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false, depo: { var?: boolean | "firlat"; yuklemeHatasi?: string } = {}) {
   const cagrilar: Cagri[] = [];
   const silinen: string[] = [];
+  const yuklenen: string[] = [];
   const from = (tablo: string) => {
     const c: Cagri = { tablo, adimlar: [] };
     cagrilar.push(c);
@@ -41,15 +42,25 @@ function sahteIstemci(yanitlar: Yanit[], silmeHatasi = false) {
         silinen.push(...yollar);
         return { data: [], error: null };
       },
+      upload: async (yol: string) => {
+        if (depo.yuklemeHatasi) return { data: null, error: { message: depo.yuklemeHatasi } };
+        yuklenen.push(yol);
+        return { data: { path: yol }, error: null };
+      },
+      exists: async () => {
+        if (depo.var === "firlat") throw new Error("ağ");
+        return depo.var ? { data: true, error: null } : { data: false, error: { message: "not found" } };
+      },
     }),
   };
-  return { sb: { from, storage } as unknown as SupabaseClient, cagrilar, silinen, kalan: yanitlar };
+  return { sb: { from, storage } as unknown as SupabaseClient, cagrilar, silinen, yuklenen, kalan: yanitlar };
 }
 
 const P = "3b281459-8ae2-4a9a-b31f-4530474fea2e";
 const U = "b4219800-20a2-492d-ac4c-8fbd295efd70";
-const YOL = `${P}/kaynak-pdf/y-${U}-1763200000000.pdf`;
-const ESKI = `${P}/kaynak-pdf/y-${U}-1763100000000.pdf`;
+const YOL = `${P}/kaynak-pdf/y-${U}-5f0e1d2c-3b4a-4968-8776-655443322110.pdf`;
+const ESKI = `${P}/kaynak-pdf/y-${U}-0a1b2c3d-4e5f-4061-8273-948576a6b7c8.pdf`;
+const BAYT = new TextEncoder().encode("%PDF-1.7");
 const kayit = (ek: Partial<KaynakPdfKaydi> = {}): KaynakPdfKaydi => ({
   project_id: P,
   olusturan: U,
@@ -140,7 +151,7 @@ test("sahipsizseSil: başka kayıt gösteriyorsa SİLMEZ", async () => {
 test("sahipsizseSil: kalıba uymayan ya da başka çalışmanın yolu sorgu bile atılmadan reddedilir", async () => {
   const g = gunlukYakala();
   try {
-    for (const yol of [`${P}/kaynak-pdf/../x.pdf`, `${P}/kilavuz/a.pdf`, `9c1e0d4a-1111-4222-8333-444455556666/kaynak-pdf/y-${U}-1763200000000.pdf`]) {
+    for (const yol of [`${P}/kaynak-pdf/../x.pdf`, `${P}/kilavuz/a.pdf`, `9c1e0d4a-1111-4222-8333-444455556666/kaynak-pdf/y-${U}-5f0e1d2c-3b4a-4968-8776-655443322110.pdf`]) {
       const s = sahteIstemci([]);
       assert.equal(await sahipsizseSil(s.sb, P, yol, "deneme"), "gecersiz");
       assert.equal(s.cagrilar.length, 0);
@@ -174,8 +185,62 @@ test("sahipsizseSil: silme düşerse 'silinemedi' döner (başarı değil), yol 
   }
 });
 
-test("sahipsizseSil: kimse göstermiyorsa siler", async () => {
-  const s = sahteIstemci([{ data: [] }]);
+test("sahipsizseSil: kimse göstermiyorsa siler; silmeden SONRA bir kez daha bakar", async () => {
+  const s = sahteIstemci([{ data: [] }, { data: [] }]);
   assert.equal(await sahipsizseSil(s.sb, P, YOL, "deneme"), "silindi");
   assert.deepEqual(s.silinen, [YOL]);
+  assert.equal(s.cagrilar.length, 2, "ön ve son kullanım denetimi");
+});
+
+test("sahipsizseSil TOCTOU: denetimden sonra yol sahiplenildiyse baytlar aynı yola GERİ yüklenir (Y1)", async () => {
+  const s = sahteIstemci([{ data: [] }, { data: [{ id: "b" }] }]);
+  assert.equal(await sahipsizseSil(s.sb, P, YOL, "deneme", BAYT), "geri_yuklendi");
+  assert.deepEqual(s.silinen, [YOL]);
+  assert.deepEqual(s.yuklenen, [YOL]);
+});
+
+test("sahipsizseSil TOCTOU: son denetim okunamazsa ve bayt varsa temkinle geri yükler", async () => {
+  const g = gunlukYakala();
+  try {
+    const s = sahteIstemci([{ data: [] }, { error: { message: "ağ" } }]);
+    assert.equal(await sahipsizseSil(s.sb, P, YOL, "deneme", BAYT), "geri_yuklendi");
+    assert.deepEqual(s.yuklenen, [YOL]);
+    assert.ok(g.satirlar.some((x) => x.includes(YETIM_IZI) && x.includes(YOL)));
+  } finally {
+    g.birak();
+  }
+});
+
+test("sahipsizseSil TOCTOU: bayt yoksa (yerine geçilen eski dosya) KAYIP iziyle, yoluyla günlüğe yazar", async () => {
+  const g = gunlukYakala();
+  try {
+    const s = sahteIstemci([{ data: [] }, { data: [{ id: "b" }] }]);
+    assert.equal(await sahipsizseSil(s.sb, P, ESKI, "deneme"), "kayip");
+    assert.ok(g.satirlar.some((x) => x.includes(KAYIP_IZI) && x.includes(ESKI)));
+  } finally {
+    g.birak();
+  }
+});
+
+test("baglantiyiDogrula: dosya yerindeyse dokunmaz; yoksa geri yükler (Y2); geri yüklenemezse 'kayip'", async () => {
+  const yerinde = sahteIstemci([], false, { var: true });
+  assert.equal(await baglantiyiDogrula(yerinde.sb, YOL, BAYT, "deneme"), "yerinde");
+  assert.deepEqual(yerinde.yuklenen, []);
+
+  const g = gunlukYakala();
+  try {
+    const yok = sahteIstemci([], false, { var: false });
+    assert.equal(await baglantiyiDogrula(yok.sb, YOL, BAYT, "deneme"), "geri_yuklendi");
+    assert.deepEqual(yok.yuklenen, [YOL]);
+
+    const dusuk = sahteIstemci([], false, { var: false, yuklemeHatasi: "depo kapalı" });
+    assert.equal(await baglantiyiDogrula(dusuk.sb, YOL, BAYT, "deneme"), "kayip");
+    assert.ok(g.satirlar.some((x) => x.includes(KAYIP_IZI) && x.includes(YOL)));
+
+    // Varlık sorusu düşerse "zaten var" cevabı dosyanın yerinde olduğunu söyler.
+    const bilinmez = sahteIstemci([], false, { var: "firlat", yuklemeHatasi: "The resource already exists" });
+    assert.equal(await baglantiyiDogrula(bilinmez.sb, YOL, BAYT, "deneme"), "yerinde");
+  } finally {
+    g.birak();
+  }
 });

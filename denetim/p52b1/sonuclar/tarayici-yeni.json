@@ -6,10 +6,10 @@
       "sorun": null,
       "kanit": {
         "kayit": [
-          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf"
+          "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-1732db2a-2b0c-4ab7-bb5a-28e1235017fc.pdf"
         ],
         "nesne": [
-          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf"
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-1732db2a-2b0c-4ab7-bb5a-28e1235017fc.pdf"
         ],
         "bildirim": "PDF yüklendi.İşlem başarıyla tamamlandı."
       }
@@ -19,12 +19,12 @@
       "sonuc": "PASS",
       "sorun": null,
       "kanit": {
-        "once": "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf",
+        "once": "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-1732db2a-2b0c-4ab7-bb5a-28e1235017fc.pdf",
         "kayit": [
-          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+          "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
         ],
         "nesne": [
-          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
         ]
       }
     },
@@ -33,7 +33,7 @@
       "sonuc": "PASS",
       "sorun": null,
       "kanit": {
-        "adres": "http://127.0.0.1:54401/storage/v1/object/sign/project-files/b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf?token=…",
+        "adres": "http://127.0.0.1:54401/storage/v1/object/sign/project-files/1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf?token=…",
         "durum": 200,
         "bas": "%PDF-"
       }
@@ -44,22 +44,43 @@
       "sorun": null,
       "kanit": {
         "bildirim": "!İşlem tamamlanamadıBu çalışmaya yazma yetkiniz yok.",
-        "once": "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf",
+        "once": "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf",
         "kayit": [
-          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+          "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
         ],
         "nesne": [
-          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
         ],
         "basariBildirimi": null
+      }
+    },
+    {
+      "ad": "T5 Eski sekme: dağıtımdan önceki biçimde yol (y-<zaman>.pdf) → açık hata bildirimi, kayıt ve PDF değişmez",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "bildirim": "!İşlem tamamlanamadıDosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+        "yeniden": 1,
+        "once": "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf",
+        "kayit": [
+          "yuklendi|1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
+        ],
+        "nesne": [
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-cd8e072e-d8e7-4b20-b79d-0afe7078f427.pdf",
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-f02ebe6b-62da-4cba-a9cb-1a474353cb7f.pdf"
+        ],
+        "basariBildirimi": null,
+        "yetim": [
+          "1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1/kaynak-pdf/y-a99fc4b1-aacd-4ea2-8eed-edbfea47eb13-cd8e072e-d8e7-4b20-b79d-0afe7078f427.pdf"
+        ]
       }
     }
   ],
   "konsol": [
     "istek düştü: POST http://localhost:3125/dashboard net::ERR_ABORTED",
-    "istek düştü: POST http://localhost:3125/dashboard/editor/b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
-    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
-    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
-    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED"
+    "istek düştü: POST http://localhost:3125/dashboard net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor/1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1 net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor/1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1 net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=1ab8b645-3c52-4b4f-b000-d7c3a7bfb3b1 net::ERR_ABORTED"
   ]
 }
