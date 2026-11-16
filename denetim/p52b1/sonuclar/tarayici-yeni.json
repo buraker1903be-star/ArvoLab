@@ -1,0 +1,85 @@
+{
+  "sonuclar": [
+    {
+      "ad": "T1 PDF yükle: gerçek depoya yüklenir, kayıt 'yuklendi', yol kullanıcıya bağlı kalıpta",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "kayit": [
+          "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-8cf75a64-207f-4a15-84ba-51f38d045875.pdf"
+        ],
+        "nesne": [
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-8cf75a64-207f-4a15-84ba-51f38d045875.pdf"
+        ],
+        "bildirim": "PDF yüklendi.İşlem başarıyla tamamlandı."
+      }
+    },
+    {
+      "ad": "T2 Değiştir: yeni nesne kayıtlı, eski nesne depodan silindi, yetim yok",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "once": "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-8cf75a64-207f-4a15-84ba-51f38d045875.pdf",
+        "kayit": [
+          "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ],
+        "nesne": [
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ]
+      }
+    },
+    {
+      "ad": "T3 PDF'i aç: imzalı bağlantı gerçek depodan alınır ve PDF döner",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "adres": "http://127.0.0.1:54401/storage/v1/object/sign/project-files/25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf?token=…",
+        "durum": 200,
+        "bas": "%PDF-"
+      }
+    },
+    {
+      "ad": "T4 DB yazımı düşerken Değiştir: hata bildirimi, eski PDF ve kayıt yerinde, yeni nesne temizlendi",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "bildirim": "!İşlem tamamlanamadıBu çalışmaya yazma yetkiniz yok.",
+        "once": "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf",
+        "kayit": [
+          "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ],
+        "nesne": [
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ],
+        "basariBildirimi": null
+      }
+    },
+    {
+      "ad": "T5 Eski sekme: dağıtımdan önceki biçimde yol (y-<zaman>.pdf) → açık hata bildirimi, kayıt ve PDF değişmez",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "bildirim": "!İşlem tamamlanamadıDosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+        "yeniden": 1,
+        "once": "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf",
+        "kayit": [
+          "yuklendi|25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ],
+        "nesne": [
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-1e8bae06-ce7d-4e76-a882-025b18a88c1f.pdf",
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-dcce4dbc-c4bf-401d-9707-07da958e5cde.pdf"
+        ],
+        "basariBildirimi": null,
+        "yetim": [
+          "25041e0a-a88e-4884-8a6f-17a2a208a9cc/kaynak-pdf/y-2acb6ba7-16f8-49cf-bae8-682db52fb329-1e8bae06-ce7d-4e76-a882-025b18a88c1f.pdf"
+        ]
+      }
+    }
+  ],
+  "konsol": [
+    "istek düştü: POST http://localhost:3125/dashboard/editor/25041e0a-a88e-4884-8a6f-17a2a208a9cc net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor/25041e0a-a88e-4884-8a6f-17a2a208a9cc net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=25041e0a-a88e-4884-8a6f-17a2a208a9cc net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=25041e0a-a88e-4884-8a6f-17a2a208a9cc net::ERR_ABORTED"
+  ]
+}

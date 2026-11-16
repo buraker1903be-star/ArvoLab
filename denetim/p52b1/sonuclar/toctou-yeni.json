@@ -1,0 +1,303 @@
+[
+  {
+    "kimlik": "Y1",
+    "ad": "TOCTOU (silen taraf): A'nın telafisi 'kullanılmıyor' dedikten sonra, silmeden hemen önce B aynı yolu sahipleniyor",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "b": "başarılı",
+      "bSonrasiNesne": true,
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "kayit": [
+        "yuklendi|6d93ff75-0f76-46a0-83da-f0b4e65a0a88/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-e4978f4c-123e-4357-b93d-4e50e39cd3a2.pdf"
+      ],
+      "nesneVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y2",
+    "ad": "TOCTOU (bağlayan taraf): B dosyayı okudu, A'nın telafisi tamamen bitti (sildi), sonra B kaydını yazıyor",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "aSonrasiNesne": false,
+      "b": "başarılı",
+      "kayit": [
+        "yuklendi|ac6a8d3d-160c-4389-b715-b42f6151ca76/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-16011ea5-33c0-481a-96c8-03e358fdb2e6.pdf"
+      ],
+      "nesneVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y3a",
+    "ad": "Aynı milisaniyede iki yükleme yolu (iki künye, iki sekme) → ikinci yükleme 'zaten var' ile düşmemeli",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "y1": "3e750425-1238-4b31-b524-6bb248a30292/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-ecfa9051-631b-499b-be53-2e8be8e0b447.pdf",
+      "y2": "3e750425-1238-4b31-b524-6bb248a30292/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-dfa618c7-461d-4192-9001-bc1ab2e389bb.pdf",
+      "ayni": false,
+      "h1": null,
+      "h2": null
+    }
+  },
+  {
+    "kimlik": "Y3b",
+    "ad": "Aynı milisaniyede İKİ künyeye EŞZAMANLI iki yükleme (iki sekme) → her künye kendi PDF'ini taşımalı",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ayniYol": false,
+      "hA": null,
+      "hB": null,
+      "rA": "başarılı",
+      "rB": "başarılı",
+      "kayit": [
+        "yuklendi|ffb84af0-9302-4e69-be11-5c2d2303aa1a/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-0694383d-4f40-452d-b7a5-bb00f03dc310.pdf",
+        "yuklendi|ffb84af0-9302-4e69-be11-5c2d2303aa1a/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-cb81aad6-f2a5-4997-8971-f955a085d9c2.pdf"
+      ],
+      "kendiPdfi": {
+        "Ali, B. ": true,
+        "Bora, C.": true
+      }
+    }
+  },
+  {
+    "kimlik": "Y3c",
+    "ad": "Aynı milisaniyede aynı künyeye iki otomatik indirme → ikisi de depoya yazabilmeli, sonuç tek kayıt, yetim yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "r2": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|c724a3e3-f6c3-4f98-8ef8-1458e645b383/kaynak-pdf/c0459901e985bf7a-c4937432-60ae-49df-9138-4d7d4e06ea97.pdf"
+      ],
+      "nesne": 1,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y4",
+    "ad": "Geri yükleme başka işlemin dosyasını DEĞİŞTİRMEZ: silmeden sonra aynı yola başka bayt yazıldıysa korunur",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "Kaydedilemedi; tekrar deneyin.",
+      "icerik": "%PDF-1.7\n% B islemi\n%%EOF\n"
+    }
+  },
+  {
+    "kimlik": "Y5",
+    "ad": "Otomatik indirme: kayıt yazıldı, dosya depodan kayboldu ve geri yüklenemedi → başarı listesinde YOK, kayıt 'erişilemedi', 'depo' sorunu",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "erisilemedi|-"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 1,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "erisilemedi|-"
+      ],
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y6",
+    "ad": "Yükleme ile değiştirme: kayıt yazıldı, yeni dosya kayboldu ve geri yüklenemedi → hata, kayıt ÖNCEKİ PDF'e döner, önceki PDF yerinde",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "PDF depoya ulaşmadı; yeniden yükleyin.",
+      "kayit": [
+        "yuklendi|86b46a87-894a-4fd0-b03d-353a24c9089f/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-68c26a80-4033-4522-bd49-05ca2c817fff.pdf"
+      ],
+      "oncekiVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Y7",
+    "ad": "Geri alma DAHA YENİ kaydı ezmez: otomatik indirme 'kayıp'ı geri alırken öğrenci aynı künyeye yeni PDF yüklemiş",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ogrenci": "başarılı",
+      "satirlar": [
+        "yuklendi|532fbafe-8521-4f9f-8e48-f3455a1ae159/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-bbfaefd2-b5a7-486d-bb81-2eb8e4b675e7.pdf"
+      ],
+      "kayit": [
+        "yuklendi|532fbafe-8521-4f9f-8e48-f3455a1ae159/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-bbfaefd2-b5a7-486d-bb81-2eb8e4b675e7.pdf"
+      ],
+      "yeniVar": true,
+      "sarkan": []
+    }
+  },
+  {
+    "kimlik": "Z-oto-ag",
+    "ad": "Otomatik indirme: dosya DEPODA, doğrulama ağ hatası (bağlantı kopuk) veriyor → geçerli kayıt GERİ ALINMAZ",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "indirildi"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|2b484ff4-d11c-496e-8b72-f4b118e2b2bd/kaynak-pdf/c0459901e985bf7a-2406db07-4cf4-4289-b9b0-ea02cd9c16a2.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0,
+      "iz": [
+        "[kaynak-pdf] DOGRULANAMADI depo cevap vermedi, kayıt korundu: otomatik indirme bağlandı 2b"
+      ]
+    }
+  },
+  {
+    "kimlik": "Z-yukle-ag",
+    "ad": "Yükleme: dosya DEPODA, doğrulama ağ hatası (bağlantı kopuk) veriyor → kayıt yeni PDF'te kalır",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|71916c8b-2884-4a3e-8e95-99935916f363/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-e63450c3-38c7-4c45-83c4-f33fb96edefa.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0
+    }
+  },
+  {
+    "kimlik": "Z-oto-503",
+    "ad": "Otomatik indirme: dosya DEPODA, doğrulama servis hatası (503) veriyor → geçerli kayıt GERİ ALINMAZ",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "indirildi"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|67e10fde-13c6-4ee4-8d11-4ff6fc1ab547/kaynak-pdf/c0459901e985bf7a-3021beb8-3804-41cb-bef0-b10c8beae1d1.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0,
+      "iz": [
+        "[kaynak-pdf] DOGRULANAMADI depo cevap vermedi, kayıt korundu: otomatik indirme bağlandı 67"
+      ]
+    }
+  },
+  {
+    "kimlik": "Z-yukle-503",
+    "ad": "Yükleme: dosya DEPODA, doğrulama servis hatası (503) veriyor → kayıt yeni PDF'te kalır",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|1adaf7d8-2ce5-443c-be23-d4ec7976d9bc/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-fc648e15-a6eb-468e-b77b-b1685b98d8a8.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0
+    }
+  },
+  {
+    "kimlik": "Z-oto-yetki",
+    "ad": "Otomatik indirme: dosya DEPODA, doğrulama yetkilendirme hatası (süresi dolmuş jeton, GERÇEK Storage yanıtı) veriyor → geçerli kayıt GERİ ALINMAZ",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": null,
+      "satirlar": [
+        "indirildi"
+      ],
+      "sorunlar": {
+        "erisim": 0,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "kayit": [
+        "indirildi|89638ec6-cd25-43a8-adac-721c35bcf9d9/kaynak-pdf/c0459901e985bf7a-df9102ab-042d-443e-97df-2b6bb1029840.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0,
+      "iz": [
+        "[kaynak-pdf] DOGRULANAMADI depo cevap vermedi, kayıt korundu: otomatik indirme bağlandı 89"
+      ]
+    }
+  },
+  {
+    "kimlik": "Z-yukle-yetki",
+    "ad": "Yükleme: dosya DEPODA, doğrulama yetkilendirme hatası (süresi dolmuş jeton, GERÇEK Storage yanıtı) veriyor → kayıt yeni PDF'te kalır",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|49fd0c9d-c7d6-4288-8e30-fdc742f071cc/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-56f45d16-0c22-4b7e-b04c-d4300e08c6a4.pdf"
+      ],
+      "nesneVar": true,
+      "geriAlma": 0
+    }
+  },
+  {
+    "kimlik": "Z-yok",
+    "ad": "Dosya GERÇEKTEN yok (404), geri yükleme başarılı → kayıt kalır, dosya geri gelir",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|a22967fb-faa0-403d-9cf5-cf5402e75784/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-bdae4357-3f04-42ac-985d-1b3fb7a04aa1.pdf"
+      ],
+      "nesneVar": true
+    }
+  },
+  {
+    "kimlik": "Z-geri-alma-duser",
+    "ad": "Yükleme: dosya yok, geri yüklenemedi, GERİ ALMA da düştü → kullanıcıya hata, KAYIP_DOSYA izi yoluyla, önceki PDF silinmez",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "PDF depoya ulaşmadı; yeniden yükleyin.",
+      "kayit": [
+        "yuklendi|af8e6777-ed9c-44bd-b3a6-87c709ab554d/kaynak-pdf/y-613870e5-926f-4aff-bbfc-43c5cf0a94cf-ad7fb8b3-defc-4372-b437-4f68d9bc3d79.pdf"
+      ],
+      "oncekiVar": true,
+      "kayipIzi": true
+    }
+  }
+]

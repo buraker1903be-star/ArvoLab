@@ -1,0 +1,403 @@
+[
+  {
+    "kimlik": "S0a",
+    "ad": "DB: kilitli satırda koşullu UPDATE bekler, güncel sürüme göre YENİDEN değerlendirir (iki gerçek oturum, RLS)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "bekleme_ms": 1241,
+      "oturum2": "guncellenen=0",
+      "son": [
+        "yuklendi|c3df0b7d-028c-4d02-b89f-12797a5c8365/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-0000000000001.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S0a-kontrol",
+    "ad": "DB (kontrol): aynı yarışta KOŞULSUZ UPDATE (eski kodun upsert'i) yüklemeyi ezer",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "son": [
+        "erisilemedi|-"
+      ],
+      "not": "beklenen: ezilir (kontrol deneyi)"
+    }
+  },
+  {
+    "kimlik": "S1",
+    "ad": "Kullanıcı yüklerken otomatik PDF bulma → öğrencinin yüklemesi korunur, yetim yok",
+    "sonuc": "FAIL",
+    "sorun": "öğrencinin yüklemesi ezildi: \"erisilemedi|-\"",
+    "kanit": {
+      "yukleme": "başarılı",
+      "bul": "başarılı",
+      "son": [
+        "erisilemedi|-"
+      ],
+      "dosyaVar": true,
+      "yetim": [
+        "611dffc9-414a-4fc5-ad7a-b8379af67e6b/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786503936.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S2",
+    "ad": "Aynı kaynak için iki eşzamanlı otomatik indirme → tek kayıt, tek dosya, yetim yok",
+    "sonuc": "FAIL",
+    "sorun": "2 dosya indirildi, 1 yetim",
+    "kanit": {
+      "r1": "başarılı",
+      "r2": "başarılı",
+      "kayit": [
+        "indirildi|7b1c43b0-9049-46ca-a25f-140611b41f75/kaynak-pdf/3f54f789261aed2f-1794786505092.pdf"
+      ],
+      "dosya": 2,
+      "yetim": [
+        "7b1c43b0-9049-46ca-a25f-140611b41f75/kaynak-pdf/3f54f789261aed2f-1794786505088.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S3",
+    "ad": "Başarılı PDF kaydından sonra geciken başarısız istek dönerse 'indirildi' korunur",
+    "sonuc": "FAIL",
+    "sorun": "indirilen PDF'in kaydı ezildi: \"erisilemedi|-\"",
+    "kanit": {
+      "hizliSonrasi": [
+        "indirildi|b83b7ccf-1ff0-42a8-b520-9b0e0f8570a1/kaynak-pdf/3f54f789261aed2f-1794786505384.pdf"
+      ],
+      "yavasDonus": [
+        "erisilemedi"
+      ],
+      "son": [
+        "erisilemedi|-"
+      ],
+      "yetim": [
+        "b83b7ccf-1ff0-42a8-b520-9b0e0f8570a1/kaynak-pdf/3f54f789261aed2f-1794786505384.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S4a",
+    "ad": "Otomatik: dosya depoya yazıldı, DB yazımı düştü → hata döner, bu işlemin dosyası temizlenir",
+    "sonuc": "FAIL",
+    "sorun": "yetim: a287937b-c5ef-4c30-b969-1222c6020c6f/kaynak-pdf/3f54f789261aed2f-1794786506110.pdf",
+    "kanit": {
+      "donus": "Bu çalışmaya yazma yetkiniz yok.",
+      "kayit": [],
+      "yetim": [
+        "a287937b-c5ef-4c30-b969-1222c6020c6f/kaynak-pdf/3f54f789261aed2f-1794786506110.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S4b",
+    "ad": "Yükleme: dosya depoda, DB yazımı düştü → hata döner, yüklenen dosya temizlenir",
+    "sonuc": "FAIL",
+    "sorun": "yetim: aae20468-d76b-45e3-b90f-bb9c5b9841ab/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506302.pdf",
+    "kanit": {
+      "donus": "Bu çalışmaya yazma yetkiniz yok.",
+      "yetim": [
+        "aae20468-d76b-45e3-b90f-bb9c5b9841ab/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506302.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S4c",
+    "ad": "DB düştü VE telafi silmesi de düştü → hata döner (başarı değil), yetim YOLUYLA günlüğe yazılır",
+    "sonuc": "FAIL",
+    "sorun": "telafi hiç denenmedi",
+    "kanit": {
+      "donus": "Bu çalışmaya yazma yetkiniz yok.",
+      "yetim": [
+        "e801ef35-17d9-4090-bddb-17340a722216/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506483.pdf"
+      ],
+      "raporlandi": false,
+      "silmeDenendi": false
+    }
+  },
+  {
+    "kimlik": "S5a",
+    "ad": "PDF değiştirildi, eski dosyanın silinmesi düştü → yeni kayıt geçerli, eski dosya yolu günlükte (sessiz değil)",
+    "sonuc": "FAIL",
+    "sorun": "eski dosya sessizce yetim kaldı: 385fec61-5811-4353-af0a-e3d7f83dc41c/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506638.pdf",
+    "kanit": {
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|385fec61-5811-4353-af0a-e3d7f83dc41c/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506651.pdf"
+      ],
+      "yeniVar": true,
+      "yetim": [
+        "385fec61-5811-4353-af0a-e3d7f83dc41c/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506638.pdf"
+      ],
+      "raporlandi": false
+    }
+  },
+  {
+    "kimlik": "S5b",
+    "ad": "PDF değiştirilirken DB yazımı düştü → ESKİ PDF silinmez, kayıt eski dosyayı göstermeye devam eder",
+    "sonuc": "FAIL",
+    "sorun": "yeni dosya yetim kaldı: 6ddcdcae-5244-4c13-a0a2-e4f3df8c1ef5/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506821.pdf",
+    "kanit": {
+      "donus": "Bu çalışmaya yazma yetkiniz yok.",
+      "kayit": [
+        "yuklendi|6ddcdcae-5244-4c13-a0a2-e4f3df8c1ef5/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506808.pdf"
+      ],
+      "eskiVar": true,
+      "yetim": [
+        "6ddcdcae-5244-4c13-a0a2-e4f3df8c1ef5/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786506821.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S6a",
+    "ad": "A'nın yüklemesine B'nin PDF yolu verilir → reddedilir, B'nin dosyası ve kaydı yerinde",
+    "sonuc": "FAIL",
+    "sorun": "B'nin PDF'i silindi",
+    "kanit": {
+      "donus": "kabul edildi",
+      "kayit": [
+        "yuklendi|1519cd2c-af65-4620-90ea-d4cddabe8a67/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507039.pdf",
+        "yuklendi|1519cd2c-af65-4620-90ea-d4cddabe8a67/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507017.pdf"
+      ],
+      "bDosyasiVar": false
+    }
+  },
+  {
+    "kimlik": "S6b",
+    "ad": "A'nın kaydı API'den doğrudan B'nin yoluna çevrilir (RLS izin veriyor), sonra A değiştirilir → B'nin dosyası silinmez",
+    "sonuc": "FAIL",
+    "sorun": "A değiştirilince B'nin PDF'i silindi",
+    "kanit": {
+      "kurcalama": "yazıldı",
+      "donus": "başarılı",
+      "kayit": [
+        "yuklendi|11a0aaff-78bb-4924-b6b7-4f5964f5bfca/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507185.pdf",
+        "yuklendi|11a0aaff-78bb-4924-b6b7-4f5964f5bfca/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507158.pdf"
+      ],
+      "bDosyasiVar": false
+    }
+  },
+  {
+    "kimlik": "S6c",
+    "ad": "Bozuk/yabancı yollar (.., ters bölü, çift bölü, büyük harf, başka çalışma, otomatik kalıp, başka kullanıcı) depoya HİÇ dokunmadan reddedilir",
+    "sonuc": "FAIL",
+    "sorun": "kabul edilen ya da depoya dokunan: nokta_nokta, nokta_nokta_ad, cift_bolu, otomatik_kalip, kisa_eski_bicim, baska_kullanici, sondaki_ek",
+    "kanit": {
+      "sonuc": {
+        "nokta_nokta": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "nokta_nokta_ad": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "ters_bolu": {
+          "reddedildi": true,
+          "depoyaDokundu": false
+        },
+        "cift_bolu": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "buyuk_harf": {
+          "reddedildi": true,
+          "depoyaDokundu": false
+        },
+        "baska_calisma": {
+          "reddedildi": true,
+          "depoyaDokundu": false
+        },
+        "otomatik_kalip": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "kisa_eski_bicim": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "baska_kullanici": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        },
+        "sondaki_ek": {
+          "reddedildi": false,
+          "depoyaDokundu": true
+        }
+      },
+      "kayit": [
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/y-528197dd-a9d1-4294-bb3f-cf1628c2aaac-1763200000000.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf//y-b4219800-20a2-492d-ac4c-8fbd295efd70-1763200000000.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/y-1763200000000.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/../bfd48df0-5de1-440f-b80a-109f0a543269/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1763200000000.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1763200000000/../../x.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/0123456789abcdef-1763200000000.pdf",
+        "yuklendi|2b926299-0a28-4b13-a203-974125e9706d/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1763200000000.pdf.html"
+      ]
+    }
+  },
+  {
+    "kimlik": "S7a",
+    "ad": "Yabancı kullanıcı başka çalışmanın PDF kayıtlarını göremez/yazamaz, depoda iz bırakmaz",
+    "sonuc": "FAIL",
+    "sorun": "sahte depoda yetim (gerçek depoda politika yüklemeyi reddeder): 1",
+    "kanit": {
+      "gorunen": 0,
+      "yazma": "Bu çalışmaya yazma yetkiniz yok.",
+      "yukleme": "Bu çalışmaya yazma yetkiniz yok.",
+      "kayit": [
+        "yuklendi|ab58e73f-1720-4c35-a9a9-1e81650cd264/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507548.pdf"
+      ],
+      "sahibinDosyasi": true,
+      "yetim": [
+        "ab58e73f-1720-4c35-a9a9-1e81650cd264/kaynak-pdf/ee554a0e72f843fd-1794786507555.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S7b",
+    "ad": "Sahip, başka bir kullanıcının yüklediği dosyanın yolunu kendi künyesine bağlayamaz (yolda kimlik eşleşmeli)",
+    "sonuc": "FAIL",
+    "sorun": "başka kullanıcının yüklemesi kabul edildi",
+    "kanit": {
+      "donus": "kabul edildi",
+      "depoyaDokundu": true,
+      "kayit": [
+        "yuklendi|506cfc4f-e109-433f-b476-9dd1fedfe023/kaynak-pdf/y-528197dd-a9d1-4294-bb3f-cf1628c2aaac-1794786507744.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S8a",
+    "ad": "Yazma düşerken dosyayı ARADA başka bir kayıt sahiplendi → telafi o dosyayı silmez",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": "Bu çalışmaya yazma yetkiniz yok.",
+      "kayit": [
+        "yuklendi|bf507052-8c82-4317-97e3-453af8c76598/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786507876.pdf"
+      ],
+      "dosyaVar": true
+    }
+  },
+  {
+    "kimlik": "S8b",
+    "ad": "PDF olmayan dosya için 'temizlik', o yolu gösteren başka kaydın dosyasını silmez",
+    "sonuc": "FAIL",
+    "sorun": "B'nin kaydının gösterdiği dosya silindi",
+    "kanit": {
+      "donus": "Dosya PDF değil. Kaynağın PDF'ini yükleyin.",
+      "dosyaVar": false,
+      "kayit": [
+        "yuklendi|64956634-7ea3-48db-b847-1051ea5af2ee/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786508069.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S9a",
+    "ad": "Dizin (OpenAlex) ağ hatası → 'erişilemedi'; ağ gelince tekrar → 'indirildi', tek kayıt, tek dosya",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ilk": [
+        "erisilemedi|-"
+      ],
+      "r1": {
+        "erisim": 1,
+        "pdf_degil": 0,
+        "depo": 0,
+        "beklenmeyen": 0
+      },
+      "r2": "başarılı",
+      "son": [
+        "indirildi|f2ca14f9-4fdc-4c19-875e-007e9e9076c6/kaynak-pdf/3f54f789261aed2f-1794786508296.pdf"
+      ],
+      "dosya": 1,
+      "yetim": []
+    }
+  },
+  {
+    "kimlik": "S9b",
+    "ad": "Depo yazıldı, PostgREST'e YAZMA isteği ağda düştü → hata, yetim yok; tekrar → tek kayıt, tek dosya",
+    "sonuc": "FAIL",
+    "sorun": "kesinti sonrası yetim: 0ff1b618-b029-46f1-9a1f-c22df0551a57/kaynak-pdf/3f54f789261aed2f-1794786508495.pdf",
+    "kanit": {
+      "ilkYetim": [
+        "0ff1b618-b029-46f1-9a1f-c22df0551a57/kaynak-pdf/3f54f789261aed2f-1794786508495.pdf"
+      ],
+      "r1": "PDF durumu kaydedilemedi; tekrar deneyin.",
+      "r2": "başarılı",
+      "son": [
+        "indirildi|0ff1b618-b029-46f1-9a1f-c22df0551a57/kaynak-pdf/3f54f789261aed2f-1794786508538.pdf"
+      ],
+      "dosya": 2,
+      "yetim": [
+        "0ff1b618-b029-46f1-9a1f-c22df0551a57/kaynak-pdf/3f54f789261aed2f-1794786508495.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "S9c",
+    "ad": "PostgREST TAMAMEN kesik (telafinin okuması da düşer) → silinmez (emin olunamıyor), yol günlükte; ağ gelince tekrar başarılı",
+    "sonuc": "FAIL",
+    "sorun": "sessiz yetim: 84919329-9f02-4e5a-b264-f6ed37711453/kaynak-pdf/3f54f789261aed2f-1794786508706.pdf",
+    "kanit": {
+      "r1": "PDF durumu kaydedilemedi; tekrar deneyin.",
+      "r2": "başarılı",
+      "son": [
+        "indirildi|84919329-9f02-4e5a-b264-f6ed37711453/kaynak-pdf/3f54f789261aed2f-1794786508711.pdf"
+      ],
+      "yetim": [
+        "84919329-9f02-4e5a-b264-f6ed37711453/kaynak-pdf/3f54f789261aed2f-1794786508706.pdf"
+      ],
+      "raporlanan": 0
+    }
+  },
+  {
+    "kimlik": "S10a",
+    "ad": "Aynı kaynakta art arda üç 'PDF'leri bul' → tek kayıt, tek dosya, kayıt ilk başarıdan sonra değişmez",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "ilk": [
+        "indirildi|c572fba1-99c4-43b9-914f-e32159466069/kaynak-pdf/3f54f789261aed2f-1794786508884.pdf"
+      ],
+      "son": [
+        "indirildi|c572fba1-99c4-43b9-914f-e32159466069/kaynak-pdf/3f54f789261aed2f-1794786508884.pdf"
+      ],
+      "dosya": 1,
+      "yetim": []
+    }
+  },
+  {
+    "kimlik": "S10b",
+    "ad": "Aynı yükleme bildirimi iki kez (çift tık/tekrar) → tek kayıt, dosya silinmez",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "donus": [
+        "başarılı",
+        "başarılı",
+        "başarılı"
+      ],
+      "son": [
+        "yuklendi|b4c55296-8ba4-4758-b654-0ce264d3d5b2/kaynak-pdf/y-b4219800-20a2-492d-ac4c-8fbd295efd70-1794786509107.pdf"
+      ],
+      "dosyaVar": true
+    }
+  },
+  {
+    "kimlik": "S10c",
+    "ad": "Bulunamayan kaynağa art arda bakmak → tek kayıt, depoda dosya yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "son": [
+        "erisilemedi|-"
+      ],
+      "dosya": 0
+    }
+  }
+]
