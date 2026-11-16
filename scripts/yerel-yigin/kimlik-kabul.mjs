@@ -155,7 +155,6 @@ async function sifreCekmecesiniAc(sayfa) {
   await sayfa.getByRole("button", { name: /^(Değiştir|Change)$/ }).first().click();
   await sayfa.waitForSelector('input[name="currentPassword"]');
 }
-const metinVar = async (sayfa, desen) => desen.test(await sayfa.locator("body").innerText());
 const bekleMetin = async (sayfa, desen, sure = 15000) => {
   try {
     await sayfa.waitForFunction((k) => new RegExp(k.s, k.f).test(document.body.innerText), { s: desen.source, f: desen.flags }, { timeout: sure });
