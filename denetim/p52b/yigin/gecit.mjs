@@ -11,7 +11,7 @@
 import http from "node:http";
 
 const PORT = Number(process.env.GECIT_PORT ?? 54401);
-const HEDEF = { "/auth/v1": 59998, "/rest/v1": 53001 };
+const HEDEF = { "/auth/v1": 59998, "/rest/v1": 53001, "/storage/v1": 55000 };
 let kanca = null; // { yontem, yolIcerir, eylem: { yontem, yol, basliklar, govde } }
 const kancaGecmisi = [];
 
@@ -54,6 +54,20 @@ const sunucu = http.createServer(async (istek, cevap) => {
       }
       return;
     }
+    // Tarayıcı (localhost:31xx) istemcisi geçide doğrudan gelir: CORS ön isteği burada cevaplanır.
+    const koken = istek.headers.origin;
+    const cors = koken
+      ? { "access-control-allow-origin": koken, "access-control-allow-credentials": "true", "access-control-expose-headers": "*", vary: "Origin" }
+      : {};
+    if (istek.method === "OPTIONS" && koken) {
+      cevap.writeHead(204, {
+        ...cors,
+        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "access-control-allow-headers": istek.headers["access-control-request-headers"] ?? "*",
+        "access-control-max-age": "600",
+      }).end();
+      return;
+    }
     const giris = Object.entries(HEDEF).find(([onek]) => istek.url.startsWith(onek));
     if (!giris) {
       cevap.writeHead(404).end();
@@ -67,7 +81,7 @@ const sunucu = http.createServer(async (istek, cevap) => {
       const eylemSonucu = await kancaCalistir(k.eylem);
       kancaGecmisi.push({ zaman: new Date().toISOString(), tetikleyen: `${istek.method} ${istek.url}`, eylemSonucu });
     }
-    const basliklar = { ...sonuc.basliklar };
+    const basliklar = { ...sonuc.basliklar, ...cors };
     delete basliklar["content-length"];
     delete basliklar["transfer-encoding"];
     cevap.writeHead(sonuc.durum, { ...basliklar, "content-length": String(sonuc.govde.length) }).end(sonuc.govde);

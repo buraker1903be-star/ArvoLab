@@ -1,0 +1,65 @@
+{
+  "sonuclar": [
+    {
+      "ad": "T1 PDF yükle: gerçek depoya yüklenir, kayıt 'yuklendi', yol kullanıcıya bağlı kalıpta",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "kayit": [
+          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf"
+        ],
+        "nesne": [
+          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf"
+        ],
+        "bildirim": "PDF yüklendi.İşlem başarıyla tamamlandı."
+      }
+    },
+    {
+      "ad": "T2 Değiştir: yeni nesne kayıtlı, eski nesne depodan silindi, yetim yok",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "once": "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787599785.pdf",
+        "kayit": [
+          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+        ],
+        "nesne": [
+          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+        ]
+      }
+    },
+    {
+      "ad": "T3 PDF'i aç: imzalı bağlantı gerçek depodan alınır ve PDF döner",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "adres": "http://127.0.0.1:54401/storage/v1/object/sign/project-files/b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf?token=…",
+        "durum": 200,
+        "bas": "%PDF-"
+      }
+    },
+    {
+      "ad": "T4 DB yazımı düşerken Değiştir: hata bildirimi, eski PDF ve kayıt yerinde, yeni nesne temizlendi",
+      "sonuc": "PASS",
+      "sorun": null,
+      "kanit": {
+        "bildirim": "!İşlem tamamlanamadıBu çalışmaya yazma yetkiniz yok.",
+        "once": "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf",
+        "kayit": [
+          "yuklendi|b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+        ],
+        "nesne": [
+          "b3070096-e516-473c-a1af-7f1be8754a7f/kaynak-pdf/y-0c3d7599-c8f2-4e0e-896b-3073b2b50eee-1794787600470.pdf"
+        ],
+        "basariBildirimi": null
+      }
+    }
+  ],
+  "konsol": [
+    "istek düştü: POST http://localhost:3125/dashboard net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor/b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED",
+    "istek düştü: POST http://localhost:3125/dashboard/editor?sec=b3070096-e516-473c-a1af-7f1be8754a7f net::ERR_ABORTED"
+  ]
+}

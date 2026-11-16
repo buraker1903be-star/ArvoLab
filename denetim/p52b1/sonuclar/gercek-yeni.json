@@ -1,0 +1,111 @@
+[
+  {
+    "kimlik": "G1",
+    "ad": "Meşru yükleme ve değiştirme: yeni nesne kayıtlı, eski nesne gerçek depodan silindi",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": "başarılı",
+      "r2": "başarılı",
+      "kayit": [
+        "yuklendi|eccefc39-c38c-4390-9a0e-0a4fd133edd5/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787693799.pdf"
+      ],
+      "nesne": [
+        "eccefc39-c38c-4390-9a0e-0a4fd133edd5/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787693799.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G2",
+    "ad": "Meşru otomatik indirme (gerçek depoya yazar) ve eşzamanlı ikinci arama → tek kayıt, tek nesne",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "a": "başarılı",
+      "b": "başarılı",
+      "kayit": [
+        "indirildi|7c19735a-7940-4f85-82d6-feeb8eb15196/kaynak-pdf/c0459901e985bf7a-1794787694376.pdf"
+      ],
+      "nesne": [
+        "7c19735a-7940-4f85-82d6-feeb8eb15196/kaynak-pdf/c0459901e985bf7a-1794787694376.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G3",
+    "ad": "Kullanıcı yüklerken otomatik arama (gerçek depo) → yükleme korunur, yetim yok",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "başarılı",
+      "kayit": [
+        "yuklendi|fe094e4d-1ecc-422b-834d-a407fb51c0c5/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787694778.pdf"
+      ],
+      "nesne": [
+        "fe094e4d-1ecc-422b-834d-a407fb51c0c5/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787694778.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G4",
+    "ad": "DB yazımı düştü → yüklenen nesne gerçek depodan temizlendi; hata döndü",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "Bu çalışmaya yazma yetkiniz yok.",
+      "nesne": []
+    }
+  },
+  {
+    "kimlik": "G5",
+    "ad": "A'nın kaydı API'den B'nin yoluna çevrilip A değiştirilir → B'nin nesnesi gerçek depoda kalır",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "başarılı",
+      "r2": "Bu dosya başka bir kaynağa bağlı.",
+      "kayit": [
+        "yuklendi|01824d76-85c2-4857-b7eb-773b9e01b7e8/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696125.pdf",
+        "yuklendi|01824d76-85c2-4857-b7eb-773b9e01b7e8/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696028.pdf"
+      ],
+      "nesne": [
+        "01824d76-85c2-4857-b7eb-773b9e01b7e8/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787695996.pdf",
+        "01824d76-85c2-4857-b7eb-773b9e01b7e8/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696028.pdf",
+        "01824d76-85c2-4857-b7eb-773b9e01b7e8/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696125.pdf"
+      ],
+      "bVar": true
+    }
+  },
+  {
+    "kimlik": "G6",
+    "ad": "Yabancı kullanıcı: çalışmanın klasörüne YÜKLEYEMEZ, sahibin nesnesini SİLEMEZ, eylem reddeder (gerçek depo politikası)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "yukleme": "new row violates row-level security policy",
+      "silinen": 0,
+      "indirme": "Object not found",
+      "eylem": "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+      "nesne": [
+        "189d1f89-9a87-4e3f-ace8-1747ed1f409d/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696431.pdf"
+      ],
+      "kayit": [
+        "yuklendi|189d1f89-9a87-4e3f-ace8-1747ed1f409d/kaynak-pdf/y-f467ea4c-3a47-4356-9485-314550a3bc36-1794787696431.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G7",
+    "ad": "Eski istemcinin yolu (y-<zaman>.pdf) reddedilir, nesneye dokunulmaz (dağıtım geçişi)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "Dosya yolu geçersiz. Sayfayı yenileyip yeniden yükleyin.",
+      "nesne": [
+        "ad9ce533-fe13-4d7c-9868-ec758333a694/kaynak-pdf/y-1794787696737.pdf"
+      ],
+      "kayit": [],
+      "not": "Yeni kodda reddedilir ve nesne yetim kalır: dağıtım sırasında açık kalmış eski sekmenin tek yüklemesi. Eski kodda kabul edilir (beklenen)."
+    }
+  }
+]

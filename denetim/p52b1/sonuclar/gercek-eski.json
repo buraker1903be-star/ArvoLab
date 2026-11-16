@@ -1,0 +1,111 @@
+[
+  {
+    "kimlik": "G1",
+    "ad": "Meşru yükleme ve değiştirme: yeni nesne kayıtlı, eski nesne gerçek depodan silindi",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r1": "başarılı",
+      "r2": "başarılı",
+      "kayit": [
+        "yuklendi|672b266c-b8b3-4f99-8f4f-e01b77137e72/kaynak-pdf/y-1794787064337.pdf"
+      ],
+      "nesne": [
+        "672b266c-b8b3-4f99-8f4f-e01b77137e72/kaynak-pdf/y-1794787064337.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G2",
+    "ad": "Meşru otomatik indirme (gerçek depoya yazar) ve eşzamanlı ikinci arama → tek kayıt, tek nesne",
+    "sonuc": "FAIL",
+    "sorun": "2 nesne (yetim: 1)",
+    "kanit": {
+      "a": "başarılı",
+      "b": "başarılı",
+      "kayit": [
+        "indirildi|e5feec73-3257-4d08-b544-bd3d586e1570/kaynak-pdf/c0459901e985bf7a-1794787064855.pdf"
+      ],
+      "nesne": [
+        "e5feec73-3257-4d08-b544-bd3d586e1570/kaynak-pdf/c0459901e985bf7a-1794787064855.pdf",
+        "e5feec73-3257-4d08-b544-bd3d586e1570/kaynak-pdf/c0459901e985bf7a-1794787064858.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G3",
+    "ad": "Kullanıcı yüklerken otomatik arama (gerçek depo) → yükleme korunur, yetim yok",
+    "sonuc": "FAIL",
+    "sorun": "yükleme ezildi: erisilemedi|-",
+    "kanit": {
+      "r": "başarılı",
+      "kayit": [
+        "erisilemedi|-"
+      ],
+      "nesne": [
+        "6d4e38ca-1fc1-4fc4-8332-ed1c89f6d09c/kaynak-pdf/y-1794787065299.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G4",
+    "ad": "DB yazımı düştü → yüklenen nesne gerçek depodan temizlendi; hata döndü",
+    "sonuc": "FAIL",
+    "sorun": "yetim nesne: 286650a7-2b3d-44eb-afbc-81a76782a8c4/kaynak-pdf/y-1794787066121.pdf",
+    "kanit": {
+      "r": "Bu çalışmaya yazma yetkiniz yok.",
+      "nesne": [
+        "286650a7-2b3d-44eb-afbc-81a76782a8c4/kaynak-pdf/y-1794787066121.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G5",
+    "ad": "A'nın kaydı API'den B'nin yoluna çevrilip A değiştirilir → B'nin nesnesi gerçek depoda kalır",
+    "sonuc": "FAIL",
+    "sorun": "B'nin PDF'i gerçek depodan silindi",
+    "kanit": {
+      "r": "başarılı",
+      "r2": "Yüklenen dosya okunamadı; tekrar deneyin.",
+      "kayit": [
+        "yuklendi|2bc8d9c8-40fa-4e7b-b76d-dc608deb3aa5/kaynak-pdf/y-1794787066457.pdf",
+        "yuklendi|2bc8d9c8-40fa-4e7b-b76d-dc608deb3aa5/kaynak-pdf/y-1794787066377.pdf"
+      ],
+      "nesne": [
+        "2bc8d9c8-40fa-4e7b-b76d-dc608deb3aa5/kaynak-pdf/y-1794787066343.pdf",
+        "2bc8d9c8-40fa-4e7b-b76d-dc608deb3aa5/kaynak-pdf/y-1794787066457.pdf"
+      ],
+      "bVar": false
+    }
+  },
+  {
+    "kimlik": "G6",
+    "ad": "Yabancı kullanıcı: çalışmanın klasörüne YÜKLEYEMEZ, sahibin nesnesini SİLEMEZ, eylem reddeder (gerçek depo politikası)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "yukleme": "new row violates row-level security policy",
+      "silinen": 0,
+      "indirme": "Object not found",
+      "eylem": "Yüklenen dosya okunamadı; tekrar deneyin.",
+      "nesne": [
+        "721f094c-9d62-4aa9-9910-209f64f6596f/kaynak-pdf/y-1794787066725.pdf"
+      ],
+      "kayit": [
+        "yuklendi|721f094c-9d62-4aa9-9910-209f64f6596f/kaynak-pdf/y-1794787066725.pdf"
+      ]
+    }
+  },
+  {
+    "kimlik": "G7",
+    "ad": "Eski istemcinin yolu (y-<zaman>.pdf) reddedilir, nesneye dokunulmaz (dağıtım geçişi)",
+    "sonuc": "PASS",
+    "sorun": null,
+    "kanit": {
+      "r": "Yüklenen dosya okunamadı; tekrar deneyin.",
+      "nesne": [],
+      "kayit": [],
+      "not": "Yeni kodda reddedilir ve nesne yetim kalır: dağıtım sırasında açık kalmış eski sekmenin tek yüklemesi. Eski kodda kabul edilir (beklenen)."
+    }
+  }
+]

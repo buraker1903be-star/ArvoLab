@@ -5,6 +5,7 @@ import { ExternalLink, FileCheck2, FileUp, MessageSquareText } from "lucide-reac
 import KaynakSohbetPenceresi from "./kaynak-sohbet-penceresi";
 import { createClient } from "@/lib/supabase/client";
 import { kaynakPdfiYuklendi } from "@/app/actions/kaynak-pdf";
+import { yuklemeYolu } from "@/lib/kaynak-pdf-yolu";
 import { PDF_EN_FAZLA_BAYT, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 import { showToast } from "../_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -64,8 +65,18 @@ export default function KaynakPdfSatiri({
     }
     setYukleniyor(true);
     try {
-      const yol = `${projectId}/kaynak-pdf/y-${Date.now()}.pdf`;
-      const { error } = await createClient().storage.from("project-files").upload(yol, dosya, {
+      /* Yükleyenin kimliği yolda: sunucu onu oturumla karşılaştırıyor
+         (lib/kaynak-pdf-yolu.ts). Eskiden yol yalnızca zamandan kuruluyordu
+         ve sunucu önekten başka bir şeye bakmıyordu. */
+      const sb = createClient();
+      // Yerel oturum yeter: kimliği sunucu yeniden doğruluyor, ek ağ çağrısı gerekmez.
+      const { data: oturum } = await sb.auth.getSession();
+      if (!oturum.session) {
+        showToast("error", t({ tr: "Oturumunuz kapanmış; yeniden giriş yapın.", en: "Your session has ended; please sign in again." }));
+        return;
+      }
+      const yol = yuklemeYolu(projectId, oturum.session.user.id);
+      const { error } = await sb.storage.from("project-files").upload(yol, dosya, {
         contentType: "application/pdf",
         upsert: false,
       });
