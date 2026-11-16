@@ -1,0 +1,89 @@
+{
+  "etiket": "eski-05182c7",
+  "sonuclar": [
+    {
+      "yol": "paylasim",
+      "resim": "calisma",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "paylasim",
+      "resim": "sahip",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "paylasim",
+      "resim": "yabanci",
+      "yetkili": false,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "FAIL"
+    },
+    {
+      "yol": "editor",
+      "resim": "calisma",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "editor",
+      "resim": "sahip",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "editor",
+      "resim": "yabanci",
+      "yetkili": false,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "FAIL"
+    },
+    {
+      "yol": "yazdirma",
+      "resim": "calisma",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "yazdirma",
+      "resim": "sahip",
+      "yetkili": true,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "yazdirma",
+      "resim": "yabanci",
+      "yetkili": false,
+      "gozlenen": "imzali_indirilebilir",
+      "sonuc": "FAIL"
+    },
+    {
+      "yol": "word",
+      "resim": "calisma",
+      "yetkili": true,
+      "gozlenen": "word_icinde",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "word",
+      "resim": "sahip",
+      "yetkili": true,
+      "gozlenen": "word_icinde",
+      "sonuc": "PASS"
+    },
+    {
+      "yol": "word",
+      "resim": "yabanci",
+      "yetkili": false,
+      "gozlenen": "word_icinde",
+      "sonuc": "FAIL"
+    }
+  ]
+}
