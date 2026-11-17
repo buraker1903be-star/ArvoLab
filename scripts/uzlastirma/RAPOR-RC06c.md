@@ -380,7 +380,7 @@ Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapıl
 | Fiziksel yedek | **PASS (panel)** — son yedek 17.11.2026 05:00:49 UTC; Storage dosyalarını KAPSAMAZ |
 | PITR | **YOK** (kapalı) — geri dönüş sınırları §8.3 |
 | Vercel / GitHub Actions otomatik Production işlemi | **UNVERIFIED** |
-| Auth ayarları ↔ G1 | §8.4 — yayını engelleyen bir açık yok; G1'in "mevcut şifre" koruması API düzeyinde değil, uygulama düzeyinde |
+| Auth ayarları ↔ G1 | **AÇIK KARAR MADDESİ (Karar A1, §8.4)** — G1 koruması yalnızca uygulama düzeyinde; Auth API'si doğrudan çağrılınca mevcut şifre sorulmuyor. Eski Production davranışıyla aynı olması maddeyi KAPATMAZ |
 | Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |
 
 ## 8. Production panel kanıtı (RC06f, 17.11.2026)
@@ -468,7 +468,7 @@ ayar/ücret kararıdır ve onay gerektirir.
 | Mevcut şifresiz yol (sıfırlama / ilk şifre) | yalnızca e-posta bağlantısıyla açılmış ya da şifresi olmayan oturuma (`lib/sifre-yetkisi.ts`, AMR) | — | uygulama düzeyinde |
 | Diğer oturumlar | şifre değişince `signOut({ scope: "others" })` | — | uygulama düzeyinde |
 
-**Bulgu (yayını engellemiyor):** G1'in "mevcut şifre" ve "yalnızca e-posta bağlantısıyla sıfırlama"
+**Karar A1 — AÇIK (bulgu; karar sizin):** G1'in "mevcut şifre" ve "yalnızca e-posta bağlantısıyla sıfırlama"
 korumaları uygulamanın sunucu işlemindedir; Supabase Auth bunları ayrıca uygulamıyor.
 
 - Geçerli bir erişim belirtecine sahip biri (örneğin ele geçirilmiş bir oturum) uygulamayı atlayıp
@@ -476,7 +476,9 @@ korumaları uygulamanın sunucu işlemindedir; Supabase Auth bunları ayrıca uy
   sorulmaz, 12 yerine 8 karakter yeter ve öteki oturumlar kapanmaz.
 - Bu, bugünkü Production davranışıyla **aynıdır**: Production'daki kodda mevcut şifre denetimi hiç
   yok. Yayın bir şeyi kötüleştirmiyor, yalnızca uygulama içi yolu düzeltiyor. Bu yüzden yayın için
-  zorunlu bir açık değil.
+  zorunlu bir açık değil. **Ama madde kapatılmış sayılmaz:** "eski davranış" gerekçesi riski
+  ortadan kaldırmıyor. Karar seçenekleri: (a) yayından önce ayar + kod + kabul, (b) yayından sonra ayrı
+  iş olarak, (c) riski kabul edip belgelemek. Karar verilene kadar bu madde açık listede kalır.
 - Raporlarda ve kullanıcıya dönük metinlerde G1 korumasının "uygulama içinden yapılan değişiklikler
   için" geçerli olduğu yazılmalı; API düzeyinde bir garanti gibi anlatılmamalı.
 
@@ -491,3 +493,62 @@ Ayar değişikliği + küçük kod değişikliği + yerel/Test kabulü ayrı bir
 uzunluğu 12'ye çıkarmak da aynı API yolunu 12'ye bağlar; bugünkü uyum kuralını bozmaz (12 ≤ 12).
 Mevcut şifreleri etkilemez, yalnızca yeni belirlenenleri. İkisi de ayar değişikliğidir, onay
 gerektirir.
+
+## 9. Gerçek AI kabulü — güvenli anahtar hazırlığı (RC06g, gerçek çağrı YOK)
+
+Kod değiştirilmedi. Production anahtarı okunmadı, kopyalanmadı. Bu bölüm hazırlıktır; anahtar hazır
+olmadan hiçbir gerçek çağrı yapılmaz.
+
+**Sağlayıcı ve model:**
+- Kod sağlayıcıdan bağımsız (`lib/ai/saglayici.ts`): adres `AI_TABAN_URL`, tel biçimi `AI_BICIM` ya
+  da adresten çıkarım (Anthropic `/v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`).
+- Varsayılan model `AI_MODEL`; yeteneğe özel `AI_MODEL_<YETENEK>`. Hiçbiri yoksa kodun varsayılanı
+  OpenAI `gpt-4o-mini`.
+- Production'daki gerçek değerler okunmadı. Production kayıtları (`ai_assistant_runs.model`, salt
+  okunur toplu sayım, içerik okunmadı) **Anthropic** gösteriyor:
+  - `claude-sonnet-5`: bütün yetenekler, 02.11–05.11.2026;
+  - `claude-haiku-4-5-20251001`: literatür, 3 kayıt.
+- Kabul aynı kimliklerle koşulur: `AI_MODEL=claude-sonnet-5`, `AI_MODEL_LITERATUR=claude-haiku-4-5-20251001`.
+
+**Yerel izole kabul için ortam değişkenleri (yalnızca adlar):**
+- AI: `AI_TABAN_URL`, `AI_BICIM`, `AI_MODEL`, `AI_MODEL_LITERATUR`, `AI_ANAHTAR`, (isteğe bağlı) `AI_ZAMAN_ASIMI_MS`.
+  `OPENAI_API_KEY` ve `OPENAI_TABAN_URL` süreçte **olmamalı**: yedek okunuyorlar ve yerel taklidin
+  değeri bugün `OPENAI_API_KEY`'de.
+- Yerel yığın: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY` (yerel JWT), `ARVOLAB_TEST_ANAHTARLARI`, `PDF_ISLEM_SAATLIK`, `CRON_SECRET`.
+- Kabul betiği: `STUDYO_DERLEME=uretim`, `STUDYO_ISTEM_KAYDI`.
+
+**Anahtarın tanımlanması:**
+- Ayrı bir test anahtarı kullanılır: Production'ınki değil. Mümkünse harcama sınırı olan ayrı bir
+  çalışma alanında açılır, kabulden sonra iptal edilir.
+- Anahtar bu oturumun ortamına **ağ sırrı** olarak, kullanıcının kendi girdiği güvenli formla
+  kaydedilir (`api.anthropic.com`, başlık `x-api-key`). Ağ vekili gerçek değeri giden isteğe kendisi
+  koyar: değer sohbete, terminale, süreç ortamına, günlüğe ya da git'e hiç girmez.
+- Uygulama `AI_ANAHTAR` olarak yalnızca biçimi uygun sahte bir yer tutucu taşır; vekil onu değiştirir.
+- Not: ağ sırrı bu bulut ortamındaki her oturuma uygulanır; ortam paylaşımlıysa öteki oturumlara da.
+
+**Çağrı sınırı (en çok 30):**
+- Uygulamanın kendi hakkı kullanıcı başına saatte 20 (`SAATLIK_HAK`). Bu sert bir sınır değil: kesilen
+  yanıt bir kez daha denenebiliyor (`butceyeTakildi`), birden çok test kullanıcısı da hakkı çoğaltır.
+- Sert sınır, uygulama ile sağlayıcı arasına konan, depo DIŞINDA küçük bir sayaç vekilidir:
+  - `AI_TABAN_URL` ona gider; vekil `api.anthropic.com`'a iletir;
+  - her ileti için yalnızca sayaç, model, durum kodu ve kullanım jetonlarını yazar (istem ve yanıt
+    metni yazılmaz);
+  - 31. istekte iletmeden 429 döner.
+- Adres yerel olduğu için `AI_BICIM=anthropic` açıkça verilir.
+- İkinci koruma: test anahtarının çalışma alanındaki harcama sınırı (kullanıcı tarafında).
+
+**Tahmini maliyet:** Claude Sonnet 5 girdi $2 / çıktı $10, Haiku 4.5 $1 / $5 (milyon jeton başına).
+
+| Senaryo | Çağrı başına | 30 çağrı |
+|---|---|---|
+| Olağan (4k girdi / 1,5k çıktı, Sonnet) | ≈ $0,023 | ≈ $0,70 |
+| Temkinli (20k / 3k) | ≈ $0,07 | ≈ $2,10 |
+| Tavan (30k girdi + kılavuz/ÜAK'taki 16k çıktı sınırı, her çağrı) | ≈ $0,22 | ≈ $6,60 |
+
+Literatür çağrıları Haiku'yla daha ucuz.
+
+**Birleşik aday ön koşulları değişmedi (§6):**
+- kabul 0c/0d'den sonraki `design/os5` SHA'sında, `next build` + `next start` ve `STUDYO_DERLEME=uretim` ile yapılır;
+- derleme kaydı ve şema özeti rapora geçer;
+- merge ve Production uygulaması ayrı onay ister.
