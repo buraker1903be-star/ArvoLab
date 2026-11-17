@@ -1,5 +1,5 @@
 import type { ParsedReference } from "@/lib/apa7";
-import { dogrulamaAnahtari, doiKimligi, kunyeDoisi } from "@/lib/kaynak-anahtari";
+import { dogrulamaAnahtari, doiKimligi, kunyeDoisi, soyadKimligi } from "@/lib/kaynak-anahtari";
 
 export type AcademicProvider = "crossref" | "openalex";
 
@@ -84,12 +84,7 @@ function titleSimilarity(left: string, right: string): number {
   return intersection / payda;
 }
 
-/** "Yılmaz, A." → "yılmaz" · "Ali Taş" → "taş" */
-function soyad(ad: string): string {
-  const temiz = ad.trim();
-  const parca = temiz.includes(",") ? temiz.split(",")[0] : temiz.split(/\s+/).at(-1) ?? "";
-  return parca.toLocaleLowerCase("tr-TR").replace(/[^\p{L}]/gu, "");
-}
+const soyad = soyadKimligi;
 
 /**
  * Künyedeki ilk yazar, adaydaki yazarların hiçbirinde geçmiyor mu?
@@ -223,6 +218,28 @@ async function crossrefDoiSorgusu(reference: ParsedReference, istenen: string): 
 
 const ayniEser = (match: AcademicMatch, istenen: string | null) => Boolean(istenen) && doiKimligi(match.doi) === istenen;
 
+type EslesmeHukmu = "verified" | "possible_match" | "not_found";
+
+/*
+  BİR KÜNYE İLE BİR ESER ARASINDAKİ HÜKÜM, tek yerde. Hem dizinden yeni
+  gelen sonuçta hem ÖNBELLEKTEN okunan kayıtta aynı fonksiyon çalışır
+  (PR #105 incelemesi): önbellek "dizinde ne var" bilgisini taşır, "bu
+  künye doğrulandı" hükmünü değil. Eskiden saklanan hüküm, aynı kutuya
+  düşen başka bir künyeye (başka yazar, aynı DOI ama çelişkili başlık)
+  olduğu gibi veriliyordu.
+
+  - İstenen DOI'nin eseri dizinde VARSA hüküm "bulunamadı" olamaz; künye
+    onunla çelişiyorsa (başlık/yazar) "olası eşleşme"dir. Böylece aynı DOI
+    kutusuna yazılan kayıt, künyeden bağımsız bir dizin bilgisi kalır.
+  - Yazar tutmuyorsa ya da eser başka DOI'nin ise "doğrulandı" denmez.
+*/
+function eslesmeHukmu(reference: ParsedReference, eser: AcademicMatch, istenenDoi: string | null): EslesmeHukmu {
+  const kimlikTutmuyor = Boolean(istenenDoi) && !ayniEser(eser, istenenDoi);
+  if (eser.confidence >= 0.78 && !yazarTutmuyor(reference, eser.authors) && !kimlikTutmuyor) return "verified";
+  if (istenenDoi && !kimlikTutmuyor) return "possible_match";
+  return eser.confidence >= 0.55 ? "possible_match" : "not_found";
+}
+
 async function searchOpenAlex(reference: ParsedReference): Promise<AcademicMatch[]> {
   const query = reference.title || reference.raw;
   const url = new URL("https://api.openalex.org/works");
@@ -319,8 +336,14 @@ async function verifyReference(reference: ParsedReference): Promise<DizinSonucu>
     yoksa başka DOI'li aday ancak "olası eşleşme" olabilir (aşağıda).
   */
   const kimlikEslesen = istenenDoi ? deduplicated.find((match) => ayniEser(match, istenenDoi)) ?? null : null;
-  const bestMatch = istenenDoi ? kimlikEslesen ?? deduplicated[0] ?? null : deduplicated[0] ?? null;
-  const kimlikTutmuyor = Boolean(istenenDoi && bestMatch && !ayniEser(bestMatch, istenenDoi));
+  /*
+    DOI'siz künyede güçlü adaylar arasında YAZARI TUTAN seçilir. Eskiden
+    sıralamada ilk gelen (puan yalnızca başlık+yıl) seçiliyordu: aynı
+    başlık/yıldaki iki eserden yanlış olanı "en iyi" olup yazar kapısına
+    takılıyor, doğru eser hiç değerlendirilmiyordu.
+  */
+  const yazariTutan = deduplicated.find((match) => match.confidence >= 0.78 && !yazarTutmuyor(reference, match.authors)) ?? null;
+  const bestMatch = istenenDoi ? kimlikEslesen ?? deduplicated[0] ?? null : yazariTutan ?? deduplicated[0] ?? null;
   /*
     YAZAR BİR KAPI, ağırlık değil.
 
@@ -335,14 +358,7 @@ async function verifyReference(reference: ParsedReference): Promise<DizinSonucu>
     Kapı olarak: yazar tutmuyorsa "doğrulandı" denmiyor, "olası eşleşme"
     deniyor — bulduğumuz şey duruyor, kesinlik iddiası kalkıyor.
   */
-  const yazarSupheli = bestMatch ? yazarTutmuyor(reference, bestMatch.authors) : false;
-  const eslesmeDurumu = !bestMatch
-    ? "not_found"
-    : bestMatch.confidence >= 0.78 && !yazarSupheli && !kimlikTutmuyor
-    ? "verified"
-    : bestMatch.confidence >= 0.55
-    ? "possible_match"
-    : "not_found";
+  const eslesmeDurumu = bestMatch ? eslesmeHukmu(reference, bestMatch, istenenDoi) : "not_found";
   /*
     Olumlu kanıt, bir dizin düşmüş olsa da geçerli: cevap veren dizinin
     bulduğu kayıt gerçek. "Bulunamadı" ise ancak İKİ dizin de cevap
@@ -392,6 +408,27 @@ function yerelAlanlar(reference: ParsedReference) {
 function kayitKunyeyeAit(kayit: OnbellekKaydi, istenen: string | null): boolean {
   if (!istenen || !kayit.bestMatch) return true;
   return doiKimligi(kayit.bestMatch.doi) === istenen;
+}
+
+/*
+  SICAK OKUMA (PR #105 incelemesi). Kayıttaki eser bu künyeye karşı yeniden
+  puanlanır ve hüküm eslesmeHukmu'yle YENİDEN verilir; saklanan hüküm
+  aynen taşınmaz. null = kayıt kullanılmaz, dizine yeniden sorulur:
+    - DOI'li künyede kayıt başka DOI'nin eseri;
+    - kayıt "doğrulandı" diyor ama bu künye için öyle değil. Burada
+      "olası eşleşme"ye indirip göstermek yerine yeniden sormak bilinçli:
+      aynı başlıktaki DOĞRU eser dizinde olabilir (başka yazar), yeni
+      sorgu onu bulur.
+  Kayıtta eser yoksa ("bulunamadı") hüküm künyeye bağlı değildir, aynen kalır.
+*/
+function sicakHukum(kayit: OnbellekKaydi, reference: ParsedReference): OnbellekKaydi | null {
+  const istenen = kunyeDoisi(reference.raw);
+  if (!kayitKunyeyeAit(kayit, istenen)) return null;
+  if (!kayit.bestMatch) return kayit.status === "not_found" ? kayit : null;
+  const eser = { ...kayit.bestMatch, confidence: scoreCandidate(reference, kayit.bestMatch.title, kayit.bestMatch.year) };
+  const hukum = eslesmeHukmu(reference, eser, istenen);
+  if (kayit.status === "verified" && hukum !== "verified") return null;
+  return { status: hukum, bestMatch: hukum === "not_found" ? null : eser, matches: kayit.matches };
 }
 
 /**
@@ -444,8 +481,9 @@ export async function verifyAcademicReferences(
     }
     const anahtar = anahtarlar.get(reference) ?? null;
     const kayit = anahtar ? bilinen.get(anahtar) : undefined;
-    if (kayit && kayitKunyeyeAit(kayit, kunyeDoisi(reference.raw))) {
-      sonuclar.push({ ...yerelAlanlar(reference), ...kayit });
+    const sicak = kayit ? sicakHukum(kayit, reference) : null;
+    if (sicak) {
+      sonuclar.push({ ...yerelAlanlar(reference), ...sicak });
       continue;
     }
     // Sınır YALNIZCA bakılmamışlara harcanıyor.

@@ -42,9 +42,12 @@ const DIZIN: Record<string, ReturnType<typeof kayit>> = { [X]: kayit(X, "Kaya"),
 
 const gercekFetch = globalThis.fetch;
 let istekler: string[] = [];
+/** Başlık aramasının döndürdüğü kayıtlar; DOI'siz senaryolar kendi listesini koyar. */
+let aramaSonucu: () => unknown[] = () => [DIZIN[X], DIZIN[Y]];
 
 beforeEach(() => {
   istekler = [];
+  aramaSonucu = () => [DIZIN[X], DIZIN[Y]];
   globalThis.fetch = (async (adres: string) => {
     const u = new URL(String(adres));
     istekler.push(`${u.hostname}${u.pathname}`);
@@ -55,7 +58,7 @@ beforeEach(() => {
         ? new Response(JSON.stringify({ message: oge }), { status: 200 })
         : new Response(JSON.stringify({ status: "error" }), { status: 404 });
     }
-    const govde = u.hostname === "api.crossref.org" ? { message: { items: [DIZIN[X], DIZIN[Y]] } } : { results: [] };
+    const govde = u.hostname === "api.crossref.org" ? { message: { items: aramaSonucu() } } : { results: [] };
     return new Response(JSON.stringify(govde), { status: 200, headers: { "content-type": "application/json" } });
   }) as unknown as typeof fetch;
 });
@@ -144,5 +147,80 @@ describe("pdfSatirinaDoi: belirsiz eşleşme kesin eşleşme sayılmaz", () => {
     assert.equal(pdfSatirinaDoi({ status: "possible_match", bestMatch: eser(X), istenenDoi: null }), null);
     assert.equal(pdfSatirinaDoi({ status: "verified", bestMatch: eser(X), istenenDoi: null }), X);
     assert.equal(pdfSatirinaDoi(null), null);
+  });
+});
+
+/*
+  PR #105 incelemesi (17.11.2026). DOI'siz yol: anahtar "başlık|yıl" olduğu
+  için aynı başlık/yıldaki iki FARKLI eser (farklı yazar) aynı kutuya
+  düşüyordu ve kayitKunyeyeAit DOI yokken koşulsuz "ait" diyordu. A'nın
+  "verified" hükmü B'nin künyesine olduğu gibi taşınıyordu. DOI'li yolda
+  da sıcak okuma künyenin yazar/başlığına hiç bakmıyordu.
+*/
+describe("doğrulama önbelleği: sıcak okumada yazar/kimlik yeniden doğrulanır", () => {
+  const P = "10.5555/ornek.p";
+  const Q = "10.5555/ornek.q";
+  const yazarli = (doi: string, aile: string) => ({ ...kayit(doi, aile) });
+
+  test("DOI'siz: aynı başlık/yıl, farklı yazar ve eser; iki kullanıcı soğuk → sıcak", async () => {
+    aramaSonucu = () => [yazarli(P, "Kaya"), yazarli(Q, "Demir")];
+    const { onbellek } = ortakOnbellek();
+    const [a] = await verifyAcademicReferences([kunye(null, "Kaya, A.")], 25, onbellek);
+    assert.equal(a.status, "verified");
+    assert.equal(enIyiDoi(a), P);
+    // B: aynı başlık/yıl, başka yazar. Eskiden A'nın "verified" P kaydını alıyordu.
+    const [b] = await verifyAcademicReferences([kunye(null, "Demir, B.")], 25, onbellek);
+    assert.notEqual(enIyiDoi(b), P, "A'nın eseri B'ye taşındı");
+    assert.equal(b.status, "verified");
+    assert.equal(enIyiDoi(b), Q);
+    istekler = [];
+    const [a2] = await verifyAcademicReferences([kunye(null, "Kaya, A.")], 25, onbellek);
+    const [b2] = await verifyAcademicReferences([kunye(null, "Demir, B.")], 25, onbellek);
+    assert.deepEqual([enIyiDoi(a2), a2.status, enIyiDoi(b2), b2.status], [P, "verified", Q, "verified"]);
+    assert.deepEqual(istekler, [], "sıcak turda dizine gidildi");
+  });
+
+  test("DOI'siz: aynı anahtara düşse bile 'verified' kayıt yazarı tutmayan künyeye aynen verilmez", async () => {
+    aramaSonucu = () => [yazarli(P, "Kaya"), yazarli(Q, "Demir")];
+    const pKaydi: OnbellekKaydi = {
+      status: "verified",
+      bestMatch: { provider: "crossref", title: BASLIK, year: 2021, doi: P, authors: ["A. Kaya"], venue: null, url: `https://doi.org/${P}`, citedByCount: null, confidence: 1 },
+      matches: [],
+    };
+    // Anahtarı ne olursa olsun B'nin kutusuna A'nın kaydı konur (eski satır, çakışma, elle bozulma).
+    const tablo: Record<string, OnbellekKaydi> = {};
+    const kutu: DogrulamaOnbellegi = {
+      async oku(anahtarlar) { return new Map(anahtarlar.map((a) => [a, tablo[a] ?? pKaydi])); },
+      async yaz(girisler) { for (const g of girisler) tablo[g.anahtar] = g.kayit; },
+    };
+    const [b] = await verifyAcademicReferences([kunye(null, "Demir, B.")], 25, kutu);
+    assert.ok(!(b.status === "verified" && enIyiDoi(b) === P), "önbellekteki verified hüküm başka künyeye taşındı");
+    assert.equal(pdfSatirinaDoi(b) === P, false);
+  });
+
+  test("DOI'li: aynı DOI ama çelişkili yazar/başlık taşıyan künye önceki 'verified' hükmü aynen almaz", async () => {
+    const { onbellek } = ortakOnbellek();
+    const [a] = await verifyAcademicReferences([kunye(X)], 25, onbellek);
+    assert.equal(a.status, "verified");
+    const celiskili: ParsedReference = {
+      raw: `Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/${X}`,
+      authors: ["Demir, B."], year: "2021", title: "Agricultural policy in coastal regions", issues: [],
+    };
+    const [b] = await verifyAcademicReferences([celiskili], 25, onbellek);
+    assert.notEqual(b.status, "verified");
+    // DOI dizinde var: eser X'tir, ama künye onunla çelişiyor → belirsiz, "bulunamadı" da değil.
+    assert.equal(b.status, "possible_match");
+    // B'nin denetimi A'nın sıcak hükmünü bozmaz.
+    istekler = [];
+    const [a2] = await verifyAcademicReferences([kunye(X)], 25, onbellek);
+    assert.equal(a2.status, "verified");
+    assert.deepEqual(istekler, []);
+  });
+
+  test("DOI'li: yazarı tutmayan künye (başlık aynı) de 'verified' almaz", async () => {
+    const { onbellek } = ortakOnbellek();
+    await verifyAcademicReferences([kunye(X)], 25, onbellek);
+    const [b] = await verifyAcademicReferences([kunye(X, "Demir, B.")], 25, onbellek);
+    assert.equal(b.status, "possible_match");
   });
 });

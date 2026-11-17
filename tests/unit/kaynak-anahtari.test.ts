@@ -86,6 +86,6 @@ describe("doğrulama önbelleği anahtarı", () => {
     const uzun = Array.from({ length: 80 }, (_, i) => `kelime${i}`).join(" ");
     const anahtar = dogrulamaAnahtari(kunye(uzun));
     assert.ok(anahtar);
-    assert.equal(anahtar!.split("|")[1].split(" ").length, 24);
+    assert.equal(anahtar!.split("|")[2].split(" ").length, 24);
   });
 });

@@ -23,9 +23,17 @@ const kunye = (baslik: string, yil = "2020"): ParsedReference => ({
   issues: [],
 });
 
-const kayit = (status: OnbellekKaydi["status"] = "verified"): OnbellekKaydi => ({
-  status,
-  bestMatch: null,
+/*
+  "verified" kayıt her zaman bir eser taşır; sıcak okuma hükmü o esere karşı
+  YENİDEN verir (PR #105 incelemesi). Eskiden buradaki kurgu eseri olmayan
+  bir "verified" koyuyordu — uygulamanın hiç yazmadığı bir durum.
+*/
+const dogrulanmisKayit = (k: ParsedReference): OnbellekKaydi => ({
+  status: "verified",
+  bestMatch: {
+    provider: "crossref", title: k.title ?? "", year: Number(k.year), doi: null,
+    authors: ["A. Yazar"], venue: null, url: "https://example.org", citedByCount: null, confidence: 1,
+  },
   matches: [],
 });
 
@@ -34,7 +42,7 @@ function sahteOnbellek(bilinenler: ParsedReference[]) {
   const depo = new Map<string, OnbellekKaydi>();
   for (const k of bilinenler) {
     const anahtar = dogrulamaAnahtari(k);
-    if (anahtar) depo.set(anahtar, kayit());
+    if (anahtar) depo.set(anahtar, dogrulanmisKayit(k));
   }
   const yazilanlar: { anahtar: string; kayit: OnbellekKaydi }[] = [];
   const onbellek: DogrulamaOnbellegi = {

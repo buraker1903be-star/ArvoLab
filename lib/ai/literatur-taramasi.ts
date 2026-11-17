@@ -172,6 +172,19 @@ export function kunyeIzi(sonuc: LiteraturSonucu): boolean {
 const AD = "[A-ZÇĞİÖŞÜ][a-zçğıöşüâîû]+(?:-[A-ZÇĞİÖŞÜ][a-zçğıöşüâîû]+)?";
 const YAZAR_CIFTI = new RegExp(`(${AD})\\s*&\\s*(${AD})`, "gu");
 const YAZAR_VD = new RegExp(`(${AD})\\s+(?:et al\\.?|vd\\.|ve ark\\.|ve arkadaşları)`, "gu");
+/*
+  TEK YAZARLI ÖNERİ (PR #105 incelemesi): "Weiss’in çalışmalarına bakın",
+  "Bowlby'nin bağlanma kuramı", "Weiss's work". İlk iki biçim bunu
+  kaçırıyordu. Aranan şekil dar: büyük harfli ad + iyelik eki + (en çok iki
+  sözcük sonra) bir ESER sözcüğü. Ad listesi yok; ad girdide geçiyorsa
+  serbest. Kalan açıklar testte adıyla duruyor
+  (tests/unit/literatur-yazar-onerisi.test.ts, "BİLİNEN AÇIK").
+*/
+const ESER_TR = "(?:çalışma|araştırma|makale|kitab|kitap|eser|kuram|teori|model|yaklaşım|yayın|ölçe[kğ]|tanım|bulgu)";
+const ESER_EN = "(?:works?|stud(?:y|ies)|research|theory|theories|model|papers?|books?|framework|scale|approach|findings)";
+const ARA_SOZCUK = "(?:[\\p{Ll}-]+\\s+){0,2}?";
+const YAZAR_IYELIK_TR = new RegExp(`(${AD})['’]n?[ıiuü]n\\s+${ARA_SOZCUK}${ESER_TR}\\p{L}*`, "gu");
+const YAZAR_IYELIK_EN = new RegExp(`(${AD})['’]s\\s+${ARA_SOZCUK}${ESER_EN}(?!\\p{L})`, "gu");
 /* Veri tabanı adları yazar değildir: "Web of Science & Scopus". */
 const DIZIN_ADLARI = new Set(["science", "scopus", "scholar", "embase", "medline", "cochrane", "dizin", "tez", "proquest", "google"]);
 
@@ -198,8 +211,10 @@ export function eklenenYazarlar(metin: string, girdi: string): string[] {
     if (adlar.some((ad) => DIZIN_ADLARI.has(kucuk(ad)))) continue;
     if (adlar.some((ad) => !girdideGecer(ad, girdi))) bulunan.push(m[0]);
   }
-  for (const m of metin.matchAll(YAZAR_VD)) {
-    if (!DIZIN_ADLARI.has(kucuk(m[1])) && !girdideGecer(m[1], girdi)) bulunan.push(m[0]);
+  for (const desen of [YAZAR_VD, YAZAR_IYELIK_TR, YAZAR_IYELIK_EN]) {
+    for (const m of metin.matchAll(desen)) {
+      if (!DIZIN_ADLARI.has(kucuk(m[1])) && !girdideGecer(m[1], girdi)) bulunan.push(m[0]);
+    }
   }
   return bulunan;
 }

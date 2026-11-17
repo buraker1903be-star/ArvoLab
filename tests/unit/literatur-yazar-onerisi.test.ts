@@ -47,12 +47,53 @@ describe("literatür: modelin eklediği yazar önerisi", () => {
     assert.deepEqual(eklenenYazarlar("Smith vd. bulguları", ""), ["Smith vd."]);
     // Tek başına özel ad, veri tabanı adı ve "ve" bağlacı yanlış alarm değil.
     for (const metin of [
-      "Bandura'nın öz yeterlik kuramı çerçeve olabilir.",
+      "Öz yeterlik kuramı çerçeve olabilir.",
+      "Türkiye'deki çalışmaları YÖK Tez'de arayın.",
+      "Scopus'un yayın kapsamı sınırlıdır.",
       "Web of Science & Scopus filtrelerini kullanın.",
       "Türkçe ve İngilizce terimleri birlikte arayın.",
       "\"loneliness\" AND (\"distance learning\" OR \"online learning\")",
       "UCLA & SCS gibi ölçek kısaltmaları",
     ]) assert.deepEqual(eklenenYazarlar(metin, ""), [], metin);
+  });
+
+  /*
+    PR #105 incelemesi: tek yazarlı öneri. İlk süzgeç ("Ad & Ad", "Ad vd.")
+    bu cümleyi KAÇIRIYORDU (eklenenYazarlar → []); 17.11.2026'da
+    92a0e91 üzerinde ölçüldü. Şimdi "ad + iyelik eki + eser sözcüğü"
+    biçimi yakalıyor — ad listesi yok, genel ad yasağı yok.
+  */
+  test("tek yazarlı öneri: 'Weiss’in çalışmalarına bakın.' yakalanır", () => {
+    assert.deepEqual(eklenenYazarlar("Weiss’in çalışmalarına bakın.", ""), ["Weiss’in çalışmalarına"]);
+    assert.deepEqual(eklenenYazarlar("Weiss'in çalışmalarına bakın.", ""), ["Weiss'in çalışmalarına"]);
+    assert.deepEqual(eklenenYazarlar("Bowlby'nin bağlanma kuramını inceleyin.", ""), ["Bowlby'nin bağlanma kuramını"]);
+    assert.deepEqual(eklenenYazarlar("See Weiss's work on loneliness.", ""), ["Weiss's work"]);
+    // Model kendisi eklediyse kuramcı adı da öneridir; kullanıcı sorusunda geçtiyse serbest.
+    assert.deepEqual(eklenenYazarlar("Bandura'nın öz yeterlik kuramı çerçeve olabilir.", ""), ["Bandura'nın öz yeterlik kuramı"]);
+    const { kaynak } = literaturIstemi({ arastirmaSorusu: "Bandura'nın öz yeterlik kuramına göre çevrimiçi öğrenme nasıl açıklanır?" });
+    assert.deepEqual(eklenenYazarlar("Bandura'nın öz yeterlik kuramı çerçeve olabilir.", kaynak), []);
+    // Ayıklama: öneriyi taşıyan bulgu kullanıcıya sunulmaz.
+    const { sonuc } = yazarOnerileriniAyikla({ bulgular: [{ tur: "oneri", baslik: "Kuram", aciklama: "Weiss’in çalışmalarına bakın." }], aramalar: [] }, "");
+    assert.equal(sonuc.bulgular.length, 0);
+  });
+
+  /*
+    BİLİNEN AÇIK — bilerek kapatılmadı. Bu biçimler bugün GEÇİYOR; testin
+    amacı sınırı görünür tutmak. Kapatmak ya genel bir büyük harfli ad
+    yasağı ya da büyüyen bir ad/yer listesi gerektiriyor; ikisi de istenmedi
+    (yanlış alarm doğru çalışan aracı bıraktırır). Yapısal alternatif PR
+    açıklamasında: literatür bulgularını serbest metin yerine sunucunun
+    çizdiği kategori kodlarına çevirmek. Biri kapanırsa bu listeden çıkarın.
+  */
+  test("BİLİNEN AÇIK: ad + belirtme/yönelme eki, 'gibi' ve iyeliksiz kullanım geçiyor", () => {
+    for (const metin of ["Weiss'i okuyun.", "Weiss'e bakın.", "Weiss gibi kuramcıların yaklaşımı", "Weiss bu konuda öncüdür."]) {
+      assert.deepEqual(eklenenYazarlar(metin, ""), [], `açık kapanmış görünüyor, listeden çıkarın: ${metin}`);
+    }
+  });
+
+  /* BİLİNEN YANLIŞ ALARM: iyelikli yer adı + eser sözcüğü. Bedeli tek bulgunun düşmesi, cevabın değil. */
+  test("BİLİNEN YANLIŞ ALARM: 'Türkiye'nin araştırma politikaları'", () => {
+    assert.deepEqual(eklenenYazarlar("Türkiye'nin araştırma politikaları", ""), ["Türkiye'nin araştırma"]);
   });
 
   test("her şey ayıklanırsa boş sonuç döner (çağıran 'kunye' ile reddeder)", () => {

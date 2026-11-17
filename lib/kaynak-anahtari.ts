@@ -92,7 +92,14 @@ export function kunyeDoisi(ham: string | null | undefined): string | null {
  * Künyenin önbellek anahtarı. Anlamlı bir sorgu üretilemiyorsa null:
  * çağıran o künyeyi önbelleğe hiç sokmamalı.
  */
-export function dogrulamaAnahtari(kunye: { title: string | null; year: string | null; raw: string }): string | null {
+/** "Yılmaz, A." → "yılmaz" · "Ali Taş" → "taş". Doğrulamanın yazar kapısı da bunu kullanır: iki yer aynı soyadını görmeli. */
+export function soyadKimligi(ad: string): string {
+  const temiz = ad.trim();
+  const parca = temiz.includes(",") ? temiz.split(",")[0] : temiz.split(/\s+/).at(-1) ?? "";
+  return parca.toLocaleLowerCase("tr-TR").replace(/[^\p{L}]/gu, "");
+}
+
+export function dogrulamaAnahtari(kunye: { title: string | null; year: string | null; raw: string; authors?: string[] | null }): string | null {
   const doi = kunyeDoisi(kunye.raw);
   if (doi) return `${DOGRULAMA_ANAHTAR_SURUMU}|doi:${doi}`;
   const temel = kunye.title?.trim() || kunye.raw?.trim() || "";
@@ -109,5 +116,14 @@ export function dogrulamaAnahtari(kunye: { title: string | null; year: string | 
     da bir durumdur ve kendi kutusunu hak eder.
   */
   const yil = /^\d{4}$/.test(kunye.year?.trim() ?? "") ? kunye.year!.trim() : "";
-  return `${DOGRULAMA_ANAHTAR_SURUMU}|${parcalar.join(" ")}|${yil}`;
+  /*
+    İlk yazarın soyadı da anahtarda (PR #105 incelemesi). Yalnızca
+    "başlık|yıl" iken aynı başlık ve yıldaki iki FARKLI eser (farklı
+    yazarlar) aynı kutuya düşüyor, birinin "doğrulandı" hükmü ötekinin
+    künyesine taşınıyordu. Yazarsız künye boş soyadla kendi kutusunda kalır.
+    Sıcak okumada yazar kapısı ayrıca yeniden çalışır
+    (academic-reference-verification.ts, sicakHukum): anahtar tek savunma değil.
+  */
+  const yazar = kunye.authors?.[0] ? soyadKimligi(kunye.authors[0]) : "";
+  return `${DOGRULAMA_ANAHTAR_SURUMU}|${yazar}|${parcalar.join(" ")}|${yil}`;
 }
