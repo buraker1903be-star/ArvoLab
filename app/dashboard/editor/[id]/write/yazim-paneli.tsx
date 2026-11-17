@@ -214,9 +214,35 @@ export default function YazimPaneli({
       const ust = cubuk ? Math.min(Math.max(cubuk.bottom + 8, yuk * 0.3), yuk * 0.6) : yuk * 0.3;
       panel.style.setProperty("--yaprak-ust", `${Math.round(ust)}px`);
     };
+    /*
+      Kaydırmada ve araç çubuğunun boyu değişince de yeniden ölçülür (RC06,
+      17.11.2026). Eskiden yalnızca açılışta ve "resize"da ölçülüyordu: belge
+      aşağı kaydırılmışken açılan yaprak, üste yapışmış araç çubuğuna göre
+      (ekranın %30'u) yerleşiyor, sayfa yukarı dönünce araç çubuğu eski yerine
+      (390 px'te 279–337) iniyor ve yaprağın altında kalıyordu — bütün düğmeler
+      erişilemez (studyo-kabul.mjs U3'ün aralıklı düşmesi; tıklama sayfayı
+      kaydırdığında oluyordu). Kare başına en çok bir ölçüm.
+    */
+    let kare = 0;
+    const planla = () => {
+      if (kare) return;
+      kare = window.requestAnimationFrame(() => {
+        kare = 0;
+        hizala();
+      });
+    };
     hizala();
-    window.addEventListener("resize", hizala);
-    return () => window.removeEventListener("resize", hizala);
+    window.addEventListener("resize", planla);
+    window.addEventListener("scroll", planla, { passive: true, capture: true });
+    const cubuk = document.querySelector(".manuscript-araclar");
+    const gozlem = cubuk && typeof ResizeObserver !== "undefined" ? new ResizeObserver(planla) : null;
+    if (cubuk) gozlem?.observe(cubuk);
+    return () => {
+      window.removeEventListener("resize", planla);
+      window.removeEventListener("scroll", planla, { capture: true });
+      gozlem?.disconnect();
+      if (kare) window.cancelAnimationFrame(kare);
+    };
   }, [acik]);
 
   if (!acik) return null;

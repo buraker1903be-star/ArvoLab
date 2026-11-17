@@ -138,14 +138,24 @@ export async function kaynakPdfSayfalari(
     return bitir(await suren!);
   }
 
-  /* Pahalı iş (indirme + metin çıkarma) yalnızca sayaç izin verirse. */
-  const sinir = await pdfIslemIzni(kullaniciId, iz);
-  if (sinir) return { ok: false, hata: sinir };
-
-  const is = cozumle(supabase, depoYolu, iz).then((c) => {
+  /*
+    Pahalı iş (indirme + metin çıkarma) yalnızca sayaç izin verirse. İş, haritaya
+    yukarıdaki SUREN.get ile AYNI eşzamanlı adımda (arada await yok) yazılır;
+    sayaç çağrısı işin İÇİNDE. Eskiden önce sayaç bekleniyor, iş haritaya sonra
+    yazılıyordu: o ağ gidiş-dönüşü sırasında gelen eşzamanlı istekler de haritayı
+    boş görüyor, her biri sayaçtan bir birim düşüp PDF'i ayrıca indiriyordu
+    (RC06, 17.11.2026, next start: aynı süreçte 10 eşzamanlı istek → 2 çözümleme,
+    iki örnekte 3). Bekleyenler sonucu paylaşır; depo erişimleri yukarıda
+    kendileri için ayrıca sınanmıştı. Tekilleştirme yalnızca SÜREÇ İÇİNDE:
+    serverless örnekleri arasında paylaşılan bir önbellek yok.
+  */
+  const is = (async (): Promise<Cozumleme> => {
+    const sinir = await pdfIslemIzni(kullaniciId, iz);
+    if (sinir) return { ok: false, hata: sinir };
+    const c = await cozumle(supabase, depoYolu, iz);
     if (c.ok) SAYFA_ONBELLEGI.set(depoYolu, c.sayfalar);
     return c;
-  });
+  })();
   SUREN.set(depoYolu, is);
   try {
     return bitir(await is);
