@@ -952,6 +952,22 @@ for (const genislik of [1440, 1280, 1200]) {
     await c.close();
   });
 }
+// U3'ün ölçümü (değişmedi): U3 ve U3K aynı fonksiyonu kullanır.
+const u3Olc = (sayfa) => sayfa.evaluate(async () => {
+    const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
+    window.scrollTo(0, 0);
+    const erisilemeyen = [];
+    for (const x of dugmeler) {
+      x.scrollIntoView({ block: "nearest", inline: "nearest" });
+      await new Promise((r) => requestAnimationFrame(r));
+      const k = x.getBoundingClientRect();
+      const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+      // Kanıt: düğmenin adı yanında üstündeki öğe, kutusu ve o anki kaydırma da yazılır (RC06d).
+      if (!(ust === x || x.contains(ust))) erisilemeyen.push(`${(x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24)} ← ${ust ? `${ust.tagName.toLowerCase()}.${String(ust.className).trim().split(/\s+/).slice(0, 2).join(".")}` : "yok"} @${Math.round(k.left)},${Math.round(k.top)} y${Math.round(scrollY)}`);
+    }
+    const p = document.querySelector(".yazim-paneli").getBoundingClientRect();
+    return { dugme: dugmeler.length, erisilemeyen, panel: [Math.round(p.top), Math.round(p.width)], tasma: document.documentElement.scrollWidth - innerWidth };
+  });
 for (const [ad, gorunum] of [["U3-1024", { viewport: { width: 1024, height: 768 } }], ["U3-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
   // 1180 px ve altında asistan alttan açılan yaprak: araç çubuğu üstte erişilebilir, taşma yok.
   const { c, sayfa } = await kullaniciSayfasi(A, PROJE, gorunum);
@@ -962,27 +978,58 @@ for (const [ad, gorunum] of [["U3-1024", { viewport: { width: 1024, height: 768 
     await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
     await sayfa.waitForSelector(".yazim-paneli");
     await kanit.adim("asistan tıklandı, yaprak DOM'da");
+    // Tıklamanın kendi kaydırması: 0 ise U3 "yukarı dönüş" yolunu bu turda hiç sınamaz (RC06d; o yol U3K'da).
+    const tikKaydirma = await sayfa.evaluate(() => Math.round(scrollY));
     await sayfa.waitForTimeout(400);
     await kanit.adim("400 ms sonra (ölçüm öncesi)");
-    const r = await sayfa.evaluate(async () => {
-      const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
-      window.scrollTo(0, 0);
-      const erisilemeyen = [];
-      for (const x of dugmeler) {
-        x.scrollIntoView({ block: "nearest", inline: "nearest" });
-        await new Promise((r) => requestAnimationFrame(r));
-        const k = x.getBoundingClientRect();
-        const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
-        // Kanıt: düğmenin adı yanında üstündeki öğe, kutusu ve o anki kaydırma da yazılır (RC06d).
-        if (!(ust === x || x.contains(ust))) erisilemeyen.push(`${(x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24)} ← ${ust ? `${ust.tagName.toLowerCase()}.${String(ust.className).trim().split(/\s+/).slice(0, 2).join(".")}` : "yok"} @${Math.round(k.left)},${Math.round(k.top)} y${Math.round(scrollY)}`);
-      }
-      const p = document.querySelector(".yazim-paneli").getBoundingClientRect();
-      return { dugme: dugmeler.length, erisilemeyen, panel: [Math.round(p.top), Math.round(p.width)], tasma: document.documentElement.scrollWidth - innerWidth };
-    });
+    const r = await u3Olc(sayfa);
     await kanit.adim("ölçüm sonrası");
     const gecti = r.erisilemeyen.length === 0 && r.panel[1] === en && r.tasma <= 0;
-    kayit(ad, `${en} px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok`, "erişilemeyen 0, panel tam genişlik, taşma 0", `${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, gecti);
-    kanit.bitir(gecti ? "PASS" : "FAIL", r);
+    kayit(ad, `${en} px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok`, "erişilemeyen 0, panel tam genişlik, taşma 0", `tıklama sonrası kaydırma ${tikKaydirma} · ${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, gecti);
+    kanit.bitir(gecti ? "PASS" : "FAIL", { tikKaydirma, ...r });
+  } catch (hata) {
+    await kanit.hata(hata);
+    throw hata;
+  } finally {
+    await c.close();
+  }
+});
+
+
+/*
+  U3K (RC06d): U3-1024'ün 10 turda 7 kez düştüğü DURUMUN kendisi, her seferinde. U3'te o durum
+  tıklamanın sayfayı kaydırıp kaydırmamasına bağlıydı (düşen 7 turda 314 px, geçen 3'ünde 0);
+  next start altında tıklama çoğu zaman kaydırmıyor ve U3 o yolu hiç sınamadan geçiyor. Burada
+  sayfa yaprak açıkken 314 px aşağı alınır, yaprak o konumda oturana kadar (üst kenarı üç kare
+  aynı kalana kadar — koşul, süre değil) beklenir, sonra U3'ün AYNI ölçümü AYNI ölçütle yapılır.
+  Ölçümün kendisine bekleme eklenmedi.
+*/
+for (const [ad, gorunum] of [["U3K-1024", { viewport: { width: 1024, height: 768 } }], ["U3K-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
+  const { c, sayfa } = await kullaniciSayfasi(A, PROJE, gorunum);
+  const kanit = kanitBaslat(ad, sayfa);
+  try {
+    const en = sayfa.viewportSize().width;
+    await sayfa.evaluate(() => { const b = document.createElement("div"); b.setAttribute("aria-hidden", "true"); b.style.height = "1600px"; document.body.appendChild(b); });
+    await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    const kurulum = await sayfa.evaluate(async () => {
+      const raf = () => new Promise((r) => requestAnimationFrame(r));
+      for (let i = 0; i < 20 && Math.abs(scrollY - 314) > 1; i++) { window.scrollTo(0, 314); await raf(); }
+      let son = null, ayni = 0;
+      for (let i = 0; i < 120 && ayni < 3; i++) { await raf(); const t = Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top); if (t === son) ayni++; else { ayni = 0; son = t; } }
+      return { kaydirma: Math.round(scrollY), yaprakUst: son };
+    });
+    await kanit.adim(`kurulum: sayfa ${kurulum.kaydirma} px aşağıda, yaprak üstü ${kurulum.yaprakUst}`);
+    if (kurulum.kaydirma < 200) {
+      kayit(ad, `${en} px: kaydırılmışken açık yaprak, yukarı dönüş`, "sayfa ≥ 200 px aşağı alınır", `senaryo kurulamadı — ${JSON.stringify(kurulum)}`, false, "KURULAMADI");
+      kanit.bitir("KURULAMADI", { kurulum });
+      return;
+    }
+    const r = await u3Olc(sayfa);
+    await kanit.adim("ölçüm sonrası");
+    const gecti = r.erisilemeyen.length === 0 && r.panel[1] === en && r.tasma <= 0;
+    kayit(ad, `${en} px: sayfa ${kurulum.kaydirma} px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir`, "erişilemeyen 0, panel tam genişlik, taşma 0", `kurulum ${JSON.stringify(kurulum)} · ${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, gecti);
+    kanit.bitir(gecti ? "PASS" : "FAIL", { kurulum, ...r });
   } catch (hata) {
     await kanit.hata(hata);
     throw hata;
