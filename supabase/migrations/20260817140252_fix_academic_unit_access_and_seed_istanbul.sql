@@ -1,0 +1,14 @@
+-- YER TUTUCU — bilerek BOŞ (RELEASE CLOSURE 06 geçmiş uzlaştırması).
+--
+-- Bu sürüm Production'ın supabase_migrations.schema_migrations tablosunda kayıtlı, ama
+-- depoda karşılığı yoktu. Kayıt SİLİNMEZ (bkz. scripts/uzlastirma/gecmis/MANIFESTO.md);
+-- bunun yerine depoya bu boş dosya eklenir, böylece CLI ve GitHub entegrasyonu
+-- "uzakta olup yerelde olmayan sürüm" diye durmaz ve hiçbir şey yeniden çalışmaz.
+--
+-- Production'daki içerik: Depodaki 20260817120000 ile BİREBİR aynı içerik (boşluksuz md5 c78d7022…).
+--
+-- Yeni bir ortam kurulurken bu dosya hiçbir şey yapmaz; içerik ya depodaki eşdeğer
+-- migration'dadır ya da Production'a özgü tek seferlik bir veri işlemidir.
+-- Production kaydının parmak izi (17.11.2026, salt okunur): 1 ifade, 4992 karakter, boşluksuz md5 c78d70228d77c3aa715ca03a370e2ed0.
+-- İz: scripts/uzlastirma/gecmis/ESKI-KAYITLAR.md
+select 1;

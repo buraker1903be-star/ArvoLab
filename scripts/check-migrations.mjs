@@ -57,6 +57,10 @@ const DUSURULEN = new RegExp(String.raw`drop\s+policy\s+if\s+exists\s+${POLITIKA
 const politikaAdi = (m) => m[1] ?? m[2];
 
 const problems = [];
+const PRODUCTION_ESKI_KAYITLAR = new Set([
+  "20260815134724", "20260815134754", "20260815143714", "20260815145249", "20260817140252", "20260818072457",
+  "20260818073414", "20260818084045", "20260818085709", "20260818090326", "20260818090724", "20260818091259",
+]);
 const entries = fs.readdirSync(DIR).filter((name) => name.endsWith(".sql")).sort();
 const versions = new Map();
 
@@ -149,6 +153,20 @@ for (const name of entries) {
   }
 }
 
+/*
+  Production'ın geçmiş tablosunda depodan ÖNCE kaydedilmiş 12 sürüm (RC06c, scripts/uzlastirma/gecmis/).
+  Depoya yalnızca BOŞ yer tutucu olarak girerler: CLI ve GitHub entegrasyonu uzak-yalnız sürümde
+  durmasın diye. İstisna dar: liste sabit, ve dosya yorum + "select 1;" dışında bir şey içerirse HATA.
+  İçerik denetimi dosya git'te izlenmeye başladıktan SONRA da koşar: sıra kuralı izlenen ("gönderilmiş")
+  dosyaları atlıyor, yani yalnızca orada bakılsaydı yer tutucu ilk commit'ten sonra sessizce gerçek
+  bir değişikliğe dönüştürülebilirdi ve ne CI ne Vercel derlemesi bunu görürdü.
+*/
+for (const [version, name] of versions) {
+  if (!PRODUCTION_ESKI_KAYITLAR.has(version)) continue;
+  const govde = yorumsuz(fs.readFileSync(path.join(DIR, name), "utf8")).replace(/\s+/g, " ").trim().toLowerCase();
+  if (govde !== "select 1;") problems.push(`${name}: Production eski kayıt yer tutucusu yalnızca "select 1;" içerebilir.`);
+}
+
 // Asıl kural: yeni bir migration, gönderilmiş olanların en büyüğünden büyük
 // bir sürüm taşımalı; yoksa uygulanmışların önüne sıralanır.
 if (tracked && tracked.size) {
@@ -159,6 +177,8 @@ if (tracked && tracked.size) {
     .pop();
   for (const [version, name] of versions) {
     if (isShipped(name)) continue;
+    // Production eski kayıt yer tutucusu: sıra kuralının dışında (içerik denetimi aşağıda, her koşulda).
+    if (PRODUCTION_ESKI_KAYITLAR.has(version)) continue;
     if (shippedMax && version <= shippedMax) {
       problems.push(
         `${name}: sürümü (${version}) gönderilmiş en son migration'dan (${shippedMax}) küçük. ` +
