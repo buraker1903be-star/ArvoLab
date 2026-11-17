@@ -1,0 +1,20 @@
+{
+  "kullanicilar": ["A", "B"],
+  "kaynakca": {
+    "A": [
+      "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220",
+      "Heidingsfelder, M. (2021). Guest editorial. Kybernetes."
+    ],
+    "B": [
+      "Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405",
+      "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+      "Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220"
+    ]
+  },
+  "adimlar": [
+    { "ad": "A-soguk", "kim": "A" },
+    { "ad": "B-soguk", "kim": "B" },
+    { "ad": "A-sicak", "kim": "A" },
+    { "ad": "B-sicak", "kim": "B" }
+  ]
+}

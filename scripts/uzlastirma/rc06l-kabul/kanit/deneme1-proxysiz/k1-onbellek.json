@@ -1,0 +1,172 @@
+{
+  "kullanicilar": {
+    "A": {
+      "kimlik": "b68b4478-be74-4ce1-8ee4-aaf2e8571c10",
+      "proje": "5ca30eec-0b96-45d1-8d44-9c4c7029e309"
+    },
+    "B": {
+      "kimlik": "275650a5-3fb6-4b9f-8fb3-aca95f31eae0",
+      "proje": "76f8857c-b4cd-4b25-8411-67436c379618"
+    }
+  },
+  "adimlar": [
+    {
+      "ad": "A-soguk",
+      "kim": "A",
+      "kullanici": "b68b4478-be74-4ce1-8ee4-aaf2e8571c10",
+      "dogrulama": [
+        {
+          "kunye": "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "kunye": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.#",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        }
+      ],
+      "dizinIstekleri": 5,
+      "dizinDurumlari": [
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 null",
+        "api.crossref.org/works null",
+        "api.openalex.org/works null"
+      ],
+      "onbellek": [],
+      "ekran": "1 Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220 Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Heidingsfelder, M. (2021). Guest editorial. Kybernetes.# Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "B-soguk",
+      "kim": "B",
+      "kullanici": "275650a5-3fb6-4b9f-8fb3-aca95f31eae0",
+      "dogrulama": [
+        {
+          "kunye": "Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "kunye": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220#",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        }
+      ],
+      "dizinIstekleri": 8,
+      "dizinDurumlari": [
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works/10.68259/raeu-bengo.v2i3.405 null",
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works null",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 null",
+        "api.openalex.org/works null"
+      ],
+      "onbellek": [],
+      "ekran": "1 Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405 Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology. Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 3 Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220# Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "A-sicak",
+      "kim": "A",
+      "kullanici": "b68b4478-be74-4ce1-8ee4-aaf2e8571c10",
+      "dogrulama": [
+        {
+          "kunye": "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "kunye": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.#",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        }
+      ],
+      "dizinIstekleri": 5,
+      "dizinDurumlari": [
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 null",
+        "api.crossref.org/works null",
+        "api.openalex.org/works null"
+      ],
+      "onbellek": [],
+      "ekran": "1 Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220 Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Heidingsfelder, M. (2021). Guest editorial. Kybernetes.# Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "B-sicak",
+      "kim": "B",
+      "kullanici": "275650a5-3fb6-4b9f-8fb3-aca95f31eae0",
+      "dogrulama": [
+        {
+          "kunye": "Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "kunye": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220#",
+          "durum": "ulasilamadi",
+          "enIyiDoi": null,
+          "enIyiBaslik": null,
+          "enIyiYazarlar": [],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        }
+      ],
+      "dizinIstekleri": 8,
+      "dizinDurumlari": [
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works/10.68259/raeu-bengo.v2i3.405 null",
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works null",
+        "api.openalex.org/works null",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 null"
+      ],
+      "onbellek": [],
+      "ekran": "1 Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405 Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology. Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 3 Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220# Dizine ulaşılamadı Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın. Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    }
+  ],
+  "konsol": {
+    "A": [],
+    "B": []
+  }
+}

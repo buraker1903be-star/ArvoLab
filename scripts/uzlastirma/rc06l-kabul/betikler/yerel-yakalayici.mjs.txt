@@ -1,0 +1,47 @@
+// RC06l TEST DÜZENEĞİ — uygulama kodu DEĞİL. `next start` sürecine NODE_OPTIONS="--import <bu dosya>" ile yüklenir.
+// RC06k'dan FARKI: Crossref ve OpenAlex bu kez GERÇEK. Onlara giden istekler değiştirilmeden
+// iletilir; yalnızca (zaman, alan adı, yol, durum, süre) DIZIN_KAYIT dosyasına yazılır ki sıcak
+// önbellekte dizine HİÇ gidilmediği sayılabilsin. Yanıt gövdesi yazılmaz.
+//   api.resend.com   → İLETİLMEZ; posta YAKALAYICI_KAYIT dosyasına yazılır (bu onayda gerçek gönderim yok).
+//   api.crossref.org, api.openalex.org → gerçek, iletilir ve sayılır.
+// Geri kalan her istek (yerel Supabase, sayaç vekili → sağlayıcı) olduğu gibi geçer.
+import fs from "node:fs";
+
+const POSTA = process.env.YAKALAYICI_KAYIT ?? "/tmp/yerel-posta.jsonl";
+const DIZIN = process.env.DIZIN_KAYIT ?? "/tmp/dizin-istekleri.jsonl";
+const asil = globalThis.fetch;
+let sira = 0;
+const json = (veri, durum = 200) => new Response(JSON.stringify(veri), { status: durum, headers: { "content-type": "application/json" } });
+
+globalThis.fetch = async (girdi, secenek = {}) => {
+  const adres = typeof girdi === "string" ? girdi : girdi instanceof URL ? girdi.href : girdi?.url;
+  let u;
+  try {
+    u = new URL(adres);
+  } catch {
+    return asil(girdi, secenek);
+  }
+  if (u.hostname === "api.resend.com") {
+    let govde = {};
+    try {
+      govde = JSON.parse(String(secenek.body ?? "{}"));
+    } catch {
+      /* gövde okunamadı */
+    }
+    sira += 1;
+    fs.appendFileSync(POSTA, `${JSON.stringify({ sira, zaman: new Date().toISOString(), to: govde.to, subject: govde.subject, html: govde.html })}\n`);
+    return json({ id: `yerel-${sira}` });
+  }
+  if (u.hostname === "api.crossref.org" || u.hostname === "api.openalex.org") {
+    const basla = Date.now();
+    try {
+      const yanit = await asil(girdi, secenek);
+      fs.appendFileSync(DIZIN, `${JSON.stringify({ zaman: new Date().toISOString(), alan: u.hostname, yol: `${u.pathname}${u.search}`.slice(0, 300), durum: yanit.status, sureMs: Date.now() - basla })}\n`);
+      return yanit;
+    } catch (hata) {
+      fs.appendFileSync(DIZIN, `${JSON.stringify({ zaman: new Date().toISOString(), alan: u.hostname, yol: `${u.pathname}${u.search}`.slice(0, 300), durum: null, hata: String(hata?.message ?? hata).slice(0, 120), sureMs: Date.now() - basla })}\n`);
+      throw hata;
+    }
+  }
+  return asil(girdi, secenek);
+};

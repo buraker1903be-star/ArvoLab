@@ -1,0 +1,60 @@
+// RC06l kabul betiklerinin ortak parçası (test düzeneği, uygulama kodu DEĞİL).
+// Kayıt akışı RC06k z1.mjs'ten: /kayit → yakalanan posta → doğrulama bağlantısı → ilk şifre → çalışma.
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-rc06l-aday/package.json");
+export const { chromium } = require("playwright");
+
+export const db = (sql) =>
+  execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+
+export const satirSay = (yol) => (fs.existsSync(yol) ? fs.readFileSync(yol, "utf8").split("\n").filter(Boolean).length : 0);
+export const satirlar = (yol, bas = 0) => (fs.existsSync(yol) ? fs.readFileSync(yol, "utf8").split("\n").filter(Boolean).slice(bas).map((s) => JSON.parse(s)) : []);
+
+/** Yeni bağlamda sentetik kullanıcı: kayıt → posta → doğrula → ilk şifre → çalışma. */
+export async function kullaniciAc(tarayici, URL0, POSTA, OUT, etiket, dil = "tr") {
+  const ek = crypto.randomBytes(3).toString("hex");
+  const adres = `${etiket}-${ek}@yerel.test`;
+  const parola = `Rk!${crypto.randomBytes(9).toString("base64url")}`;
+  // Yerel veritabanındaki kayıt hız sınırı satırları (IP başına): ardışık sentetik kayıtlar sınırı doldurmasın.
+  db("delete from public.auth_rate_limits where key like 'kayit%'");
+  const c = await tarayici.newContext({ baseURL: URL0 });
+  await c.addCookies([{ name: "arvolab_dil", value: dil, url: URL0 }]);
+  const s = await c.newPage();
+  const konsol = [];
+  s.on("console", (m) => { if (m.type() === "error") konsol.push(m.text().slice(0, 300)); });
+  s.on("pageerror", (e) => konsol.push(`pageerror ${String(e).slice(0, 300)}`));
+  await s.goto("/kayit");
+  await s.fill("#kayit-ad", `Sentetik ${etiket}`);
+  await s.fill("#kayit-eposta", adres);
+  await s.fill("#kayit-telefon", "0555 000 00 00");
+  await s.getByRole("button", { name: /Kullanım Sözleşmesi|Terms of Use/ }).click();
+  await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); });
+  await s.waitForTimeout(500);
+  await s.getByRole("button", { name: /Okudum ve onaylıyorum|I have read/ }).click();
+  await s.check('input[name="kvkk"]');
+  const once = satirSay(POSTA);
+  await s.getByRole("button", { name: /Ücretsiz hesabımı oluştur|Create my free account/ }).click();
+  for (let i = 0; i < 40 && satirSay(POSTA) <= once; i++) await s.waitForTimeout(500);
+  const posta = satirlar(POSTA).filter((x) => JSON.stringify(x.to).includes(adres)).find((x) => /auth\/confirm\?token_hash=/.test(x.html));
+  if (!posta) throw new Error(`${etiket}: doğrulama postası yakalanmadı`);
+  const baglanti = posta.html.match(/href="([^"]*\/auth\/confirm\?token_hash=[^"]+)"/)[1].replace(/&amp;/g, "&");
+  await s.goto(baglanti);
+  await s.getByRole("button", { name: /Devam et|Continue/ }).click();
+  await s.waitForURL(/reset-password|dashboard/, { timeout: 30000 });
+  await s.fill('input[name="password"]', parola);
+  await s.fill('input[name="passwordConfirm"]', parola);
+  await s.getByRole("button", { name: /Şifreyi kaydet ve devam et|Save password and continue/ }).click();
+  await s.waitForURL(/dashboard/, { timeout: 30000 });
+  await s.goto("/dashboard/editor?yeni=1");
+  await s.getByRole("button", { name: /^Tez|^Thesis/ }).first().click().catch(() => {});
+  await s.fill('input[name="title"]', `RC06l kabul ${etiket} ${ek}`);
+  await s.getByRole("button", { name: /Çalışmayı oluştur|Create work/ }).click();
+  await s.getByText(/Kılavuzu sonra eklerim, yazmaya başla|add the guideline later/i).click({ timeout: 60000 });
+  await s.waitForURL(/dashboard\/editor\/[0-9a-f-]{36}/, { timeout: 60000 });
+  const proje = s.url().match(/editor\/([0-9a-f-]{36})/)[1];
+  const kimlik = db(`select id from auth.users where email='${adres}'`);
+  return { etiket, adres, kimlik, proje, sayfa: s, baglam: c, konsol };
+}

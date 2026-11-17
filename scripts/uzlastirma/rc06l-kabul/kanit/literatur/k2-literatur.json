@@ -1,0 +1,218 @@
+{
+  "adimlar": [
+    {
+      "ad": "H1-rc06k-sorusu",
+      "kim": "L",
+      "tur": "model",
+      "soru": "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?",
+      "sayacIstek": 1,
+      "ekran": {
+        "bulgular": [
+          "Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin.",
+          "Boşluk Kuramsal çerçeve kaynakları eksik Araştırma sorusundaki kavramların kuramsal temelini açıklayan kaynaklar listede görünmüyor. Kavram adlarını kuram ve model terimleriyle birlikte tarayın.",
+          "Boşluk Ölçek kaynakları eksik Kullanacağınız ölçme araçlarının özgün geliştirme çalışmaları ve varsa Türkçe uyarlama çalışmaları listede görünmüyor. Bunları ölçek adıyla dizinde arayın.",
+          "Öneri Türkçe gri literatür Türkiye'de yapılmış tezleri ve makaleleri YÖK Tez ve TR Dizin'de ayrıca tarayın; Türkçe anahtar kelimeleri İngilizce karşılıklarıyla birlikte kullanın."
+        ],
+        "aramalar": [
+          "\"uzaktan öğrenim\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\"",
+          "\"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\"",
+          "\"online learning\" AND (\"loneliness\" OR \"social isolation\") AND \"university students\"",
+          "\"uzaktan eğitim\" AND (\"yalnızlık*\" OR \"izolasyon\") AND (\"birinci sınıf\" OR \"1. sınıf\")",
+          "\"remote education\" AND (\"loneliness\" OR \"social connect*\") AND \"higher education\"",
+          "\"e-öğrenme\" OR \"çevrimiçi öğrenme\" AND \"yalnızlık\" AND \"üniversite\""
+        ],
+        "uyarilar": []
+      },
+      "yeniKayit": 1,
+      "sonKayit": {
+        "id": "af736122-44d8-4a3c-b68c-6a8e5e8d60ac",
+        "status": "completed",
+        "reject_reason": null,
+        "model": "claude-haiku-4-5-20251001",
+        "output": "{\n  \"aramalar\": [\n    \"\\\"uzaktan öğrenim\\\" AND (\\\"yalnızlık\\\" OR \\\"sosyal izolasyon\\\") AND \\\"üniversite öğrencileri\\\"\",\n    \"\\\"distance learning\\\" AND (\\\"loneliness\\\" OR \\\"social isolation\\\") AND \\\"first-year students\\\"\",\n    \"\\\"online learning\\\" AND (\\\"loneliness\\\" OR \\\"social isolation\\\") AND \\\"university students\\\"\",\n    \"\\\"uzaktan eğitim\\\" AND (\\\"yalnızlık*\\\" OR \\\"izolasyon\\\") AND (\\\"birinci sınıf\\\" OR \\\"1. sınıf\\\")\",\n    \"\\\"remote education\\\" AND (\\\"loneliness\\\" OR \\\"social connect*\\\") AND \\\"higher education\\\"\",\n    \"\\\"e-öğrenme\\\" OR \\\"çevrimiçi öğrenme\\\" AND \\\"yalnızlık\\\" AND \\\"üniversite\\\"\"\n  ],\n  \"bulgular\": [\n    {\n      \"kod\": \"tarama_plani\",\n      \"tur\": \"bilgi\"\n    },\n    {\n      \"kod\": \"kuram_kaynagi_eksik\",\n      \"tur\": \"uyari\"\n    },\n    {\n      \"kod\": \"olcek_kaynagi_eksik\",\n      \"tur\": \"uyari\"\n    },\n    {\n      \"kod\": \"gri_literatur\",\n      \"tur\": \"oneri\"\n    }\n  ]\n}",
+        "findings": {
+          "aramalar": [
+            "\"uzaktan öğrenim\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\"",
+            "\"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\"",
+            "\"online learning\" AND (\"loneliness\" OR \"social isolation\") AND \"university students\"",
+            "\"uzaktan eğitim\" AND (\"yalnızlık*\" OR \"izolasyon\") AND (\"birinci sınıf\" OR \"1. sınıf\")",
+            "\"remote education\" AND (\"loneliness\" OR \"social connect*\") AND \"higher education\"",
+            "\"e-öğrenme\" OR \"çevrimiçi öğrenme\" AND \"yalnızlık\" AND \"üniversite\""
+          ],
+          "bulgular": [
+            {
+              "kod": "tarama_plani",
+              "tur": "bilgi",
+              "baslik": "Tarama planı",
+              "aciklama": "Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin."
+            },
+            {
+              "kod": "kuram_kaynagi_eksik",
+              "tur": "uyari",
+              "baslik": "Kuramsal çerçeve kaynakları eksik",
+              "aciklama": "Araştırma sorusundaki kavramların kuramsal temelini açıklayan kaynaklar listede görünmüyor. Kavram adlarını kuram ve model terimleriyle birlikte tarayın."
+            },
+            {
+              "kod": "olcek_kaynagi_eksik",
+              "tur": "uyari",
+              "baslik": "Ölçek kaynakları eksik",
+              "aciklama": "Kullanacağınız ölçme araçlarının özgün geliştirme çalışmaları ve varsa Türkçe uyarlama çalışmaları listede görünmüyor. Bunları ölçek adıyla dizinde arayın."
+            },
+            {
+              "kod": "gri_literatur",
+              "tur": "oneri",
+              "baslik": "Türkçe gri literatür",
+              "aciklama": "Türkiye'de yapılmış tezleri ve makaleleri YÖK Tez ve TR Dizin'de ayrıca tarayın; Türkçe anahtar kelimeleri İngilizce karşılıklarıyla birlikte kullanın."
+            }
+          ]
+        },
+        "context": "### Çalışma\nBaşlık: RC06l kabul k2l f23d4b\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nUzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?"
+      }
+    },
+    {
+      "ad": "H2-ingilizce",
+      "kim": "E",
+      "tur": "model",
+      "soru": "How does remote learning affect loneliness and social isolation among first-year university students?",
+      "sayacIstek": 1,
+      "ekran": {
+        "bulgular": [
+          "Note Search plan Search with a broad string first, then narrow with inclusion and exclusion criteria. Note in each round how many records you found and why you excluded them."
+        ],
+        "aramalar": [
+          "\"remote learning\" AND (\"loneliness\" OR \"social isolation\") AND \"university students\"",
+          "\"online learning\" AND (\"loneliness\" OR \"isolation\") AND \"first-year\" AND \"higher education\"",
+          "\"distance learning\" AND \"social isolation\" AND (\"student* wellbeing\" OR \"mental health\")",
+          "(\"blended learning\" OR \"hybrid learning\") AND \"loneliness\" AND \"university\"",
+          "\"remote education\" AND (\"social connect*\" OR \"peer interaction*\") AND \"undergraduate*\"",
+          "\"online university\" AND (\"loneliness\" OR \"social isolation\") AND (\"qualitative\" OR \"quantitative\" OR \"mixed method*\")"
+        ],
+        "uyarilar": []
+      },
+      "yeniKayit": 1,
+      "sonKayit": {
+        "id": "fae70edf-a338-4aa2-b310-b261551724f5",
+        "status": "completed",
+        "reject_reason": null,
+        "model": "claude-haiku-4-5-20251001",
+        "output": "{\n  \"aramalar\": [\n    \"\\\"remote learning\\\" AND (\\\"loneliness\\\" OR \\\"social isolation\\\") AND \\\"university students\\\"\",\n    \"\\\"online learning\\\" AND (\\\"loneliness\\\" OR \\\"isolation\\\") AND \\\"first-year\\\" AND \\\"higher education\\\"\",\n    \"\\\"distance learning\\\" AND \\\"social isolation\\\" AND (\\\"student* wellbeing\\\" OR \\\"mental health\\\")\",\n    \"(\\\"blended learning\\\" OR \\\"hybrid learning\\\") AND \\\"loneliness\\\" AND \\\"university\\\"\",\n    \"\\\"remote education\\\" AND (\\\"social connect*\\\" OR \\\"peer interaction*\\\") AND \\\"undergraduate*\\\"\",\n    \"\\\"online university\\\" AND (\\\"loneliness\\\" OR \\\"social isolation\\\") AND (\\\"qualitative\\\" OR \\\"quantitative\\\" OR \\\"mixed method*\\\")\"\n  ],\n  \"bulgular\": [\n    {\n      \"kod\": \"tarama_plani\",\n      \"tur\": \"bilgi\"\n    }\n  ]\n}",
+        "findings": {
+          "aramalar": [
+            "\"remote learning\" AND (\"loneliness\" OR \"social isolation\") AND \"university students\"",
+            "\"online learning\" AND (\"loneliness\" OR \"isolation\") AND \"first-year\" AND \"higher education\"",
+            "\"distance learning\" AND \"social isolation\" AND (\"student* wellbeing\" OR \"mental health\")",
+            "(\"blended learning\" OR \"hybrid learning\") AND \"loneliness\" AND \"university\"",
+            "\"remote education\" AND (\"social connect*\" OR \"peer interaction*\") AND \"undergraduate*\"",
+            "\"online university\" AND (\"loneliness\" OR \"social isolation\") AND (\"qualitative\" OR \"quantitative\" OR \"mixed method*\")"
+          ],
+          "bulgular": [
+            {
+              "kod": "tarama_plani",
+              "tur": "bilgi",
+              "baslik": "Search plan",
+              "aciklama": "Search with a broad string first, then narrow with inclusion and exclusion criteria. Note in each round how many records you found and why you excluded them."
+            }
+          ]
+        },
+        "context": "### Çalışma\nBaşlık: RC06l kabul k2e 93814b\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nHow does remote learning affect loneliness and social isolation among first-year university students?\n\n[çıktı dili: İngilizce]"
+      }
+    },
+    {
+      "ad": "H3-sorudaki-arastirmaci",
+      "kim": "L",
+      "tur": "model",
+      "soru": "Bandura'nın öz yeterlik kuramına göre çevrimiçi derslerde akademik öz yeterlik ile ders bırakma niyeti arasındaki ilişki nedir?",
+      "sayacIstek": 1,
+      "ekran": {
+        "bulgular": [
+          "Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin."
+        ],
+        "aramalar": [
+          "\"öz yeterlik\" AND \"çevrimiçi dersler\" AND (\"ders bırakma\" OR \"dropout\" OR \"devam etme niyeti\")",
+          "\"self-efficacy\" AND \"online learning\" AND (\"course dropout\" OR \"persistence\" OR \"retention\")",
+          "\"akademik öz yeterlik\" AND (\"çevrimiçi eğitim\" OR \"uzaktan eğitim\") AND \"niyeti*\"",
+          "\"Bandura\" AND \"öz yeterlik\" AND (\"çevrimiçi\" OR \"online\") AND (\"akademik başarı\" OR \"tamamlama\")",
+          "\"self-efficacy\" AND (\"online education\" OR \"distance learning\") AND (\"intention\" OR \"motivation\" OR \"engagement\")",
+          "\"öz yeterlik\" AND \"çevrimiçi\" AND \"ders tamamlama\" site:tez.yok.gov.tr OR site:trdizin.gov.tr"
+        ],
+        "uyarilar": []
+      },
+      "yeniKayit": 1,
+      "sonKayit": {
+        "id": "4e46eb7d-6553-41d5-8230-88493770b7ab",
+        "status": "completed",
+        "reject_reason": null,
+        "model": "claude-haiku-4-5-20251001",
+        "output": "{\n  \"aramalar\": [\n    \"\\\"öz yeterlik\\\" AND \\\"çevrimiçi dersler\\\" AND (\\\"ders bırakma\\\" OR \\\"dropout\\\" OR \\\"devam etme niyeti\\\")\",\n    \"\\\"self-efficacy\\\" AND \\\"online learning\\\" AND (\\\"course dropout\\\" OR \\\"persistence\\\" OR \\\"retention\\\")\",\n    \"\\\"akademik öz yeterlik\\\" AND (\\\"çevrimiçi eğitim\\\" OR \\\"uzaktan eğitim\\\") AND \\\"niyeti*\\\"\",\n    \"\\\"Bandura\\\" AND \\\"öz yeterlik\\\" AND (\\\"çevrimiçi\\\" OR \\\"online\\\") AND (\\\"akademik başarı\\\" OR \\\"tamamlama\\\")\",\n    \"\\\"self-efficacy\\\" AND (\\\"online education\\\" OR \\\"distance learning\\\") AND (\\\"intention\\\" OR \\\"motivation\\\" OR \\\"engagement\\\")\",\n    \"\\\"öz yeterlik\\\" AND \\\"çevrimiçi\\\" AND \\\"ders tamamlama\\\" site:tez.yok.gov.tr OR site:trdizin.gov.tr\"\n  ],\n  \"bulgular\": [\n    {\n      \"kod\": \"tarama_plani\",\n      \"tur\": \"bilgi\"\n    }\n  ]\n}",
+        "findings": {
+          "aramalar": [
+            "\"öz yeterlik\" AND \"çevrimiçi dersler\" AND (\"ders bırakma\" OR \"dropout\" OR \"devam etme niyeti\")",
+            "\"self-efficacy\" AND \"online learning\" AND (\"course dropout\" OR \"persistence\" OR \"retention\")",
+            "\"akademik öz yeterlik\" AND (\"çevrimiçi eğitim\" OR \"uzaktan eğitim\") AND \"niyeti*\"",
+            "\"Bandura\" AND \"öz yeterlik\" AND (\"çevrimiçi\" OR \"online\") AND (\"akademik başarı\" OR \"tamamlama\")",
+            "\"self-efficacy\" AND (\"online education\" OR \"distance learning\") AND (\"intention\" OR \"motivation\" OR \"engagement\")",
+            "\"öz yeterlik\" AND \"çevrimiçi\" AND \"ders tamamlama\" site:tez.yok.gov.tr OR site:trdizin.gov.tr"
+          ],
+          "bulgular": [
+            {
+              "kod": "tarama_plani",
+              "tur": "bilgi",
+              "baslik": "Tarama planı",
+              "aciklama": "Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin."
+            }
+          ]
+        },
+        "context": "### Çalışma\nBaşlık: RC06l kabul k2l f23d4b\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nBandura'nın öz yeterlik kuramına göre çevrimiçi derslerde akademik öz yeterlik ile ders bırakma niyeti arasındaki ilişki nedir?"
+      }
+    },
+    {
+      "ad": "H4-eski-kayit",
+      "kim": "L",
+      "tur": "eski-kayit",
+      "soru": "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?",
+      "sayacIstek": 0,
+      "ekran": {
+        "bulgular": [],
+        "aramalar": [
+          "\"loneliness\" AND (\"distance learning\" OR \"online learning\")"
+        ],
+        "uyarilar": [
+          "Bu kayıtlı cevabın bir kısmı eski biçimde olduğu için gösterilmiyor. Güncel bir tarama için yeniden sorgulayabilirsiniz.",
+          "Bu soruyu 17.11.2026 21:42 tarihinde sormuştunuz; kayıtlı cevap gösteriliyor. Yeni bir denetim için yeniden sorgulayın. Yeniden sorgula"
+        ]
+      },
+      "yeniKayit": 0,
+      "sonKayit": {
+        "id": "f8dca38f-9b62-4c35-b292-be2618386cd1",
+        "status": "completed",
+        "reject_reason": null,
+        "model": "eski-bicim-kurgu",
+        "output": "eski biçim kurgu",
+        "findings": {
+          "aramalar": [
+            "\"loneliness\" AND (\"distance learning\" OR \"online learning\")",
+            "\"Hawkley & Cacioppo\" AND loneliness"
+          ],
+          "bulgular": [
+            {
+              "tur": "uyari",
+              "baslik": "Teorik çerçeve kaynakları belirsiz",
+              "aciklama": "Kavramların teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) eksiktir."
+            },
+            {
+              "tur": "oneri",
+              "baslik": "Kuram okuması",
+              "aciklama": "Weiss'i okuyun; Weiss gibi kuramcıların yaklaşımı çerçeve olabilir."
+            }
+          ]
+        },
+        "context": "### Çalışma\nBaşlık: RC06l kabul k2l f23d4b\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nUzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?"
+      },
+      "gecmisMetni": "Önceki sorgularım Başlık: RC06l kabul k2l f23d4b 17.11.2026 21:42 ARAMA DİZELERİ \"loneliness\" AND (\"distance learning\" OR \"online learning\") Başlık: RC06l kabul k2l f23d4b 17.11.2026 21:42 ARAMA DİZELERİ \"öz yeterlik\" AND \"çevrimiçi dersler\" AND (\"ders bırakma\" OR \"dropout\" OR \"devam etme niyeti\") \"self-efficacy\" AND \"online learning\" AND (\"course dropout\" OR \"persistence\" OR \"retention\") \"akademik öz yeterlik\" AND (\"çevrimiçi eğitim\" OR \"uzaktan eğitim\") AND \"niyeti*\" \"Bandura\" AND \"öz yeterlik\" AND (\"çevrimiçi\" OR \"online\") AND (\"akademik başarı\" OR \"tamamlama\") \"self-efficacy\" AND (\"online education\" OR \"distance learning\") AND (\"intention\" OR \"motivation\" OR \"engagement\") \"öz yeterlik\" AND \"çevrimiçi\" AND \"ders tamamlama\" site:tez.yok.gov.tr OR site:trdizin.gov.tr Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin. Başlık: RC06l kabul k2l f23d4b 17.11.2026 21:42 ARAMA DİZELERİ \"uzaktan öğrenim\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\" \"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\" \"online learning\" AND (\"loneliness\" OR \"social isolation\") AND \"university students\" \"uzaktan eğitim\" AND (\"yalnızlık*\" OR \"izolasyon\") AND (\"birinci sınıf\" OR \"1. sınıf\") \"remote education\" AND (\"loneliness\" OR \"social connect*\") AND \"higher education\" \"e-öğrenme\" OR \"çevrimiçi öğrenme\" AND \"yalnızlık\" AND \"üniversite\" Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve kaçını neden elediğinizi not edin. Boşluk Kuramsal çerçeve kaynakları eksik Araştırma sorusundaki kavramların kuramsal temelini açıklayan kaynaklar listede görünmüyor. Kavram adlarını kuram ve model terimleriyle birlikte tarayın. Boşluk Ölçek kaynakları eksik Kullanacağınız ölçme araçlarının özgün geliştirme çalışmaları ve varsa Türkçe uyarlama çalışmaları listede görünmüyor. Bunları ölçek adıyla dizinde arayın. Öneri Türkçe gri literatür Türkiye'de yapılmış tezleri ve makaleleri YÖK Tez ve TR Dizin'de ayrıca tarayın; Türkçe anahtar kelimeleri İngilizce karşılıklarıyla birlikte kullanın."
+    }
+  ],
+  "konsol": {
+    "L": [],
+    "E": []
+  }
+}

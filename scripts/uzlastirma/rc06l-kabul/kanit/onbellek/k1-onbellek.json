@@ -1,0 +1,240 @@
+{
+  "kullanicilar": {
+    "A": {
+      "kimlik": "a4884af1-d6a3-40fe-b4cc-b6889aced597",
+      "proje": "5611d575-580a-44a6-bb7e-2a3735c84ad6"
+    },
+    "B": {
+      "kimlik": "5769d8cf-e67d-47dc-ae51-025175a9b592",
+      "proje": "b31a34f3-b13c-4f54-a031-123e700d64e2"
+    }
+  },
+  "adimlar": [
+    {
+      "ad": "A-soguk",
+      "kim": "A",
+      "kullanici": "a4884af1-d6a3-40fe-b4cc-b6889aced597",
+      "dogrulama": [
+        {
+          "kunye": "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Helvetia Cárdenas Leitón"
+          ],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "kunye": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.#",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        }
+      ],
+      "dizinIstekleri": 5,
+      "dizinDurumlari": [
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 200",
+        "api.openalex.org/works 429",
+        "api.openalex.org/works 429",
+        "api.crossref.org/works 200",
+        "api.crossref.org/works 200"
+      ],
+      "onbellek": [
+        {
+          "anahtar": "v2|doi:10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "anahtar": "v2|heidingsfelder|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        }
+      ],
+      "ekran": "1 Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220 Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %100 Editorial Helvetia Cárdenas Leitón · 2021 · Actualidades Investigativas en Educación · 0 atıf DOI: 10.15517/aie.v21i3.48220 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Heidingsfelder, M. (2021). Guest editorial. Kybernetes.# Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1972 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/70.7.395 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "B-soguk",
+      "kim": "B",
+      "kullanici": "5769d8cf-e67d-47dc-ae51-025175a9b592",
+      "dogrulama": [
+        {
+          "kunye": "Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405",
+          "durum": "possible_match",
+          "enIyiDoi": "10.15446/male.n12.84724",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Javier Hernando Reyes-Rincón"
+          ],
+          "istenenDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "kunye": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "possible_match",
+          "enIyiDoi": "10.15517/aie.v21i3.48220",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Helvetia Cárdenas Leitón"
+          ],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        }
+      ],
+      "dizinIstekleri": 8,
+      "dizinDurumlari": [
+        "api.crossref.org/works/10.68259/raeu-bengo.v2i3.405 429",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 200",
+        "api.crossref.org/works 200",
+        "api.crossref.org/works 200",
+        "api.crossref.org/works 200",
+        "api.openalex.org/works 429",
+        "api.openalex.org/works 429",
+        "api.openalex.org/works 200"
+      ],
+      "onbellek": [
+        {
+          "anahtar": "v2|doi:10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "anahtar": "v2|heidingsfelder|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        },
+        {
+          "anahtar": "v2|sohret|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        }
+      ],
+      "ekran": "1 Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405 Olası eşleşme DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %89 Editorial Javier Hernando Reyes-Rincón · 2020 · Matices en Lenguas Extranjeras · 0 atıf DOI: 10.15446/male.n12.84724 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology. Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1972 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/70.7.395 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 3 Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220 Olası eşleşme DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %18 Editorial Helvetia Cárdenas Leitón · 2021 · Actualidades Investigativas en Educación · 0 atıf DOI: 10.15517/aie.v21i3.48220 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "A-sicak",
+      "kim": "A",
+      "kullanici": "a4884af1-d6a3-40fe-b4cc-b6889aced597",
+      "dogrulama": [
+        {
+          "kunye": "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Helvetia Cárdenas Leitón"
+          ],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "kunye": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.#",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        }
+      ],
+      "dizinIstekleri": 0,
+      "dizinDurumlari": [],
+      "onbellek": [
+        {
+          "anahtar": "v2|doi:10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "anahtar": "v2|heidingsfelder|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        },
+        {
+          "anahtar": "v2|sohret|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        }
+      ],
+      "ekran": "1 Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220 Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %100 Editorial Helvetia Cárdenas Leitón · 2021 · Actualidades Investigativas en Educación · 0 atıf DOI: 10.15517/aie.v21i3.48220 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Heidingsfelder, M. (2021). Guest editorial. Kybernetes.# Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1972 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/70.7.395 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    },
+    {
+      "ad": "B-sicak",
+      "kim": "B",
+      "kullanici": "5769d8cf-e67d-47dc-ae51-025175a9b592",
+      "dogrulama": [
+        {
+          "kunye": "Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405",
+          "durum": "verified",
+          "enIyiDoi": "10.68259/raeu-bengo.v2i3.405",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Maria da Conceição Barbosa Rodrigues Mendes"
+          ],
+          "istenenDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "kunye": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220",
+          "durum": "possible_match",
+          "enIyiDoi": "10.15517/aie.v21i3.48220",
+          "enIyiBaslik": "Editorial",
+          "enIyiYazarlar": [
+            "Helvetia Cárdenas Leitón"
+          ],
+          "istenenDoi": "10.15517/aie.v21i3.48220"
+        }
+      ],
+      "dizinIstekleri": 6,
+      "dizinDurumlari": [
+        "api.crossref.org/works/10.68259/raeu-bengo.v2i3.405 200",
+        "api.crossref.org/works/10.15517/aie.v21i3.48220 200",
+        "api.crossref.org/works 200",
+        "api.openalex.org/works 429",
+        "api.crossref.org/works 200",
+        "api.openalex.org/works 429"
+      ],
+      "onbellek": [
+        {
+          "anahtar": "v2|doi:10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "anahtar": "v2|doi:10.68259/raeu-bengo.v2i3.405",
+          "durum": "verified",
+          "enIyiDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "anahtar": "v2|heidingsfelder|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        },
+        {
+          "anahtar": "v2|sohret|guest editorial|2021",
+          "durum": "verified",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        }
+      ],
+      "ekran": "1 Mendes, A. (2021). Editorial. Revista Angolana de Extensão Universitária, 2(3). https://doi.org/10.68259/raeu-bengo.v2i3.405 Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %100 Editorial Maria da Conceição Barbosa Rodrigues Mendes · 2021 · Revista Angolana de Extensão Universitária · 0 atıf DOI: 10.68259/raeu-bengo.v2i3.405 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology. Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1972 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/70.7.395 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 3 Demir, B. (2021). Agricultural policy in coastal regions. Other Journal, 4(1), 1-9. https://doi.org/10.15517/aie.v21i3.48220 Olası eşleşme DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %18 Editorial Helvetia Cárdenas Leitón · 2021 · Actualidades Investigativas en Educación · 0 atıf DOI: 10.15517/aie.v21i3.48220 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    }
+  ],
+  "konsol": {
+    "A": [],
+    "B": []
+  }
+}

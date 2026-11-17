@@ -1,0 +1,28 @@
+# RC06l yerel veritabanı özeti (aday a0b6834, yalnızca yerel yığın)
+## ai_assistant_runs (literatur, bu koşu: gerçek yığın kullanıcıları k2l/k2e)
+literatur|completed|claude-haiku-4-5-20251001|-|3
+literatur|completed|eski-bicim-kurgu|-|2
+literatur|completed|taklit|-|2
+## kaynak_dogrulama_onbellegi
+v2|doi:10.15517/aie.v21i3.48220|verified|10.15517/aie.v21i3.48220|Editorial|2021|1
+v2|doi:10.68259/raeu-bengo.v2i3.405|verified|10.68259/raeu-bengo.v2i3.405|Editorial|2021|1
+v2|heidingsfelder|guest editorial|2021|verified|10.1093/jof/70.7.395|Guest Editorial|1972|0
+v2|sohret|guest editorial|2021|verified|10.1093/jof/70.7.395|Guest Editorial|1972|0
+## citation_checks (k1 kullanıcıları)
+k1a-3ac4bc@yerel.test|2
+k1a-628be8@yerel.test|2
+k1a-91e1c9@yerel.test|2
+k1a-9bc00b@yerel.test|1
+k1a-a0b02f@yerel.test|1
+k1a-d1e18b@yerel.test|1
+k1b-19d4b3@yerel.test|1
+k1b-3b9eae@yerel.test|2
+k1b-494cc9@yerel.test|1
+k1b-4e44ba@yerel.test|1
+k1b-694315@yerel.test|2
+k1b-95f8eb@yerel.test|1
+## asistan hakkı (rate_limit) — literatür kullanıcıları
+ai-asistan:11861d4c-4544-4809-a067-ba200dded28e|1
+ai-asistan:b5bddd7b-184e-49c0-b4f4-2f811f3a69a2|1
+ai-asistan:c3f25bfc-fe69-454b-b6fc-fa7bbc829326|1
+ai-asistan:f6ef276f-e318-434f-be0d-af2f9d579477|2

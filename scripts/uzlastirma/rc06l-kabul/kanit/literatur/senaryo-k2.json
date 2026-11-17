@@ -1,0 +1,9 @@
+{
+  "kullanicilar": { "L": "tr", "E": "en" },
+  "adimlar": [
+    { "ad": "H1-rc06k-sorusu", "kim": "L", "soru": "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?" },
+    { "ad": "H2-ingilizce", "kim": "E", "soru": "How does remote learning affect loneliness and social isolation among first-year university students?" },
+    { "ad": "H3-sorudaki-arastirmaci", "kim": "L", "soru": "Bandura'nın öz yeterlik kuramına göre çevrimiçi derslerde akademik öz yeterlik ile ders bırakma niyeti arasındaki ilişki nedir?" },
+    { "ad": "H4-eski-kayit", "kim": "L", "tur": "eski-kayit", "kaynakAdim": "H1-rc06k-sorusu", "soru": "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?" }
+  ]
+}

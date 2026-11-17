@@ -1,0 +1,60 @@
+// RC06l K3: kayıt formunun telefon deseni gerçek tarayıcıda (Chromium) + sunucu doğrulaması (test düzeneği).
+// Kullanım: node k3-telefon.mjs <adres> <çıktı dizini>
+// Negatif kontrol: aynı sayfada input'a ESKİ desen konur; tarayıcı onu derleyemiyorsa konsola hata yazar
+// ve deseni yok sayar (her şey "geçerli" olur). Yeni desen derlenir ve yanlış yazımı yakalar.
+import fs from "node:fs";
+import { chromium, db } from "./ortak.mjs";
+
+const [URL0, OUT] = process.argv.slice(2);
+const b = await chromium.launch();
+const c = await b.newContext({ baseURL: URL0 });
+await c.addCookies([{ name: "arvolab_dil", value: "tr", url: URL0 }]);
+const s = await c.newPage();
+const konsol = [];
+s.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") konsol.push(`${m.type()}: ${m.text().slice(0, 300)}`); });
+await s.goto("/kayit");
+await s.waitForSelector("#kayit-telefon");
+const tarayici = b.version();
+const desen = await s.getAttribute("#kayit-telefon", "pattern");
+const yazimlar = ["0532 123 45 67", "+90 (532) 123-4567", "05321234567", "0532.123.45.67", "abc1234567890", "12345", "0532/123/45/67"];
+async function olc() {
+  const sonuc = {};
+  for (const y of yazimlar) {
+    await s.fill("#kayit-telefon", y);
+    sonuc[y] = await s.$eval("#kayit-telefon", (e) => ({ gecerli: e.validity.valid, desenUyusmazligi: e.validity.patternMismatch }));
+  }
+  return sonuc;
+}
+const konsolOnce = konsol.length;
+const yeni = await olc();
+const yeniKonsol = konsol.slice(konsolOnce);
+// Negatif kontrol: eski desen (PR #105 öncesi).
+const ESKI = String.raw`\+?[\d\s().\-]{10,20}`;
+await s.$eval("#kayit-telefon", (e, p) => e.setAttribute("pattern", p), ESKI);
+const eskiKonsolOnce = konsol.length;
+const eski = await olc();
+const eskiKonsol = konsol.slice(eskiKonsolOnce);
+await s.$eval("#kayit-telefon", (e, p) => e.setAttribute("pattern", p), desen);
+
+// Sunucu doğrulaması: istemci deseni atlanır (novalidate), desene uyan ama rakamsız telefon gönderilir.
+const adres = `k3-${Date.now()}@yerel.test`;
+db("delete from public.auth_rate_limits where key like 'kayit%'");
+await s.fill("#kayit-ad", "Sentetik Telefon");
+await s.fill("#kayit-eposta", adres);
+await s.fill("#kayit-telefon", "((((()))))");
+await s.getByRole("button", { name: /Kullanım Sözleşmesi/ }).click();
+await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); });
+await s.waitForTimeout(500);
+await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).click();
+await s.check('input[name="kvkk"]');
+await s.$eval("#kayit-telefon", (e) => e.closest("form").setAttribute("novalidate", ""));
+await s.getByRole("button", { name: /Ücretsiz hesabımı oluştur/ }).click();
+await s.waitForTimeout(3000);
+const sunucuMesaji = (await s.locator("body").innerText()).match(/Geçerli bir telefon numarası[^\n]*/)?.[0] ?? null;
+const hesapAcildi = db(`select count(*) from auth.users where email='${adres}'`);
+await s.screenshot({ path: `${OUT}/k3-sunucu-red.png` });
+
+const sonuc = { tarayici, desen, yeni, yeniKonsol, eskiDesen: ESKI, eski, eskiKonsol, sunucu: { gonderilen: "((((()))))", mesaj: sunucuMesaji, hesapAcildi: Number(hesapAcildi) } };
+fs.writeFileSync(`${OUT}/k3-telefon.json`, JSON.stringify(sonuc, null, 2));
+console.log(JSON.stringify(sonuc, null, 1));
+await b.close();

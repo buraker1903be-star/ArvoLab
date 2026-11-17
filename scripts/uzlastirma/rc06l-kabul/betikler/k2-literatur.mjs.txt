@@ -1,0 +1,79 @@
+// RC06l K2: literatür (Haiku) yolu — kod → şablon, arama dizeleri, eski kayıt (test düzeneği).
+// Kullanım: node k2-literatur.mjs <adres> <posta.jsonl> <sayaç günlüğü> <çıktı dizini> <senaryo.json>
+// Sonuç ekrandan (bulgu/arama/uyarı metinleri) ve uygulamanın kendi ai_assistant_runs satırından okunur;
+// sağlayıcıya giden istek sayısı sayaç vekilinin günlüğünden adım başına sayılır.
+import fs from "node:fs";
+import { chromium, db, kullaniciAc, satirSay } from "./ortak.mjs";
+
+const [URL0, POSTA, SAYAC, OUT, SENARYO] = process.argv.slice(2);
+const senaryo = JSON.parse(fs.readFileSync(SENARYO, "utf8"));
+const b = await chromium.launch();
+const kisiler = {};
+for (const [ad, dil] of Object.entries(senaryo.kullanicilar)) kisiler[ad] = await kullaniciAc(b, URL0, POSTA, OUT, `k2${ad.toLowerCase()}`, dil);
+
+const q = (v) => `'${String(v).replace(/'/g, "''")}'`;
+async function sor(kisi, soru, zorla = false) {
+  const s = kisi.sayfa;
+  await s.goto(`/dashboard/literature?calisma=${kisi.proje}`);
+  await s.getByRole("button", { name: /^Tarama asistanı$|^Search assistant$/ }).first().click();
+  await s.waitForTimeout(600);
+  const d = s.locator('[role="dialog"]:visible').last();
+  await d.locator("textarea").first().fill(soru);
+  const once = Number(db(`select count(*) from ai_assistant_runs where user_id=${q(kisi.kimlik)} and capability='literatur'`));
+  await d.getByRole("button", { name: /Tarama Stratejisi Kur|Build Search Strategy/ }).click();
+  if (zorla) {
+    await d.getByRole("button", { name: /Yeniden sorgula|Ask again/ }).first().click({ timeout: 60000 });
+  }
+  // Bitiş: sonuç bölümü, hata ya da kayıtlı cevap görünür; düğme yeniden etkinleşir.
+  await d.locator(".asistan-aramalar, .asistan-bulgular, .asistan-uyari").first().waitFor({ timeout: 120000 });
+  await s.waitForFunction(() => !/Hazırlanıyor…|Preparing…/.test(document.body.innerText), null, { timeout: 120000 });
+  await s.waitForTimeout(1200);
+  const metin = async (sec) => (await d.locator(sec).allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim());
+  const ekran = {
+    bulgular: await metin(".asistan-bulgu"),
+    aramalar: await metin(".asistan-aramalar li"),
+    uyarilar: await metin(".asistan-uyari"),
+  };
+  const sonra = Number(db(`select count(*) from ai_assistant_runs where user_id=${q(kisi.kimlik)} and capability='literatur'`));
+  const satir = JSON.parse(db(`select coalesce(json_build_object('id',id,'status',status,'reject_reason',reject_reason,'model',model,'output',output,'findings',findings,'context',context),'null') from ai_assistant_runs where user_id=${q(kisi.kimlik)} and capability='literatur' order by created_at desc limit 1`) || "null");
+  return { ekran, yeniKayit: sonra - once, sonKayit: satir, dialog: d };
+}
+
+const adimlar = [];
+for (const adim of senaryo.adimlar) {
+  const kisi = kisiler[adim.kim];
+  const sayacOnce = satirSay(SAYAC);
+  let kayit;
+  if (adim.tur === "eski-kayit") {
+    // Bu düzeltmeden ÖNCEKİ biçimde (kodsuz, serbest başlık/açıklama) tamamlanmış bir kayıt: önceki adımın
+    // bağlamıyla birebir aynı bağlamda, daha yeni zaman damgasıyla. Uygulama aynı soru sorulunca bunu bulur.
+    const kaynak = adimlar.find((a) => a.ad === adim.kaynakAdim).sonKayit;
+    const eskiBulgular = { bulgular: [
+      { tur: "uyari", baslik: "Teorik çerçeve kaynakları belirsiz", aciklama: "Kavramların teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) eksiktir." },
+      { tur: "oneri", baslik: "Kuram okuması", aciklama: "Weiss'i okuyun; Weiss gibi kuramcıların yaklaşımı çerçeve olabilir." },
+    ], aramalar: ['"loneliness" AND ("distance learning" OR "online learning")', '"Hawkley & Cacioppo" AND loneliness'] };
+    db(`insert into ai_assistant_runs (user_id, capability, status, model, context, output, findings, project_id, created_at) values (${q(kisi.kimlik)}, 'literatur', 'completed', 'eski-bicim-kurgu', ${q(kaynak.context)}, 'eski biçim kurgu', ${q(JSON.stringify(eskiBulgular))}::jsonb, ${q(kisi.proje)}, now())`);
+    const r = await sor(kisi, adim.soru);
+    // Önceki sorgularım: geçmiş paneli de şablon yolundan geçmeli.
+    const gecmis = r.dialog.locator("details.asistan-gecmis").first();
+    let gecmisMetni = "";
+    if (await gecmis.count()) {
+      await gecmis.locator("summary").first().click();
+      await kisi.sayfa.waitForTimeout(2500);
+      for (const ic of await gecmis.locator("li details").all()) await ic.locator("summary").click().catch(() => {});
+      await kisi.sayfa.waitForTimeout(800);
+      gecmisMetni = (await gecmis.innerText()).replace(/\s+/g, " ").slice(0, 3000);
+    }
+    kayit = { ...r, gecmisMetni };
+  } else {
+    kayit = await sor(kisi, adim.soru, adim.zorla);
+  }
+  delete kayit.dialog;
+  const sayacIstek = satirSay(SAYAC) - sayacOnce;
+  adimlar.push({ ad: adim.ad, kim: adim.kim, tur: adim.tur ?? "model", soru: adim.soru, sayacIstek, ...kayit });
+  console.log(`ADIM ${adim.ad} sayaç+${sayacIstek} yeniKayıt=${kayit.yeniKayit} durum=${kayit.sonKayit?.status} bulgu=${kayit.ekran.bulgular.length} arama=${kayit.ekran.aramalar.length} uyarı=${kayit.ekran.uyarilar.length}`);
+  for (const x of kayit.ekran.bulgular) console.log(`   BULGU ${x.slice(0, 140)}`);
+  for (const x of kayit.ekran.uyarilar) console.log(`   UYARI ${x.slice(0, 160)}`);
+}
+fs.writeFileSync(`${OUT}/k2-literatur.json`, JSON.stringify({ adimlar, konsol: Object.fromEntries(Object.entries(kisiler).map(([k, v]) => [k, v.konsol.slice(-10)])) }, null, 2));
+await b.close();

@@ -1,0 +1,23 @@
+// RC06l KURU KOŞU düzeneği — uygulama kodu DEĞİL, sağlayıcıya gitmez. OpenAI uyumlu yerel taklit (54901).
+// Literatür istemine yeni kod biçiminde cevap verir; içine bilerek serbest metin, bilinmeyen kod ve
+// yazar önerisi koyar ki betik, şablonların bunları göstermediğini kuru koşuda da görsün.
+import http from "node:http";
+const PORT = Number(process.env.TAKLIT_PORT ?? 54901);
+http
+  .createServer((istek, yanit) => {
+    let govde = "";
+    istek.on("data", (p) => (govde += p));
+    istek.on("end", () => {
+      const icerik = JSON.stringify({
+        aramalar: ['("uzaktan öğrenme" OR "uzaktan eğitim") AND ("yalnızlık" OR "sosyal izolasyon")', '"distance learning" AND loneliness'],
+        bulgular: [
+          { kod: "tarama_plani", tur: "bilgi", baslik: "Weiss'i okuyun", aciklama: "Peplau & Perlman, Weiss vb." },
+          { kod: "uydurma_kod", tur: "uyari" },
+          { tur: "oneri", baslik: "Kodsuz", aciklama: "Weiss’in çalışmalarına bakın." },
+        ],
+      });
+      yanit.writeHead(200, { "Content-Type": "application/json" });
+      yanit.end(JSON.stringify({ id: "taklit", object: "chat.completion", model: "taklit", choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: icerik } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }));
+    });
+  })
+  .listen(PORT, "127.0.0.1", () => console.log(`literatür taklidi 127.0.0.1:${PORT}`));

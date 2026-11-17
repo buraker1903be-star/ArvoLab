@@ -1,0 +1,74 @@
+{
+ "tarayici": "153.0.8010.12",
+ "desen": "\\+?[\\d\\s\\(\\)\\.\\-]{10,20}",
+ "yeni": {
+  "12345": {
+   "gecerli": false,
+   "desenUyusmazligi": true
+  },
+  "0532 123 45 67": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "+90 (532) 123-4567": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "05321234567": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "0532.123.45.67": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "abc1234567890": {
+   "gecerli": false,
+   "desenUyusmazligi": true
+  },
+  "0532/123/45/67": {
+   "gecerli": false,
+   "desenUyusmazligi": true
+  }
+ },
+ "yeniKonsol": [],
+ "eskiDesen": "\\+?[\\d\\s().\\-]{10,20}",
+ "eski": {
+  "12345": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "0532 123 45 67": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "+90 (532) 123-4567": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "05321234567": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "0532.123.45.67": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "abc1234567890": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  },
+  "0532/123/45/67": {
+   "gecerli": true,
+   "desenUyusmazligi": false
+  }
+ },
+ "eskiKonsol": [
+  "error: Pattern attribute value \\+?[\\d\\s().\\-]{10,20} is not a valid regular expression: Uncaught SyntaxError: Failed to read the 'valid' property from 'ValidityState': Invalid regular expression: /\\+?[\\d\\s().\\-]{10,20}/v: Invalid character in character class"
+ ],
+ "sunucu": {
+  "gonderilen": "((((()))))",
+  "mesaj": "Geçerli bir telefon numarası yazın (10–15 rakam).",
+  "hesapAcildi": 0
+ }
+}

@@ -1,0 +1,12 @@
+ADIM H1-rc06k-sorusu sayaç+1 yeniKayıt=1 durum=completed bulgu=4 arama=6 uyarı=0
+   BULGU Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve k
+   BULGU Boşluk Kuramsal çerçeve kaynakları eksik Araştırma sorusundaki kavramların kuramsal temelini açıklayan kaynaklar listede görünmüyor. Kavram 
+   BULGU Boşluk Ölçek kaynakları eksik Kullanacağınız ölçme araçlarının özgün geliştirme çalışmaları ve varsa Türkçe uyarlama çalışmaları listede gör
+   BULGU Öneri Türkçe gri literatür Türkiye'de yapılmış tezleri ve makaleleri YÖK Tez ve TR Dizin'de ayrıca tarayın; Türkçe anahtar kelimeleri İngili
+ADIM H2-ingilizce sayaç+1 yeniKayıt=1 durum=completed bulgu=1 arama=6 uyarı=0
+   BULGU Note Search plan Search with a broad string first, then narrow with inclusion and exclusion criteria. Note in each round how many records yo
+ADIM H3-sorudaki-arastirmaci sayaç+1 yeniKayıt=1 durum=completed bulgu=1 arama=6 uyarı=0
+   BULGU Not Tarama planı Önce geniş bir dizeyle tarayın, sonra dahil etme ve hariç tutma ölçütleriyle daraltın. Her turda kaç kayıt bulduğunuzu ve k
+ADIM H4-eski-kayit sayaç+0 yeniKayıt=0 durum=completed bulgu=0 arama=1 uyarı=2
+   UYARI Bu kayıtlı cevabın bir kısmı eski biçimde olduğu için gösterilmiyor. Güncel bir tarama için yeniden sorgulayabilirsiniz.
+   UYARI Bu soruyu 17.11.2026 21:42 tarihinde sormuştunuz; kayıtlı cevap gösteriliyor. Yeni bir denetim için yeniden sorgulayın. Yeniden sorgula
