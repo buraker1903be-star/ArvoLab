@@ -8,7 +8,7 @@ konuda düzeltildi:
    yazıyordu; doğrusu **beş bulgu**: 1–3 ürün davranışı, 4 karar konusu, 5 maliyet/gecikme.
 
 Test edilen aday SHA'sı değişmedi. Bu rapor ayrı bir hazırlık dalında
-(`hazirlik/rc06i-kabul-raporu`, `dbb2d5a`'nın üstünde) tutuluyor. Bulgu 1–3 ve 5'in düzeltmesi
+(`hazirlik/rc06i-kabul-raporu`, `dbb2d5a`'nın üstünde) tutuluyor. Bulgu 2, 3 ve 5'in düzeltmesi
 ayrı Draft PR'da:
 [buraker1903be-star/ArvoLab#104](https://github.com/buraker1903be-star/ArvoLab/pull/104).
 Merge edilmedi.
@@ -88,8 +88,9 @@ koşuldu (`betikler/gercek-ai-devam.mjs.txt`). E0r bu bölümde 1 istekle tekrar
    1'inde kullanıcı tekrar denemek zorunda kaldı. Kod değişikliği önerilmiyor; alıntı koruması
    gevşetilmez.
 2. **Künyede yanlış alarm (N3).** İki neden var: kaynağın kendi atfı ("Kaya (2021)") ve
-   sorudaki atıf ("Smith (2019)"). PR #104 ikisini ayrı ve dar olarak düzeltiyor; sorudaki atıf
-   yalnızca `bulundu: false` cevapta serbest. Gerçek modelde yeniden ölçülmedi.
+   sorudaki atıf ("Smith (2019)"). PR #104 (`b8085fd`): kaynağın kendi atfı serbest. Sorudaki atıf
+   yalnızca `bulundu: false` cevapta kabul edilir; model metni atılır ve sunucunun sabit ret metni
+   gösterilir. İnceleme bulgusu üzerine daraltıldı (aşağıda). Gerçek modelde yeniden ölçülmedi.
 3. **Dayanaksız yorum (E0r) — FAIL.** PR #104: hazır soru artık sınırlılığı var saymıyor.
    İsteme kural 7 (çıkarımı kaynağın sözü gibi sunma) ve 8 (kısmi okumada "okunan sayfalarda
    yok") eklendi; istem okunan sayfaları söylüyor. İstem düzeltmesidir, yapısal denetim değil;
@@ -156,17 +157,42 @@ küçük çözüm, mevcut yarış ve tekrar davranışını dikkate alarak:
 
 Bu bir migration ve davranış değişikliğidir; hak politikası kararı verilmeden uygulanmaz.
 
-## PR #104'ün taklit model kanıtı
-- Ortam: `next build` + `next start`, yerel yığın, taklit model, `STUDYO_DERLEME=uretim`.
-- Derleme kaydı: `gitHead dbb2d5a`, `gitTemiz: false`, BUILD_ID `G95yGayHGOuzYuFYji1hd`. Yani derleme,
-  PR #104'ün değişikliklerini taşıyan **commit edilmemiş** çalışma ağacından alındı.
-- Derlemeden sonra yalnızca bir JSDoc bloğunun yeri değişti (kod davranışı yok); ağaç bundan sonra
-  `75838e4` + `40784f2` olarak commit edildi. `40784f2`'nin kendisi yeniden derlenip koşulmadı.
-  Birim testleri ve tsc/lint commit edilmiş hâlde geçti.
-- Sonuç: 68 PASS / 0 FAIL / 1 UNVERIFIED (U5-dokunma).
-- S9'da yeni hazır soru ve `OKUNAN SAYFALAR` istemde; S9c uydurma alıntıyı yine düşürüyor.
-- Kanıt: `kanit/pr104-taklit/studyo-tam.txt`, `studyo-kabul-derleme.json`.
-- Gerçek model değil: Bulgu 2, 3 ve 5'in gerçek sağlayıcıdaki etkisi UNVERIFIED.
+## PR #104 — inceleme düzeltmesi ve son HEAD'in kabulü
+
+**İnceleme bulgusu (doğrulandı).** `40784f2`'de sorudaki atıf, modelin `bulundu:false` bayrağıyla
+koşulsuz serbest kalıyordu. Bayrak, metnin atfı gerçekten reddettiğini kanıtlamıyor. Negatif
+test önce eklendi ve eski kodda **FAIL** verdi: `bulundu:false` + "Smith (2019) uzaktan öğrenimin
+izolasyonu artırdığını göstermiştir." kullanıcıya olduğu gibi ulaşıyordu.
+
+**Düzeltme (`b8085fd`).** Serbest metinde ret ile olumlu iddiayı güvenilir biçimde ayıran bir
+kural yok, bu yüzden ayırmaya çalışılmıyor.
+- Sorudaki atıf yalnızca `bulundu:false` cevapta kabul edilir ve **model metni atılır**.
+- Kullanıcı sunucunun sabit ret metnini görür (`soruAtfiRetMetni`, iki dilli, alıntısız). Model
+  cevabı kayda ham olarak girer; `findings.sunucuMetni` değiştirmeyi işaretler.
+- Alıntı ve sayı denetimi model metni üzerinde ÖNCE çalışır. Metni atılacak bir cevap bile
+  uydurma sayı ya da birebir olmayan alıntı taşıyorsa düşer.
+- Sınanan karma cevaplar:
+  - ret + olumlu iddia (`bulundu:false`) → sunucu metni, iddia görünmez;
+  - ret + soruda olmayan başka bir atıf → künye reddi;
+  - ret + olumlu iddia `bulundu:true` (geçerli alıntıyla) → künye reddi.
+- Kaynağın kendi atfı ("Kaya (2021)") değişmeden serbest.
+
+**Son tam HEAD'in kabulü (temiz checkout).** Uzak daldan ayrık checkout, `npm ci`, `next build` + `next start`:
+- `gitHead b8085fd081398ad49aa5b04030ada95e1a936277`, **`gitTemiz: true`**.
+- BUILD_ID `-jkjooWl8udtw1KSFm7es`.
+- Manifest sha256 `21dbeabfbc3d474c6a39f034eff6693c7fa809d4a43251fc463e5f42c60b014a`.
+- Taklit modelle tam Stüdyo akışı, `STUDYO_DERLEME=uretim`: **68 PASS / 0 FAIL / 1 UNVERIFIED** (U5-dokunma).
+- Hedefli birim testleri (`kaynak-sohbeti` + `ai-saglayici`): **51/51 PASS**.
+- Tam yerel kontroller (`b8085fd` öncesi çalışma ağacında, aynı içerik): tsc, lint (0 hata),
+  css, migrations, rakamlar temiz; unit 2259/2259, editor 112/112, db 350/350.
+- Kanıt: `kanit/pr104-b8085fd-temiz/` (`studyo-tam.txt`, `studyo-kabul-derleme.json`, `hedefli-testler.txt`, `build.log`).
+- Yeni sağlayıcı çağrısı yok: sayaç günlüğü **13/30**, vekil kapalı. Gerçek modeldeki etki hâlâ **UNVERIFIED**.
+
+**Tarihsel kanıt — son commit'in kabulü DEĞİL.** `kanit/pr104-tarihsel-calisma-agaci/`:
+- İlk PR #104 sürümünün commit edilmemiş çalışma ağacı koşusu: `gitHead dbb2d5a`, `gitTemiz: false`,
+  BUILD_ID `G95yGayHGOuzYuFYji1hd`, 68 PASS / 0 FAIL / 1 UNVERIFIED.
+- O ağaç `75838e4` + `40784f2` oldu. İnceleme açığı (yukarıda) o sürümdeydi.
+- Bu koşu yalnızca tarihsel kayıttır; `40784f2`'nin de `b8085fd`'nin de kabulü sayılmaz.
 
 ## Kapsam dışı / dokunulmadı
 - Production ve paylaşılan Test'e yazılmadı; main merge yok; PR #104 merge edilmedi.

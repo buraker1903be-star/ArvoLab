@@ -1,0 +1,379 @@
+TAP version 13
+# Subtest: tel biçimi
+    # Subtest: adresten çıkarılır
+    ok 1 - adresten çıkarılır
+      ---
+      duration_ms: 1.30067
+      type: 'test'
+      ...
+    # Subtest: elle verilen biçim adresi ezer
+    ok 2 - elle verilen biçim adresi ezer
+      ---
+      duration_ms: 0.356417
+      type: 'test'
+      ...
+    # Subtest: benzer görünen alan adı Anthropic sayılmaz
+    ok 3 - benzer görünen alan adı Anthropic sayılmaz
+      ---
+      duration_ms: 0.355097
+      type: 'test'
+      ...
+    1..3
+ok 1 - tel biçimi
+  ---
+  duration_ms: 2.831646
+  type: 'suite'
+  ...
+# Subtest: yanıt metni
+    # Subtest: openai biçimi
+    ok 1 - openai biçimi
+      ---
+      duration_ms: 0.64413
+      type: 'test'
+      ...
+    # Subtest: anthropic metin parçaları birleşir
+    ok 2 - anthropic metin parçaları birleşir
+      ---
+      duration_ms: 0.531242
+      type: 'test'
+      ...
+    # Subtest: prefill ile başlatılan JSON tamamlanır
+    ok 3 - prefill ile başlatılan JSON tamamlanır
+      ---
+      duration_ms: 0.331236
+      type: 'test'
+      ...
+    # Subtest: boş yanıt null döner
+    ok 4 - boş yanıt null döner
+      ---
+      duration_ms: 0.252153
+      type: 'test'
+      ...
+    1..4
+ok 2 - yanıt metni
+  ---
+  duration_ms: 2.101708
+  type: 'suite'
+  ...
+# Subtest: reddedilen parametreyi düşürme
+    # Subtest: temperature deprecated ise sıcaklık düşer
+    ok 1 - temperature deprecated ise sıcaklık düşer
+      ---
+      duration_ms: 1.098195
+      type: 'test'
+      ...
+    # Subtest: response_format bilinmiyorsa JSON biçimi düşer (openai)
+    ok 2 - response_format bilinmiyorsa JSON biçimi düşer (openai)
+      ---
+      duration_ms: 0.604765
+      type: 'test'
+      ...
+    # Subtest: prefill desteklenmiyorsa JSON biçimi düşer (anthropic)
+    ok 3 - prefill desteklenmiyorsa JSON biçimi düşer (anthropic)
+      ---
+      duration_ms: 0.521419
+      type: 'test'
+      ...
+    # Subtest: zaten düşürülmüş parametre ikinci kez düşürülmez
+    ok 4 - zaten düşürülmüş parametre ikinci kez düşürülmez
+      ---
+      duration_ms: 0.293911
+      type: 'test'
+      ...
+    # Subtest: 400 dışındaki hatalarda ve ilgisiz gövdede dokunulmaz
+    ok 5 - 400 dışındaki hatalarda ve ilgisiz gövdede dokunulmaz
+      ---
+      duration_ms: 0.322155
+      type: 'test'
+      ...
+    1..5
+ok 3 - reddedilen parametreyi düşürme
+  ---
+  duration_ms: 3.191642
+  type: 'suite'
+  ...
+# Subtest: yeteneğe göre model
+    # Subtest: tanımlıysa o yetenekte kullanılır
+    ok 1 - tanımlıysa o yetenekte kullanılır
+      ---
+      duration_ms: 1.221586
+      type: 'test'
+      ...
+    # Subtest: boş değer varsayılanı ezmez
+    ok 2 - boş değer varsayılanı ezmez
+      ---
+      duration_ms: 0.322156
+      type: 'test'
+      ...
+    # Subtest: yetenek verilmezse seçim yapılmaz
+    ok 3 - yetenek verilmezse seçim yapılmaz
+      ---
+      duration_ms: 0.22025
+      type: 'test'
+      ...
+    1..3
+ok 4 - yeteneğe göre model
+  ---
+  duration_ms: 1.873437
+  type: 'suite'
+  ...
+# Subtest: kurulum durumu
+    # Subtest: kendi sunucusu anahtarsız çalışır
+    ok 1 - kendi sunucusu anahtarsız çalışır
+      ---
+      duration_ms: 0.592561
+      type: 'test'
+      ...
+    # Subtest: bulut sağlayıcı anahtar ister
+    ok 2 - bulut sağlayıcı anahtar ister
+      ---
+      duration_ms: 0.429864
+      type: 'test'
+      ...
+    # Subtest: BOZUK adres çökertmiyor, sebebini söylüyor
+    ok 3 - BOZUK adres çökertmiyor, sebebini söylüyor
+      ---
+      duration_ms: 0.794554
+      type: 'test'
+      ...
+    # Subtest: adresin başındaki ve sonundaki boşluk sorun değil
+    ok 4 - adresin başındaki ve sonundaki boşluk sorun değil
+      ---
+      duration_ms: 0.768963
+      type: 'test'
+      ...
+    # Subtest: adres hiç verilmezse bulut varsayılanı ve anahtar şartı
+    ok 5 - adres hiç verilmezse bulut varsayılanı ve anahtar şartı
+      ---
+      duration_ms: 0.292558
+      type: 'test'
+      ...
+    1..5
+ok 5 - kurulum durumu
+  ---
+  duration_ms: 3.040255
+  type: 'suite'
+  ...
+# Subtest: boş yanıtın sebebi
+    # Subtest: iki biçimde sonlanma sebebi okunur; bütçeye takılma ayırt edilir
+    ok 1 - iki biçimde sonlanma sebebi okunur; bütçeye takılma ayırt edilir
+      ---
+      duration_ms: 0.378313
+      type: 'test'
+      ...
+    1..1
+ok 6 - boş yanıtın sebebi
+  ---
+  duration_ms: 0.437416
+  type: 'suite'
+  ...
+# Subtest: İngilizce hata metinleri
+    # Subtest: sağlayıcı hatası iki dilde
+    ok 1 - sağlayıcı hatası iki dilde
+      ---
+      duration_ms: 0.495475
+      type: 'test'
+      ...
+    # Subtest: AiHatasi: message Türkçe kalır, aiHataMesaji dili seçer
+    ok 2 - AiHatasi: message Türkçe kalır, aiHataMesaji dili seçer
+      ---
+      duration_ms: 0.357687
+      type: 'test'
+      ...
+    1..2
+ok 7 - İngilizce hata metinleri
+  ---
+  duration_ms: 0.925675
+  type: 'suite'
+  ...
+# Subtest: kurulum sorunu İngilizce
+ok 8 - kurulum sorunu İngilizce
+  ---
+  duration_ms: 0.336577
+  type: 'test'
+  ...
+# Subtest: bilinen modelin başlangıç bayrakları (RC06i, 17.11.2026)
+    # Subtest: claude-sonnet-5: ne temperature ne prefill (canlıda ve RC06i'de ikisi de 400)
+    ok 1 - claude-sonnet-5: ne temperature ne prefill (canlıda ve RC06i'de ikisi de 400)
+      ---
+      duration_ms: 0.494959
+      type: 'test'
+      ...
+    # Subtest: 5 ailesi ve 4.7/4.8: ikisi de kapalı; sağlayıcı öneki ve tarih eki model kimliğini değiştirmez
+    ok 2 - 5 ailesi ve 4.7/4.8: ikisi de kapalı; sağlayıcı öneki ve tarih eki model kimliğini değiştirmez
+      ---
+      duration_ms: 0.722132
+      type: 'test'
+      ...
+    # Subtest: Opus/Sonnet 4.6: yalnız prefill kapalı, sıcaklık gönderilir
+    ok 3 - Opus/Sonnet 4.6: yalnız prefill kapalı, sıcaklık gönderilir
+      ---
+      duration_ms: 0.360721
+      type: 'test'
+      ...
+    # Subtest: Haiku 4.5 ve eski modeller tabloda yok: eski davranış (öğrenme) sürer
+    ok 4 - Haiku 4.5 ve eski modeller tabloda yok: eski davranış (öğrenme) sürer
+      ---
+      duration_ms: 0.271023
+      type: 'test'
+      ...
+    # Subtest: OpenAI tel biçiminde tablo uygulanmaz (ağ geçidi model adını kendisi çevirir)
+    ok 5 - OpenAI tel biçiminde tablo uygulanmaz (ağ geçidi model adını kendisi çevirir)
+      ---
+      duration_ms: 0.215437
+      type: 'test'
+      ...
+    1..5
+ok 9 - bilinen modelin başlangıç bayrakları (RC06i, 17.11.2026)
+  ---
+  duration_ms: 2.205394
+  type: 'suite'
+  ...
+# Subtest: sor(): bilinen modelde ilk istek reddedilecek parametreyi taşımaz
+    # Subtest: claude-sonnet-5: tek istek, temperature yok, son mesaj kullanıcının
+    ok 1 - claude-sonnet-5: tek istek, temperature yok, son mesaj kullanıcının
+      ---
+      duration_ms: 26.456916
+      type: 'test'
+      ...
+    # Subtest: claude-haiku-4-5: davranış değişmedi (temperature ve prefill gönderilir)
+    ok 2 - claude-haiku-4-5: davranış değişmedi (temperature ve prefill gönderilir)
+      ---
+      duration_ms: 1.237597
+      type: 'test'
+      ...
+    1..2
+ok 10 - sor(): bilinen modelde ilk istek reddedilecek parametreyi taşımaz
+  ---
+  duration_ms: 27.841037
+  type: 'suite'
+  ...
+# Subtest: doğru alıntı geçer; yanlış sayfa düzeltilir
+ok 11 - doğru alıntı geçer; yanlış sayfa düzeltilir
+  ---
+  duration_ms: 7.603509
+  type: 'test'
+  ...
+# Subtest: metinde olmayan alıntı cevabı düşürür
+ok 12 - metinde olmayan alıntı cevabı düşürür
+  ---
+  duration_ms: 0.321572
+  type: 'test'
+  ...
+# Subtest: 'bulundu' diyen cevap alıntısız olamaz; 'bulunamadı' alıntısız olabilir
+ok 13 - 'bulundu' diyen cevap alıntısız olamaz; 'bulunamadı' alıntısız olabilir
+  ---
+  duration_ms: 2.835878
+  type: 'test'
+  ...
+# Subtest: kaynakta olmayan sayı ve künye cevabı düşürür
+ok 14 - kaynakta olmayan sayı ve künye cevabı düşürür
+  ---
+  duration_ms: 1.842703
+  type: 'test'
+  ...
+# Subtest: sayfa seçimi: sığıyorsa hepsi; sığmıyorsa ilk iki sayfa + ilgili olanlar
+ok 15 - sayfa seçimi: sığıyorsa hepsi; sığmıyorsa ilk iki sayfa + ilgili olanlar
+  ---
+  duration_ms: 2.884121
+  type: 'test'
+  ...
+# Subtest: çözümleme ve istem
+ok 16 - çözümleme ve istem
+  ---
+  duration_ms: 0.609207
+  type: 'test'
+  ...
+# Subtest: seçili pasaj (Yazım Stüdyosu): istemde sayfasıyla yer alır, kayda kısaltılmış girer; seçimsiz istem değişmez
+ok 17 - seçili pasaj (Yazım Stüdyosu): istemde sayfasıyla yer alır, kayda kısaltılmış girer; seçimsiz istem değişmez
+  ---
+  duration_ms: 0.309454
+  type: 'test'
+  ...
+# Subtest: RC06i N3: kaynakta olmayan atıf sorulunca kullanıcı sunucunun sabit ret metnini görür (model metni değil)
+ok 18 - RC06i N3: kaynakta olmayan atıf sorulunca kullanıcı sunucunun sabit ret metnini görür (model metni değil)
+  ---
+  duration_ms: 2.765252
+  type: 'test'
+  ...
+# Subtest: sorudaki atıf 'bulundu: true' cevapta kaynağa dayanıyormuş gibi sunulursa DÜŞER
+ok 19 - sorudaki atıf 'bulundu: true' cevapta kaynağa dayanıyormuş gibi sunulursa DÜŞER
+  ---
+  duration_ms: 0.760144
+  type: 'test'
+  ...
+# Subtest: ne soruda ne kaynakta geçen atıf 'bulunamadı' cevabında da DÜŞER
+ok 20 - ne soruda ne kaynakta geçen atıf 'bulunamadı' cevabında da DÜŞER
+  ---
+  duration_ms: 1.055646
+  type: 'test'
+  ...
+# Subtest: kaynağın kendi atfı: soyad ve yıl künyede olmalı (sözcük sınırıyla)
+ok 21 - kaynağın kendi atfı: soyad ve yıl künyede olmalı (sözcük sınırıyla)
+  ---
+  duration_ms: 3.562502
+  type: 'test'
+  ...
+# Subtest: alıntı koruması gevşemedi: 'bulunamadı' cevabındaki birebir olmayan alıntı da düşer
+ok 22 - alıntı koruması gevşemedi: 'bulunamadı' cevabındaki birebir olmayan alıntı da düşer
+  ---
+  duration_ms: 0.173178
+  type: 'test'
+  ...
+# Subtest: RC06i: hazır seçim sorusu sınırlılığı VAR saymaz; istem çıkarımı kaynak gibi sunmayı yasaklar
+ok 23 - RC06i: hazır seçim sorusu sınırlılığı VAR saymaz; istem çıkarımı kaynak gibi sunmayı yasaklar
+  ---
+  duration_ms: 0.170678
+  type: 'test'
+  ...
+# Subtest: RC06i: kaynağın bir kısmı verildiyse istem okunan sayfaları söyler; tamamı verildiyse söylemez
+ok 24 - RC06i: kaynağın bir kısmı verildiyse istem okunan sayfaları söyler; tamamı verildiyse söylemez
+  ---
+  duration_ms: 0.151501
+  type: 'test'
+  ...
+# Subtest: PR \#104 negatif: bulundu:false ama metin sorudaki atfa olumlu iddia yüklüyor → model metni kullanıcıya ULAŞMAZ
+ok 25 - PR \#104 negatif: bulundu:false ama metin sorudaki atfa olumlu iddia yüklüyor → model metni kullanıcıya ULAŞMAZ
+  ---
+  duration_ms: 0.255013
+  type: 'test'
+  ...
+# Subtest: PR \#104 karma: aynı metinde hem ret hem olumlu iddia (bulundu:false) → model metni atılır, iddia görünmez
+ok 26 - PR \#104 karma: aynı metinde hem ret hem olumlu iddia (bulundu:false) → model metni atılır, iddia görünmez
+  ---
+  duration_ms: 0.189775
+  type: 'test'
+  ...
+# Subtest: PR \#104 karma: ret + soruda olmayan başka bir atıf (bulundu:false) → DÜŞER (künye)
+ok 27 - PR \#104 karma: ret + soruda olmayan başka bir atıf (bulundu:false) → DÜŞER (künye)
+  ---
+  duration_ms: 0.492774
+  type: 'test'
+  ...
+# Subtest: PR \#104 karma: ret + olumlu iddia 'bulundu:true' ile (geçerli alıntıyla) → DÜŞER (künye)
+ok 28 - PR \#104 karma: ret + olumlu iddia 'bulundu:true' ile (geçerli alıntıyla) → DÜŞER (künye)
+  ---
+  duration_ms: 0.21418
+  type: 'test'
+  ...
+# Subtest: PR \#104: sayı ve alıntı koruması gevşemedi — metni atılacak 'bulunamadı' cevabı da uydurma sayı/alıntıyla DÜŞER
+ok 29 - PR \#104: sayı ve alıntı koruması gevşemedi — metni atılacak 'bulunamadı' cevabı da uydurma sayı/alıntıyla DÜŞER
+  ---
+  duration_ms: 0.250699
+  type: 'test'
+  ...
+# Subtest: PR \#104: sunucu ret metni cevap dilinde; sorudaki atıf yoksa model metni olduğu gibi kalır
+ok 30 - PR \#104: sunucu ret metni cevap dilinde; sorudaki atıf yoksa model metni olduğu gibi kalır
+  ---
+  duration_ms: 0.285215
+  type: 'test'
+  ...
+1..30
+# tests 51
+# suites 9
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 203.861972

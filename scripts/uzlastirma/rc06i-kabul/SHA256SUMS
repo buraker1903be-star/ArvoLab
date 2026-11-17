@@ -1,4 +1,4 @@
-427151866559546fce07aaca9835aa83a3ea59b0db0818aca97c4e83b17e540d  ./RAPOR.md
+baca3a9fd8945c4c93f1a3d7966ed6bf2c0616d32b0431670f9b9fafd8f7c5d2  ./RAPOR.md
 67cc14b2dcf4a6815beeed7c4861e1bb6285d75b7e777adbd784a7951291c570  ./betikler/gercek-ai-devam.mjs.txt
 a23954ed005c4a2949b261beb091fcc50fc394dda9c7b87534e4733fe8179331  ./betikler/gercek-ai-kabul.mjs.txt
 4ce6bb0785236812b512916266188d128f4914fae53b0a2bd88dddaf56d3e537  ./kanit/gercek/gercek-ai-kabul-bolum2.json
@@ -17,8 +17,12 @@ f4ef717f700d8c94af1dcf5f363ebb1bdccaf5f839bf81c4c36de2d7255c295f  ./kanit/gorsel
 417cd3e3b0c186989fe03af188ac98e276f507e1cae881868aa4739d7a4292c2  ./kanit/gorseller/m1-masaustu-yan-yana.png
 dc75bc7051a3165e1783e6ae69be9dfb439f389149f07c96c5d9da03144bfa0b  ./kanit/gorseller/s7-belirsiz-eslesme.png
 072497aa562a7b5808eeb851d3a2d4d8e4e1f5cf019e4d32dede4dd526b1e628  ./kanit/gorseller/t1-telefon-pdf.png
-a3103521090822d201c9e374777611058df0df14204116ce0404cc3924c17a99  ./kanit/pr104-taklit/studyo-kabul-derleme.json
-a119b7d400bb0fab6936d50237536361ed9c51d5668b8c8e2e5d6d3cd9ee049d  ./kanit/pr104-taklit/studyo-tam.txt
+0cb420c1964444bf1c15a78f331c11befb1c51850ba0c5c59d7d96aacee0a775  ./kanit/pr104-b8085fd-temiz/build.log
+39d1e9576fbbe90e0c24ceed257e221b5e9e726bf5b318759209301ee593482a  ./kanit/pr104-b8085fd-temiz/hedefli-testler.txt
+dfd34e9309ee03d71e1899eb525875d533df8b2393fe7d594b187bdca95a0b05  ./kanit/pr104-b8085fd-temiz/studyo-kabul-derleme.json
+5713e411e74f4e6adb737454fe7cc04779c585704286e4ecc2a8569a9f5032cd  ./kanit/pr104-b8085fd-temiz/studyo-tam.txt
+a3103521090822d201c9e374777611058df0df14204116ce0404cc3924c17a99  ./kanit/pr104-tarihsel-calisma-agaci/studyo-kabul-derleme.json
+a119b7d400bb0fab6936d50237536361ed9c51d5668b8c8e2e5d6d3cd9ee049d  ./kanit/pr104-tarihsel-calisma-agaci/studyo-tam.txt
 0bbf6fbb15df673a20396a1c5692d94ad20486571af5def62f9562ee24c2e0f9  ./kanit/taklit/build.log
 05f8bf1424185ace286c278a6fcfa38d7330b20611417b32513fba824c151a55  ./kanit/taklit/butunluk.txt
 14d62d16d5643fab05ee10af29566dda1b55e414fdbb99490672e1f0c580235e  ./kanit/taklit/d2.docx
