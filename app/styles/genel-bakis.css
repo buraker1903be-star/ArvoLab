@@ -311,6 +311,9 @@
    (.gb-tek-ekran); burada yalnızca iki kartın kendi düzeni.
    ============================================================ */
 .calismalar-ikili { grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); }
+/* Seçili çalışmanın sütunu (17.11.2026): durum kartı + Danışmanıma gönder aynı hücrede; taşan sütun kayar, ızgara satır açmaz. */
+.calisma-secili-sutun { display: flex; flex-direction: column; gap: var(--kart-araligi); min-height: 0; min-width: 0; overflow-y: auto; }
+.calisma-secili-sutun > .gb-kart { flex: none; }
 .calisma-secim .gb-satir { border-left: 3px solid transparent; }
 .calisma-secim .gb-satir[aria-current="true"] { border-left-color: var(--primary-ink); background: var(--primary-soft); }
 /* Liste satırı (04.11.2026): rozet başlığı ezmesin, altta ince ilerleme çizgisi */

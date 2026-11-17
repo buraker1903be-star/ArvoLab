@@ -26,10 +26,10 @@ import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
-import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
 import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
+import CalismaSekmeleri from "./[id]/calisma-sekmeleri";
 import DanismanaGonder from "../_components/danismana-gonder";
 
 export async function generateMetadata() {
@@ -412,6 +412,14 @@ export default async function ProjectsPage({
             eylem={{ etiket: t({ tr: "Filtreyi temizle", en: "Clear filter" }), href: "/dashboard/editor" }}
           />
         ) : ogrenciDuzeni ? (
+          <>
+          {/*
+            Seçili çalışmanın sekmeleri (17.11.2026): Özet, Yazım, Kanıt matrisi,
+            Etik kurul ve o çalışmaya süzülü araçlar. Eskiden bu bağlantılar
+            kenar çubuğunun çalışma alt menüsündeydi; gezinme artık editörde de
+            sabit, bölümler her çalışma sayfasında aynı sekme sırasında.
+          */}
+          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
@@ -481,8 +489,13 @@ export default async function ProjectsPage({
                 );
               })()}
             </article>
-            {/* Seçili çalışma kenar çubuğuna bildirilir (Phase 3): o çalışmanın bölümleri orada açılır. */}
-            {secili ? <CalismaBaglamiYayinla id={secili.id} baslik={secili.title} tur={secili.project_type} /> : null}
+            {/*
+              Seçili çalışmanın sütunu: durum kartı ve (bireysel abonede)
+              Danışmanıma gönder alt alta, aynı ızgara hücresinde. Kart ızgarada
+              ayrı bir öğe olsaydı tek ekranlık düzende yeni bir satır açıp durum
+              kartının altını keserdi. Çalışma bağlamını sekmeler yayınlıyor.
+            */}
+            <div className="calisma-secili-sutun">
             {secili ? (
               <CalismaDurumKarti
                 key={secili.id}
@@ -499,7 +512,9 @@ export default async function ProjectsPage({
             {secili && gorunum.bireysel ? (
               <DanismanaGonder projectId={secili.id} baslik={secili.title} sonGonderim={sonGonderim} sonGonderimMetni={sonGonderimMetni} />
             ) : null}
+            </div>
           </section>
+          </>
         ) : (
           /*
             PERSONEL DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği).

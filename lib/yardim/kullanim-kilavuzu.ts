@@ -66,8 +66,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "The navigation holds the three everyday sections: Home, My works, Sources. Analysis Center and Document Check are under \"Tools\"; the User Guide and Support are under \"Help\"; Settings is at the bottom. When you open a work, its sections (Overview, Writing, Evidence matrix, Ethics) appear as tabs at the top of the page; the navigation stays the same.",
       },
       {
-        tr: "Seyrek açılan sayfalar (örneğin Abonelik ve Kredi, bu kılavuz) bilgisayarda \"Diğer\" başlığının altında, tablet ve telefonda \"Daha fazla\" düğmesindedir.",
-        en: "Pages you open less often (for example Subscription and Credits, and this guide) are under \"More\" on a computer, and behind the \"More\" button on a tablet or phone.",
+        tr: "Seyrek açılan sayfalar (örneğin Abonelik ve Kredi) bilgisayarda adınıza tıklayınca açılan hesap menüsünde, tablet ve telefonda \"Daha fazla\" düğmesindedir.",
+        en: "Pages you open rarely (for example Subscription and Credits) are in the account menu that opens when you click your name on a computer, and under the \"More\" button on tablets and phones.",
       },
       {
         tr: "Herhangi bir yerden Ctrl+K (Mac'te Cmd+K) ile arama penceresini açın; sayfa ya da komut adını yazıp Enter'a basın.",
