@@ -379,7 +379,7 @@ Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapıl
 | Supabase entegrasyonu (Deploy to production, otomatik dallanma) | **PASS (panel, kullanıcı)** — ikisi de kapalı |
 | Fiziksel yedek | **PASS (panel)** — son yedek 17.11.2026 05:00:49 UTC; Storage dosyalarını KAPSAMAZ |
 | PITR | **YOK** (kapalı) — geri dönüş sınırları §8.3 |
-| Vercel / GitHub Actions otomatik Production işlemi | Vercel Production dalı `main` (panel); `design/os5` → Preview. GitHub Actions Production'a yazmıyor (iş akışları okundu). Preview ortam değişkeni ataması **UNVERIFIED** (Vercel erişimi 403) |
+| Vercel / GitHub Actions otomatik Production işlemi | Vercel Production dalı `main` (panel); `design/os5` → Preview. GitHub Actions Production'a yazmıyor (iş akışları okundu). Preview ortam değişkenleri metadata'sı doğrulandı (ayrı kayıtlar, dala özel atama yok); Preview adresinin Test projesi olduğu **UNVERIFIED** (değer okunmadı) |
 | Auth ayarları ↔ G1 | **AÇIK KARAR MADDESİ (Karar A1, §8.4)** — G1 koruması yalnızca uygulama düzeyinde; Auth API'si doğrudan çağrılınca mevcut şifre sorulmuyor. Eski Production davranışıyla aynı olması maddeyi KAPATMAZ |
 | Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |
 
@@ -451,9 +451,26 @@ Sonuç:
     derleme ve bağlantı **reddedilir**; değişkenler ne derse desin.
   - Üç beyan değişkeni (`ARVOLAB_SUPABASE_ORTAMI=test`, `ARVOLAB_TEST_SUPABASE_REF`,
     `ARVOLAB_URETIM_SUPABASE_REF`) eksik ya da tutarsızsa da reddedilir (fail-closed).
-- **Panel düzeyinde: UNVERIFIED.** Vercel ekip kapsamı bu bağlantıya 403 döndü. Preview ortam
-  değişkenlerinin hangi projeyi gösterdiği ve dala özel (`gitBranch`) atama olup olmadığı okunamadı.
-  Yetki verilince yalnızca adlar, hedefler ve dal atamaları okunur; değerler okunmaz.
+- **Panel metadata'sı (17.11.2026, salt okunur):**
+  - Okunan: Vercel projesi `arvo-lab` (`arvo-os` ekibi). Liste şifre çözme kapalıyken alındı;
+    değerler okunmadı, yazılmadı.
+  - Dağılım: 18 kayıt. **Preview** 6: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+    `SUPABASE_SECRET_KEY`, `ARVOLAB_SUPABASE_ORTAMI`, `ARVOLAB_TEST_SUPABASE_REF`,
+    `ARVOLAB_URETIM_SUPABASE_REF`. **Production** 12: üç Supabase değişkeni, `AI_*`, `OPENAI_API_KEY`,
+    `RESEND_API_KEY`, `CRON_SECRET`, köprü değişkenleri. Development 0.
+  - Ayrım: her kaydın tek hedefi var. Production ile Preview'u ortak bir kayıt üzerinden paylaşan
+    değişken yok; Supabase değişkenleri iki ortamda ayrı kayıtlar.
+  - **Dala özel atama yok:** `gitBranch` hiçbir kayıtta dolu değil; `design/os5` süzgeci boş döndü.
+    `design/os5` Preview'u Preview kümesini kullanır. Özel ortam ataması da yok.
+  - Preview'da `AI_*` yok: Preview'da asistan kurulumu kapalı görünür, gerçek AI çağrısı yapılmaz.
+
+**Güvencelerin ayrımı:**
+
+| Güvence | Ne kanıtlıyor | Ne kanıtlamıyor |
+|---|---|---|
+| Panel metadata'sı | Preview'un Production kayıtlarını değil, kendi ayrı kayıtlarını kullandığı; dala özel geçersiz kılma olmadığı | Preview'daki `NEXT_PUBLIC_SUPABASE_URL` değerinin gerçekten Test projesini gösterdiği. Değerler okunmadı; yanlış girilmiş bir değer metadata'da görünmez |
+| Kod koruması (`ortam-guvenligi.ts`) | Production dışında adres Production kimliğine giderse ya da beyan değişkenleri eksik veya tutarsızsa derlemenin ve bağlantının durduğu. Production kimliği kodda sabit; değişkenle aşılamaz | Adresin TEST projesi olduğu. Yalnızca "Production değil" ve beyanlarla tutarlı olduğunu garanti eder |
+| İkisi birlikte | `design/os5` Preview'u Production Supabase'e bağlanamaz: ya Production dışı bir projeye bağlanır ya da derlemesi düşer | Bağlanılan projenin doğru Test projesi olduğu. Bu ancak Preview'un çalışma anında gösterdiği proje kimliğiyle (örneğin CSP `connect-src`) ya da değer kontrolüyle doğrulanır: UNVERIFIED |
 
 ### 8.3 PITR olmadan geri dönüşün sınırları
 
