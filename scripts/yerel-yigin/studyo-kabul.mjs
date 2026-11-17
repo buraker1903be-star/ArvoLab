@@ -740,6 +740,66 @@ async function kullaniciSayfasi(k, projeId, secenek = {}) {
   await sayfa.waitForSelector(".ProseMirror", { timeout: 120000 });
   return { c, sayfa };
 }
+/*
+  U3/U4 kanıtı (RC06d, 17.11.2026). İlk ×5 turundaki dört düşmenin gözlenen değerleri
+  saklanmamıştı ve nedenleri hâlâ bilinmiyor; bir düşme bir daha "kanıtsız" kalmasın diye her
+  adımda viewport, kaydırma, yaprak ve araç çubuğu kutusu, her düğmenin üstündeki öğe ve ekran
+  görüntüsü yazılır; senaryo patlarsa hata yığını da. Anlık görüntü EDİLGENDİR: kaydırmaz,
+  odak değiştirmez — ölçümün kendisi sonucu etkilemesin. Çıktı depo dışında (CIKTI/kanit/<tur>).
+*/
+const KANIT_TUR = process.env.STUDYO_TUR ?? new Date().toISOString().replace(/[:.]/g, "-");
+const KANIT_DIZIN = path.join(CIKTI, "kanit", KANIT_TUR);
+function kanitBaslat(ad, sayfa) {
+  fs.mkdirSync(KANIT_DIZIN, { recursive: true });
+  const adimlar = [];
+  const yaz = (sonuc, ek = {}) =>
+    fs.writeFileSync(path.join(KANIT_DIZIN, `${ad}.json`), `${JSON.stringify({ ad, tur: KANIT_TUR, sonuc, ...ek, adimlar }, null, 2)}\n`);
+  return {
+    async adim(adim) {
+      const i = String(adimlar.length + 1).padStart(2, "0");
+      const goruntu = `${ad}-${i}.png`;
+      const olcum = await sayfa
+        .evaluate(() => {
+          const kutu = (e) => {
+            if (!e) return null;
+            const r = e.getBoundingClientRect();
+            return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
+          };
+          const tanim = (e) => (e ? `${e.tagName.toLowerCase()}${e.id ? `#${e.id}` : ""}${typeof e.className === "string" && e.className ? `.${e.className.trim().split(/\s+/).slice(0, 3).join(".")}` : ""}` : null);
+          const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent).map((x) => {
+            const r = x.getBoundingClientRect();
+            const ekranda = r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+            const ust = ekranda ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+            return { ad: (x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24), kutu: kutu(x), ekranda, ustte: ekranda ? (ust === x || x.contains(ust) ? "kendisi" : tanim(ust)) : "ekran dışı" };
+          });
+          const vv = window.visualViewport;
+          return {
+            viewport: [innerWidth, innerHeight],
+            gorselViewport: vv ? [Math.round(vv.width), Math.round(vv.height), Math.round(vv.offsetTop), Math.round(vv.pageTop)] : null,
+            kaydirma: [Math.round(scrollX), Math.round(scrollY)],
+            belgeYuksekligi: document.documentElement.scrollHeight,
+            tasma: document.documentElement.scrollWidth - innerWidth,
+            yaprak: kutu(document.querySelector(".yazim-paneli")),
+            aracCubugu: kutu(document.querySelector(".manuscript-araclar")),
+            odak: tanim(document.activeElement),
+            ortulen: dugmeler.filter((d) => d.ekranda && d.ustte !== "kendisi").map((d) => `${d.ad} ← ${d.ustte}`),
+            dugmeler,
+          };
+        })
+        .catch((h) => ({ olcumHatasi: String(h?.message ?? h).split("\n")[0] }));
+      await sayfa.screenshot({ path: path.join(KANIT_DIZIN, goruntu) }).catch(() => {});
+      adimlar.push({ adim, zaman: new Date().toISOString(), goruntu, ...olcum });
+      yaz("SÜRÜYOR");
+    },
+    async hata(h) {
+      await this.adim("HATA ANI").catch(() => {});
+      yaz("HATA", { hata: String(h?.stack ?? h) });
+    },
+    bitir(sonuc, ozet) {
+      yaz(sonuc, { ozet });
+    },
+  };
+}
 const L_SATIR = "Remote learning increased reported isolation among first-year students.";
 await senaryo("R1", async () => {
   const { c, sayfa } = await kullaniciSayfasi(L, L_PROJE);
@@ -892,26 +952,40 @@ for (const genislik of [1440, 1280, 1200]) {
 for (const [ad, gorunum] of [["U3-1024", { viewport: { width: 1024, height: 768 } }], ["U3-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
   // 1180 px ve altında asistan alttan açılan yaprak: araç çubuğu üstte erişilebilir, taşma yok.
   const { c, sayfa } = await kullaniciSayfasi(A, PROJE, gorunum);
-  const en = sayfa.viewportSize().width;
-  await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
-  await sayfa.waitForSelector(".yazim-paneli");
-  await sayfa.waitForTimeout(400);
-  const r = await sayfa.evaluate(async () => {
-    const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
-    window.scrollTo(0, 0);
-    const erisilemeyen = [];
-    for (const x of dugmeler) {
-      x.scrollIntoView({ block: "nearest", inline: "nearest" });
-      await new Promise((r) => requestAnimationFrame(r));
-      const k = x.getBoundingClientRect();
-      const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
-      if (!(ust === x || x.contains(ust))) erisilemeyen.push((x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24));
-    }
-    const p = document.querySelector(".yazim-paneli").getBoundingClientRect();
-    return { dugme: dugmeler.length, erisilemeyen, panel: [Math.round(p.top), Math.round(p.width)], tasma: document.documentElement.scrollWidth - innerWidth };
-  });
-  kayit(ad, `${en} px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok`, "erişilemeyen 0, panel tam genişlik, taşma 0", `${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, r.erisilemeyen.length === 0 && r.panel[1] === en && r.tasma <= 0);
-  await c.close();
+  const kanit = kanitBaslat(ad, sayfa);
+  try {
+    const en = sayfa.viewportSize().width;
+    await kanit.adim("editör açıldı");
+    await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    await kanit.adim("asistan tıklandı, yaprak DOM'da");
+    await sayfa.waitForTimeout(400);
+    await kanit.adim("400 ms sonra (ölçüm öncesi)");
+    const r = await sayfa.evaluate(async () => {
+      const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
+      window.scrollTo(0, 0);
+      const erisilemeyen = [];
+      for (const x of dugmeler) {
+        x.scrollIntoView({ block: "nearest", inline: "nearest" });
+        await new Promise((r) => requestAnimationFrame(r));
+        const k = x.getBoundingClientRect();
+        const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+        // Kanıt: düğmenin adı yanında üstündeki öğe, kutusu ve o anki kaydırma da yazılır (RC06d).
+        if (!(ust === x || x.contains(ust))) erisilemeyen.push(`${(x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24)} ← ${ust ? `${ust.tagName.toLowerCase()}.${String(ust.className).trim().split(/\s+/).slice(0, 2).join(".")}` : "yok"} @${Math.round(k.left)},${Math.round(k.top)} y${Math.round(scrollY)}`);
+      }
+      const p = document.querySelector(".yazim-paneli").getBoundingClientRect();
+      return { dugme: dugmeler.length, erisilemeyen, panel: [Math.round(p.top), Math.round(p.width)], tasma: document.documentElement.scrollWidth - innerWidth };
+    });
+    await kanit.adim("ölçüm sonrası");
+    const gecti = r.erisilemeyen.length === 0 && r.panel[1] === en && r.tasma <= 0;
+    kayit(ad, `${en} px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok`, "erişilemeyen 0, panel tam genişlik, taşma 0", `${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, gecti);
+    kanit.bitir(gecti ? "PASS" : "FAIL", r);
+  } catch (hata) {
+    await kanit.hata(hata);
+    throw hata;
+  } finally {
+    await c.close();
+  }
 });
 
 // ── T: telefon ────────────────────────────────────────────────────────────
@@ -986,7 +1060,7 @@ const ulasim = async (sayfa) => sayfa.evaluate(async () => {
     if (!(ust === x || x.contains(ust))) erisilemeyen.push((x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 18));
   }
   const ed = document.querySelector(".ProseMirror")?.getBoundingClientRect();
-  return { dugme: dugmeler.length, erisilemeyen: erisilemeyen.length, tasma: document.documentElement.scrollWidth - innerWidth, editor: ed ? Math.round(ed.width) : 0 };
+  return { dugme: dugmeler.length, erisilemeyen: erisilemeyen.length, erisilemeyenAdlar: erisilemeyen, tasma: document.documentElement.scrollWidth - innerWidth, editor: ed ? Math.round(ed.width) : 0 };
 });
 /*
   U4 kendi kullanıcısıyla koşar: aynı kullanıcının yeni bağlamda girişi tek oturum kuralı gereği
@@ -997,35 +1071,45 @@ const U4K = await kullaniciAc("studyo-u4");
 const U4_PROJE = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${U4K.id}', 'thesis', 'U4 tezi ${ek}') returning id`).split("\n")[0];
 for (const [ad, gorunum] of [["U4-1440", { viewport: { width: 1440, height: 900 } }], ["U4-1280", { viewport: { width: 1280, height: 800 } }], ["U4-1024", { viewport: { width: 1024, height: 768 } }], ["U4-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
   const { c, sayfa } = await kullaniciSayfasi(U4K, U4_PROJE, gorunum);
-  const en = sayfa.viewportSize().width;
-  const masaustu = en > 1180;
-  const adimlar = [];
-  const olc = async (adim) => { await sayfa.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); await sayfa.waitForTimeout(150); const r = await ulasim(sayfa); await sayfa.evaluate(() => window.scrollTo(0, 0)); adimlar.push({ adim, ...r }); };
-  const asistan = () => sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first();
-  // Belge kısaysa kaydırılacak yer olsun diye alt boşluk; yalnızca bu tarayıcı oturumunda, kaydedilmez.
-  await sayfa.evaluate(async () => {
-    const b = document.createElement("div"); b.className = "u4-dolgu"; b.setAttribute("aria-hidden", "true"); b.style.height = "1600px"; document.body.appendChild(b);
-    // Kaydırma bazen ilk karede tutmuyor (yerleşim henüz oturmamış); etkili olana kadar birkaç kare dene.
-    for (let i = 0; i < 20 && window.scrollY < 200; i++) { window.scrollTo(0, 420); await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))); }
-  });
-  await asistan().click();
-  await sayfa.waitForSelector(".yazim-paneli");
-  // Ön koşul kanıtı: yaprak sayfa AŞAĞIDAYKEN açıldı (0 olsaydı senaryo eski hatayı üretemezdi).
-  const acilisKaydirma = await sayfa.evaluate(() => Math.round(window.scrollY));
-  await sayfa.evaluate(() => window.scrollTo(0, 0));
-  await olc("kaydırılmış açılış → yukarı");
-  await sayfa.setViewportSize({ width: Math.max(360, en - 120), height: gorunum.viewport ? gorunum.viewport.height - 100 : 600 });
-  await olc("küçültme");
-  await sayfa.setViewportSize(gorunum.viewport ?? { width: en, height: 664 });
-  await olc("geri büyütme");
-  await sayfa.locator(".yazim-paneli .yazim-ikon[aria-label]").first().click();
-  await sayfa.waitForSelector(".yazim-paneli", { state: "detached" });
-  await asistan().click();
-  await sayfa.waitForSelector(".yazim-paneli");
-  await olc("kapat/aç");
-  const gecti = acilisKaydirma > 0 && adimlar.every((a) => a.erisilemeyen === 0 && a.tasma <= 0 && (!masaustu || a.editor >= 420));
-  kayit(ad, `${en} px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir`, "her adımda erişilemeyen 0, taşma 0" + (masaustu ? ", editör ≥ 420 px" : ""), `açılışta kaydırma ${acilisKaydirma} px · ` + adimlar.map((a) => `${a.adim}: ${a.erisilemeyen}/${a.dugme} erişilemez, taşma ${a.tasma}${masaustu ? `, editör ${a.editor}` : ""}`).join(" · "), gecti);
-  await c.close();
+  const kanit = kanitBaslat(ad, sayfa);
+  try {
+    const en = sayfa.viewportSize().width;
+    const masaustu = en > 1180;
+    const adimlar = [];
+    const olc = async (adim) => { await sayfa.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); await sayfa.waitForTimeout(150); await kanit.adim(`${adim} (ölçüm öncesi)`); const r = await ulasim(sayfa); await sayfa.evaluate(() => window.scrollTo(0, 0)); adimlar.push({ adim, ...r }); };
+    const asistan = () => sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first();
+    // Belge kısaysa kaydırılacak yer olsun diye alt boşluk; yalnızca bu tarayıcı oturumunda, kaydedilmez.
+    await sayfa.evaluate(async () => {
+      const b = document.createElement("div"); b.className = "u4-dolgu"; b.setAttribute("aria-hidden", "true"); b.style.height = "1600px"; document.body.appendChild(b);
+      // Kaydırma bazen ilk karede tutmuyor (yerleşim henüz oturmamış); etkili olana kadar birkaç kare dene.
+      for (let i = 0; i < 20 && window.scrollY < 200; i++) { window.scrollTo(0, 420); await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))); }
+    });
+    await kanit.adim("dolgu + aşağı kaydırma");
+    await asistan().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    await kanit.adim("asistan aşağıdayken açıldı");
+    // Ön koşul kanıtı: yaprak sayfa AŞAĞIDAYKEN açıldı (0 olsaydı senaryo eski hatayı üretemezdi).
+    const acilisKaydirma = await sayfa.evaluate(() => Math.round(window.scrollY));
+    await sayfa.evaluate(() => window.scrollTo(0, 0));
+    await olc("kaydırılmış açılış → yukarı");
+    await sayfa.setViewportSize({ width: Math.max(360, en - 120), height: gorunum.viewport ? gorunum.viewport.height - 100 : 600 });
+    await olc("küçültme");
+    await sayfa.setViewportSize(gorunum.viewport ?? { width: en, height: 664 });
+    await olc("geri büyütme");
+    await sayfa.locator(".yazim-paneli .yazim-ikon[aria-label]").first().click();
+    await sayfa.waitForSelector(".yazim-paneli", { state: "detached" });
+    await asistan().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    await olc("kapat/aç");
+    const gecti = acilisKaydirma > 0 && adimlar.every((a) => a.erisilemeyen === 0 && a.tasma <= 0 && (!masaustu || a.editor >= 420));
+    kayit(ad, `${en} px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir`, "her adımda erişilemeyen 0, taşma 0" + (masaustu ? ", editör ≥ 420 px" : ""), `açılışta kaydırma ${acilisKaydirma} px · ` + adimlar.map((a) => `${a.adim}: ${a.erisilemeyen}/${a.dugme} erişilemez${a.erisilemeyen ? ` [${a.erisilemeyenAdlar.join("; ")}]` : ""}, taşma ${a.tasma}${masaustu ? `, editör ${a.editor}` : ""}`).join(" · "), gecti);
+    kanit.bitir(gecti ? "PASS" : "FAIL", { acilisKaydirma, adimlar });
+  } catch (hata) {
+    await kanit.hata(hata);
+    throw hata;
+  } finally {
+    await c.close();
+  }
 });
 
 
