@@ -55,7 +55,7 @@ describe("çalışmanın birimleri", () => {
     const o = ozet();
     assert.equal(adim(o, "literatur").href, "/dashboard/literature?calisma=c1");
     assert.equal(adim(o, "yazim").href, "/dashboard/editor/c1/write");
-    assert.equal(adim(o, "kaynakca").href, "/dashboard/citations?calisma=c1");
+    assert.equal(adim(o, "kaynakca").href, "/dashboard/literature?calisma=c1&sekme=kaynakca");
     assert.equal(adim(o, "belge").href, "/dashboard/documents?calisma=c1");
   });
 
@@ -196,6 +196,8 @@ describe("birim listesi tek kaynaktan", () => {
     assert.equal(birimYolu("yazim", "c1"), "/dashboard/editor/c1/write");
     assert.equal(birimYolu("literatur", "c1"), "/dashboard/literature?calisma=c1");
     assert.equal(birimYolu("analiz", "c1"), "/dashboard/analysis?calisma=c1");
+    // Kaynakça adımı doğrudan Kaynakça sekmesine (eskiden yönlendirme Kaynaklar sekmesinde bırakıyordu).
+    assert.equal(birimYolu("kaynakca", "c1"), "/dashboard/literature?calisma=c1&sekme=kaynakca");
   });
 
   test("her adımın başlığı ve adresi BIRIMLER'den geliyor", () => {

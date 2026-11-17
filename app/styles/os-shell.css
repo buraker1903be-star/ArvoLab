@@ -181,19 +181,30 @@
   html[data-gezinme="dar"] .os-root .os-marka-logo { display: flex; }
   html[data-gezinme="dar"] .os-root .os-kullanici--ust { display: block; }
   html[data-gezinme="dar"] .os-root .os-marka-sayfa { padding-left: 12px; border-left: 1px solid var(--line); }
-  /* Rayda grup başlığı gizli, öğeler simge olarak doğrudan görünür (kapalı grup da). */
-  html[data-gezinme="dar"] .os-gezinme-takim-bas { display: none; }
-  html[data-gezinme="dar"] .os-gezinme-takim { align-items: center; }
-  html[data-gezinme="dar"] .os-gezinme-takim-liste[data-kapali] { display: flex; }
-  html[data-gezinme="dar"] .os-gezinme-takim-liste .os-gezinme-oge { padding-left: 0; }
-  html[data-gezinme="dar"] .os-gezinme-alt-bolge { align-items: center; width: 100%; margin-top: auto; }
+  /*
+    Rayda gruplar ve alt bölge çizilmez; sayfaları "Daha fazla"da
+    (dahaFazlasi). İlk turda grupların öğeleri rayda simge olarak
+    duruyordu: 500 px yüksekliğinde ray taşıyor, "Daha fazla" klavye
+    odağında ekranın dışında kalıyordu (kisa-ekran-kabul, 17.11.2026).
+  */
+  html[data-gezinme="dar"] .os-gezinme-takim,
+  html[data-gezinme="dar"] .os-gezinme-alt-bolge { display: none; }
+  html[data-gezinme="dar"] .os-gezinme-son { margin-top: auto; }
   /*
     KÂĞIT GEOMETRİSİ SABİT (kurum sahibinin kararı, Phase 5.1c): daraltmanın
     kazandırdığı 176 px belgeyi genişletmez. Yazım düzeni açık kenar
     çubuğundaki genişliğinde kalır (inceleme paneli açık ya da kapalı) ve
     kazanılan alanda ortalanır.
   */
+  /*
+    width:100% gerekli: kap (main.dashboard-page) dikey flex ve otomatik
+    kenar boşluğu esnemeyi kapatıyor, düzen İÇERİĞİ kadar daralıyordu.
+    Eskiden araç çubuğu geniş olduğu için içerik kendiliğinden 1062 px
+    tutuyordu; araç çubuğu sadeleşince (17.11.2026) 1366'da 1013 px'e
+    düştü ve dar hâlde belge 49 px daraldı (kenar-daraltma-kabul).
+  */
   html[data-gezinme="dar"] .os-root .manuscript-layout {
+    width: 100%;
     max-width: calc(100% - (var(--os5-kenar-genis) - var(--os5-kenar-ray)));
     margin-inline: auto;
   }
@@ -242,10 +253,8 @@
   .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
   .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
   .os-gezinme .os-gezinme-kisa { display: none; }
-  .os-gezinme-takim, .os-gezinme-alt-bolge { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
-  .os-gezinme-takim-bas { display: none; }
-  .os-gezinme-alt-bolge { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
-  .os-gezinme-son { padding-top: var(--s-1); }
+  /* Tablet rayı: üç ana öğe + "Daha fazla" (gruplar orada); yukarıdaki dar masaüstüyle aynı karar. */
+  .os-gezinme-son { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
   .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--os5-kenar-ray); }
 }
 
@@ -262,15 +271,22 @@
   .os-gezinme-son { display: contents; }
   .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li) { display: none; }
   .os-gezinme-ana > li, .os-gezinme-son > li { flex: 1 1 0; min-width: 0; display: flex; }
-  .os-gezinme-oge {
+  /*
+    Kurallar alt çubuğa (.os-gezinme) bağlı. Eskiden çıplak
+    `.os-gezinme-ad { display: none }` yazıyordu ve aynı sınıfı taşıyan
+    "Daha fazla" penceresine de uyuyordu: telefonda pencere adsız
+    simgeler gösteriyor, bağlantıların erişilebilir adı hiç yoktu
+    (kabul.mjs, 17.11.2026; aaa0561'de de böyleydi).
+  */
+  .os-gezinme .os-gezinme-oge {
     flex-direction: column; justify-content: center; gap: 2px; min-height: var(--alt-cubuk-h); padding: 4px 2px;
     border-radius: 0; background: transparent; text-align: center;
   }
-  .os-gezinme-oge:hover { background: transparent; }
-  .os-gezinme-oge.is-active { background: transparent; }
-  .os-gezinme-oge.is-active > svg { color: var(--primary-ink); }
-  .os-gezinme-ad { display: none; }
-  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme .os-gezinme-oge:hover { background: transparent; }
+  .os-gezinme .os-gezinme-oge.is-active { background: transparent; }
+  .os-gezinme .os-gezinme-oge.is-active > svg { color: var(--primary-ink); }
+  .os-gezinme .os-gezinme-ad { display: none; }
+  .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
   /* Klavye açıkken alt çubuk aşağı çekilir: yazarken ekranın altı zaten klavyede. */
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
 }

@@ -85,8 +85,9 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
     // Açık hâlde gizli olan alt liste ("Daha fazla"yı taşır) dar hâlde görünür (Phase 5.1d-3).
     kural("\\.os-gezinme-son", /display: flex/);
     assert.doesNotMatch(masaustu, /os-gezinme-diger/);
-    // 17.11.2026: çalışma alt menüsü kalktı (editörde gezinme sabit); rayda gruplar simge olarak açık.
-    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-takim-bas \{ display: none; \}/);
+    // 17.11.2026: çalışma alt menüsü kalktı. Rayda gruplar ve alt bölge çizilmez; sayfaları
+    // "Daha fazla"da. Simge olarak dursalar kısa ekranda "Daha fazla"yı ekranın dışına itiyorlardı.
+    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-takim,\s*html\[data-gezinme="dar"\] \.os-gezinme-alt-bolge \{ display: none; \}/);
   });
 
   // 17.11.2026: sekmeler her ekran boyunda görünür; dar hâle özel kural gerekmiyor (gizleyen kural da yok).
@@ -96,6 +97,8 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
 
   test("kâğıt geometrisi sabit: yazım düzeni açık kenar çubuğundaki genişliğinde kalır", () => {
     kural("\\.manuscript-layout", /max-width: calc\(100% - \(var\(--os5-kenar-genis\) - var\(--os5-kenar-ray\)\)\)/);
+    // Flex kapta otomatik kenar boşluğu esnemeyi kapatır; genişlik açıkça verilmezse düzen içeriğe göre daralır.
+    kural("\\.manuscript-layout", /width: 100%/);
   });
 
   test("geçiş süresi token'dan; azaltılmış harekette kapalı", () => {

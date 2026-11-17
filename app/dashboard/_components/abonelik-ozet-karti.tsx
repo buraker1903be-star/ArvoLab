@@ -124,7 +124,7 @@ export default async function AbonelikOzetKarti({
             </Link>
           </li>
           <li>
-            <Link className="gb-satir" href={`/dashboard/citations?calisma=${calismaId}`}>
+            <Link className="gb-satir" href={`/dashboard/literature?calisma=${calismaId}&sekme=kaynakca`}>
               <MessagesSquare size={16} aria-hidden="true" />
               <span className="gb-satir-govde">
                 <b>{t({ tr: "Kaynağa sor", en: "Ask a source" })}</b>

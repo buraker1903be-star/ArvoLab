@@ -90,7 +90,12 @@ describe("editörde gezinme sabit; gruplar erişilebilir", () => {
     assert.match(gezinme, /grup\("yardim", t\(\{ tr: "Yardım", en: "Help" \}\)/);
     assert.doesNotMatch(gezinme, /os-gezinme-diger|digerAcik/);
   });
-  test("tek etkin işaret: etkin uygulama adresten", () => {
+  test("grupların seçimi grup başına: birini açmak ötekini kapatmaz", () => {
+    // Eskiden tek {grup, acik} tutuluyordu; Yardım'ı açmak Araçlar'ı kapatıyordu.
+    assert.match(gezinme, /gruplar: Record<string, boolean>/);
+    assert.match(gezinme, /\.\.\.\(onceki\?\.yol === yol \? onceki\.gruplar : \{\}\)/);
+  });
+    test("tek etkin işaret: etkin uygulama adresten", () => {
     assert.match(gezinme, /const acik = etkin\?\.key === u\.key;/);
   });
 });
@@ -108,11 +113,20 @@ describe("kabuk stilleri", () => {
     assert.match(tablet, /\.os-gezinme \.os-gezinme-ad \{[^}]*opacity: 0/);
     assert.doesNotMatch(tablet, /\.os-gezinme-ad \{[^}]*display: none/);
   });
-  test("kapalı grup açık kenar çubuğunda gizli, rayda öğeleri görünür", () => {
+  test("kapalı grup açık kenar çubuğunda gizli; rayda (tablet, dar) gruplar yok, Daha fazla var", () => {
     assert.match(css, /\.os-gezinme-takim-liste\[data-kapali\] \{ display: none; \}/);
-    assert.match(css, /html\[data-gezinme="dar"\] \.os-gezinme-takim-liste\[data-kapali\] \{ display: flex; \}/);
+    const tablet = css.slice(css.indexOf("@media (min-width: 761px) and (max-width: 1199px)"), css.indexOf("@media (max-width: 760px)"));
+    // Tablette grupları açan bir kural yok; temel kural (display:none) geçerli kalır.
+    assert.doesNotMatch(tablet, /\.os-gezinme-takim[^{]*\{[^}]*display: flex/);
+    assert.doesNotMatch(tablet, /\.os-gezinme-son \{[^}]*display: none/);
   });
-  test("azaltılmış hareket karşılığı var", () => {
+  test("telefonda adı gizleyen kural alt çubuğa bağlı; Daha fazla penceresi adsız kalmaz", () => {
+    const telefon = css.slice(css.indexOf("@media (max-width: 760px)"));
+    // Eskiden çıplak `.os-gezinme-ad { display: none; }` pencereye de uyuyordu (erişilebilir adı yoktu).
+    assert.doesNotMatch(telefon, /^\s*\.os-gezinme-ad \{ display: none; \}/m);
+    assert.match(telefon, /\.os-gezinme \.os-gezinme-ad \{ display: none; \}/);
+  });
+    test("azaltılmış hareket karşılığı var", () => {
     assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.os-gezinme, \.os-gezinme-oge/);
   });
   test("üst çubukta kodla çizilmiş logo yok; resmî logo bileşeni kullanılıyor", () => {

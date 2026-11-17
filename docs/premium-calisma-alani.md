@@ -14,6 +14,7 @@ Her karar, öğrencinin o ekranda tamamlayacağı işe göre verildi.
 | Ekran | Öğrencinin işi | Karar | Neden |
 |---|---|---|---|
 | Kenar çubuğu | "Bugün neyle çalışacağım?" | 3 ana öğe: Ana Sayfa, Çalışmalarım, Kaynaklar. Analiz ve Belge Kontrol "Araçlar", Kılavuz ve Destek "Yardım" altında; Ayarlar en altta | Günlük iş bu üçünden biri. Altı eşit öğe, ilk açılışta hangisinin günlük iş olduğunu ayırt etmeyi zorlaştırıyordu |
+| Ray (tablet, dar masaüstü) | Aynı sayfalara dar ekranda ulaşmak | 3 ana öğe + "Daha fazla"; gruplar rayda çizilmez | İlk turda grupların simgeleri raydaydı; 1024×500'de "Daha fazla" klavye odağında ekranın dışına düşüyordu (kisa-ekran-kabul) |
 | Editör | Yazmaya odaklanmak | Editör açılınca kenar çubuğu değişmez; çalışma bölümleri sayfadaki sekmelerde | Eskiden editöre girmek kenar çubuğunu uzatıyordu; konum duygusu kayboluyordu |
 | Ana Sayfa | Kaldığı yere dönmek | Tek kart + tek "Yazmaya devam et"; altında son kaynaklar | Ana eylem eskiden 9 kartın arasındaydı |
 | Ana Sayfa (çok çalışma) | Doğru çalışmayı seçmek | Son düzenlenen + en fazla 3 çalışma daha; tamamı Çalışmalarım'da | Liste ana eylemi gölgelemesin |
@@ -59,14 +60,26 @@ kopyalanmadı.
 | İnceleme paneli | Varsayılan açık | Araç çubuğunda "Kontroller" (varsayılan kapalı; tercih hatırlanır) |
 | Kılavuz yok uyarısı | Belgenin üstünde büyük kutu | Tek satırlık bilgi; iki bağlantı aynı |
 | DOI kutusu | Kaynaklar'da her zaman açık | Kaynak ekle → DOI ile ekle (adreste DOI varsa kendiliğinden açık) |
-| Kaynakça denetimi | Kaynaklar'da sağ kart | Kaynaklar → Kaynakça sekmesi |
+| Kaynakça denetimi | Kaynaklar'da sağ kart | Kaynaklar → Kaynakça sekmesi (`?sekme=kaynakca`). Çalışma özetinin "Kaynakça" adımı ve eski `/dashboard/citations` bağlantıları doğrudan bu sekmeye gider |
 
 ## Bilinen borçlar
 
 - Ana Sayfa'nın Phase 4 stillerinden (`os5-ana-sayfa.css`: `os5-ana-olcu`,
   `os5-ana-arac` vb.) artık kullanılmayanlar dosyada duruyor; ayrı bir
   temizlikte kaldırılacak.
-- Çalışma özeti kartında birden çok birincil düğme var ("Yazmaya devam et",
-  "Kılavuzu yükle", "Şimdi" satırının eylemi). Bu PR'da değiştirilmedi.
-- `scripts/onizleme/*-kabul.mjs` tarayıcı betikleri eski kenar çubuğu alt
-  menüsünü arıyor olabilir; bu PR'da koşturulmadı.
+- Tarayıcı kabul betikleri (`scripts/onizleme/*-kabul.mjs`) CI'da değil;
+  sonuçları PR açıklamasında. Yerel önizlemede (sahte Supabase) koşuyorlar,
+  gerçek veritabanı ve Auth yolu bu betiklerin kapsamında değil.
+
+## Kabulde bulunan ve düzeltilenler (17.11.2026)
+
+Aynı betikler `aaa0561` (taban) üzerinde de koşturuldu; taban geçiyorsa
+hata bu PR'ındır.
+
+| Bulgu | Taban | Neden | Düzeltme |
+|---|---|---|---|
+| Dar masaüstünde belge 49 px daralıyor (1366, inceleme kapalı: 1062 → 1013) | geçiyor | Düzen dikey flex kapta `margin-inline:auto` ile içeriği kadar daralıyor; taban araç çubuğu geniş olduğu için içerik 1062'yi tutuyordu | `width:100%` (os-shell.css); birim testi |
+| 1024×500 tablette "Daha fazla" klavye odağında görünmüyor | geçiyor | Grupların simgeleri raydaydı | Rayda gruplar çizilmez; sayfaları "Daha fazla"da |
+| Tablette ve telefonda "Kılavuzumu yükle" / "Kurumu seç" 28 px | geçiyor | Tek satıra inen kılavuz uyarısının bağlantıları | Dokunmatikte 44 px |
+| Telefonda "Daha fazla" penceresi adsız simgeler gösteriyor; bağlantıların erişilebilir adı yok | **aynı hata tabanda da var** | Alt çubuk kuralı (`.os-gezinme-ad { display:none }`) kapsamsızdı, pencereye de uyuyordu | Kural `.os-gezinme`'ye bağlandı; birim testi |
+| Kaynakça görüntüsü kaynak listesini gösteriyor | — | Görüntü betiği `/dashboard/citations`'ı açıyordu, o da Kaynaklar sekmesine yönleniyordu | Betik Kaynakça sekmesini açar, sekme etkin ve içerik görünür değilse durur; yönlendirme ve özet adımı da sekmeye gider |

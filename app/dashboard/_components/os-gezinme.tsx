@@ -62,12 +62,15 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
     seçim düşer ve varsayılan kural yeniden işler (etkin sayfa gruptaysa
     açık, değilse kapalı). Efektte sıfırlamak yerine adresle anahtarlamak,
-    çizim sırasında durum değiştirmeden aynı sonucu verir.
+    çizim sırasında durum değiştirmeden aynı sonucu verir. Seçim grup
+    başına tutulur: ilk sürümde tek bir {grup, acik} vardı ve "Yardım"ı
+    açmak "Araçlar"ı varsayılana (kapalı) döndürüyordu (personel-araclari
+    kabulü, 17.11.2026).
   */
-  const [secim, setSecim] = useState<{ yol: string; grup: string; acik: boolean } | null>(null);
+  const [secim, setSecim] = useState<{ yol: string; gruplar: Record<string, boolean> } | null>(null);
   const grupAcik = (grup: string, uyeler: OsUygulama[]) =>
     grupAcikMi({
-      secim: secim?.yol === yol && secim.grup === grup ? secim.acik : null,
+      secim: secim?.yol === yol ? (secim.gruplar[grup] ?? null) : null,
       etkinIcinde: uyeler.some((u) => u.key === etkin?.key),
       varsayilan: false,
     });
@@ -102,10 +105,11 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
 
   /*
     Açık adlı grup ("Araçlar", "Yardım"). Açık kenar çubuğunda başlık bir
-    açılır düğme; rayda (tablet ve dar masaüstü) başlık gizlenir ve öğeler
-    simge olarak doğrudan görünür — 64 px'te açılır menü sığmaz, öğe gizli
-    kalırsa ulaşılamaz olurdu. Liste `hidden` değil data-kapali taşır:
-    kapalılık yalnızca açık kenar çubuğunda anlamlı (os-shell.css).
+    açılır düğme. Rayda (tablet ve dar masaüstü) grup hiç çizilmez; öğeleri
+    "Daha fazla"da (dahaFazlasi). İlk turda rayda simge olarak duruyorlardı
+    ve 500 px yüksekliğinde "Daha fazla"yı ekranın dışına itiyorlardı.
+    Liste `hidden` değil data-kapali taşır: kapalılık yalnızca açık kenar
+    çubuğunda anlamlı (os-shell.css).
   */
   const grup = (anahtar: string, baslik: string, simge: ReactNode, uyeler: OsUygulama[]) => {
     if (!uyeler.length) return null;
@@ -118,7 +122,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           className="os-gezinme-oge os-gezinme-takim-bas"
           aria-expanded={acik}
           aria-controls={kimlik}
-          onClick={() => setSecim({ yol, grup: anahtar, acik: !acik })}
+          onClick={() => setSecim((onceki) => ({ yol, gruplar: { ...(onceki?.yol === yol ? onceki.gruplar : {}), [anahtar]: !acik } }))}
         >
           {simge}
           <span className="os-gezinme-ad">{baslik}</span>

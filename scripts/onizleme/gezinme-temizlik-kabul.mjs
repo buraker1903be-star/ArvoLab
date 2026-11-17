@@ -2,9 +2,13 @@
   PHASE 5.1d-4 TARAYICI KABULÜ: çalışma sekmeleri tek kaynaktan ve Ctrl+K
   kenar çubuğu komutu.
 
-  - Sayfadaki sekmeler (tablet, telefon, dar masaüstü) ile açık masaüstündeki
-    kenar çubuğu alt menüsü aynı adları, aynı sırayı ve aynı etkin bölümü
-    gösterir; Makale yalnızca makale türünde.
+  - Çalışma sekmeleri her ekran boyunda aynı adları, aynı sırayı ve aynı
+    etkin bölümü gösterir; Makale yalnızca makale türünde. 17.11.2026'ya
+    kadar açık masaüstünde sekmeler gizli, aynı liste kenar çubuğunun alt
+    menüsündeydi; alt menü kalktı (editör açılınca gezinme değişmez).
+    Sekme sırasının sonundaki araç bağlantıları (Kaynaklar, Analiz, Belge
+    Kontrol) bölüm sayılmaz, ayrıca denetlenir. Telefonda yazım ekranı
+    sekmeleri gizler; oradan geri düğmesi çalışma özetine (sekmelere) götürür.
   - Ctrl+K'daki "Kenar çubuğunu daralt/genişlet" yalnızca ≥1200 px'te
     listelenir, kenar çubuğundaki düğmeyle AYNI tercihi değiştirir (yeni
     depolama anahtarı yok), tercih yeniden yüklemede kalır. Ctrl+B kenar
@@ -66,14 +70,15 @@ async function sayfaAc({ w, h, dar, tema = "light", yol = "/dashboard" }) {
 const sekmeler = (s) =>
   s.evaluate(() => {
     const nav = [...document.querySelectorAll("nav.calisma-sekmeleri")].find((n) => n.checkVisibility());
-    return nav ? [...nav.querySelectorAll("a")].map((a) => [a.textContent.trim(), a.getAttribute("aria-current") === "page"]) : null;
+    return nav ? [...nav.querySelectorAll("a:not(.calisma-sekmeleri-arac)")].map((a) => [a.textContent.trim(), a.getAttribute("aria-current") === "page"]) : null;
   });
-/** Kenar çubuğundaki çalışma alt menüsü (açık masaüstü): [ad, etkin mi]. */
-const altMenu = (s) =>
+/** Sekme sırasının sonundaki, bu çalışmaya süzülü araçlar: [ad, adres]. */
+const araclar = (s) =>
   s.evaluate(() => {
-    const ul = document.querySelector("#os-gezinme-calisma ul");
-    return ul && ul.checkVisibility() ? [...ul.querySelectorAll("a")].map((a) => [a.textContent.trim(), a.getAttribute("aria-current") === "page"]) : null;
+    const nav = [...document.querySelectorAll("nav.calisma-sekmeleri")].find((n) => n.checkVisibility());
+    return nav ? [...nav.querySelectorAll("a.calisma-sekmeleri-arac")].map((a) => [a.textContent.trim(), a.getAttribute("href")]) : null;
   });
+const ARACLAR = ["Kaynaklar", "Analiz", "Belge Kontrol"];
 
 const SAYFALAR = [
   [`/dashboard/editor/${TEZ}/write`, "Yazım", TEZ_BOLUMLERI],
@@ -82,16 +87,33 @@ const SAYFALAR = [
   [`/dashboard/editor/${MAKALE}/makale`, "Makale", MAKALE_BOLUMLERI],
 ];
 
-for (const d of [{ ad: "1024 tablet", w: 1024, h: 768 }, { ad: "390 telefon", w: 390, h: 844 }, { ad: "1366 dar", w: 1366, h: 800, dar: true }]) {
-  await senaryo(`[${ROL}] ${d.ad}: çalışma sekmeleri ad, sıra ve etkin bölüm doğru; Makale yalnızca makalede`, async () => {
+for (const d of [{ ad: "1024 tablet", w: 1024, h: 768 }, { ad: "390 telefon", w: 390, h: 844, telefon: true }, { ad: "1366 dar", w: 1366, h: 800, dar: true }, { ad: "1366 açık", w: 1366, h: 800 }]) {
+  await senaryo(`[${ROL}] ${d.ad}: çalışma sekmeleri ad, sıra ve etkin bölüm doğru; Makale yalnızca makalede; araçlar bu çalışmaya süzülü`, async () => {
     const { ctx, sayfa, hatalar } = await sayfaAc(d);
     for (const [yol, etkin, beklenen] of SAYFALAR) {
       await sayfa.goto(TABAN + yol, { waitUntil: "networkidle", timeout: 150000 });
+      bekle(!(await sayfa.locator("#os-gezinme-calisma, .os-gezinme-baglam").count()), `${yol}: kenar çubuğunda çalışma alt menüsü var`);
+      if (d.telefon && yol.endsWith("/write")) {
+        // Telefonda yazım ekranı sekmeleri gizler (metin ilk ekranda görünsün); geri düğmesi özete götürür.
+        bekle((await sekmeler(sayfa)) === null, `${yol}: telefonda yazım ekranında sekmeler görünmemeli`);
+        const geri = sayfa.locator(".yazma-basligi a.projects-filter-button").first();
+        bekle(await geri.isVisible(), `${yol}: geri düğmesi yok`);
+        await geri.click();
+        await sayfa.waitForURL((u) => !u.pathname.endsWith("/write"), { timeout: 60000 });
+        await sayfa.waitForLoadState("networkidle");
+        const ozet = await sekmeler(sayfa);
+        bekle(ozet && ozet.find(([a, e]) => a === "Özet" && e), `geri düğmesi özete götürmedi: ${sayfa.url()}`);
+        continue;
+      }
       const s = await sekmeler(sayfa);
       bekle(s, `${yol}: sekme yok`);
       bekle(JSON.stringify(s.map(([a]) => a)) === JSON.stringify(beklenen), `${yol}: ${s.map(([a]) => a).join(", ")}`);
       const etkinler = s.filter(([, e]) => e).map(([a]) => a);
       bekle(JSON.stringify(etkinler) === JSON.stringify([etkin]), `${yol}: etkin ${etkinler.join(",")}`);
+      const id = yol.split("/")[3];
+      const a = await araclar(sayfa);
+      bekle(JSON.stringify(a.map(([x]) => x)) === JSON.stringify(ARACLAR), `${yol}: araçlar ${a.map(([x]) => x).join(", ")}`);
+      bekle(a.every(([, h]) => h.includes(`calisma=${id}`)), `${yol}: araç bu çalışmaya süzülü değil ${JSON.stringify(a)}`);
     }
     bekle(!hatalar.length, hatalar.join(" | "));
     await ctx.close();
@@ -99,17 +121,29 @@ for (const d of [{ ad: "1024 tablet", w: 1024, h: 768 }, { ad: "390 telefon", w:
   });
 }
 
-await senaryo(`[${ROL}] 1366 açık: kenar çubuğu alt menüsü sekmelerle aynı ad/sıra/etkin; sayfadaki sekmeler gizli`, async () => {
-  const { ctx, sayfa } = await sayfaAc({ w: 1366, h: 800 });
-  for (const [yol, etkin, beklenen] of SAYFALAR) {
-    await sayfa.goto(TABAN + yol, { waitUntil: "networkidle", timeout: 150000 });
-    const m = await altMenu(sayfa);
-    bekle(m, `${yol}: alt menü yok`);
-    bekle(JSON.stringify(m.map(([a]) => a)) === JSON.stringify(beklenen), `${yol}: ${m.map(([a]) => a).join(", ")}`);
-    bekle(JSON.stringify(m.filter(([, e]) => e).map(([a]) => a)) === JSON.stringify([etkin]), `${yol}: etkin`);
-    bekle((await sekmeler(sayfa)) === null, `${yol}: açık masaüstünde sekmeler görünüyor`);
+/*
+  Sekmeler klavyeyle: Tab sırasıyla her bölüme ulaşılır, Enter götürür.
+  (Eskiden aynı senaryo kenar çubuğu alt menüsünün ad/sıra eşleşmesini sınıyordu.)
+*/
+await senaryo(`[${ROL}] 1366 açık: sekmeler klavyeyle gezilir; Enter bölüme götürür, kenar çubuğu aynı kalır`, async () => {
+  const { ctx, sayfa } = await sayfaAc({ w: 1366, h: 800, yol: `/dashboard/editor/${TEZ}/write` });
+  const kenarOnce = await sayfa.locator("nav.os-gezinme").innerText();
+  await sayfa.locator("nav.calisma-sekmeleri a").first().focus();
+  const sira = [];
+  for (let i = 0; i < 4; i++) {
+    sira.push(await sayfa.evaluate(() => document.activeElement?.textContent?.trim()));
+    await sayfa.keyboard.press("Tab");
   }
+  bekle(JSON.stringify(sira) === JSON.stringify(TEZ_BOLUMLERI), `Tab sırası: ${sira.join(", ")}`);
+  await sayfa.locator("nav.calisma-sekmeleri a", { hasText: "Kanıt matrisi" }).focus();
+  await sayfa.keyboard.press("Enter");
+  await sayfa.waitForURL(/\/kanit/, { timeout: 60000 });
+  await sayfa.waitForLoadState("networkidle");
+  const s = await sekmeler(sayfa);
+  bekle(s.find(([a, e]) => a === "Kanıt matrisi" && e), "Kanıt matrisi etkin değil");
+  bekle((await sayfa.locator("nav.os-gezinme").innerText()) === kenarOnce, "kenar çubuğu değişti");
   await ctx.close();
+  return sira.join(" → ");
 });
 
 async function paletAc(s) {

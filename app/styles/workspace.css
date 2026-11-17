@@ -1657,6 +1657,10 @@
 */
 .yazma-kayit { min-height: var(--os5-kontrol-h); }
 .kilavuz-kisa { display: none; }
+/* Dokunmatikte kılavuz bağlantıları 44 px hedef (kabul.mjs: tablette 28 px'ti). */
+@media (max-width: 1199px), (pointer: coarse) {
+  .kilavuz-satiri a { min-height: 44px; min-width: 44px; justify-content: center; }
+}
 @media (max-width: 760px) {
   .yazma-eylemleri .yazma-kayit:not([data-state="error"]):not([data-state="conflict"]) { gap: 0; padding: 0; font-size: 0; justify-content: center; }
   .kilavuz-satiri { flex-wrap: nowrap; padding-block: 4px; white-space: nowrap; }
