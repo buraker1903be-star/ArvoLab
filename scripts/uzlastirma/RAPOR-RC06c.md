@@ -527,6 +527,25 @@ olmadan hiçbir gerçek çağrı yapılmaz.
 - Uygulama `AI_ANAHTAR` olarak yalnızca biçimi uygun sahte bir yer tutucu taşır; vekil onu değiştirir.
 - Not: ağ sırrı bu bulut ortamındaki her oturuma uygulanır; ortam paylaşımlıysa öteki oturumlara da.
 
+**Anahtar yöntemi — güncelleme (17.11.2026):** ağ sırrı formu bu ortamda `api.anthropic.com` için
+**desteklenmiyor**. Ortam, Anthropic adreslerini oturumun kendi kimliğiyle doğruluyor ve kullanıcı
+anahtarı kabul etmiyor. Ajan vekilinin durumuna göre `api.anthropic.com` vekil dışı (doğrudan
+bağlantı); vekil bu adrese giden isteğe anahtar koymuyor, değiştirmiyor da. Kullanılabilir güvenli
+yollar (karar kullanıcının; Claude değeri hiçbir zaman istemez, görmez, yazdırmaz):
+
+- **A — bulut ortam değişkeni.** Kullanıcı ortam ayarlarına (oturum başlığındaki ortam menüsü →
+  Edit → Environment variables) `ARVOLAB_KABUL_AI_ANAHTAR` adıyla girer.
+  - Kabul başlatıcısı bu değeri yalnızca o süreç için `AI_ANAHTAR`'a aktarır; kabuk izi kapalıdır,
+    `env`/`printenv` çalıştırılmaz.
+  - Sınırlar: değer ortamda düz metin saklanır; ortamı düzenleyebilen görür. Yeni başlayan oturumda
+    geçerli olur. Oturumdaki her süreç okuyabilir.
+  - Kabulden sonra değişken silinir ve anahtar iptal edilir.
+- **B — kullanıcının kendi makinesi.** Kabul kullanıcının makinesinde koşulur. Anahtar işletim
+  sisteminin anahtar zincirinde ya da `.env.local`'da durur (`.gitignore`'da `.env`, `.env.local`,
+  `.env.*.local` var); vekil ve betikler aynıdır.
+- Doğrudan bağlantının bu kapsayıcıdan kullanıcı anahtarıyla çalıştığı **doğrulanmadı**:
+  doğrulamak gerçek bir çağrı gerektirir.
+
 **Çağrı sınırı (en çok 30):**
 - Uygulamanın kendi hakkı kullanıcı başına saatte 20 (`SAATLIK_HAK`). Bu sert bir sınır değil: kesilen
   yanıt bir kez daha denenebiliyor (`butceyeTakildi`), birden çok test kullanıcısı da hakkı çoğaltır.
@@ -535,6 +554,12 @@ olmadan hiçbir gerçek çağrı yapılmaz.
   - her ileti için yalnızca sayaç, model, durum kodu ve kullanım jetonlarını yazar (istem ve yanıt
     metni yazılmaz);
   - 31. istekte iletmeden 429 döner.
+  - Uygulandı: `ai-kabul/sayac-vekili.mjs` (depo dışı araç, uygulama kodu değil).
+    - Sayaç iletimden ÖNCE ve eşzamanlı artırılıyor; yeniden denemeler ve paralel istekler sayılıyor.
+    - Başarısız iletiler de sayılıyor; sayaç günlükten devam ettiği için yeniden başlatma sınırı sıfırlamıyor.
+    - Yerel taklide karşı sınandı (gerçek sağlayıcı değil): 40 paralel istekten 30'u iletildi,
+      10'u iletilmeden 429 aldı. Yeniden başlatma sonrası 31. istek de 429.
+    - Günlükte ve çıktıda anahtar izi 0; başlıklar yazılmıyor.
 - Adres yerel olduğu için `AI_BICIM=anthropic` açıkça verilir.
 - İkinci koruma: test anahtarının çalışma alanındaki harcama sınırı (kullanıcı tarafında).
 
