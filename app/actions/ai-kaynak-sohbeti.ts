@@ -94,7 +94,7 @@ export async function kaynaklaSohbet(girdi: {
     .slice(-6);
   /* Seçim varsa okunacak sayfalar seçimin çevresi (lib/pdf-secim.ts); yoksa soruyla en ilgili sayfalar. */
   const { secilen, kirpildi } = secim ? { secilen: secimSayfalari(sayfalar, secim.sayfa, sonrakiSayfaya), kirpildi: 0 } : ilgiliSayfalar(sayfalar, soru);
-  const { mesajlar, kayitBaglami } = kaynakIstemi({ kunye: satir.kunye, sayfalar: secilen, soru, gecmis, dil, secim });
+  const { mesajlar, kayitBaglami } = kaynakIstemi({ kunye: satir.kunye, sayfalar: secilen, soru, gecmis, dil, secim, toplamSayfa: sayfalar.length });
 
   const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
@@ -108,7 +108,7 @@ export async function kaynaklaSohbet(girdi: {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
       return { hata: t({ tr: "Asistan bir cevap üretemedi; soruyu biraz daha açık yazın.", en: "The assistant couldn't answer; rephrase the question." }) };
     }
-    const denetim = kaynakCevabiDenetle(cevap, secilen, soru);
+    const denetim = kaynakCevabiDenetle(cevap, secilen, soru, satir.kunye, dil);
     if (!denetim.gecti) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: denetim.neden, model: yanit.model, cikti: yanit.metin, bulgular: { ayrinti: denetim.ayrinti } });
       return {
@@ -126,7 +126,8 @@ export async function kaynaklaSohbet(girdi: {
                 }),
       };
     }
-    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: denetim.cevap });
+    // Model metni sunucu metniyle değiştirildiyse kayıtta görünür: çıktı modelin ham cevabı, bulgular ekranda gösterilen.
+    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: { ...denetim.cevap, sunucuMetni: denetim.sunucuMetni ?? null } });
     return {
       bulundu: denetim.cevap.bulundu,
       cevap: denetim.cevap.cevap,

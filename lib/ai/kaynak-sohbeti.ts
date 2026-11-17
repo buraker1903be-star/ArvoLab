@@ -25,7 +25,7 @@
   Saf modül; testi tests/unit/kaynak-sohbeti.test.ts.
 */
 
-import type { Dil } from "@/lib/dil";
+import type { Dil, Metin } from "@/lib/dil";
 import type { Mesaj } from "./saglayici";
 import { jsonOku, baglamDisiKunye } from "./bulgu";
 import { uydurmaSayilar } from "./sayi-denetimi";
@@ -85,12 +85,28 @@ YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yaz
 {"bulundu": true|false, "cevap": "<kısa, açık cevap; en çok 6 cümle>", "alintilar": [{"sayfa": <PDF sayfa numarası>, "metin": "<kaynaktan BİREBİR kopyalanmış parça>"}]}
 
 KESİN KURALLAR:
-1. Cevaptaki her bilgi kaynakta yazılı olmalı. Kaynakta olmayan bilgiyi genel bilgiden tamamlama; kaynakta yoksa "bulundu": false yap ve cevapta kaynakta bulunamadığını söyle.
+1. Cevaptaki her bilgi kaynakta yazılı olmalı. Kaynakta olmayan bilgiyi genel bilgiden ya da kendi yorumunla tamamlama; kaynakta yoksa "bulundu": false yap ve cevapta kaynakta bulunamadığını söyle.
 2. "bulundu": true ise en az bir alıntı ver. Alıntı kaynaktan HARFİ HARFİNE kopyalanmış, en az ${ALINTI_EN_AZ} karakterlik bir parça olmalı: kelime değiştirme, çevirme, kısaltma, "…" ile birleştirme. Kaynak İngilizceyse alıntı İngilizce kalır.
 3. "sayfa", alıntının geçtiği "--- SAYFA N ---" başlığındaki N'dir (PDF sayfası); baskı sayfa numarası uydurma.
 4. Cevaptaki her sayı (örneklem, yüzde, katsayı, yıl, p değeri) kaynakta birebir geçmeli.
 5. Kaynakta geçmeyen bir yazara, çalışmaya ya da künyeye atıf yapma.
-6. Cevabı kullanıcının arayüz diliyle yaz (aşağıda belirtilir); alıntılar kaynağın dilinde kalır.`;
+6. Cevabı kullanıcının arayüz diliyle yaz (aşağıda belirtilir); alıntılar kaynağın dilinde kalır.
+7. Kaynakta AÇIKÇA yazanla kendi çıkarımını ayır ve çıkarımı kaynağın sözü gibi sunma. Sorulan bir unsur (sınırlılık, yöntem, örneklem, sonuç…) verilen sayfalarda yazılı değilse onu kendin üretme; bunun yerine yazılı olmadığını açıkça söyle (örn. "Okunan sayfalarda yazarların belirttiği bir sınırlılık yok."). Yazarların söylemediği bir değerlendirmeyi ("genellenebilirliği sınırlayabilir", "nedensellik tartışılmamış" gibi) cevaba koyma.
+8. Sana kaynağın yalnızca bazı sayfaları verildiyse (KAYNAK satırının altında "OKUNAN SAYFALAR" yazar) "kaynakta yok" deme, "okunan sayfalarda yok" de: kalan sayfalarda yazıyor olabilir.`;
+
+/*
+  SEÇİLİ PASAJ İÇİN HAZIR SORU (17.11.2026, RC06i). Eskiden "…ana iddiasını,
+  dayandığı kanıtı ve sınırlılığını açıkla" idi: soru sınırlılığı VAR
+  sayıyordu. Seçim kipinde model yalnızca seçimin çevresindeki sayfaları
+  okuyor; gerçek model kabulünde yazarların asıl sınırlılıkları okunmayan
+  3. sayfadaydı ve model kendi çıkarımını ("genellenebilirliği sınırlayabilir")
+  sınırlılık diye yazdı. Alıntı/sayı/atıf denetimleri cümle düzeyinde
+  dayanağı yakalayamıyor; bu yüzden soru, olmayanı üretmeye davet etmemeli.
+*/
+export const SECIM_ANALIZ_SORUSU: Metin = {
+  tr: "Bu pasajın ana iddiasını ve dayandığı kanıtı açıkla. Okunan sayfalarda yazarların belirttiği bir sınırlılık varsa alıntıyla göster; yoksa yazılı olmadığını söyle, kendin sınırlılık üretme.",
+  en: "Explain this passage's main claim and the evidence it rests on. If the pages read state a limitation, quote it; if not, say that none is stated and don't infer one.",
+};
 
 /*
   SEÇİLİ PASAJ (16.11.2026, Yazım Stüdyosu). Öğrenci PDF görüntüleyicide bir
@@ -108,6 +124,8 @@ export function kaynakIstemi(g: {
   gecmis: KaynakMesaji[];
   dil: Dil;
   secim?: SeciliPasaj | null;
+  /** Kaynağın toplam sayfa sayısı; verilen sayfalar daha azsa modele söylenir (kural 8). */
+  toplamSayfa?: number;
 }): { mesajlar: Mesaj[]; kaynakMetni: string; kayitBaglami: string } {
   const kaynakMetni = g.sayfalar.map((s) => `--- SAYFA ${s.num} ---\n${s.text.trim()}`).join("\n\n");
   const secimMesaji: Mesaj[] = g.secim
@@ -118,7 +136,9 @@ export function kaynakIstemi(g: {
         },
       ]
     : [];
-  const ust = `KAYNAK: ${g.kunye.slice(0, 600)}\nCEVAP DİLİ: ${g.dil === "en" ? "İngilizce" : "Türkçe"}`;
+  const kismi = g.toplamSayfa && g.sayfalar.length < g.toplamSayfa;
+  const okunan = kismi ? `\nOKUNAN SAYFALAR: ${g.sayfalar.map((s) => s.num).join(", ")} (kaynak ${g.toplamSayfa} sayfa; kalanı sana verilmedi)` : "";
+  const ust = `KAYNAK: ${g.kunye.slice(0, 600)}${okunan}\nCEVAP DİLİ: ${g.dil === "en" ? "İngilizce" : "Türkçe"}`;
   const gecmis: Mesaj[] = g.gecmis.slice(-6).map((m) => ({
     rol: m.rol === "kullanici" ? "kullanici" : "sistem",
     metin: m.rol === "kullanici" ? m.metin.slice(0, SORU_EN_UZUN) : `ÖNCEKİ CEVABIN: ${m.metin.slice(0, 1_500)}`,
@@ -154,14 +174,73 @@ export function kaynakCevabiCozumle(ham: string): KaynakCevabi | null {
 }
 
 export type KaynakDenetimi =
-  | { gecti: true; cevap: KaynakCevabi }
+  /** sunucuMetni: model metni atıldı, cevap sunucunun sabit ret metni (sorudaki atıf kaynakta yok). */
+  | { gecti: true; cevap: KaynakCevabi; sunucuMetni?: { neden: "soru_atfi"; atiflar: string[] } }
   | { gecti: false; neden: "alinti" | "uydurma_sayi" | "kunye"; ayrinti: string[] };
+
+/*
+  KAYNAKTA BULUNMAYAN ATFI REDDETMEK UYDURMA ATIF DEĞİLDİR (17.11.2026, RC06i).
+  Gerçek modelle kabulde öğrenci "Smith (2019)'a göre etki büyüklüğü ne?" diye
+  sordu; model doğru cevap verdi ("Kaya (2021) kaynağında Smith (2019)'a atıf
+  yok") ama künye denetimi cevabı İKİ yanlış alarmla düşürdü ve öğrenci
+  "asistan kaynakta olmayan bir atıf yazdı" mesajını gördü:
+    1) "Kaya (2021)": incelenen kaynağın KENDİSİ. Künye satırı ("Kaya, A.
+       (2021). …") modele veriliyor ama denetim yalnızca sayfa metnine
+       bakıyordu; anlatı biçimi "Kaya (2021)" künyenin alt dizesi değil.
+    2) "Smith (2019)": öğrencinin SORUDA yazdığı atıf; model onu yalnızca
+       kaynakta bulunmadığını söylemek için tekrarladı.
+  İkisi ayrı ayrı ve dar tutuldu; uydurma atfın sunulması yine düşer:
+    - Kaynağın kendisi: atıftaki HER soyadı künyede (sözcük sınırıyla) ve yıl
+      künyede geçmeli. "Kaya (2020)" ya da "Kayalar (2021)" geçmez.
+    - Sorudaki atıf: "bulundu": true cevapta kaynakta olmayan bir atıf
+      kaynağa dayanıyormuş gibi sunulmuş olur ve düşer. "bulundu": false
+      cevapta da MODELİN METNİNE güvenilmez (PR #104 incelemesi): bayrak,
+      metnin atfı gerçekten reddettiğini kanıtlamıyor; model bayrağı false
+      verip "Smith (2019) … göstermiştir" diye olumlu iddia yükleyebilir.
+      Serbest metinde ret ile iddiayı güvenilir biçimde ayıran bir kural
+      yok, bu yüzden ayırmaya çalışılmıyor: model metni ATILIR ve kullanıcıya
+      sunucunun sabit ret metni gösterilir (soruAtfiRetMetni). Model
+      cevabı kayda olduğu gibi girer (eğitim verisi), ekrana girmez.
+  Alıntı ve sayı denetimi değişmedi ve sunucu metninden ÖNCE, model metni
+  üzerinde çalışır: uydurma sayı ya da birebir olmayan alıntı taşıyan cevap,
+  metni atılacak olsa bile düşer.
+*/
+const SOYAD_ATIFTA = /\p{Lu}[\p{L}'’-]*\p{Ll}/gu;
+const kacir = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const bosluksuz = (s: string) => s.replace(/\s+/g, " ").trim();
+
+/*
+  Sorudaki atıf için gösterilen sabit metin; modelin serbest metni yerine.
+  Yalnızca OKUNAN sayfalar hakkında konuşur: seçim kipinde ve uzun kaynakta
+  sayfaların bir kısmı okunuyor, bu yüzden "kaynak bu atıf hakkında bilgi
+  vermiyor" gibi bütün kaynak üzerine bir yokluk iddiası kurulmaz. Eskiden
+  (b8085fd) metin "kaynak bu atıf hakkında bilgi vermiyor" diyordu.
+*/
+export function soruAtfiRetMetni(atiflar: string[], dil: Dil = "tr"): string {
+  const liste = atiflar.join(", ");
+  return dil === "en"
+    ? `No verifiable information about this citation (${liste}) was found in the pages read.`
+    : `Bu atıf (${liste}) hakkında okunan sayfalarda doğrulanabilir bilgi bulunamadı.`;
+}
+
+/** Atıf, incelenen kaynağın kendi künyesine mi işaret ediyor (soyadları ve yıl künyede)? */
+export function kaynaginKendiAtfi(atif: string, kunye: string): boolean {
+  if (!kunye.trim()) return false;
+  if (/^10\./.test(atif)) return kunye.includes(atif);
+  const yil = atif.match(/\d{4}[a-z]?/)?.[0];
+  const soyadlar = atif.match(SOYAD_ATIFTA) ?? [];
+  if (!yil || soyadlar.length === 0) return false;
+  const sinirli = (s: string) => new RegExp(`(?<![\\p{L}\\p{N}])${kacir(s)}(?![\\p{L}\\p{N}])`, "u").test(kunye);
+  return sinirli(yil) && soyadlar.every(sinirli);
+}
 
 /**
  * Alıntılar gönderilen sayfalarda geçiyor mu (sayfa gerekirse düzeltilir),
- * "bulundu" cevap alıntılı mı, sayılar ve atıflar kaynakta mı.
+ * "bulundu" cevap alıntılı mı, sayılar ve atıflar kaynakta mı. Kaynağın kendi
+ * künyesi serbest; "bulunamadı" cevabında sorudaki atıf varsa model metni
+ * atılır ve sunucunun sabit ret metni döner (sunucuMetni).
  */
-export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru: string): KaynakDenetimi {
+export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru: string, kunye = "", dil: Dil = "tr"): KaynakDenetimi {
   const duzeltilmis: KaynakAlintisi[] = [];
   for (const alinti of cevap.alintilar) {
     const belirtilen = sayfalar.find((s) => s.num === alinti.sayfa);
@@ -177,9 +256,29 @@ export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru
 
   const kaynakMetni = sayfalar.map((s) => s.text).join("\n");
   // Künye önce: uydurma bir atfın yılı sayı denetimine de takılır, ama öğrenciye doğru sebep "kaynakta olmayan atıf".
-  const kunye = baglamDisiKunye(cevap.cevap, kaynakMetni);
-  if (kunye.length) return { gecti: false, neden: "kunye", ayrinti: kunye };
-  const uydurma = uydurmaSayilar(cevap.cevap, kaynakMetni, soru);
+  const soruDuz = bosluksuz(soru);
+  const atiflar = baglamDisiKunye(cevap.cevap, kaynakMetni);
+  const kendiAtiflari = atiflar.filter((atif) => kaynaginKendiAtfi(atif, kunye));
+  const soruAtiflari = cevap.bulundu === false ? atiflar.filter((atif) => !kendiAtiflari.includes(atif) && soruDuz.includes(bosluksuz(atif))) : [];
+  const izinsiz = atiflar.filter((atif) => !kendiAtiflari.includes(atif) && !soruAtiflari.includes(atif));
+  if (izinsiz.length) return { gecti: false, neden: "kunye", ayrinti: izinsiz };
+  /*
+    Kaynağın kendi atfındaki yıl ("Kaya (2021)") sayfa metninde geçmeyebilir:
+    yıl künye satırında. Künyenin bütün sayılarını serbest bırakmak cilt ve
+    sayfa numarasını ("12", "201") veri değeri gibi yazmaya kapı açardı; bu
+    yüzden yalnızca kaynağın kendisi olarak tanınan atıf DİZESİ sayı
+    denetiminden önce çıkarılır, cevabın geri kalanı aynen denetlenir.
+  */
+  const sayiMetni = kendiAtiflari.reduce((m, atif) => m.split(atif).join(" "), cevap.cevap);
+  const uydurma = uydurmaSayilar(sayiMetni, kaynakMetni, soru);
   if (uydurma.length) return { gecti: false, neden: "uydurma_sayi", ayrinti: uydurma };
+  if (soruAtiflari.length) {
+    const tekil = [...new Set(soruAtiflari.map(bosluksuz))];
+    return {
+      gecti: true,
+      cevap: { bulundu: false, cevap: soruAtfiRetMetni(tekil, dil), alintilar: [] },
+      sunucuMetni: { neden: "soru_atfi", atiflar: tekil },
+    };
+  }
   return { gecti: true, cevap: { ...cevap, alintilar: duzeltilmis } };
 }

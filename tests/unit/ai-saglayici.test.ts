@@ -6,8 +6,10 @@ import {
   aiKurulumSorunu,
   aiYapilandirildi,
   bicim,
+  bilinenBayraklar,
   parametreDusur,
   saglayiciHatasi,
+  sor,
   yanitMetni,
   yetenekModeli,
 } from "../../lib/ai/saglayici";
@@ -210,4 +212,66 @@ describe("İngilizce hata metinleri", () => {
 test("kurulum sorunu İngilizce", () => {
   process.env.AI_TABAN_URL = "10.0.0.5:11434/v1";
   assert.match(aiKurulumSorunu("en") ?? "", /^The AI server address could not be read \(AI_TABAN_URL\)/);
+});
+
+describe("bilinen modelin başlangıç bayrakları (RC06i, 17.11.2026)", () => {
+  test("claude-sonnet-5: ne temperature ne prefill (canlıda ve RC06i'de ikisi de 400)", () => {
+    assert.deepEqual(bilinenBayraklar("claude-sonnet-5", "anthropic"), { json: false, sicaklik: false });
+  });
+
+  test("5 ailesi ve 4.7/4.8: ikisi de kapalı; sağlayıcı öneki ve tarih eki model kimliğini değiştirmez", () => {
+    for (const m of ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2", "claude-mythos-5-1", "claude-opus-4-8", "claude-opus-4-7", "anthropic.claude-opus-5-5", "us.anthropic.claude-sonnet-5", "Claude-Sonnet-5"])
+      assert.deepEqual(bilinenBayraklar(m, "anthropic"), { json: false, sicaklik: false }, m);
+  });
+
+  test("Opus/Sonnet 4.6: yalnız prefill kapalı, sıcaklık gönderilir", () => {
+    assert.deepEqual(bilinenBayraklar("claude-opus-4-6", "anthropic"), { json: false, sicaklik: true });
+    assert.deepEqual(bilinenBayraklar("claude-sonnet-4-6", "anthropic"), { json: false, sicaklik: true });
+  });
+
+  test("Haiku 4.5 ve eski modeller tabloda yok: eski davranış (öğrenme) sürer", () => {
+    for (const m of ["claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-5-20251101", "claude-sonnet-50", "qwen2.5:14b-instruct"])
+      assert.equal(bilinenBayraklar(m, "anthropic"), undefined, m);
+  });
+
+  test("OpenAI tel biçiminde tablo uygulanmaz (ağ geçidi model adını kendisi çevirir)", () => {
+    assert.equal(bilinenBayraklar("claude-sonnet-5", "openai"), undefined);
+  });
+});
+
+describe("sor(): bilinen modelde ilk istek reddedilecek parametreyi taşımaz", () => {
+  const gercekFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = gercekFetch;
+  });
+
+  async function ilkGovde(model: string, taban: string) {
+    process.env.AI_TABAN_URL = taban;
+    process.env.AI_BICIM = "anthropic";
+    process.env.AI_ANAHTAR = "test-degil";
+    const govdeler: Record<string, unknown>[] = [];
+    globalThis.fetch = (async (_adres: string, secenek: { body: string }) => {
+      govdeler.push(JSON.parse(secenek.body) as Record<string, unknown>);
+      return new Response(JSON.stringify({ content: [{ type: "text", text: '{"tamam": true}' }], stop_reason: "end_turn" }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await sor([{ rol: "sistem", metin: "s" }, { rol: "kullanici", metin: "k" }], { model, jsonBekle: true, sicaklik: 0 });
+    return govdeler;
+  }
+
+  test("claude-sonnet-5: tek istek, temperature yok, son mesaj kullanıcının", async () => {
+    // Eskiden: 400 (temperature) → 400 (prefill) → 200; soğuk örnek başına üç istek.
+    const govdeler = await ilkGovde("claude-sonnet-5", "http://127.0.0.1:1/v1-sonnet5");
+    assert.equal(govdeler.length, 1);
+    assert.equal("temperature" in govdeler[0], false);
+    const mesajlar = govdeler[0].messages as { role: string }[];
+    assert.equal(mesajlar.at(-1)?.role, "user");
+  });
+
+  test("claude-haiku-4-5: davranış değişmedi (temperature ve prefill gönderilir)", async () => {
+    const govdeler = await ilkGovde("claude-haiku-4-5-20251001", "http://127.0.0.1:1/v1-haiku45");
+    assert.equal(govdeler.length, 1);
+    assert.equal(govdeler[0].temperature, 0);
+    const mesajlar = govdeler[0].messages as { role: string; content: string }[];
+    assert.deepEqual(mesajlar.at(-1), { role: "assistant", content: "{" });
+  });
 });

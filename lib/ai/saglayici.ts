@@ -267,6 +267,39 @@ export function parametreDusur(
 const ogrenilen = new Map<string, IstekBayraklari>();
 const ogrenmeAnahtari = (model: string) => `${tabanUrl()}|${model}`;
 
+/*
+  BİLİNEN MODELİN BAŞLANGIÇ BAYRAKLARI (17.11.2026, RC06i gerçek AI kabulü).
+  Öğrenme süreç belleğinde; sunucusuz dağıtımda her soğuk örnek ilk çağrıda
+  iki reddi baştan yaşıyordu: claude-sonnet-5 ile ölçüldü, bir yetenek
+  çağrısı 3 sağlayıcı isteğine (400 temperature, 400 prefill, 200) ve ~0,4 sn
+  gecikmeye mal oldu. Anthropic'in belgelediği model yüzeyi:
+  - prefill (son asistan turu) 400: Opus/Sonnet 4.6 ve sonrası, 5 ailesinin
+    tamamı (Opus, Sonnet, Haiku, Fable, Mythos).
+  - temperature: Opus 4.7/4.8, Sonnet 5, Opus 5/5.5, Fable/Mythos'ta
+    kaldırıldı (400); Sonnet 5.5 ve Haiku 5.5 varsayılan dışı değeri
+    reddediyor (biz 0 ya da 0,2 gönderiyoruz).
+  Haiku 4.5 ve 4.6 öncesi modeller ikisini de kabul ediyor; tabloda yoklar.
+  YALNIZCA Anthropic tel biçiminde: OpenAI uyumlu bir ağ geçidi aynı model
+  adını kendi kurallarıyla çeviriyor olabilir, orada eski davranış sürer.
+  Tablo bir İYİMSERLİK değil KÖTÜMSERLİK: yanlışsa bedeli JSON prefill'inin
+  ya da sıcaklığın gönderilmemesidir (istem biçimi ve toleranslı çözümleyici
+  yine çalışır), istek düşmez. Tablo dışı her model için parametreDusur
+  ile öğrenme aynen duruyor.
+  Saf fonksiyon; testi tests/unit/ai-saglayici.test.ts.
+*/
+const PREFILL_YOK = /^claude-(?:(?:opus|sonnet|haiku|fable|mythos)-5(?:$|[-.@])|opus-4-[678](?:$|[-@])|sonnet-4-6(?:$|[-@]))/;
+const SICAKLIK_YOK = /^claude-(?:(?:opus|sonnet|haiku|fable|mythos)-5(?:$|[-.@])|opus-4-[78](?:$|[-@]))/;
+
+export function bilinenBayraklar(model: string, bicimi: Bicim): IstekBayraklari | undefined {
+  if (bicimi !== "anthropic") return undefined;
+  // Sağlayıcı öneki ("anthropic.claude-…", "us.anthropic.claude-…") ve büyük harf model kimliğini değiştirmez.
+  const ad = model.trim().toLowerCase().replace(/^(?:[a-z]{2}\.)?anthropic\./, "");
+  const prefill = PREFILL_YOK.test(ad);
+  const sicaklik = SICAKLIK_YOK.test(ad);
+  if (!prefill && !sicaklik) return undefined;
+  return { json: !prefill, sicaklik: !sicaklik };
+}
+
 type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBayraklari;
 
 /*
@@ -363,7 +396,8 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   const model =
     secenek.model ?? yetenekModeli(secenek.yetenek) ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
   const bicimi = bicim();
-  const bilinen = ogrenilen.get(ogrenmeAnahtari(model));
+  // Önce bu süreçte öğrenilen, yoksa belgelenmiş model yüzeyi (bilinenBayraklar).
+  const bilinen = ogrenilen.get(ogrenmeAnahtari(model)) ?? bilinenBayraklar(model, bicimi);
   let istek: Istek = {
     model,
     mesajlar,
