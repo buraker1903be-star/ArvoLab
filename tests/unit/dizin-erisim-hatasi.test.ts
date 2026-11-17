@@ -234,9 +234,16 @@ describe("PDF araması geçici arızayı 'kayıt yok' yapmaz", () => {
   });
   test("kaynak sohbeti ortak 20 MB sabitini kullanıyor", () => {
     assert.equal(PDF_EN_FAZLA_BAYT, 20 * 1024 * 1024);
+    /*
+      16.11.2026 (Yazım Stüdyosu): PDF okuma kaynak sohbetinden ortak modüle
+      taşındı (lib/kaynak-pdf-okuma.ts); seçim doğrulaması da aynı okumayı
+      kullanıyor. Sınır orada, sohbet eylemi onu çağırıyor.
+    */
+    const okuma = readFileSync("lib/kaynak-pdf-okuma.ts", "utf8");
+    assert.match(okuma, /dosya\.size > PDF_EN_FAZLA_BAYT/);
     const sohbet = readFileSync("app/actions/ai-kaynak-sohbeti.ts", "utf8");
-    assert.match(sohbet, /const EN_BUYUK_PDF = PDF_EN_FAZLA_BAYT;/);
-    assert.doesNotMatch(sohbet, /25 \* 1024 \* 1024|en fazla 25 MB|25 MB at most/);
+    assert.match(sohbet, /kaynakPdfSayfalari\(/);
+    for (const metin of [okuma, sohbet]) assert.doesNotMatch(metin, /25 \* 1024 \* 1024|en fazla 25 MB|25 MB at most/);
   });
 });
 

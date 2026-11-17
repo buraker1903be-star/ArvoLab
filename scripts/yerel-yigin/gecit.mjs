@@ -11,7 +11,8 @@
 import http from "node:http";
 
 const PORT = Number(process.env.GECIT_PORT ?? 54401);
-const HEDEF = { "/auth/v1": 59998, "/rest/v1": 53001 };
+// /storage/v1 → storage-api (kur-depo.sh ile; kur.sh kurmaz, o zaman istek bağlantı hatası alır).
+const HEDEF = { "/auth/v1": 59998, "/rest/v1": 53001, "/storage/v1": 55000 };
 let kanca = null; // { yontem, yolIcerir, eylem: { yontem, yol, basliklar, govde } }
 const kancaGecmisi = [];
 
