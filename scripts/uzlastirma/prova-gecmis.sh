@@ -5,7 +5,7 @@
 # 1) Production benzeri şema + taklit; geçmiş tablosuna Production'daki 12 eski kayıt (sürüm + ad).
 # 2) Yer tutucusuz depo: CLI ne görüyor? (beklenen: uzak-yalnız sürümler yüzünden durur)
 # 3) Yer tutucular eklenir: CLI listesi; db push --dry-run neyi uygulayacağını söyler (109 bekleyen).
-# 4) Dalga A (100 sürüm) repair; bekleyen yalnızca paket sürümleri.
+# 4) Dalga A (97 sürüm) repair; 4b) KISMİ 3 sürüm ayrı adımda; bekleyen yalnızca paket sürümleri.
 # 5) P1..P6 (+P8) uygulanır, her paketten sonra kendi dalga-B sürümleri repair.
 # 6) Son: bekleyen 0, uzak-yalnız 0; repair şemayı değiştirmedi (özet eşit).
 # Kullanım: SUPABASE_CLI=<supabase.js yolu> scripts/uzlastirma/prova-gecmis.sh
@@ -62,6 +62,13 @@ echo "== 4) Dalga A repair ($(wc -l < "$G/dalga-A.txt") sürüm)"
 echo "   liste: $(sayim) · dry-run bekleyen: $(bekleyen)"
 ozet gecmis-A
 echo "   repair şemayı değiştirdi mi: $(fark gecmis-once gecmis-A) satır"
+
+# KISMİ kayıtlar ayrı onay maddesi (RAPOR-RC06c Onay K): Dalga A'dan sonra, kendi adımında.
+echo "== 4b) Dalga A-K: KISMİ kayıtlar ($(wc -l < "$G/dalga-A-kismi.txt") sürüm, ayrı onay)"
+"${CLI[@]}" migration repair --status applied $(cat "$G/dalga-A-kismi.txt") --db-url "$URL" --workdir "$W" >/dev/null 2>&1
+echo "   liste: $(sayim) · dry-run bekleyen: $(bekleyen)"
+ozet gecmis-AK
+echo "   repair şemayı değiştirdi mi: $(fark gecmis-A gecmis-AK) satır"
 
 echo "== 5) Paketler + dalga B"
 for p in P1:P1_rate_limit_take P2:P2_metin_surum_damgasi P6:P6_destek_danismanlik_guard P4:P4_kilavuz_secimi P3:P3_kvkk_ve_deneme_isareti P5:P5_g1_kimlik; do

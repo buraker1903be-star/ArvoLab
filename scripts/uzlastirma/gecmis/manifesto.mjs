@@ -85,7 +85,11 @@ for (const r of satirlar) {
     gerekce = veri ? `veri işlemi yeniden çalıştırılmaz: ${veri[2]}` : "DDL idempotent; ara hâller kalıcı değil";
   }
   let kayit = "TAM";
-  if (KISMI[r.v]) { kayit = `KISMİ — var: ${KISMI[r.v].var} · yok: ${KISMI[r.v].yok}`; }
+  /*
+    KISMİ kayıtlar Dalga A'dan AYRILDI (RC06d): eksik nesneleri olan bir sürümü "uygulandı" yazmak
+    kendi başına bir karardır; paketten bağımsız 97 sürümle aynı onayın içinde kaybolmamalı.
+  */
+  if (KISMI[r.v]) { kayit = `KISMİ — var: ${KISMI[r.v].var} · yok: ${KISMI[r.v].yok}`; dalga = "A-K (ayrı onay)"; onKosul = "Dalga A tamam + KISMİ kayıt onayı (RAPOR-RC06c Onay K)"; }
   else if (NET[r.v]) { kayit = `NET-EŞDEĞER — ${NET[r.v]}`; }
   else if (DOLAYLI[r.v]) { kayit = "TAM (kendi içeriği)"; sonNesne = `evet (kendi nesneleri) — ${DOLAYLI[r.v]}`; }
   else if (r.durum === "EKSİK" || paket) { kayit = `TAM — ancak ${paket} uygulanıp doğrulandıktan sonra`; }
@@ -99,8 +103,9 @@ const eski = fs.readdirSync(`${KOK}yer-tutucular`).sort().map((f) => {
 const hepsi = [...eski, ...satir].sort((a, b) => a.surum.localeCompare(b.surum));
 
 fs.writeFileSync(`${KOK}manifesto.tsv`, ["sürüm\tad\tsınıf\tson_nesne\ttarihsel_etki\tkayıt_durumu\tişlem\tdalga\tön_koşul\tgerekçe", ...hepsi.map((s) => [s.surum, s.ad, s.sinif, s.sonNesne, s.tarihsel, s.kayit, s.islem, s.dalga, s.onKosul, s.gerekce].join("\t"))].join("\n") + "\n");
-const dalga = (d) => hepsi.filter((s) => s.dalga.startsWith(d) && s.islem.startsWith("repair")).map((s) => s.surum);
+const dalga = (d) => hepsi.filter((s) => s.dalga === d && s.islem.startsWith("repair")).map((s) => s.surum);
 fs.writeFileSync(`${KOK}dalga-A.txt`, dalga("A").join("\n") + "\n");
+fs.writeFileSync(`${KOK}dalga-A-kismi.txt`, dalga("A-K (ayrı onay)").join("\n") + "\n");
 for (const p of ["P1", "P2", "P3", "P4", "P5", "P6"]) fs.writeFileSync(`${KOK}dalga-B-${p}.txt`, hepsi.filter((s) => s.dalga === `B (${p} sonrası)`).map((s) => s.surum).join("\n") + "\n");
 
 const say = (f) => hepsi.filter(f).length;
@@ -113,7 +118,7 @@ const md = [
   "veri adımı olanlarda son hâl tek başına kanıt değildir, son koşul ayrıca ölçüldü (17.11.2026, salt okunur).",
   "",
   `Toplam ${hepsi.length} kayıt: depo ${satir.length} + Production'daki eski ${eski.length}.`,
-  `Dalga A (paketten bağımsız): ${dalga("A").length} · Dalga B (paket sonrası): ${say((s) => s.dalga.startsWith("B"))} · Dokunulmayan eski kayıt: ${eski.length}.`,
+  `Dalga A (paketten bağımsız): ${dalga("A").length} · Dalga A-K (KISMİ, ayrı onay): ${dalga("A-K (ayrı onay)").length} · Dalga B (paket sonrası): ${say((s) => s.dalga.startsWith("B"))} · Dokunulmayan eski kayıt: ${eski.length}.`,
   "",
   "Kayıt durumu: **TAM** = içeriği Production'da (paketli olanlar paketten SONRA); **KISMİ** = kabul edilen sapma, eksik parça adıyla yazılı ve yeni bir migration'la teslim edilecek; **NET-EŞDEĞER** = sonraki migration içeriğini geri alıyor. CLI'ın \"bekleyen 0\" demesi şemanın depoyla aynı olduğu anlamına GELMEZ (RAPOR-RC06c §2).",
   "",
@@ -125,4 +130,4 @@ const md = [
   "",
 ].join("\n");
 fs.writeFileSync(`${KOK}MANIFESTO.md`, md);
-console.log(`${hepsi.length} kayıt · A=${dalga("A").length} · B=${say((s) => s.dalga.startsWith("B"))} · eski=${eski.length}`);
+console.log(`${hepsi.length} kayıt · A=${dalga("A").length} · A-K=${dalga("A-K (ayrı onay)").length} · B=${say((s) => s.dalga.startsWith("B"))} · eski=${eski.length}`);
