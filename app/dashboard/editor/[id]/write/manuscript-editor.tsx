@@ -77,6 +77,7 @@ import {
   TableCellsSplit,
   Sparkles,
   FileText,
+  Info,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -986,8 +987,14 @@ export default function ManuscriptEditor({
   */
   const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
   const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
-  /* İnceleme paneli varsayılan AÇIK: kılavuz ve yapı uyarıları orada; kapatan öğrenci bilerek kapatır. */
-  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  /*
+    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
+    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
+    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
+    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
+    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
+  */
+  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
   /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
@@ -2185,9 +2192,10 @@ export default function ManuscriptEditor({
                 çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
                 öğrenci hangisinin neye baktığını ayırt edemiyordu.
               */}
+              {/* İkincil (17.11.2026): yazım ekranında belirgin bir birincil düğme yok; odak belgede. */}
               <button
                 type="button"
-                className="projects-primary-button"
+                className="projects-filter-button"
                 onClick={handleCheck}
                 disabled={checking}
                 title={t({
@@ -2522,10 +2530,24 @@ export default function ManuscriptEditor({
           </ToolbarButton>
         </div>
         <div className="arac-grup arac-grup-son">
-          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          {/*
+            "Bul" ve "Odak modu" 17.11.2026'dan beri "Belge" menüsünde (premium
+            çalışma alanı: ince araç çubuğu). Eskiden çubuktaydılar ve 1440 px'te
+            çubuk 323 px taşıyor, sağdaki "Kontroller" kaydırmadan görünmüyordu.
+            Ctrl+F ve Esc kısayolları değişmedi.
+          */}
+          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Bul, odak modu, sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Find, focus mode, page setup, cover, share, versions, shortcuts" })} etiketiGizle>
+          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul ve değiştir", en: "Find and replace" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
             <Search size={16} />
           </ToolbarButton>
-          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Page setup, cover, share, versions, shortcuts" })} etiketiGizle>
+          <ToolbarButton
+            label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
+            metin={odak ? t({ tr: "Odak modundan çık", en: "Exit focus mode" }) : t({ tr: "Odak modu", en: "Focus mode" })}
+            active={odak}
+            onClick={() => setOdak((o) => !o)}
+          >
+            {odak ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
@@ -2544,17 +2566,11 @@ export default function ManuscriptEditor({
           </AracMenusu>
           <ToolbarButton
             label={incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
+            metin={t({ tr: "Kontroller", en: "Checks" })}
             active={incelemeAcik}
             onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}
           >
             {incelemeAcik ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </ToolbarButton>
-          <ToolbarButton
-            label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
-            active={odak}
-            onClick={() => setOdak((o) => !o)}
-          >
-            {odak ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </ToolbarButton>
         </div>
       </div>
@@ -2846,28 +2862,29 @@ export default function ManuscriptEditor({
           </div>
         </div>
       ) : !guideline && isThesis ? (
-        <div className="guideline-applied-banner" data-tone="muted" role="status">
-          <div>
-            <strong>{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</strong>
-            {/* Eskiden yalnızca "kurumu seçin" deniyordu: kataloğunda kılavuzu
-                olmayan (yurt dışındaki her) öğrenci kurumu seçse de bir şey
-                değişmiyordu. Asıl yol kendi kılavuzunu yüklemek. */}
-            <span>
-              {t({
-                tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-                en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
-              })}
-            </span>
-          </div>
-          <div className="cluster">
-            <Link href={calismaAdresi(projectId, { kilavuz: true })} className="projects-primary-button">
-              {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
-            </Link>
-            <Link href={editHref} className="projects-filter-button">
-              {t({ tr: "Kurumu seç", en: "Select institution" })}
-            </Link>
-          </div>
-        </div>
+        /*
+          KOMPAKT KILAVUZ BİLGİSİ (17.11.2026, onaylı tasarım): eskiden iki
+          satır açıklama ve iki büyük düğmeyle belgenin üstünde ~150 px'lik
+          bir kutuydu; telefonda belge metnini ilk ekranın altına itiyordu.
+          Şimdi tek satır: durum + iki bağlantı. Açıklama title'da ve
+          ekran okuyucuya açık (role=status). Asıl yol hâlâ kendi kılavuzunu
+          yüklemek; "kurumu seç" ikinci sırada (eskiden yalnızca o vardı ve
+          kataloğunda kılavuzu olmayan öğrencide bir şey değiştirmiyordu).
+        */
+        <p
+          className="kilavuz-satiri"
+          role="status"
+          title={t({
+            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
+            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
+          })}
+        >
+          <Info size={15} aria-hidden="true" />
+          <span>{t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}</span>
+          <Link href={calismaAdresi(projectId, { kilavuz: true })}>{t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}</Link>
+          <span aria-hidden="true">·</span>
+          <Link href={editHref}>{t({ tr: "Kurumu seç", en: "Select institution" })}</Link>
+        </p>
       ) : null}
 
       {guideline && syncMode === "offer" ? (
