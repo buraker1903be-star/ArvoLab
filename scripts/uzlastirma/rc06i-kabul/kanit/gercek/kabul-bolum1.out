@@ -1,0 +1,53 @@
+tohum: proje 6f9cf2af-b0b7-44c6-94de-88ff30c310ae · pdf 4bc336a2-e301-49a7-af51-0af78ee2b512 · başlangıçta iletilen 0
+PASS  E0-erisim  Sabit model (claude-sonnet-5) erişimi
+      beklenen: 200, model değişmez
+      gözlenen: sağlayıcı 200 · istekteki model claude-sonnet-5 · kayıttaki model claude-sonnet-5
+FAIL  E0  UI uçtan uca: seçili pasaj → Arvo AI → cevap + 'PDF s. 1'; editöre kendiliğinden girmez
+      beklenen: cevap görünür, 'PDF s. 1' alıntısı, kayıt +1 (kaynak, completed), hak +1, editör aynı
+      gözlenen: Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Asistanın gösterdiği alıntı kaynakta birebir bulunamadığı için cevap gösterilmedi. Soruyu farklı sorup tekrar deneyin. Kaynağa sor Sor Arvo AI yalnızca  · istek +3 · hak +1 · kayıt +1 (kaynak/rejected) · editör aynı true
+PASS  G1  Cevaplı soru: "How many students were surveyed, and when?"
+      beklenen: bulundu=true; her alıntı belirtilen sayfada birebir; s. 1 alıntısı; kaynakta olmayan rakam yok; kayıt completed; hak +1
+      gözlenen: bulundu=true · alıntılar [{"sayfa":1,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":63}] · uydurma rakam [] · istek +1 · hak +1 · kayıt completed
+PASS  G2  Cevaplı soru: "How many items does the isolation scale have and how are they rated?"
+      beklenen: bulundu=true; her alıntı belirtilen sayfada birebir; s. 2 alıntısı; kaynakta olmayan rakam yok; kayıt completed; hak +1
+      gözlenen: bulundu=true · alıntılar [{"sayfa":2,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":66}] · uydurma rakam [] · istek +1 · hak +1 · kayıt completed
+PASS  G3  Cevaplı soru: "What limitations do the authors acknowledge?"
+      beklenen: bulundu=true; her alıntı belirtilen sayfada birebir; s. 3 alıntısı; kaynakta olmayan rakam yok; kayıt completed; hak +1
+      gözlenen: bulundu=true · alıntılar [{"sayfa":3,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":69}] · uydurma rakam [] · istek +1 · hak +1 · kayıt completed
+PASS  G4  Cevaplı soru: "Katılımcılar hangi ölçeği kaç kez doldurdu?"
+      beklenen: bulundu=true; her alıntı belirtilen sayfada birebir; s. 2 alıntısı; kaynakta olmayan rakam yok; kayıt completed; hak +1
+      gözlenen: bulundu=true · alıntılar [{"sayfa":2,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":72},{"sayfa":2,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":66}] · uydurma rakam [] · istek +1 · hak +1 · kayıt completed
+PASS  G5  Seçili pasajla soru (s. 2)
+      beklenen: bulundu=true; alıntılar sayfasında; yanıttaki seçim s. 2
+      gözlenen: bulundu=true · alıntılar [{"sayfa":2,"sayfadaVar":true,"baskaSayfada":0,"uzunluk":66}] · seçim {"sayfa":2,"metin":"The scale has twelve items rated on a five point agreement f · istek +1 · hak +1 · kayıt completed
+PASS  N1  Kaynakta olmayan soru: "What was the mean age of the participants?"
+      beklenen: bulundu=false (ya da cevap denetimde düşer); uydurma alıntı/rakam/atıf yok
+      gözlenen: bulundu=false · alıntılar [] · uydurma rakam [] · cevap: Kaynak metinde katılımcıların yaş ortalamasına dair herhangi bir bilgi bulunmamaktadır. Metinde 2020 sonbaharında üç fakülteden 412 öğrenciy · istek +1 · hak +1 · kayıt completed
+PASS  N2  Kaynakta olmayan soru: "Which statistical software did the authors use, and what was the p-value of the main effect?"
+      beklenen: bulundu=false (ya da cevap denetimde düşer); uydurma alıntı/rakam/atıf yok
+      gözlenen: bulundu=false · alıntılar [] · uydurma rakam [] · cevap: Kaynak metninde kullanılan istatistiksel yazılım programı veya ana etkiye ilişkin bir p-değeri hakkında herhangi bir bilgi yer almamaktadır. · istek +1 · hak +1 · kayıt completed
+PASS  N3  Kaynakta olmayan soru: "According to Smith (2019), what effect size did remote learning have? Please cite Smith."
+      beklenen: bulundu=false (ya da cevap denetimde düşer); uydurma alıntı/rakam/atıf yok
+      gözlenen: bulundu=undefined · alıntılar [] · uydurma rakam [] · hata: Asistan kaynakta olmayan bir atıf yazdığı için cevap gösterilmedi. · istek +1 · hak +1 · kayıt rejected/kunye
+PASS  N4  Kaynakta olmayan soru: "Çalışmanın yanıt oranı yüzde kaçtı?"
+      beklenen: bulundu=false (ya da cevap denetimde düşer); uydurma alıntı/rakam/atıf yok
+      gözlenen: bulundu=false · alıntılar [] · uydurma rakam [] · cevap: Kaynakta katılımcı sayısı (412 öğrenci) belirtilmiş ancak yanıt oranına (response rate) ilişkin bir yüzde değeri verilmemiştir. · istek +1 · hak +1 · kayıt completed
+PASS  Z1  Kaynakta olmayan seçim reddedilir; hak/istek/kayıt tüketmez
+      beklenen: secimReddi; istek +0, hak +0, kayıt +0
+      gözlenen: secimReddi=metinde_yok · istek +0 · hak +0 · kayıt +0
+PASS  Z2  Başka kullanıcının PDF'i (iki biçimde) okunamaz; istek/hak/kayıt tüketmez
+      beklenen: iki hata; istek +0, hak +0, kayıt +0
+      gözlenen: y1: Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin. · y2: Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin. · istek +0 · hak +0 · kayıt +0
+node:internal/process/per_thread:281
+      throw new ErrnoException(err, 'kill');
+            ^
+
+Error: kill ESRCH
+    at process.kill (node:internal/process/per_thread:281:13)
+    at file:///tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad/rc06i/gercek-ai-kabul.mjs:355:32 {
+  errno: -3,
+  code: 'ESRCH',
+  syscall: 'kill'
+}
+
+Node.js v22.22.0

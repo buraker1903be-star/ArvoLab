@@ -1,0 +1,367 @@
+// RC06i GERÇEK AI KABULÜ — kaynakla sohbet uçtan uca (17.11.2026). Depo DIŞI betik.
+// Yerel yığın (127.0.0.1) + next start (aday derleme) + sayaç vekili (≤30 sağlayıcı isteği).
+// Anahtar bu süreçte YOK: yalnızca next start sürecinde. Betik istem/yanıt gövdesini değil,
+// değerlendirme için gereken alanları yazar.
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync, spawn } from "node:child_process";
+import { createRequire } from "node:module";
+
+const ADAY = "/home/user/arvolab-aday";
+const require = createRequire(path.join(ADAY, "package.json"));
+const { chromium } = require("playwright");
+const { sentetikPdf } = await import(path.join(ADAY, "scripts/yerel-yigin/sentetik-pdf.mjs"));
+
+const UYGULAMA = "http://127.0.0.1:3124";
+const GECIT = "http://127.0.0.1:54401";
+const CIKTI = process.argv[2];
+const GUNLUK = path.join(CIKTI, "saglayici-istekleri.jsonl");
+const BUTCE_DUR = Number(process.env.BUTCE_DUR ?? 24); // bu sayıya ulaşınca modelli senaryolar durur (bir çağrı en çok 3 istek)
+const SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
+const imzala = (yuk) => {
+  const b = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const g = `${b({ alg: "HS256", typ: "JWT" })}.${b({ iss: "yerel-yigin", iat: 1763200000, exp: 2079000000, ...yuk })}`;
+  return `${g}.${crypto.createHmac("sha256", SIR).update(g).digest("base64url")}`;
+};
+const ANON = imzala({ role: "anon" });
+const SERVIS = imzala({ role: "service_role" });
+const psql = (sql) =>
+  execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], {
+    env: { ...process.env, PGPASSWORD: "yerel-yigin" },
+    encoding: "utf8",
+  }).trim();
+const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+
+const iletilen = () =>
+  fs.existsSync(GUNLUK) ? fs.readFileSync(GUNLUK, "utf8").split("\n").filter((s) => s.includes('"iletildi":true')).length : 0;
+const gunlukSatirlari = () => (fs.existsSync(GUNLUK) ? fs.readFileSync(GUNLUK, "utf8").trim().split("\n").filter(Boolean).map((s) => JSON.parse(s)) : []);
+
+const sonuclar = [];
+const kayit = (kimlik, ad, beklenen, gozlenen, sonuc) => {
+  sonuclar.push({ kimlik, ad, beklenen, gozlenen, sonuc });
+  console.log(`${sonuc}  ${kimlik}  ${ad}\n      beklenen: ${beklenen}\n      gözlenen: ${gozlenen}`);
+};
+const yanitlar = []; // değerlendirme için: soru, cevap, alıntılar (sentetik kaynak, kişisel veri yok)
+
+async function auth(yol, { yontem = "POST", govde, belirtec = ANON, apikey = ANON } = {}) {
+  const r = await fetch(`${GECIT}/auth/v1${yol}`, {
+    method: yontem,
+    headers: { apikey, Authorization: `Bearer ${belirtec}`, "Content-Type": "application/json" },
+    body: govde ? JSON.stringify(govde) : undefined,
+  });
+  const t = await r.text();
+  let json = null;
+  try {
+    json = JSON.parse(t);
+  } catch {}
+  return { durum: r.status, json };
+}
+const ek = crypto.randomBytes(3).toString("hex");
+const SOZLESME_SURUMU = fs.readFileSync(path.join(ADAY, "lib/sozlesme/kullanim-sozlesmesi.ts"), "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+async function kullaniciAc(ad) {
+  const adres = `${ad}-${ek}@yerel.test`;
+  const parola = `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
+  const r = await auth("/admin/users", { govde: { email: adres, email_confirm: true }, belirtec: SERVIS, apikey: SERVIS });
+  if (r.durum >= 300) throw new Error(`kullanıcı açılamadı: ${r.durum}`);
+  const g = await auth(`/admin/users/${r.json.id}`, { yontem: "PUT", govde: { password: parola }, belirtec: SERVIS, apikey: SERVIS });
+  if (g.durum >= 300) throw new Error(`şifre konamadı: ${g.durum}`);
+  psql(`insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi) values ('${r.json.id}', 'kullanim_sozlesmesi', '${SOZLESME_SURUMU}', 'tr', '${"0".repeat(64)}', 'giris', true)`);
+  const t = await auth("/token?grant_type=password", { govde: { email: adres, password: parola } });
+  if (t.durum !== 200) throw new Error(`belirteç alınamadı: ${t.durum}`);
+  return { id: r.json.id, adres, parola, erisim: t.json.access_token };
+}
+const kunyeAnahtari = (k) =>
+  k.replace(/I/g, "ı").replace(/İ/g, "i").toLowerCase().replace(/https?:\/\/\S+/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim().slice(0, 400);
+
+const SAYFALAR = [
+  [
+    "Remote learning and student wellbeing",
+    "Kaya, A. Journal of Synthetic Studies 12(3)",
+    "",
+    "Remote learning increased reported isolation among first-year students.",
+    "The effect was strongest in programmes without weekly live sessions.",
+    "Students who joined peer study groups reported lower isolation scores.",
+    "We surveyed 412 students across three faculties in autumn 2020.",
+  ],
+  [
+    "Method",
+    "Participants completed the Synthetic Isolation Scale at two time points.",
+    "The scale has twelve items rated on a five point agreement format.",
+    "Internal consistency was acceptable in both waves of the survey.",
+  ],
+  [
+    "Discussion",
+    "Structured peer contact appears to buffer the isolation of remote study.",
+    "Institutions should schedule regular synchronous sessions for new cohorts.",
+    "Limitations include self-report measures and a single country sample.",
+  ],
+];
+const norm = (s) => String(s).replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim().toLowerCase();
+const SAYFA_METNI = SAYFALAR.map((s) => norm(s.join(" ")));
+const KAYNAK_TUM = SAYFA_METNI.join(" ");
+
+async function depoyaYukle(k, depoYolu, bayt) {
+  const r = await fetch(`${GECIT}/storage/v1/object/project-files/${depoYolu}`, {
+    method: "POST",
+    headers: { apikey: ANON, Authorization: `Bearer ${k.erisim}`, "Content-Type": "application/pdf", "x-upsert": "true" },
+    body: bayt,
+  });
+  if (r.status >= 300) throw new Error(`depoya yüklenemedi (${r.status})`);
+}
+const ilk = (s) => s.split("\n")[0];
+
+// ── DEVAM: bölüm 1'in K kullanıcısı, projesi ve PDF'i (yerel veritabanından) ──
+const [K_ID, K_ADRES] = psql("select id, email from auth.users where email like 'gercek-ai-k-%' order by created_at desc limit 1").split("|");
+const [Y_ID, Y_ADRES] = psql("select id, email from auth.users where email like 'gercek-ai-y-%' order by created_at desc limit 1").split("|");
+async function parolaYenile(id, adres) {
+  const parola = `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
+  const g = await auth(`/admin/users/${id}`, { yontem: "PUT", govde: { password: parola }, belirtec: SERVIS, apikey: SERVIS });
+  if (g.durum >= 300) throw new Error(`şifre konamadı: ${g.durum}`);
+  const t = await auth("/token?grant_type=password", { govde: { email: adres, password: parola } });
+  if (t.durum !== 200) throw new Error(`belirteç alınamadı: ${t.durum}`);
+  return { id, adres, parola, erisim: t.json.access_token };
+}
+const K = await parolaYenile(K_ID, K_ADRES);
+const PROJE = psql(`select id from public.academic_projects where owner_id='${K.id}' limit 1`);
+const PDF = psql(`select id from public.kaynak_pdfleri where project_id='${PROJE}' limit 1`);
+const ONCEKI_MODELLI = Number(process.env.ONCEKI_MODELLI ?? 10); // bölüm 1: E0 + G1–G5 + N1–N4
+console.log(`devam: proje ${PROJE} · pdf ${PDF} · iletilen ${iletilen()} · önceki kayıt ${psql(`select count(*) from public.ai_assistant_runs where user_id='${K.id}'`)}`);
+
+const BILDIRIM = JSON.parse(fs.readFileSync(path.join(ADAY, ".next/server/server-reference-manifest.json"), "utf8"));
+const ISLEM = Object.entries(BILDIRIM.node).find(([, v]) => v.exportedName === "kaynaklaSohbet" && String(v.filename).includes("ai-kaynak-sohbeti"))[0];
+const HAK_ANAHTARI = `ai-asistan:${K.id}`;
+const hak = (id = K.id) => Number(psql(`select coalesce((select count from public.auth_rate_limits where key = 'ai-asistan:${id}'), 0)`));
+const kosuSayisi = (id = K.id) => Number(psql(`select count(*) from public.ai_assistant_runs where user_id='${id}'`));
+const sonKosu = () => {
+  const s = psql(`select capability, status, coalesce(reject_reason,''), coalesce(model,''), coalesce(provider,''), (project_id = '${PROJE}')::text, coalesce(prompt_chars,0), coalesce(output_chars,0), coalesce(duration_ms,0), (context is not null)::text from public.ai_assistant_runs where user_id='${K.id}' order by created_at desc limit 1`);
+  const [capability, status, reject_reason, model, provider, projeEslesir, prompt_chars, output_chars, duration_ms, baglamVar] = s.split("|");
+  return { capability, status, reject_reason, model, provider, projeEslesir, prompt_chars: +prompt_chars, output_chars: +output_chars, duration_ms: +duration_ms, baglamVar };
+};
+
+// ── Tarayıcı ─────────────────────────────────────────────────────────────
+const tarayici = await chromium.launch();
+async function oturum(k, projeId) {
+  const c = await tarayici.newContext({ baseURL: UYGULAMA });
+  await c.addCookies([{ name: "arvolab_dil", value: "tr", url: UYGULAMA }]).catch(() => {});
+  const s = await c.newPage();
+  await s.goto("/");
+  await s.fill('input[name="email"]', k.adres);
+  await s.fill('input[name="password"]', k.parola);
+  await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  await s.goto(`/dashboard/editor/${projeId}/write`, { timeout: 120000 });
+  await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  return { c, s };
+}
+async function cagir(s, arguman) {
+  const r = await s.evaluate(
+    async ({ kimlik, govde }) => {
+      const y = await fetch(location.pathname, { method: "POST", headers: { "Next-Action": kimlik, Accept: "text/x-component", "Content-Type": "text/plain;charset=UTF-8" }, body: govde });
+      return { durum: y.status, metin: await y.text() };
+    },
+    { kimlik: ISLEM, govde: JSON.stringify([arguman]) },
+  );
+  const satir = r.metin.split("\n").filter((x) => /^1:[{["]/.test(x)).pop();
+  try {
+    return satir ? JSON.parse(satir.slice(2)) : { _ham: r.durum };
+  } catch {
+    return { _ham: r.durum };
+  }
+}
+
+// Alıntı/sayfa doğruluğu: her alıntı belirtilen sayfanın metninde birebir (boşluk/tırnak normalize) geçmeli.
+function alintiDenetle(alintilar = []) {
+  return alintilar.map((a) => {
+    const sayfa = Number(a.sayfa);
+    const metin = norm(a.metin);
+    const sayfadaVar = sayfa >= 1 && sayfa <= SAYFALAR.length && SAYFA_METNI[sayfa - 1].includes(metin);
+    const baskaSayfada = !sayfadaVar ? SAYFA_METNI.findIndex((t) => t.includes(metin)) + 1 : 0;
+    return { sayfa, sayfadaVar, baskaSayfada, uzunluk: metin.length };
+  });
+}
+// Cevaptaki rakamlar kaynakta (ya da soruda) geçmeli.
+const rakamlar = (s) => [...String(s).matchAll(/\d+(?:[.,]\d+)?/g)].map((m) => m[0]);
+
+let butceDoldu = false;
+async function modelliSoru(s, kimlik, ad, arguman, degerlendir) {
+  if (iletilen() >= BUTCE_DUR) {
+    butceDoldu = true;
+    kayit(kimlik, ad, "—", `bütçe koruması: iletilen ${iletilen()} ≥ ${BUTCE_DUR}, senaryo koşulmadı`, "UNVERIFIED");
+    return null;
+  }
+  const once = { iletilen: iletilen(), hak: hak(), kosu: kosuSayisi() };
+  const t0 = Date.now();
+  const y = await cagir(s, arguman);
+  const sonra = { iletilen: iletilen(), hak: hak(), kosu: kosuSayisi() };
+  const kosu = sonKosu();
+  const fark = { istek: sonra.iletilen - once.iletilen, hak: sonra.hak - once.hak, kosu: sonra.kosu - once.kosu };
+  yanitlar.push({ kimlik, soru: arguman.soru, secim: arguman.secim ?? null, yanit: y, fark, kosu, sureMs: Date.now() - t0 });
+  await degerlendir(y, fark, kosu);
+  return y;
+}
+
+const { c: cK, s: sK } = await oturum(K, PROJE);
+const Y = { id: Y_ID };
+
+// ── 0) Model erişimi + UI uçtan uca: seçili pasaj → Arvo AI → PDF s. N ────
+{
+  const editorOnce = (await sK.locator(".ProseMirror").innerText()).replace(/\s+/g, " ");
+  await sK.getByRole("button", { name: /Kaynak PDF/ }).first().click();
+  await sK.waitForSelector(".kaynak-pdf-paneli select", { timeout: 60000 });
+  await sK.selectOption(".kaynak-pdf-paneli select", PDF);
+  await sK.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 90000 });
+  const SEC = "Remote learning increased reported isolation among first-year students.";
+  const ok = await sK.evaluate((ilk) => {
+    const sp = [...document.querySelectorAll(".pdf-sayfa .textLayer span")].filter((x) => x.firstChild?.nodeType === 3);
+    const b = sp.find((x) => x.textContent.includes(ilk));
+    if (!b) return false;
+    const r = document.createRange();
+    r.setStart(b.firstChild, b.textContent.indexOf(ilk));
+    r.setEnd(b.firstChild, b.textContent.indexOf(ilk) + ilk.length);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    return true;
+  }, SEC);
+  if (!ok) throw new Error("seçim kurulamadı");
+  const once = { iletilen: iletilen(), hak: hak(), kosu: kosuSayisi() };
+  await sK.getByRole("button", { name: /Arvo AI ile analiz et/ }).click();
+  await sK.waitForSelector(".kaynak-analiz .kaynak-cevap, .kaynak-analiz .kaynak-hata", { timeout: 150000 });
+  const metin = (await sK.locator(".kaynak-analiz").innerText()).replace(/\s+/g, " ");
+  const cevapVar = (await sK.locator(".kaynak-analiz .kaynak-cevap").count()) > 0;
+  const fark = { istek: iletilen() - once.iletilen, hak: hak() - once.hak, kosu: kosuSayisi() - once.kosu };
+  const kosu = sonKosu();
+  const son = gunlukSatirlari().filter((x) => x.iletildi).at(-1);
+  const editorSonra = (await sK.locator(".ProseMirror").innerText()).replace(/\s+/g, " ");
+  yanitlar.push({ kimlik: "E0r", soru: "(UI: seçili pasaj analizi)", secim: { sayfa: 1, metin: SEC }, ekran: metin.slice(0, 600), fark, kosu });
+  // Erişim: sağlayıcı 401/403/404 dönerse model erişimi yok — başka modele geçilmez, durulur.
+  if (son && [401, 403, 404].includes(son.durum)) {
+    kayit("E0r-erisim", "Sabit model (claude-sonnet-5) erişimi", "200", `sağlayıcı ${son.durum} · model ${son.model}`, "FAIL");
+  } else {
+    kayit("E0r-erisim", "Sabit model (claude-sonnet-5) erişimi", "200, model değişmez", `sağlayıcı ${son?.durum} · istekteki model ${son?.model} · kayıttaki model ${kosu.model}`, son?.durum === 200 && son?.model === "claude-sonnet-5" && kosu.model.startsWith("claude-sonnet-5") ? "PASS" : "FAIL");
+  }
+  kayit(
+    "E0r",
+    "UI uçtan uca: seçili pasaj → Arvo AI → cevap + 'PDF s. 1'; editöre kendiliğinden girmez",
+    "cevap görünür, 'PDF s. 1' alıntısı, kayıt +1 (kaynak, completed), hak +1, editör aynı",
+    `${metin.slice(0, 220)} · istek +${fark.istek} · hak +${fark.hak} · kayıt +${fark.kosu} (${kosu.capability}/${kosu.status}) · editör aynı ${editorOnce === editorSonra}`,
+    cevapVar && /PDF s\. 1/.test(metin) && fark.kosu === 1 && kosu.capability === "kaynak" && kosu.status === "completed" && fark.hak === 1 && editorOnce === editorSonra ? "PASS" : "FAIL",
+  );
+  if (cevapVar) {
+    const girdi = sK.locator(".pdf-sayfa-girdi");
+    await girdi.fill("3");
+    await girdi.press("Enter");
+    await sK.waitForTimeout(1500);
+    const oncesi = await girdi.inputValue();
+    await sK.locator(".kaynak-alintilar button, .kaynak-alintilar .result-link").first().click();
+    await sK.waitForTimeout(2000);
+    const sonrasi = await girdi.inputValue();
+    kayit("E0rb", "Alıntı bağlantısı PDF'te o sayfayı açar", "3 → 1", `${oncesi} → ${sonrasi}`, oncesi === "3" && sonrasi === "1" ? "PASS" : "FAIL");
+  }
+  if (son && [401, 403, 404].includes(son.durum)) {
+    butceDoldu = true; // model erişimi yok: diğer modelli senaryolar koşulmaz
+  }
+}
+
+// ── 4) Başarısız çağrı: sağlayıcıya ulaşılamıyor (vekil kapalı) ─────────
+{
+  const pid = execFileSync("bash", ["-c", "fuser 54950/tcp 2>/dev/null || true"], { encoding: "utf8" }).trim().split(/\s+/).filter(Boolean);
+  for (const p of pid) {
+    try {
+      process.kill(Number(p), "SIGTERM");
+    } catch {}
+  }
+  await new Promise((r) => setTimeout(r, 1000));
+  const once = { iletilen: iletilen(), hak: hak(), kosu: kosuSayisi(), satir: gunlukSatirlari().length };
+  const y = await cagir(sK, { projectId: PROJE, pdfId: PDF, soru: "How many students were surveyed?" });
+  const kosu = sonKosu();
+  const fark = { istek: iletilen() - once.iletilen, hak: hak() - once.hak, kosu: kosuSayisi() - once.kosu, satir: gunlukSatirlari().length - once.satir };
+  kayit(
+    "F1",
+    "Sağlayıcıya ulaşılamayınca: anlaşılır hata, kayıt 'failed', istek +0",
+    "hata 'bağlanılamadı'; kayıt +1 failed; sağlayıcıya istek yok",
+    `hata: ${String(y.hata ?? "").slice(0, 100)} · kayıt +${fark.kosu} ${kosu.status} · istek +${fark.istek} · günlük satırı +${fark.satir} · hak +${fark.hak}`,
+    /bağlanılamadı|connect/i.test(y.hata ?? "") && fark.kosu === 1 && kosu.status === "failed" && fark.istek === 0 && fark.satir === 0 ? "PASS" : "FAIL",
+  );
+  kayit("F1-hak", "Başarısız çağrının hak tüketimi (gözlem)", "kod: hak model çağrısından ÖNCE alınır → +1", `hak +${fark.hak}`, fark.hak === 1 ? "PASS" : "FAIL");
+  // Vekili aynı günlükle yeniden başlat: sayaç sıfırlanmamalı.
+  const log = fs.openSync(path.join(CIKTI, "vekil-3.log"), "a");
+  const v = spawn("node", [path.join(ADAY, "scripts/uzlastirma/ai-kabul/sayac-vekili.mjs")], {
+    env: { ...process.env, SINIR: "30", PORT: "54950", YUKARI_ADRES: "https://api.anthropic.com", GUNLUK },
+    detached: true,
+    stdio: ["ignore", log, log],
+  });
+  v.unref();
+  await new Promise((r) => setTimeout(r, 1500));
+  const bas = fs.readFileSync(path.join(CIKTI, "vekil-3.log"), "utf8");
+  const m = bas.match(/önceden iletilen (\d+)/);
+  kayit("F2", "Vekil yeniden başlatılınca sayaç sıfırlanmaz", `önceden iletilen = ${iletilen()}`, m ? `önceden iletilen ${m[1]}` : bas.slice(0, 120), m && Number(m[1]) === iletilen() && iletilen() > 0 ? "PASS" : "FAIL");
+}
+
+// ── 5) Hak bitince sağlayıcıya gidilmez ─────────────────────────────────
+{
+  // Yerel yığında kullanıcının penceresini dolu hâle getirir (yalnızca yerel veritabanı).
+  psql(`update public.auth_rate_limits set count = 20 where key = '${HAK_ANAHTARI}'`);
+  const once = { iletilen: iletilen(), kosu: kosuSayisi() };
+  const y = await cagir(sK, { projectId: PROJE, pdfId: PDF, soru: "How many students were surveyed?" });
+  const fark = { istek: iletilen() - once.iletilen, kosu: kosuSayisi() - once.kosu };
+  kayit("H1", "Saatlik hak (20) dolunca sağlayıcıya gidilmez, kayıt yazılmaz", "hak hatası; istek +0; kayıt +0", `hata: ${String(y.hata ?? JSON.stringify(y)).slice(0, 100)} · istek +${fark.istek} · kayıt +${fark.kosu} · sayaç ${hak()}`, /hak/i.test(y.hata ?? "") && fark.istek === 0 && fark.kosu === 0 ? "PASS" : "FAIL");
+}
+
+// ── 6) ai_assistant_runs ve veri bütünlüğü ───────────────────────────────
+{
+  const satirlar = psql(`select status, coalesce(reject_reason,'-'), coalesce(model,'-'), capability, (project_id='${PROJE}')::text, (context is not null)::text, (output is not null)::text, coalesce(output_chars,0) from public.ai_assistant_runs where user_id='${K.id}' order by created_at`).split("\n").filter(Boolean);
+  const kosular = satirlar.map((s) => s.split("|"));
+  const tamam = kosular.filter((k) => k[0] === "completed");
+  const red = kosular.filter((k) => k[0] === "rejected");
+  const hatali = kosular.filter((k) => k[0] === "failed");
+  const beklenenKosu = ONCEKI_MODELLI + yanitlar.length + 1; // bölüm 1 + bu bölümdeki modelli çağrılar + F1
+  kayit(
+    "K1",
+    "Her model çağrısı tam bir kez kaydedilir (completed/rejected/failed); sıfır-istek yolları kayıt yazmaz",
+    `kayıt = bölüm 1 (${ONCEKI_MODELLI}) + E0 tekrar (${yanitlar.length}) + F1 (1) = ${beklenenKosu}`,
+    `kayıt ${kosular.length} (completed ${tamam.length}, rejected ${red.length}, failed ${hatali.length})`,
+    kosular.length === beklenenKosu ? "PASS" : "FAIL",
+  );
+  const alanlar = kosular.every((k) => k[3] === "kaynak" && k[4] === "true" && k[5] === "true") &&
+    [...tamam, ...red].every((k) => k[2].startsWith("claude-sonnet-5") && k[6] === "true" && Number(k[7]) > 0) &&
+    hatali.every((k) => k[6] === "false");
+  kayit("K2", "Kayıt alanları: yetenek 'kaynak', proje, bağlam; model claude-sonnet-5; tamam/redde çıktı var, failed'da yok", "hepsi uygun", JSON.stringify(kosular.map((k) => k.slice(0, 3).join("/"))), alanlar ? "PASS" : "FAIL");
+  // İçerik değiştirilemez (guard_ai_run_update): kullanıcı kendi kaydının çıktısını PostgREST'ten yazamaz.
+  const id = psql(`select id from public.ai_assistant_runs where user_id='${K.id}' and status='completed' order by created_at limit 1`);
+  const ciktiOnce = psql(`select md5(coalesce(output,'')) from public.ai_assistant_runs where id='${id}'`);
+  const r = await fetch(`${GECIT}/rest/v1/ai_assistant_runs?id=eq.${id}`, {
+    method: "PATCH",
+    headers: { apikey: ANON, Authorization: `Bearer ${K.erisim}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ output: "degistirildi" }),
+  });
+  const ciktiSonra = psql(`select md5(coalesce(output,'')) from public.ai_assistant_runs where id='${id}'`);
+  kayit("K3", "Asistan kaydının çıktısı sonradan değiştirilemez", "çıktı aynı kalır", `PATCH ${r.status} · çıktı aynı ${ciktiOnce === ciktiSonra}`, ciktiOnce === ciktiSonra ? "PASS" : "FAIL");
+  // Anahtar sızıntısı: kayıtlarda, günlüklerde sağlayıcı anahtarı biçimi yok.
+  const dbSizinti = Number(psql(`select count(*) from public.ai_assistant_runs where coalesce(output,'') || coalesce(context::text,'') like '%sk-ant%'`));
+  const dosyalar = fs.readdirSync(CIKTI).filter((f) => /\.(log|jsonl|json)$/.test(f));
+  const dosyaSizinti = dosyalar.filter((f) => fs.readFileSync(path.join(CIKTI, f), "utf8").includes("sk-ant"));
+  kayit("K4", "Anahtar kayıtlara/günlüklere sızmaz", "0 eşleşme", `veritabanı ${dbSizinti} · dosyalar ${dosyaSizinti.length} (${dosyalar.join(", ")})`, dbSizinti === 0 && dosyaSizinti.length === 0 ? "PASS" : "FAIL");
+}
+
+// ── Sağlayıcı istek özeti ───────────────────────────────────────────────
+const gunluk = gunlukSatirlari();
+const ozet = {
+  iletilen: gunluk.filter((x) => x.iletildi).length,
+  reddedilen429: gunluk.filter((x) => !x.iletildi).length,
+  durumlar: Object.fromEntries([...new Set(gunluk.map((x) => x.durum))].map((d) => [d, gunluk.filter((x) => x.durum === d).length])),
+  modeller: [...new Set(gunluk.map((x) => x.model))],
+  girdiJeton: gunluk.reduce((t, x) => t + (x.kullanim?.input_tokens ?? 0), 0),
+  ciktiJeton: gunluk.reduce((t, x) => t + (x.kullanim?.output_tokens ?? 0), 0),
+};
+kayit("B1", "Toplam sağlayıcı isteği sınırı (yeniden denemeler dahil)", "≤ 30", JSON.stringify(ozet), ozet.iletilen <= 30 ? "PASS" : "FAIL");
+
+const tumKayitlar = JSON.parse(psql(`select coalesce(json_agg(json_build_object('status', status, 'reject_reason', reject_reason, 'model', model, 'findings', findings, 'output', output, 'duration_ms', duration_ms, 'created_at', created_at) order by created_at), '[]') from public.ai_assistant_runs where user_id='${K.id}'`));
+fs.writeFileSync(path.join(CIKTI, "gercek-ai-kayitlar.json"), `${JSON.stringify(tumKayitlar, null, 2)}\n`);
+fs.writeFileSync(path.join(CIKTI, "gercek-ai-kabul-bolum2.json"), `${JSON.stringify({ tarih: new Date().toISOString(), proje: PROJE, pdf: PDF, ozet, sonuclar, yanitlar }, null, 2)}\n`);
+await cK.close();
+await tarayici.close();
+const say = (s) => sonuclar.filter((x) => x.sonuc === s).length;
+console.log(`\nÖZET: ${say("PASS")} PASS · ${say("FAIL")} FAIL · ${say("UNVERIFIED")} UNVERIFIED · iletilen ${ozet.iletilen}/30`);
+process.exit(say("FAIL") ? 1 : 0);

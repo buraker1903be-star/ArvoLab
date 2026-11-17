@@ -1,0 +1,132 @@
+{
+  "tarih": "2026-11-17T14:27:18.405Z",
+  "proje": "6f9cf2af-b0b7-44c6-94de-88ff30c310ae",
+  "pdf": "4bc336a2-e301-49a7-af51-0af78ee2b512",
+  "ozet": {
+    "iletilen": 13,
+    "reddedilen429": 0,
+    "durumlar": {
+      "200": 11,
+      "400": 2
+    },
+    "modeller": [
+      "claude-sonnet-5"
+    ],
+    "girdiJeton": 12671,
+    "ciktiJeton": 2528
+  },
+  "sonuclar": [
+    {
+      "kimlik": "E0r-erisim",
+      "ad": "Sabit model (claude-sonnet-5) erişimi",
+      "beklenen": "200, model değişmez",
+      "gozlenen": "sağlayıcı 200 · istekteki model claude-sonnet-5 · kayıttaki model claude-sonnet-5",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E0r",
+      "ad": "UI uçtan uca: seçili pasaj → Arvo AI → cevap + 'PDF s. 1'; editöre kendiliğinden girmez",
+      "beklenen": "cevap görünür, 'PDF s. 1' alıntısı, kayıt +1 (kaynak, completed), hak +1, editör aynı",
+      "gozlenen": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasajın ana iddiası, uzaktan öğrenimin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki, haftalık canlı dersi olmay · istek +1 · hak +1 · kayıt +1 (kaynak/completed) · editör aynı true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E0rb",
+      "ad": "Alıntı bağlantısı PDF'te o sayfayı açar",
+      "beklenen": "3 → 1",
+      "gozlenen": "3 → 1",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "F1",
+      "ad": "Sağlayıcıya ulaşılamayınca: anlaşılır hata, kayıt 'failed', istek +0",
+      "beklenen": "hata 'bağlanılamadı'; kayıt +1 failed; sağlayıcıya istek yok",
+      "gozlenen": "hata: Yapay zeka sunucusuna bağlanılamadı. · kayıt +1 failed · istek +0 · günlük satırı +0 · hak +1",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "F1-hak",
+      "ad": "Başarısız çağrının hak tüketimi (gözlem)",
+      "beklenen": "kod: hak model çağrısından ÖNCE alınır → +1",
+      "gozlenen": "hak +1",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "F2",
+      "ad": "Vekil yeniden başlatılınca sayaç sıfırlanmaz",
+      "beklenen": "önceden iletilen = 13",
+      "gozlenen": "önceden iletilen 13",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "H1",
+      "ad": "Saatlik hak (20) dolunca sağlayıcıya gidilmez, kayıt yazılmaz",
+      "beklenen": "hak hatası; istek +0; kayıt +0",
+      "gozlenen": "hata: Saatlik asistan hakkınız doldu (20). Bir süre sonra tekrar deneyin. · istek +0 · kayıt +0 · sayaç 21",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K1",
+      "ad": "Her model çağrısı tam bir kez kaydedilir (completed/rejected/failed); sıfır-istek yolları kayıt yazmaz",
+      "beklenen": "kayıt = bölüm 1 (10) + E0 tekrar (1) + F1 (1) = 12",
+      "gozlenen": "kayıt 12 (completed 9, rejected 2, failed 1)",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K2",
+      "ad": "Kayıt alanları: yetenek 'kaynak', proje, bağlam; model claude-sonnet-5; tamam/redde çıktı var, failed'da yok",
+      "beklenen": "hepsi uygun",
+      "gozlenen": "[\"rejected/alinti/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"rejected/kunye/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"completed/-/claude-sonnet-5\",\"failed/-/claude-sonnet-5\"]",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K3",
+      "ad": "Asistan kaydının çıktısı sonradan değiştirilemez",
+      "beklenen": "çıktı aynı kalır",
+      "gozlenen": "PATCH 403 · çıktı aynı true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K4",
+      "ad": "Anahtar kayıtlara/günlüklere sızmaz",
+      "beklenen": "0 eşleşme",
+      "gozlenen": "veritabanı 0 · dosyalar 0 (next-start.log, saglayici-istekleri.jsonl, vekil-2.log, vekil-3.log, vekil.log)",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "B1",
+      "ad": "Toplam sağlayıcı isteği sınırı (yeniden denemeler dahil)",
+      "beklenen": "≤ 30",
+      "gozlenen": "{\"iletilen\":13,\"reddedilen429\":0,\"durumlar\":{\"200\":11,\"400\":2},\"modeller\":[\"claude-sonnet-5\"],\"girdiJeton\":12671,\"ciktiJeton\":2528}",
+      "sonuc": "PASS"
+    }
+  ],
+  "yanitlar": [
+    {
+      "kimlik": "E0r",
+      "soru": "(UI: seçili pasaj analizi)",
+      "secim": {
+        "sayfa": 1,
+        "metin": "Remote learning increased reported isolation among first-year students."
+      },
+      "ekran": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasajın ana iddiası, uzaktan öğrenimin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki, haftalık canlı dersi olmayan programlarda en güçlü şekilde görülmüştür; akran çalışma gruplarına katılan öğrencilerde ise izolasyon puanları daha düşük bulunmuştur. Kanıt, 2020 sonbaharında üç fakülteden toplam 412 öğrenciyle yapılan bir anket çalışmasına dayanmaktadır; ölçüm aracı olarak iki zaman noktasında uygulanan, on iki maddeden oluşan beşli derecelendirmeli 'Synthetic Isolation Scale' kullanılmı",
+      "fark": {
+        "istek": 1,
+        "hak": 1,
+        "kosu": 1
+      },
+      "kosu": {
+        "capability": "kaynak",
+        "status": "completed",
+        "reject_reason": "",
+        "model": "claude-sonnet-5",
+        "provider": "127.0.0.1:54950",
+        "projeEslesir": "true",
+        "prompt_chars": 304,
+        "output_chars": 1121,
+        "duration_ms": 6279,
+        "baglamVar": "true"
+      }
+    }
+  ]
+}

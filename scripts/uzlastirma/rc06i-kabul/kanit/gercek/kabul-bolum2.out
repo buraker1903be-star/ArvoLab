@@ -1,0 +1,39 @@
+devam: proje 6f9cf2af-b0b7-44c6-94de-88ff30c310ae · pdf 4bc336a2-e301-49a7-af51-0af78ee2b512 · iletilen 12 · önceki kayıt 10
+PASS  E0r-erisim  Sabit model (claude-sonnet-5) erişimi
+      beklenen: 200, model değişmez
+      gözlenen: sağlayıcı 200 · istekteki model claude-sonnet-5 · kayıttaki model claude-sonnet-5
+PASS  E0r  UI uçtan uca: seçili pasaj → Arvo AI → cevap + 'PDF s. 1'; editöre kendiliğinden girmez
+      beklenen: cevap görünür, 'PDF s. 1' alıntısı, kayıt +1 (kaynak, completed), hak +1, editör aynı
+      gözlenen: Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasajın ana iddiası, uzaktan öğrenimin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki, haftalık canlı dersi olmay · istek +1 · hak +1 · kayıt +1 (kaynak/completed) · editör aynı true
+PASS  E0rb  Alıntı bağlantısı PDF'te o sayfayı açar
+      beklenen: 3 → 1
+      gözlenen: 3 → 1
+PASS  F1  Sağlayıcıya ulaşılamayınca: anlaşılır hata, kayıt 'failed', istek +0
+      beklenen: hata 'bağlanılamadı'; kayıt +1 failed; sağlayıcıya istek yok
+      gözlenen: hata: Yapay zeka sunucusuna bağlanılamadı. · kayıt +1 failed · istek +0 · günlük satırı +0 · hak +1
+PASS  F1-hak  Başarısız çağrının hak tüketimi (gözlem)
+      beklenen: kod: hak model çağrısından ÖNCE alınır → +1
+      gözlenen: hak +1
+PASS  F2  Vekil yeniden başlatılınca sayaç sıfırlanmaz
+      beklenen: önceden iletilen = 13
+      gözlenen: önceden iletilen 13
+PASS  H1  Saatlik hak (20) dolunca sağlayıcıya gidilmez, kayıt yazılmaz
+      beklenen: hak hatası; istek +0; kayıt +0
+      gözlenen: hata: Saatlik asistan hakkınız doldu (20). Bir süre sonra tekrar deneyin. · istek +0 · kayıt +0 · sayaç 21
+PASS  K1  Her model çağrısı tam bir kez kaydedilir (completed/rejected/failed); sıfır-istek yolları kayıt yazmaz
+      beklenen: kayıt = bölüm 1 (10) + E0 tekrar (1) + F1 (1) = 12
+      gözlenen: kayıt 12 (completed 9, rejected 2, failed 1)
+PASS  K2  Kayıt alanları: yetenek 'kaynak', proje, bağlam; model claude-sonnet-5; tamam/redde çıktı var, failed'da yok
+      beklenen: hepsi uygun
+      gözlenen: ["rejected/alinti/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","rejected/kunye/claude-sonnet-5","completed/-/claude-sonnet-5","completed/-/claude-sonnet-5","failed/-/claude-sonnet-5"]
+PASS  K3  Asistan kaydının çıktısı sonradan değiştirilemez
+      beklenen: çıktı aynı kalır
+      gözlenen: PATCH 403 · çıktı aynı true
+PASS  K4  Anahtar kayıtlara/günlüklere sızmaz
+      beklenen: 0 eşleşme
+      gözlenen: veritabanı 0 · dosyalar 0 (next-start.log, saglayici-istekleri.jsonl, vekil-2.log, vekil-3.log, vekil.log)
+PASS  B1  Toplam sağlayıcı isteği sınırı (yeniden denemeler dahil)
+      beklenen: ≤ 30
+      gözlenen: {"iletilen":13,"reddedilen429":0,"durumlar":{"200":11,"400":2},"modeller":["claude-sonnet-5"],"girdiJeton":12671,"ciktiJeton":2528}
+
+ÖZET: 12 PASS · 0 FAIL · 0 UNVERIFIED · iletilen 13/30

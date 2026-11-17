@@ -1,0 +1,197 @@
+[
+  {
+    "status": "rejected",
+    "reject_reason": "alinti",
+    "model": "claude-sonnet-5",
+    "findings": {
+      "ayrinti": [
+        "Remote learning increased isolation among first-year students."
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Pasajın ana iddiası, uzaktan öğrenmenin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki özellikle haftalık canlı derslerin bulunmadığı programlarda daha güçlü bulunmuştur; buna karşın akran çalışma gruplarına katılan öğrenciler daha düşük izolasyon puanları bildirmiştir. Kanıt, 2020 güzünde üç fakülteden 412 öğrenciyle yapılan bir anket çalışmasına ve iki zaman noktasında uygulanan on iki maddelik beşli derecelendirme ölçeğine (Synthetic Isolation Scale) dayanmaktadır. Metinde açıkça belirtilen bir sınırlılık ifadesi bulunmamakla birlikte, bulgular yalnızca üç fakülteden toplanan öğrenci örneklemine ve belirli bir döneme (2020 güzü) dayandığından, genellenebilirlik açısından örtük bir kısıtlılık söz konusudur.\", \"alintilar\": [{\"sayfa\": 1, \"metin\": \"Remote learning increased isolation among first-year students.\"}, {\"sayfa\": 1, \"metin\": \"We surveyed 412 students across three faculties in autumn 2020.\"}, {\"sayfa\": 2, \"metin\": \"Participants completed the Synthetic Isolation Scale at two time points.\"}]}",
+    "duration_ms": 7155,
+    "created_at": "2026-11-17T14:25:23.602537+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Çalışmada sonbahar 2020'de üç fakülteden toplam 412 öğrenci ankete tabi tutulmuştur.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "We surveyed 412 students across three faculties in autumn 2020.",
+          "sayfa": 1
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Çalışmada sonbahar 2020'de üç fakülteden toplam 412 öğrenci ankete tabi tutulmuştur.\", \"alintilar\": [{\"sayfa\": 1, \"metin\": \"We surveyed 412 students across three faculties in autumn 2020.\"}]}",
+    "duration_ms": 1714,
+    "created_at": "2026-11-17T14:25:26.070666+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Kullanılan Synthetic Isolation Scale on iki maddeden oluşmaktadır ve bu maddeler beş puanlık bir katılım derecelendirme formatıyla değerlendirilmektedir.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "The scale has twelve items rated on a five point agreement format.",
+          "sayfa": 2
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Kullanılan Synthetic Isolation Scale on iki maddeden oluşmaktadır ve bu maddeler beş puanlık bir katılım derecelendirme formatıyla değerlendirilmektedir.\", \"alintilar\": [{\"sayfa\": 2, \"metin\": \"The scale has twelve items rated on a five point agreement format.\"}]}",
+    "duration_ms": 1647,
+    "created_at": "2026-11-17T14:25:28.177725+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Yazarlar, çalışmanın kendi bildirim (self-report) ölçümlere dayanmasını ve tek bir ülkeden alınan örneklemle sınırlı olmasını kısıtlılık olarak belirtmektedir.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "Limitations include self-report measures and a single country sample.",
+          "sayfa": 3
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Yazarlar, çalışmanın kendi bildirim (self-report) ölçümlere dayanmasını ve tek bir ülkeden alınan örneklemle sınırlı olmasını kısıtlılık olarak belirtmektedir.\", \"alintilar\": [{\"sayfa\": 3, \"metin\": \"Limitations include self-report measures and a single country sample.\"}]}",
+    "duration_ms": 1834,
+    "created_at": "2026-11-17T14:25:30.584108+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Katılımcılar, Synthetic Isolation Scale (Sentetik İzolasyon Ölçeği) adlı ölçeği iki farklı zaman noktasında doldurmuşlardır. Bu ölçek, beşli likert tipi derecelendirme formatında on iki maddeden oluşmaktadır. Ankette her iki uygulamada da iç tutarlılık kabul edilebilir düzeyde bulunmuştur.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "Participants completed the Synthetic Isolation Scale at two time points.",
+          "sayfa": 2
+        },
+        {
+          "metin": "The scale has twelve items rated on a five point agreement format.",
+          "sayfa": 2
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Katılımcılar, Synthetic Isolation Scale (Sentetik İzolasyon Ölçeği) adlı ölçeği iki farklı zaman noktasında doldurmuşlardır. Bu ölçek, beşli likert tipi derecelendirme formatında on iki maddeden oluşmaktadır. Ankette her iki uygulamada da iç tutarlılık kabul edilebilir düzeyde bulunmuştur.\", \"alintilar\": [{\"sayfa\": 2, \"metin\": \"Participants completed the Synthetic Isolation Scale at two time points.\"}, {\"sayfa\": 2, \"metin\": \"The scale has twelve items rated on a five point agreement format.\"}]}",
+    "duration_ms": 2880,
+    "created_at": "2026-11-17T14:25:33.961412+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Pasaj, ölçeğin on iki maddeden oluştuğunu ve bu maddelerin beşli bir katılım derecelendirme formatıyla puanlandığını belirtmektedir. Yani katılımcılar her madde için beş seçenekli bir katılım ölçeğinde (five point agreement format) değerlendirme yapmaktadır.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "The scale has twelve items rated on a five point agreement format.",
+          "sayfa": 2
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Pasaj, ölçeğin on iki maddeden oluştuğunu ve bu maddelerin beşli bir katılım derecelendirme formatıyla puanlandığını belirtmektedir. Yani katılımcılar her madde için beş seçenekli bir katılım ölçeğinde (five point agreement format) değerlendirme yapmaktadır.\", \"alintilar\": [{\"sayfa\": 2, \"metin\": \"The scale has twelve items rated on a five point agreement format.\"}]}",
+    "duration_ms": 2577,
+    "created_at": "2026-11-17T14:25:37.040767+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Kaynak metinde katılımcıların yaş ortalamasına dair herhangi bir bilgi bulunmamaktadır. Metinde 2020 sonbaharında üç fakülteden 412 öğrenciyle anket yapıldığı belirtilmekte, ancak yaş verisi raporlanmamaktadır.",
+      "bulundu": false,
+      "alintilar": []
+    },
+    "output": "{\"bulundu\": false, \"cevap\": \"Kaynak metinde katılımcıların yaş ortalamasına dair herhangi bir bilgi bulunmamaktadır. Metinde 2020 sonbaharında üç fakülteden 412 öğrenciyle anket yapıldığı belirtilmekte, ancak yaş verisi raporlanmamaktadır.\", \"alintilar\": []}",
+    "duration_ms": 1887,
+    "created_at": "2026-11-17T14:25:39.440273+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Kaynak metninde kullanılan istatistiksel yazılım programı veya ana etkiye ilişkin bir p-değeri hakkında herhangi bir bilgi yer almamaktadır. Metin, anket yöntemi, izolasyon ölçeği ve bulguların genel özetini içermekte, ancak analiz yazılımı veya istatistiksel anlamlılık değerlerinden bahsetmemektedir.",
+      "bulundu": false,
+      "alintilar": []
+    },
+    "output": "{\"bulundu\": false, \"cevap\": \"Kaynak metninde kullanılan istatistiksel yazılım programı veya ana etkiye ilişkin bir p-değeri hakkında herhangi bir bilgi yer almamaktadır. Metin, anket yöntemi, izolasyon ölçeği ve bulguların genel özetini içermekte, ancak analiz yazılımı veya istatistiksel anlamlılık değerlerinden bahsetmemektedir.\", \"alintilar\": []}",
+    "duration_ms": 2730,
+    "created_at": "2026-11-17T14:25:42.701379+00:00"
+  },
+  {
+    "status": "rejected",
+    "reject_reason": "kunye",
+    "model": "claude-sonnet-5",
+    "findings": {
+      "ayrinti": [
+        "Kaya (2021)",
+        "Smith (2019)"
+      ]
+    },
+    "output": "{\"bulundu\": false, \"cevap\": \"Yüklenen kaynak Kaya (2021) tarafından yazılmıştır ve metinde Smith (2019) adında bir yazara veya çalışmaya herhangi bir atıf bulunmamaktadır. Dolayısıyla Smith'in bildirdiği bir etki büyüklüğü bu kaynakta yer almamaktadır. Mevcut metinde yalnızca Kaya'nın kendi bulguları, örneğin izolasyon puanları ve anket verileri yer almaktadır. Bu soruya kaynaktan yanıt veremiyorum.\", \"alintilar\": []}",
+    "duration_ms": 3420,
+    "created_at": "2026-11-17T14:25:46.62478+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Kaynakta katılımcı sayısı (412 öğrenci) belirtilmiş ancak yanıt oranına (response rate) ilişkin bir yüzde değeri verilmemiştir.",
+      "bulundu": false,
+      "alintilar": []
+    },
+    "output": "{\"bulundu\": false, \"cevap\": \"Kaynakta katılımcı sayısı (412 öğrenci) belirtilmiş ancak yanıt oranına (response rate) ilişkin bir yüzde değeri verilmemiştir.\", \"alintilar\": []}",
+    "duration_ms": 1498,
+    "created_at": "2026-11-17T14:25:48.631135+00:00"
+  },
+  {
+    "status": "completed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": {
+      "cevap": "Pasajın ana iddiası, uzaktan öğrenimin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki, haftalık canlı dersi olmayan programlarda en güçlü şekilde görülmüştür; akran çalışma gruplarına katılan öğrencilerde ise izolasyon puanları daha düşük bulunmuştur. Kanıt, 2020 sonbaharında üç fakülteden toplam 412 öğrenciyle yapılan bir anket çalışmasına dayanmaktadır; ölçüm aracı olarak iki zaman noktasında uygulanan, on iki maddeden oluşan beşli derecelendirmeli 'Synthetic Isolation Scale' kullanılmıştır. Sınırlılık olarak, çalışmanın örneklemi yalnızca belirli bir dönemde (2020 sonbaharı) ve üç fakülteyle sınırlıdır; bu durum bulguların genellenebilirliğini sınırlayabilir. Ayrıca metinde nedensellik ile ilişki arasındaki ayrım net olarak tartışılmamıştır.",
+      "bulundu": true,
+      "alintilar": [
+        {
+          "metin": "Remote learning increased reported isolation among first-year students.",
+          "sayfa": 1
+        },
+        {
+          "metin": "The effect was strongest in programmes without weekly live sessions.",
+          "sayfa": 1
+        },
+        {
+          "metin": "We surveyed 412 students across three faculties in autumn 2020.",
+          "sayfa": 1
+        }
+      ]
+    },
+    "output": "{\"bulundu\": true, \"cevap\": \"Pasajın ana iddiası, uzaktan öğrenimin birinci sınıf öğrenciler arasında bildirilen izolasyon düzeyini artırdığıdır. Bu etki, haftalık canlı dersi olmayan programlarda en güçlü şekilde görülmüştür; akran çalışma gruplarına katılan öğrencilerde ise izolasyon puanları daha düşük bulunmuştur. Kanıt, 2020 sonbaharında üç fakülteden toplam 412 öğrenciyle yapılan bir anket çalışmasına dayanmaktadır; ölçüm aracı olarak iki zaman noktasında uygulanan, on iki maddeden oluşan beşli derecelendirmeli 'Synthetic Isolation Scale' kullanılmıştır. Sınırlılık olarak, çalışmanın örneklemi yalnızca belirli bir dönemde (2020 sonbaharı) ve üç fakülteyle sınırlıdır; bu durum bulguların genellenebilirliğini sınırlayabilir. Ayrıca metinde nedensellik ile ilişki arasındaki ayrım net olarak tartışılmamıştır.\", \"alintilar\": [{\"sayfa\": 1, \"metin\": \"Remote learning increased reported isolation among first-year students.\"}, {\"sayfa\": 1, \"metin\": \"The effect was strongest in programmes without weekly live sessions.\"}, {\"sayfa\": 1, \"metin\": \"We surveyed 412 students across three faculties in autumn 2020.\"}]}",
+    "duration_ms": 6279,
+    "created_at": "2026-11-17T14:27:10.702528+00:00"
+  },
+  {
+    "status": "failed",
+    "reject_reason": null,
+    "model": "claude-sonnet-5",
+    "findings": null,
+    "output": null,
+    "duration_ms": 2,
+    "created_at": "2026-11-17T14:27:16.090275+00:00"
+  }
+]

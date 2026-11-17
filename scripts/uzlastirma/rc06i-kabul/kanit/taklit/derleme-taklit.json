@@ -1,0 +1,10 @@
+{
+  "tarih": "2026-11-17T14:16:00.165Z",
+  "gitHead": "dbb2d5aa13763b7b20ad8640d90447b040d5d8a5",
+  "gitTemiz": true,
+  "derleme": "uretim",
+  "buildId": "V9hzecs34MRh-ctlk3QRY",
+  "bildirim": ".next/server/server-reference-manifest.json",
+  "bildirimSha256": "3bd3377f6015800abdb011d51d001879acbb431d0491bb2bbe1a5b3a6449971e",
+  "uygulama": "http://localhost:3124"
+}
