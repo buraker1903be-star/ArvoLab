@@ -242,8 +242,19 @@ async function kaynakDegistir(sayfa, pdfId) {
 
 // Sunucu işlemini arayüz olmadan çağırır (oturum çerezleriyle): istemci denetimini aşan
 // biri ne görür? Kimlikler Next'in sunucu başvuru manifestinden.
+/*
+  İşlem kimlikleri derlemeye göre değişir: `next dev` .next/dev/'e, `next build` .next/server/'a
+  yazar. Eskiden yalnızca geliştirme dosyası okunuyordu; `next start` altında eski kimliklerle
+  çağrılan her işlem boş dönüyor ve S5/S6/R1–R3 "null" ile düşüyordu (RC06d). En yeni dosya,
+  sunucunun o anda kullandığı derlemedir.
+*/
 function islemKimligi(dosyaParcasi, ad) {
-  const m = JSON.parse(fs.readFileSync(path.join(KOK, ".next/dev/server/server-reference-manifest.json"), "utf8"));
+  const adaylar = [".next/dev/server/server-reference-manifest.json", ".next/server/server-reference-manifest.json"]
+    .map((y) => path.join(KOK, y))
+    .filter((y) => fs.existsSync(y))
+    .sort((x, y) => fs.statSync(y).mtimeMs - fs.statSync(x).mtimeMs);
+  if (!adaylar.length) throw new Error("işlem bildirimi (server-reference-manifest) yok");
+  const m = JSON.parse(fs.readFileSync(adaylar[0], "utf8"));
   for (const [kimlik, kayit] of Object.entries(m.node ?? {})) {
     if (kayit.exportedName === ad && String(kayit.filename ?? "").includes(dosyaParcasi)) return kimlik;
   }
