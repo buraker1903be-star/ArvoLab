@@ -209,12 +209,18 @@ const SOYAD_ATIFTA = /\p{Lu}[\p{L}'’-]*\p{Ll}/gu;
 const kacir = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const bosluksuz = (s: string) => s.replace(/\s+/g, " ").trim();
 
-/** Sorudaki atıf kaynakta yokken gösterilen sabit metin; modelin serbest metni yerine. */
+/*
+  Sorudaki atıf için gösterilen sabit metin; modelin serbest metni yerine.
+  Yalnızca OKUNAN sayfalar hakkında konuşur: seçim kipinde ve uzun kaynakta
+  sayfaların bir kısmı okunuyor, bu yüzden "kaynak bu atıf hakkında bilgi
+  vermiyor" gibi bütün kaynak üzerine bir yokluk iddiası kurulmaz. Eskiden
+  (b8085fd) metin "kaynak bu atıf hakkında bilgi vermiyor" diyordu.
+*/
 export function soruAtfiRetMetni(atiflar: string[], dil: Dil = "tr"): string {
   const liste = atiflar.join(", ");
   return dil === "en"
-    ? `The citation you asked about (${liste}) does not appear in the pages of this source that were read, so the source gives no information about it.`
-    : `Sorduğunuz atıf (${liste}) bu kaynağın okunan sayfalarında geçmiyor; kaynak bu atıf hakkında bilgi vermiyor.`;
+    ? `No verifiable information about this citation (${liste}) was found in the pages read.`
+    : `Bu atıf (${liste}) hakkında okunan sayfalarda doğrulanabilir bilgi bulunamadı.`;
 }
 
 /** Atıf, incelenen kaynağın kendi künyesine mi işaret ediyor (soyadları ve yıl künyede)? */

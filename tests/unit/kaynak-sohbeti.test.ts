@@ -264,7 +264,13 @@ test("PR #104: sayı ve alıntı koruması gevşemedi — metni atılacak 'bulun
 
 test("PR #104: sunucu ret metni cevap dilinde; sorudaki atıf yoksa model metni olduğu gibi kalır", () => {
   const en = kaynakCevabiDenetle({ bulundu: false, cevap: RC06I_N3, alintilar: [] }, RC06I_SAYFALAR, RC06I_SORU, RC06I_KUNYE, "en");
-  assert.match(en.gecti ? en.cevap.cevap : "", /^The citation you asked about \(Smith \(2019\)\) does not appear/);
+  assert.equal(en.gecti && en.cevap.cevap, "No verifiable information about this citation (Smith (2019)) was found in the pages read.");
+  assert.equal(soruAtfiRetMetni(["Smith (2019)"]), "Bu atıf (Smith (2019)) hakkında okunan sayfalarda doğrulanabilir bilgi bulunamadı.");
+  // İki dilde de bütün kaynak hakkında yokluk iddiası kurulmaz; yalnızca okunan sayfalar.
+  for (const metin of [soruAtfiRetMetni(["Smith (2019)"], "tr"), soruAtfiRetMetni(["Smith (2019)"], "en")]) {
+    assert.doesNotMatch(metin, /kaynak bu atıf|kaynakta (yok|geçmiyor)|bilgi vermiyor|source gives no|does not appear in (the|this) source/i);
+    assert.match(metin, /okunan sayfalarda|pages read/);
+  }
   // Atıfsız "bulunamadı" cevabı (N1 gibi) değiştirilmez.
   const n1 = kaynakCevabiDenetle({ bulundu: false, cevap: "Kaynakta yaş ortalaması yok.", alintilar: [] }, RC06I_SAYFALAR, "Mean age?", RC06I_KUNYE);
   assert.deepEqual(n1, { gecti: true, cevap: { bulundu: false, cevap: "Kaynakta yaş ortalaması yok.", alintilar: [] } });
