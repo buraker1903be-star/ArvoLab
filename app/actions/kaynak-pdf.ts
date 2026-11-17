@@ -106,7 +106,7 @@ export async function kaynakSecimiDogrula(girdi: { projectId: string; pdfId: str
   const ctx = await getAuthContext();
   if (!ctx) return { hata: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { hata: await abonelikKapaliMesaji() };
-  const okuma = await kaynakPdfSayfalari(ctx.supabase, girdi.projectId, girdi.pdfId, "[kaynak-secimi]");
+  const okuma = await kaynakPdfSayfalari(ctx.supabase, ctx.user.id, girdi.projectId, girdi.pdfId, "[kaynak-secimi]");
   if (!okuma.ok) return { hata: t(okuma.hata) };
   const sonuc = secimiDogrula(String(girdi.metin ?? ""), okuma.sayfalar, Number(girdi.sayfa));
   if (!sonuc.gecti) return { hata: t(SECIM_RET_METNI[sonuc.neden]) };

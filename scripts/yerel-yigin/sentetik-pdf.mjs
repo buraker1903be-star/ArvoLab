@@ -6,7 +6,8 @@ const kacis = (s) => s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/
 
 /**
  * @param {string[][]} sayfalar her sayfa: satırlar (yukarıdan aşağı)
- * @param {{ sutunlu?: number[] }} [secenek] sutunlu: iki sütunlu çizilecek sayfaların 1 tabanlı numaraları
+ * @param {{ sutunlu?: number[], dolgu?: number }} [secenek] sutunlu: iki sütunlu çizilecek sayfaların 1 tabanlı numaraları;
+ *   dolgu: sayfa başına eklenen, hiçbir yerden başvurulmayan ikili akış baytı (boyut/yük testi: dosya büyür, metin değişmez)
  * @returns {Buffer}
  */
 export function sentetikPdf(sayfalar, secenek = {}) {
@@ -31,6 +32,7 @@ export function sentetikPdf(sayfalar, secenek = {}) {
     }
     icerik += "ET";
     const akis = ekle(`<< /Length ${Buffer.byteLength(icerik, "latin1")} >>\nstream\n${icerik}\nendstream`);
+    if (secenek.dolgu) ekle(`<< /Length ${secenek.dolgu} >>\nstream\n${"\x00".repeat(secenek.dolgu)}\nendstream`);
     sayfaNolari.push(ekle(`<< /Type /Page /Parent ${sayfaKoku} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${yazi} 0 R >> >> /Contents ${akis} 0 R >>`));
   });
   nesneler[katalog - 1] = `<< /Type /Catalog /Pages ${sayfaKoku} 0 R >>`;

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Editor } from "@tiptap/react";
 import { BookOpenCheck, FileText, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -11,7 +11,7 @@ import { getLiteratureSources, type LiteratureSource } from "@/app/actions/liter
 import { kunyeBasligi, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 import { kaynakEslesmesi, SECIM_EN_KISA, type KaynakEslesmesi } from "@/lib/pdf-secim";
 import type { KaynakMesaji } from "@/lib/ai/kaynak-sohbeti";
-import type { PdfSecimi } from "./pdf-goruntuleyici";
+import type { OkumaKonumu, PdfSecimi } from "./pdf-goruntuleyici";
 
 /*
   KAYNAK PDF PANELİ — YAZIM STÜDYOSU (16.11.2026). Tek yolculuk:
@@ -99,7 +99,22 @@ export default function KaynakPdfPaneli({
     setSecim(null);
     setAnalizler([]);
     setAtif(null);
+    // Önceki PDF'in cevabındaki "PDF s. N" isteği yeni belgeye taşınmasın.
+    setGidilecek(null);
   };
+
+  /*
+    OKUMA KONUMU (17.11.2026, RELEASE CLOSURE 05): görüntüleyici panel
+    kapanınca sökülüyor (asistan açılınca PDF paneli kapanır); yeniden
+    açılınca 1. sayfaya ve varsayılan yakınlaştırmaya dönüyordu. Sayfa ve
+    yakınlaştırma PDF BAŞINA burada tutulur (panel bileşeni kapalıyken de
+    yaşıyor): bir PDF'in konumu başka bir PDF'e taşınmaz.
+  */
+  const konumlarRef = useRef(new Map<string, OkumaKonumu>());
+  const konumDegisti = useCallback((id: string, konum: OkumaKonumu) => {
+    konumlarRef.current.set(id, konum);
+  }, []);
+  const konumAl = useCallback((id: string) => konumlarRef.current.get(id) ?? null, []);
 
   /* Görüntüleyici seçim bildirdiğinde: yeni seçim önceki atıf adımını sıfırlar. */
   const secimGeldi = useCallback((yeni: PdfSecimi | null) => {
@@ -221,7 +236,13 @@ export default function KaynakPdfPaneli({
             </select>
           </label>
 
-          {pdf ? <PdfGoruntuleyici pdfId={pdf.id} gidilecekSayfa={gidilecek} onSecim={secimGeldi} /> : null}
+          {pdf ? <PdfGoruntuleyici
+              pdfId={pdf.id}
+              gidilecekSayfa={gidilecek}
+              onSecim={secimGeldi}
+              konumAl={konumAl}
+              onKonum={konumDegisti}
+            /> : null}
 
           <div className="kaynak-pdf-alt">
             {secim ? (

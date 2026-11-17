@@ -2205,7 +2205,7 @@ export default function ManuscriptEditor({
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout" ref={yerlesimRef} data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined} data-pdf={kaynakAcik ? "" : undefined}>
+    <div className="manuscript-layout" ref={yerlesimRef} data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined} data-pdf={kaynakAcik ? "" : undefined} data-asistan={yazimAcik ? "" : undefined}>
       {/*
         TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
         yazım ekranı örnek; "daha elit, daha akışkan").

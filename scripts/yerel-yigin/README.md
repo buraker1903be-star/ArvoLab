@@ -86,10 +86,10 @@ yüzden önce onaylı açıp şifreyi ayrı bir güncellemeyle koyar.
 scripts/yerel-yigin/kur-depo.sh
 node scripts/yerel-yigin/gecit.mjs &
 STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/model-taklidi.mjs &
-AI_TABAN_URL=http://127.0.0.1:54900/v1 AI_MODEL=taklit \
+PDF_ISLEM_SAATLIK=12 AI_TABAN_URL=http://127.0.0.1:54900/v1 AI_MODEL=taklit \
   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon JWT> \
   SUPABASE_SERVICE_ROLE_KEY=<service_role JWT> npx next dev -p 3124
-STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124
+PDF_ISLEM_SAATLIK=12 STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124
 ```
 
 Kabul sırasında bulunup düzeltilenler: PDF paneli kapatılıp yeniden
@@ -97,3 +97,15 @@ açılınca görüntüleyici "PDF açılamadı" veriyordu (pdf.js işçisi belge
 birlikte yok ediliyordu); panel en genişe çekilince editör sütunu 420 yerine
 392 px'e iniyordu (ayırıcı ve sütun aralığı hesaba girmiyordu); tek
 sayfalık seçimde asistana gereksiz bir sayfa daha gidiyordu.
+
+## 17.11.2026 sonucu (RELEASE CLOSURE 05)
+
+`studyo-kabul.mjs`: 57/57 PASS (önceki 43 + yeni 14). Yeni senaryolar: PDF işlem
+sınırı (R1: 12 yeni PDF kabul, 13. reddedilir; önbellekteki PDF sınırdan sonra
+da çalışır; sınır dolunca kaynak sohbeti modele gitmez), sayaç arızası (R2:
+`rate_limit_hit` yetkisi geçici alınır, işlem yapılmaz), 19 MB / 300 sayfa
+PDF (R3: 10 eşzamanlı seçim tek çözümlemeye iner, sayaç +1, sıcak yanıt
+~0,2 sn; önbellek kullanıcılar arasında sızmaz; görüntüleyicide açılış
+~2,4 sn), PDF panelinin konumu (U1), asistan açıkken araç çubuğu (U2: 1440/
+1280/1200 px, U3: 1024 px ve telefon). `PDF_ISLEM_SAATLIK` next dev ile
+kabul betiğine aynı verilmeli (varsayılan 60).

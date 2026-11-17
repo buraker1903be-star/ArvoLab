@@ -172,6 +172,27 @@ const BUYUK = sentetikPdf(Array.from({ length: 300 }, (_, i) => Array.from({ len
 await depoyaYukle(A, yol("buyuk"), BUYUK);
 const PDF_BUYUK = pdfSatiri(PROJE, "Ozturk, D. (2020). A very long synthetic report. Synthetic Press.", null, yol("buyuk")).split("\n")[0];
 const PDF_YOK = pdfSatiri(PROJE, KUNYE_YOK, null, yol("yok")).split("\n")[0];
+
+// RELEASE CLOSURE 05: işlem sınırı (L) ve eşzamanlılık/20 MB (C) için ayrı kullanıcılar —
+// sayaç kullanıcı başına, A'nın senaryoları onların hakkını tüketmesin. next dev PDF_ISLEM_SAATLIK ile koşmalı.
+const SAATLIK = Number(process.env.PDF_ISLEM_SAATLIK ?? 12);
+const L = await kullaniciAc("studyo-l");
+const L_PROJE = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${L.id}', 'thesis', 'Sinir tezi ${ek}') returning id`).split("\n")[0];
+psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${L_PROJE}', ${q(BELGE)}::jsonb, 'Giris paragrafi.')`);
+const L_PDFLER = [];
+for (let i = 0; i < SAATLIK + 2; i++) {
+  const yolL = `${L_PROJE}/kaynak-pdf/y-${L.id}-l${i}-${ek}.pdf`;
+  await depoyaYukle(L, yolL, sentetikPdf([[...SAYFA1, `Limit test document number ${i}.`], SAYFA2]));
+  L_PDFLER.push(pdfSatiri(L_PROJE, `Sinir, L. (2020). Limit test document ${i}. Synthetic.`, null, yolL, L.id).split("\n")[0]);
+}
+const C = await kullaniciAc("studyo-c");
+const C_PROJE = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${C.id}', 'thesis', 'Yuk tezi ${ek}') returning id`).split("\n")[0];
+psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${C_PROJE}', ${q(BELGE)}::jsonb, 'Giris paragrafi.')`);
+const IRI = sentetikPdf(Array.from({ length: 300 }, (_, i) => Array.from({ length: 45 }, (_, j) => `Page ${i + 1} line ${j + 1}: synthetic filler text for the large document performance check.`)), { dolgu: 62000 });
+const C_YOL = `${C_PROJE}/kaynak-pdf/y-${C.id}-iri-${ek}.pdf`;
+await depoyaYukle(C, C_YOL, IRI);
+const PDF_IRI = pdfSatiri(C_PROJE, "Yuk, C. (2022). A 19 MB synthetic report. Synthetic Press.", null, C_YOL, C.id).split("\n")[0];
+const sayacDegeri = (k) => Number(psql(`select coalesce((select count from public.auth_rate_limits where key = '${k}'), 0)`));
 // Kütüphane: DOI'si eşleşen tek kayıt (kesin) + başlığı benzeyen iki kayıt (belirsiz; DOI yok, sessizce seçilmemeli).
 const LIT_KESIN = psql(
   `insert into public.literature_sources (owner_id, project_id, title, authors, year, doi_or_url, container_title, volume, issue, pages) values ('${A.id}', '${PROJE}', 'Remote learning and student wellbeing', 'Kaya, A.', 2021, ${q(`https://doi.org/${DOI.toUpperCase()}`)}, 'Journal of Synthetic Studies', '12', '3', '201-219') returning id`,
@@ -708,6 +729,189 @@ await senaryo("G4", async () => {
     body: iri,
   });
   kayit("G4", "20 MB üstü PDF depoya yüklenemez", "4xx", String(r.status), r.status >= 400);
+});
+
+// ── R: RELEASE CLOSURE 05 — işlem sınırı, sayaç arızası, eşzamanlılık, 20 MB ──
+async function kullaniciSayfasi(k, projeId, secenek = {}) {
+  const c = await yeniBaglam(secenek);
+  const sayfa = await c.newPage();
+  await girisYap(sayfa, k);
+  await sayfa.goto(`/dashboard/editor/${projeId}/write`, { timeout: 120000 });
+  await sayfa.waitForSelector(".ProseMirror", { timeout: 120000 });
+  return { c, sayfa };
+}
+const L_SATIR = "Remote learning increased reported isolation among first-year students.";
+await senaryo("R1", async () => {
+  const { c, sayfa } = await kullaniciSayfasi(L, L_PROJE);
+  const id = islemKimligi("kaynak-pdf", "kaynakSecimiDogrula");
+  const sonuclar_ = [];
+  for (let i = 0; i < SAATLIK; i++) sonuclar_.push(islemSonucu((await islemCagir(sayfa, id, { projectId: L_PROJE, pdfId: L_PDFLER[i], sayfa: 1, metin: L_SATIR })).metin));
+  const hepsiGecti = sonuclar_.every((r) => r?.metin === L_SATIR);
+  const fazla = islemSonucu((await islemCagir(sayfa, id, { projectId: L_PROJE, pdfId: L_PDFLER[SAATLIK], sayfa: 1, metin: L_SATIR })).metin);
+  kayit("R1", `PDF işlem sınırı: saatte ${SAATLIK} yeni PDF, sonraki reddedilir`, `${SAATLIK} kabul, ${SAATLIK + 1}. 'sınıra ulaştınız'`, `${sonuclar_.filter((r) => r?.metin).length}/${SAATLIK} kabul · fazla: ${JSON.stringify(fazla)?.slice(0, 120)} · sayaç ${sayacDegeri(`pdf-islem:${L.id}`)}`, hepsiGecti && /sınır/i.test(fazla?.hata ?? ""));
+  // Önbellekteki PDF sınırdan sonra da çalışır (çözümleme yok) ve sayaç artmaz.
+  const once = sayacDegeri(`pdf-islem:${L.id}`);
+  const onbellekte = islemSonucu((await islemCagir(sayfa, id, { projectId: L_PROJE, pdfId: L_PDFLER[0], sayfa: 1, metin: L_SATIR })).metin);
+  kayit("R1b", "Sınır dolduktan sonra önbellekteki PDF'te seçim çalışır, sayaç artmaz", "metin döner, sayaç sabit", `${JSON.stringify(onbellekte)?.slice(0, 80)} · sayaç ${once}→${sayacDegeri(`pdf-islem:${L.id}`)}`, onbellekte?.metin === L_SATIR && sayacDegeri(`pdf-islem:${L.id}`) === once);
+  // Kaynak sohbeti de aynı sınırdan geçer: model çağrılmaz, asistan hakkı ve kaydı oluşmaz.
+  const sohbetId = islemKimligi("ai-kaynak-sohbeti", "kaynaklaSohbet");
+  const istemOnce = istemSayisi();
+  const sohbet = islemSonucu((await islemCagir(sayfa, sohbetId, { projectId: L_PROJE, pdfId: L_PDFLER[SAATLIK + 1], soru: "Bu kaynak ne diyor?", gecmis: [] })).metin);
+  const asistanSayaci = sayacDegeri(`ai-asistan:${L.id}`);
+  const kayitSayisi = psql(`select count(*) from public.ai_assistant_runs where user_id='${L.id}'`);
+  kayit("R1c", "Sınır dolunca kaynak sohbeti modele gitmez; asistan hakkı ve kaydı oluşmaz", "sınır hatası; model isteği yok; ai-asistan sayacı 0; kayıt 0", `${JSON.stringify(sohbet)?.slice(0, 100)} · model ${istemOnce}→${istemSayisi()} · ai-asistan ${asistanSayaci} · kayıt ${kayitSayisi}`, /sınır/i.test(sohbet?.hata ?? "") && istemOnce === istemSayisi() && asistanSayaci === 0 && kayitSayisi === "0");
+  await c.close();
+});
+
+await senaryo("R2", async () => {
+  // Sayaç arızası: service_role'ün rate_limit_hit yetkisi geçici olarak alınır (yalnız yerel yığın).
+  const { c, sayfa } = await kullaniciSayfasi(C, C_PROJE);
+  const id = islemKimligi("kaynak-pdf", "kaynakSecimiDogrula");
+  psql("revoke execute on function public.rate_limit_hit(text, integer, interval) from service_role");
+  let r;
+  try {
+    r = islemSonucu((await islemCagir(sayfa, id, { projectId: C_PROJE, pdfId: PDF_IRI, sayfa: 1, metin: "Page 1 line 1: synthetic filler text for the large document" })).metin);
+  } finally {
+    psql("grant execute on function public.rate_limit_hit(text, integer, interval) to service_role");
+  }
+  kayit("R2", "Sayaç çalışmazsa pahalı işlem yapılmaz (arızada kapalı), anlaşılır hata", "'sayaca ulaşılamıyor… işlenmedi'", JSON.stringify(r)?.slice(0, 160), /sayac|işlenmedi/i.test(r?.hata ?? "") && !r?.metin);
+  await c.close();
+});
+
+await senaryo("R3", async () => {
+  // 19 MB · 300 sayfa: soğuk çözümleme, sıcak (önbellek) ve 10 eşzamanlı istek tek çözümlemeye iner.
+  const { c, sayfa } = await kullaniciSayfasi(C, C_PROJE);
+  const id = islemKimligi("kaynak-pdf", "kaynakSecimiDogrula");
+  const once = sayacDegeri(`pdf-islem:${C.id}`);
+  const zamanli = (arg) => sayfa.evaluate(async ({ kimlik, govde }) => {
+    const t0 = performance.now();
+    const r = await fetch(location.pathname, { method: "POST", headers: { "Next-Action": kimlik, Accept: "text/x-component", "Content-Type": "text/plain;charset=UTF-8" }, body: govde });
+    const metin = await r.text();
+    return { ms: Math.round(performance.now() - t0), metin };
+  }, { kimlik: id, govde: JSON.stringify([arg]) });
+  const arg = (n) => ({ projectId: C_PROJE, pdfId: PDF_IRI, sayfa: n, metin: `Page ${n} line 3: synthetic filler text for the large document performance check.` });
+  const es = await Promise.all(Array.from({ length: 10 }, (_, i) => zamanli(arg(10 + i * 25))));
+  const esGecti = es.filter((x) => islemSonucu(x.metin)?.metin).length;
+  const sayacSonra = sayacDegeri(`pdf-islem:${C.id}`);
+  const sicak = await zamanli(arg(299));
+  const sure = es.map((x) => x.ms).sort((a, b) => a - b);
+  kayit(
+    "R3",
+    "19 MB / 300 sayfa: 10 eşzamanlı seçim tek çözümlemeye iner; önbellekten sıcak yanıt hızlı",
+    "10/10 doğrulanır; sayaç +1; sıcak < 1000 ms",
+    `${(IRI.length / 1048576).toFixed(1)} MB · eşzamanlı ${esGecti}/10 · süre en az ${sure[0]} / en çok ${sure.at(-1)} ms · sayaç ${once}→${sayacSonra} · sıcak ${sicak.ms} ms (${islemSonucu(sicak.metin)?.metin ? "doğrulandı" : "HATA"})`,
+    esGecti === 10 && sayacSonra === once + 1 && sicak.ms < 1000 && Boolean(islemSonucu(sicak.metin)?.metin),
+  );
+  // Başka kullanıcı (A) C'nin önbellekteki PDF'ine erişemez: yetki önbellekten önce.
+  const sA2 = await baglamA.newPage();
+  await sA2.goto(EDITOR, { timeout: 120000 });
+  await sA2.waitForSelector(".ProseMirror", { timeout: 120000 });
+  const yabanci = islemSonucu((await islemCagir(sA2, id, { projectId: C_PROJE, pdfId: PDF_IRI, sayfa: 299, metin: arg(299).metin })).metin);
+  const yabanci2 = islemSonucu((await islemCagir(sA2, id, { projectId: PROJE, pdfId: PDF_IRI, sayfa: 299, metin: arg(299).metin })).metin);
+  kayit("R3b", "Önbellek kullanıcılar arasında sızmaz (A, C'nin önbellekteki PDF'ini okuyamaz)", "iki çağrıda {hata}, metin yok", `${JSON.stringify(yabanci)?.slice(0, 80)} · ${JSON.stringify(yabanci2)?.slice(0, 80)}`, Boolean(yabanci?.hata) && Boolean(yabanci2?.hata) && !yabanci?.metin && !yabanci2?.metin);
+  await sA2.close();
+
+  // Görüntüleyici: 19 MB PDF'in tarayıcıda açılışı ve uzak sayfaya gidiş.
+  const t0 = Date.now();
+  await pdfPaneliniAc(sayfa, PDF_IRI);
+  const acilis = Date.now() - t0;
+  const girdi = sayfa.locator(".pdf-sayfa-girdi");
+  const t1 = Date.now();
+  await girdi.fill("280");
+  await girdi.press("Enter");
+  await sayfa.waitForFunction(() => document.querySelector(".pdf-sayfa .textLayer")?.textContent?.includes("Page 280 line 1:"), null, { timeout: 30000 });
+  const gidis = Date.now() - t1;
+  const kanvas = await sayfa.locator(".pdf-goruntuleyici canvas").count();
+  kayit("R3c", "19 MB PDF tarayıcıda açılır; tek sayfa çizilir", "açılış < 20 sn, 280. sayfa < 5 sn, tek kanvas", `açılış ${acilis} ms · gidiş ${gidis} ms · kanvas ${kanvas}`, acilis < 20000 && gidis < 5000 && kanvas === 1);
+  await c.close();
+});
+
+// ── U: RELEASE CLOSURE 05 — panel konumu, asistan açıkken araç çubuğu ─────
+await senaryo("U1", async () => {
+  await editoruAc(sA);
+  await pdfPaneliniAc(sA, PDF_KESIN);
+  const girdi = sA.locator(".pdf-sayfa-girdi");
+  await girdi.fill("3");
+  await girdi.press("Enter");
+  await sA.waitForFunction(() => document.querySelector(".pdf-sayfa .textLayer")?.textContent?.includes("Discussion"), null, { timeout: 30000 });
+  await sA.getByRole("button", { name: /Yakınlaştır$/ }).click();
+  await sA.getByRole("button", { name: /Yakınlaştır$/ }).click();
+  await sA.waitForTimeout(500);
+  const yuzde = await sA.locator(".pdf-yuzde").innerText();
+  // Asistanı aç (PDF kapanır), asistanı kapat, PDF'i yeniden aç.
+  await sA.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+  await sA.waitForSelector(".yazim-paneli");
+  await sA.locator(".yazim-paneli").getByRole("button", { name: /kapat/i }).first().click();
+  await sA.getByRole("button", { name: /Kaynak PDF/ }).first().click();
+  await sA.waitForFunction(() => document.querySelector(".pdf-sayfa .textLayer")?.textContent?.includes("Discussion"), null, { timeout: 60000 });
+  await sA.waitForTimeout(400);
+  const sayfaSonra = await girdi.inputValue();
+  const yuzdeSonra = await sA.locator(".pdf-yuzde").innerText();
+  kayit("U1", "PDF paneli yeniden açılınca son sayfa ve yakınlaştırma korunur", `sayfa 3, ${yuzde}`, `sayfa ${sayfaSonra}, ${yuzdeSonra}`, sayfaSonra === "3" && yuzdeSonra === yuzde);
+  // Başka PDF: kendi konumuyla (1. sayfa, varsayılan) açılır; geri dönünce ilk PDF'in konumu yerinde.
+  await kaynakDegistir(sA, PDF_BELIRSIZ);
+  const digerSayfa = await girdi.inputValue();
+  const digerYuzde = await sA.locator(".pdf-yuzde").innerText();
+  await kaynakDegistir(sA, PDF_KESIN);
+  await sA.waitForFunction(() => document.querySelector(".pdf-sayfa .textLayer")?.textContent?.includes("Discussion"), null, { timeout: 30000 });
+  const geri = await girdi.inputValue();
+  const geriYuzde = await sA.locator(".pdf-yuzde").innerText();
+  kayit("U1b", "PDF değişince önceki PDF'in konumu yeni belgeye taşınmaz; geri dönünce korunur", `öteki: 1 ve ≠ ${yuzde}; geri: 3, ${yuzde}`, `öteki: ${digerSayfa}, ${digerYuzde} · geri: ${geri}, ${geriYuzde}`, digerSayfa === "1" && digerYuzde !== yuzde && geri === "3" && geriYuzde === yuzde);
+});
+
+for (const genislik of [1440, 1280, 1200]) {
+  await senaryo(`U2-${genislik}`, async () => {
+    const { c, sayfa } = await kullaniciSayfasi(A, PROJE, { viewport: { width: genislik, height: 900 } });
+    await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    await sayfa.waitForTimeout(400);
+    const r = await sayfa.evaluate(async () => {
+      const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
+      const erisilemeyen = [];
+      for (const x of dugmeler) {
+        x.scrollIntoView({ block: "nearest", inline: "nearest" });
+        await new Promise((r) => requestAnimationFrame(r));
+        const k = x.getBoundingClientRect();
+        const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+        if (!(ust === x || x.contains(ust))) erisilemeyen.push((x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24));
+      }
+      const pm = document.querySelector(".ProseMirror").getBoundingClientRect();
+      const panel = document.querySelector(".yazim-paneli").getBoundingClientRect();
+      return { dugme: dugmeler.length, erisilemeyen, editor: Math.round(pm.width), editorSag: Math.round(pm.right), panelSol: Math.round(panel.left), tasma: document.documentElement.scrollWidth - innerWidth };
+    });
+    kayit(
+      `U2-${genislik}`,
+      `Asistan açıkken araç çubuğu ve metin örtülmez (${genislik} px)`,
+      "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+      `${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · editör ${r.editor} px (sağ ${r.editorSag} < panel ${r.panelSol}) · taşma ${r.tasma}`,
+      r.erisilemeyen.length === 0 && r.editor >= 420 && r.editorSag <= r.panelSol && r.tasma <= 0,
+    );
+    await c.close();
+  });
+}
+for (const [ad, gorunum] of [["U3-1024", { viewport: { width: 1024, height: 768 } }], ["U3-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
+  // 1180 px ve altında asistan alttan açılan yaprak: araç çubuğu üstte erişilebilir, taşma yok.
+  const { c, sayfa } = await kullaniciSayfasi(A, PROJE, gorunum);
+  const en = sayfa.viewportSize().width;
+  await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+  await sayfa.waitForSelector(".yazim-paneli");
+  await sayfa.waitForTimeout(400);
+  const r = await sayfa.evaluate(async () => {
+    const dugmeler = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => x.offsetParent);
+    window.scrollTo(0, 0);
+    const erisilemeyen = [];
+    for (const x of dugmeler) {
+      x.scrollIntoView({ block: "nearest", inline: "nearest" });
+      await new Promise((r) => requestAnimationFrame(r));
+      const k = x.getBoundingClientRect();
+      const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+      if (!(ust === x || x.contains(ust))) erisilemeyen.push((x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24));
+    }
+    const p = document.querySelector(".yazim-paneli").getBoundingClientRect();
+    return { dugme: dugmeler.length, erisilemeyen, panel: [Math.round(p.top), Math.round(p.width)], tasma: document.documentElement.scrollWidth - innerWidth };
+  });
+  kayit(ad, `${en} px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok`, "erişilemeyen 0, panel tam genişlik, taşma 0", `${r.dugme} düğme, erişilemeyen [${r.erisilemeyen.join("; ")}] · panel üst ${r.panel[0]} eni ${r.panel[1]} · taşma ${r.tasma}`, r.erisilemeyen.length === 0 && r.panel[1] === en && r.tasma <= 0);
+  await c.close();
 });
 
 // ── T: telefon ────────────────────────────────────────────────────────────
