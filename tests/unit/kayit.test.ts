@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { kayitGirdisiniDenetle, telefonuTemizle } from "@/lib/kayit";
+import { kayitGirdisiniDenetle, telefonuTemizle, TELEFON_DESENI } from "@/lib/kayit";
 
 const gecerli = {
   email: "ogrenci@ornek.edu.tr", adSoyad: "Ahmet Yılmaz",
@@ -71,5 +71,34 @@ describe("kayıt: telefon ve sözleşme (02.11.2026)", () => {
     assert.ok("deger" in sonuc && sonuc.deger.iletisimIzni === false && sonuc.deger.telefon === "05321234567");
     const izinli = kayitGirdisiniDenetle({ ...gecerli, iletisimIzni: true });
     assert.ok("deger" in izinli && izinli.deger.iletisimIzni === true);
+  });
+});
+
+describe("kayıt: telefon deseni tarayıcıda geçerli (RC06k, 17.11.2026)", () => {
+  /* Tarayıcı <input pattern>'i ^(?:desen)$ biçiminde `v` bayrağıyla derler.
+     Eski desen "\+?[\d\s().\-]{10,20}" bu kipte SyntaxError veriyordu. */
+  const derle = (bayrak: "u" | "v") => new RegExp(`^(?:${TELEFON_DESENI})$`, bayrak);
+
+  test("eski desen v kipinde derlenmiyordu (hatanın kendisi)", () => {
+    assert.throws(() => new RegExp(String.raw`^(?:\+?[\d\s().\-]{10,20})$`, "v"), SyntaxError);
+  });
+
+  test("yeni desen u ve v kipinde derlenir ve sunucuyla aynı yazımları kabul eder", () => {
+    for (const bayrak of ["u", "v"] as const) {
+      const desen = derle(bayrak);
+      for (const yazim of ["0532 123 45 67", "+90 (532) 123-4567", "05321234567", "0532.123.45.67"]) {
+        assert.ok(desen.test(yazim), `${bayrak}: ${yazim}`);
+        assert.ok(telefonuTemizle(yazim), `sunucu: ${yazim}`);
+      }
+      for (const yazim of ["abc1234567890", "0532/123/45/67", "12345"]) assert.equal(desen.test(yazim), false, `${bayrak}: ${yazim}`);
+    }
+  });
+
+  test("sunucu doğrulaması desenden bağımsız korunur: desenin geçirdiği kısa rakam dizisi sunucuda düşer", () => {
+    // "(((())))))" 10 karakter, desene uyar ama rakam yok: istemci erken uyarıdır, karar sunucuda.
+    assert.ok(derle("v").test("((((()))))"));
+    assert.equal(telefonuTemizle("((((()))))"), null);
+    assert.match(hata({ ...gecerli, telefon: "((((()))))" }) ?? "", /telefon/);
+    assert.ok("deger" in kayitGirdisiniDenetle(gecerli));
   });
 });

@@ -81,7 +81,9 @@ describe("formlar aynı eylemlere, aynı alan adlarıyla gidiyor", () => {
     for (const ad of ["fullName", "email", "phone", "sozlesme", "kvkk", "iletisim", "sozlesmeOkundu"]) {
       assert.match(k, new RegExp(`name="${ad}"`), `${ad} alanı`);
     }
-    assert.match(k, /pattern="\\\+\?\[\\d\\s\(\)\.\\-\]\{10,20\}"/, "telefon deseni lib/kayit.ts ile aynı kalmalı");
+    /* Desen artık lib/kayit.ts'teki TELEFON_DESENI (RC06k): eski düz metin
+       tarayıcının `v` kipinde derlenmiyordu; geçerliliği kayit.test.ts sınıyor. */
+    assert.match(k, /pattern=\{TELEFON_DESENI\}/, "telefon deseni lib/kayit.ts'ten gelmeli");
     // G1: kayıt şifre ALMAZ; şifre doğrulanmış oturumda /reset-password?ilk=1'de belirlenir.
     assert.doesNotMatch(k, /name="password"|name="passwordRepeat"/);
   });

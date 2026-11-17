@@ -5,7 +5,7 @@ import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import type { Bulgu } from "@/lib/ai/bulgu";
-import { kunyeIzi, literaturIstemi, taramaCozumle, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
+import { kunyeIzi, literaturIstemi, taramaCozumle, yazarOnerileriniAyikla, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
@@ -91,8 +91,11 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   */
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "literatur", kaynak);
-    if (onceki)
-      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [], kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+    /* Kayıtlı cevap da aynı süzgeçten geçer: bu düzeltmeden önce tamamlanmış
+       bir cevaptaki yazar önerisi "kayıtlı cevap" yoluyla yeniden sunulmasın. */
+    const temiz = onceki ? yazarOnerileriniAyikla({ bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [] }, kaynak).sonuc : null;
+    if (onceki && temiz && (temiz.bulgular.length || temiz.aramalar.length))
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: temiz.bulgular, aramalar: temiz.aramalar, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -103,8 +106,8 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
 
   try {
     const yanit = await sor(mesajlar, { yetenek: "literatur", jsonBekle: true, sicaklik: 0.3, enFazlaJeton: 3200 });
-    const { bulgular, aramalar } = taramaCozumle(yanit.metin);
-    if (!bulgular.length && !aramalar.length) {
+    const cozulen = taramaCozumle(yanit.metin);
+    if (!cozulen.bulgular.length && !cozulen.aramalar.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return { hata: t({ tr: "Asistan tarama stratejisi üretemedi. Araştırma sorusunu biraz daha açık yazmayı deneyin.", en: "The assistant couldn't produce a search strategy. Try writing your research question a bit more clearly." }), kirpilanlar };
     }
@@ -118,9 +121,18 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
       görür. Künyede bu gerekçe yok: arama dizesinde APA künye biçimi,
       olmayan bir çalışmayı varmış gibi göstermektir.
     */
-    if (kunyeIzi({ bulgular, aramalar })) {
+    /*
+      Üçüncü koruma, yazar önerisi (yazarOnerileriniAyikla): künye biçimi
+      taşımayan "Peplau & Perlman, Weiss vb." gibi öneriler. Önerinin geçtiği
+      bulgu/dize ayıklanır; kullanıcının girdisinde geçen adlar serbest.
+      Ayıklamadan sonra hiçbir şey kalmazsa künye gibi reddedilir.
+    */
+    const { sonuc: ayiklanmis, ayiklanan } = yazarOnerileriniAyikla(cozulen, kaynak);
+    const { bulgular, aramalar } = ayiklanmis;
+    if (ayiklanan.length) console.error("[ai] literatür yanıtından yazar önerisi ayıklandı", { model: yanit.model, adet: ayiklanan.length });
+    if (kunyeIzi(cozulen) || (!bulgular.length && !aramalar.length)) {
       console.error("[ai] literatür yanıtı künye içeriyor", { model: yanit.model });
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: cozulen.bulgular, basladi });
       return {
         hata: t({
           tr: "Asistan kaynak künyesi ürettiği için cevap gösterilmedi. Kaynakları dizinden kendiniz doğrulamalısınız; tekrar deneyebilirsiniz.",

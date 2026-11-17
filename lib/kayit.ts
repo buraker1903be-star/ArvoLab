@@ -25,6 +25,17 @@ const EPOSTA = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/;
   Türkiye numarası 10 ya da 11, uluslararası E.164 en çok 15. Ülke kodu
   ZORUNLU değil — yurt dışındaki öğrenciye Türkiye biçimini dayatmamak için.
 */
+/*
+  Kayıt formundaki <input pattern> deseni. Tarayıcı deseni `v` bayrağıyla
+  derliyor (HTML standardı, Chrome 112+/Firefox 116+); o kipte karakter
+  sınıfındaki çıplak "(", ")" ve "-" GEÇERSİZ. Eskiden desen
+  "\+?[\d\s().\-]{10,20}" idi: tarayıcı derleyemiyor, konsola hata
+  yazıp deseni yok sayıyordu — yani istemci tarafında hiç denetim yoktu.
+  Kaçışlı hâli hem `u` hem `v` kipinde geçerli (testi kayit.test.ts).
+  Asıl denetim yine sunucuda, telefonuTemizle'de: desen yalnızca erken uyarı.
+*/
+export const TELEFON_DESENI = String.raw`\+?[\d\s\(\)\.\-]{10,20}`;
+
 export function telefonuTemizle(ham: unknown): string | null {
   const metin = String(ham ?? "").trim();
   if (!/^\+?[\d\s().-]+$/.test(metin)) return null;

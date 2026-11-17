@@ -60,8 +60,10 @@ GÖREVİN İKİ PARÇA:
    Anahtar kelimeleri yan yana dizmek YETERLİ DEĞİLDİR: veri tabanı bunu tam ifade araması olarak okumaz, binlerce alakasız sonuç döner. Dizeleri geniş taramadan dar taramaya sırala ve en az birini Türkçe gri literatüre ayır (TR Dizin, YÖK Tez).
 2. LİSTE DENETİMİ: Verilen kaynak listesinde boşlukları göster — yıl dağılımı (yalnızca eski ya da yalnızca çok yeni kaynaklar), tek bir dergiye/yazara yığılma, yöntem çeşitliliğinin eksikliği, araştırma sorusuyla ilgisi zayıf görünen kayıtlar, ölçek/kuram kaynağının eksikliği. Liste verilmediyse bu bölümde tarama planını nasıl kuracağını anlat.
 
+GÖREVİNİN SINIRI: Yalnızca araştırma sorusunu netleştirmeye ve arama terimi/dizesi üretmeye yardım edersin. Eser, yazar, kuramcı, ölçek sahibi ya da dergi ÖNERMEK görevin değildir. Bir boşluğu anlatırken kavram düzeyinde kal: "yalnızlık kuramlarına ilişkin kuramsal kaynaklar", "yalnızlık ölçeklerinin Türkçe uyarlamaları" — kimin yazdığını söyleme.
+
 KESİNLİKLE YAPMAYACAKLARIN (en önemlisi budur):
-1. KAYNAK ÖNERME. Hiçbir yazar adı, makale başlığı, dergi adı, yıl ya da DOI uydurma. "Şu çalışmaya bakın" deme. Var olduğunu bildiğini düşündüğün kaynakları bile yazma — kaynakları araştırmacı dizinden bulacak.
+1. KAYNAK ÖNERME. Hiçbir yazar adı, makale başlığı, dergi adı, yıl ya da DOI uydurma. "Şu çalışmaya bakın" deme. Var olduğunu bildiğini düşündüğün kaynakları, kuramcıları ve yazar çiftlerini (ör. "X & Y", "X vd.") bile yazma — kaynakları araştırmacı dizinden bulacak. Yalnızca araştırma sorusunda ya da toplanan kaynaklar listesinde ZATEN geçen adlara değinebilirsin.
 2. Araştırmacının metnine yapıştırabileceği paragraf yazma. Denetlersin, yazmazsın.
 3. Sana verilmeyen hiçbir sayıyı bulgu metninde kullanma. Kaç kaynağın eski olduğunu sayıyla değil sözle ifade et ("kaynakların çoğu", "birkaç kayıt").
 4. Kaynakların bilimsel kalitesi ya da dergi itibarı hakkında yargı verme.
@@ -146,4 +148,83 @@ export function kunyeIzi(sonuc: LiteraturSonucu): boolean {
     sonuc.bulgular.some((bulgu) => kunyeIziMetinde(`${bulgu.baslik} ${bulgu.aciklama}`)) ||
     sonuc.aramalar.some(kunyeIziMetinde)
   );
+}
+
+/*
+  YAZAR ÖNERİSİ İZİ (RC06k, 17.11.2026). kunyeIzi yalnızca künye BİÇİMİNİ
+  ("Soyad, A. (2020)", DOI) arıyor; yılı ve DOI'si olmayan yazar önerisi
+  ondan geçiyordu. RC06k gerçek Haiku kabulünde bulgu metni şuydu:
+  "…teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.)
+  eksiktir" — doğrulanmamış bir yazar önerisi, kullanıcıya sunuldu.
+
+  Genel bir kişi adı yasağı KONMADI: araştırmacı sorusunda bir kuramcıyı
+  anabilir ("Bandura'nın öz yeterlik kuramı…") ve toplanan kaynakların
+  yazarları bağlamda zaten var; modelin onlara değinmesi meşru, liste
+  denetiminin işi de bu ("tek yazara yığılma"). Ayrım şu: yalnızca YAZAR
+  ÖNERİSİ BİÇİMİNDEKİ adlar aranır ve kullanıcının girdisinde (soru,
+  çalışma, toplanan kaynaklar) geçmeyenler modelin eklediği sayılır.
+
+  Biçimler bilerek dar: "Ad & Ad" ve "Ad et al. / vd. / ve ark.". "Ad ve
+  Ad" ya da tek başına büyük harfli sözcük aranmıyor — "Türkçe ve
+  İngilizce", "Scopus'ta" gibi doğal metinlerde yanlış alarm verirdi ve
+  yanlış alarm, kullanıcıya doğru çalışan aracı bıraktırır.
+*/
+const AD = "[A-ZÇĞİÖŞÜ][a-zçğıöşüâîû]+(?:-[A-ZÇĞİÖŞÜ][a-zçğıöşüâîû]+)?";
+const YAZAR_CIFTI = new RegExp(`(${AD})\\s*&\\s*(${AD})`, "gu");
+const YAZAR_VD = new RegExp(`(${AD})\\s+(?:et al\\.?|vd\\.|ve ark\\.|ve arkadaşları)`, "gu");
+/* Veri tabanı adları yazar değildir: "Web of Science & Scopus". */
+const DIZIN_ADLARI = new Set(["science", "scopus", "scholar", "embase", "medline", "cochrane", "dizin", "tez", "proquest", "google"]);
+
+const kucuk = (metin: string) => metin.toLocaleLowerCase("tr");
+
+function girdideGecer(ad: string, girdi: string): boolean {
+  const aranan = kucuk(ad);
+  const metin = kucuk(girdi);
+  let i = metin.indexOf(aranan);
+  while (i !== -1) {
+    const once = metin[i - 1] ?? " ";
+    const sonra = metin[i + aranan.length] ?? " ";
+    if (!/\p{L}/u.test(once) && !/\p{L}/u.test(sonra)) return true;
+    i = metin.indexOf(aranan, i + 1);
+  }
+  return false;
+}
+
+/** Metinde modelin eklediği (girdide geçmeyen) yazar önerileri. */
+export function eklenenYazarlar(metin: string, girdi: string): string[] {
+  const bulunan: string[] = [];
+  for (const m of metin.matchAll(YAZAR_CIFTI)) {
+    const adlar = [m[1], m[2]];
+    if (adlar.some((ad) => DIZIN_ADLARI.has(kucuk(ad)))) continue;
+    if (adlar.some((ad) => !girdideGecer(ad, girdi))) bulunan.push(m[0]);
+  }
+  for (const m of metin.matchAll(YAZAR_VD)) {
+    if (!DIZIN_ADLARI.has(kucuk(m[1])) && !girdideGecer(m[1], girdi)) bulunan.push(m[0]);
+  }
+  return bulunan;
+}
+
+/*
+  Yazar önerisi taşıyan bulgu ve arama dizesi kullanıcıya SUNULMAZ; geri
+  kalanı sunulur. Bütün cevabı düşürmek yerine ayıklamak bilinçli: aynı
+  cevaptaki arama dizeleri ve öteki bulgular doğrulanabilir, kullanıcı onları
+  çalıştırmadan önce görüyor; yazar önerisi ise tek bir bulguya bağlı.
+  Hiçbir şey kalmazsa çağıran cevabı "kunye" nedeniyle reddeder.
+*/
+export function yazarOnerileriniAyikla(
+  sonuc: LiteraturSonucu,
+  girdi: string,
+): { sonuc: LiteraturSonucu; ayiklanan: string[] } {
+  const ayiklanan: string[] = [];
+  const bulgular = sonuc.bulgular.filter((bulgu) => {
+    const izler = eklenenYazarlar(`${bulgu.baslik} ${bulgu.aciklama}`, girdi);
+    ayiklanan.push(...izler);
+    return izler.length === 0;
+  });
+  const aramalar = sonuc.aramalar.filter((arama) => {
+    const izler = eklenenYazarlar(arama, girdi);
+    ayiklanan.push(...izler);
+    return izler.length === 0;
+  });
+  return { sonuc: { bulgular, aramalar }, ayiklanan };
 }
