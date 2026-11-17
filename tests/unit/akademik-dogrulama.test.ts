@@ -112,11 +112,14 @@ describe("akademik kayıt eşleştirmesi", () => {
   });
 
   /*
-    Kapı YALNIZCA iki tarafta da yazar varken işler. Dizin yazar
-    bildirmiyorsa bu "uyuşmuyor" değil "bilinmiyor"dur; bilgisizlikle
-    kapı kapatmak bu projede yasak.
+    Dizin yazar bildirmiyorsa bu "uyuşmuyor" değil "bilinmiyor"dur: künye
+    REDDEDİLMEZ, "olası eşleşme" olarak gösterilir. Ama bilinmeyen yazar
+    "doğrulandı" için olumlu kanıt da değildir (RC06l, 17.11.2026).
+    Eskiden bu durum "doğrulandı" sayılıyordu ve gerçek dizinde iki farklı
+    yazarın 2021 "Guest editorial"ı 1972 tarihli yazarsız bir başyazıya
+    doğrulandı (tests/unit/dogrulama-yanlis-dogrulandi.test.ts).
   */
-  test("adayda yazar yoksa kapı çalışmaz", async () => {
+  test("adayda yazar yoksa doğrulanmaz, olası eşleşme kalır", async () => {
     crossrefOgeleri = [{
       DOI: "10.1234/xyz",
       title: ["Harmanlanmış öğrenme ve matematik özyeterliği"],
@@ -130,7 +133,7 @@ describe("akademik kayıt eşleştirmesi", () => {
       title: "Harmanlanmış öğrenme ve matematik özyeterliği",
     }));
 
-    assert.equal(sonuc.status, "verified");
+    assert.equal(sonuc.status, "possible_match");
   });
 
   /*

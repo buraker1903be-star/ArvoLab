@@ -1,0 +1,158 @@
+{
+  "_aciklama": "RC06l gerçek kabulünde yanlış 'doğrulandı' veren dizin yanıtlarının kaydı. İki gerçek künye ('Guest editorial', 2021; Heidingsfelder / Sohret) aynı başlık aramasını yapıyor. Crossref gövdesi uygulamanın istediği alanlarla birebir; OpenAlex anahtarsız istekte 429 döndü (RC06l koşusunda da 429). Kişisel veri yok: kamuya açık bibliyografik kayıtlar.",
+  "kaydedildi": "2026-11-17T18:51:46.738Z",
+  "kunyeler": {
+    "heidingsfelder": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.",
+    "sohret": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology."
+  },
+  "rc06lOnbellekSatiri": {
+    "anahtar": "v2|heidingsfelder|guest editorial|2021",
+    "durum": "verified",
+    "enIyi": {
+      "provider": "crossref",
+      "title": "Guest Editorial",
+      "year": 1972,
+      "doi": "10.1093/jof/70.7.395",
+      "authors": [],
+      "venue": "Journal of Forestry",
+      "url": "https://doi.org/10.1093/jof/70.7.395",
+      "citedByCount": null,
+      "confidence": 0.82
+    }
+  },
+  "crossref": {
+    "url": "https://api.crossref.org/works?query.bibliographic=Guest+editorial&rows=3&select=DOI%2Ctitle%2Cauthor%2Cissued%2Cpublished-print%2Cpublished-online%2Ccontainer-title%2CURL%2Cis-referenced-by-count",
+    "durum": 200,
+    "govde": {
+      "status": "ok",
+      "message-type": "work-list",
+      "message": {
+        "items": [
+          {
+            "DOI": "10.1093/jof/70.7.395",
+            "title": [
+              "Guest Editorial"
+            ],
+            "author": [
+              {
+                "name": "none",
+                "sequence": "first",
+                "affiliation": [],
+                "role": [
+                  {
+                    "role": "author",
+                    "vocabulary": "crossref"
+                  }
+                ]
+              }
+            ],
+            "issued": {
+              "date-parts": [
+                [
+                  1972,
+                  7,
+                  1
+                ]
+              ]
+            },
+            "published-print": {
+              "date-parts": [
+                [
+                  1972,
+                  7,
+                  1
+                ]
+              ]
+            },
+            "container-title": [
+              "Journal of Forestry"
+            ],
+            "URL": "https://doi.org/10.1093/jof/70.7.395",
+            "is-referenced-by-count": 0
+          },
+          {
+            "DOI": "10.1093/jof/66.1.9",
+            "title": [
+              "Guest Editorial"
+            ],
+            "author": [
+              {
+                "name": "none",
+                "sequence": "first",
+                "affiliation": [],
+                "role": [
+                  {
+                    "role": "author",
+                    "vocabulary": "crossref"
+                  }
+                ]
+              }
+            ],
+            "issued": {
+              "date-parts": [
+                [
+                  1968,
+                  1,
+                  1
+                ]
+              ]
+            },
+            "published-print": {
+              "date-parts": [
+                [
+                  1968,
+                  1,
+                  1
+                ]
+              ]
+            },
+            "container-title": [
+              "Journal of Forestry"
+            ],
+            "URL": "https://doi.org/10.1093/jof/66.1.9",
+            "is-referenced-by-count": 0
+          },
+          {
+            "DOI": "10.32920/25413109",
+            "title": [
+              "Guest Editorial"
+            ],
+            "author": [
+              {
+                "given": "Frank",
+                "family": "Russo",
+                "sequence": "first",
+                "affiliation": [],
+                "role": [
+                  {
+                    "role": "author",
+                    "vocabulary": "crossref"
+                  }
+                ]
+              }
+            ],
+            "issued": {
+              "date-parts": [
+                [
+                  2024,
+                  3,
+                  21
+                ]
+              ]
+            },
+            "URL": "https://doi.org/10.32920/25413109",
+            "is-referenced-by-count": 0
+          }
+        ]
+      }
+    }
+  },
+  "openalex": {
+    "url": "https://api.openalex.org/works?search=Guest+editorial&per-page=3",
+    "durum": 429,
+    "govde": {
+      "error": "Rate limit exceeded",
+      "message": "Insufficient budget. This request has no API key, so it counts against the free daily budget shared by everyone on your network's IP address, and that budget is"
+    }
+  }
+}
