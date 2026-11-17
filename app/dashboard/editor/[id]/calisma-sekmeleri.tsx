@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ceviri } from "@/lib/dil-sunucu";
-import { calismaBolumleri, type CalismaBolumu } from "@/lib/os/uygulamalar";
+import { calismaBaglantilari, calismaBolumleri, type CalismaBolumu } from "@/lib/os/uygulamalar";
 import { CalismaBaglamiYayinla } from "../../_components/calisma-baglami";
 
 /*
@@ -34,23 +34,38 @@ export default async function CalismaSekmeleri({
     aynıydı ama bir bölüm eklenirken iki yer birden değişmeliydi. "Makale
     yalnızca makale türünde" kuralı da artık tek yerde.
   */
-  const sekmeler = calismaBolumleri({ id: calisma.id, baslik: calisma.title ?? "", tur: calisma.project_type }, t);
+  const baglam = { id: calisma.id, baslik: calisma.title ?? "", tur: calisma.project_type };
+  const sekmeler = calismaBolumleri(baglam, t);
+  /*
+    Bu çalışmaya süzülmüş araçlar (Kaynaklar, Analiz, Belge Kontrol).
+    17.11.2026'ya kadar kenar çubuğunun çalışma alt menüsünde "Bu
+    çalışmada" başlığıyla duruyordu; alt menü kalkınca (editör açılınca
+    gezinme değişmesin) sekme sırasının sonuna geldi: aynı yerde, aynı
+    çalışma için.
+  */
+  const araclar = calismaBaglantilari(baglam, t).filter((b) => b.grup === "arac");
 
   /*
-    Phase 3 (04.11.2026): sekmeler masaüstünde gizli, aynı bölümler kenar
-    çubuğunda (os-gezinme.tsx) duruyor; çalışmayı oraya bu bileşen
-    bildiriyor. Tablet ve telefonda sekmeler sayfadaki tek bölüm gezinmesi.
-    "aktif"i sayfa bildirir (sunucu bileşeni adresi okumuyor); kenar
-    çubuğunun adresten hesapladığıyla aynı olduğu testte sabit
+    Sekmeler her ekran boyunda görünür (17.11.2026): çalışmanın bölümleri
+    için tek gezinme bu. Eskiden masaüstünde gizlenip kenar çubuğunun alt
+    menüsünde gösteriliyordu. Çalışma bağlamı yine yayınlanıyor: Ctrl+K ve
+    üst çubuk onu okuyor. "aktif"i sayfa bildirir (sunucu bileşeni adresi
+    okumuyor); adresten hesaplananla aynı olduğu testte sabit
     (tests/unit/calisma-sekmeleri.test.ts).
   */
   return (
     <>
     <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
-    <nav className="segmented calisma-sekmeleri" aria-label={t({ tr: "Çalışma bölümleri", en: "Work sections" })}>
+    <nav className="calisma-sekmeleri" aria-label={t({ tr: "Çalışma bölümleri", en: "Work sections" })}>
       {sekmeler.map((sekme) => (
         <Link key={sekme.key} href={sekme.href} aria-current={sekme.key === aktif ? "page" : undefined}>
           {sekme.label}
+        </Link>
+      ))}
+      <span className="calisma-sekmeleri-ayrac" aria-hidden="true" />
+      {araclar.map((arac) => (
+        <Link key={arac.key} href={arac.href} className="calisma-sekmeleri-arac">
+          {arac.label}
         </Link>
       ))}
     </nav>

@@ -54,7 +54,16 @@ export type OsUygulama = {
   yer?: OsYer;
 };
 
-export type OsYer = "hesap" | "yonetim";
+/*
+  PREMIUM ÇALIŞMA ALANI (17.11.2026, kurum sahibinin onaylı tasarımı): ana
+  gezinmede yalnızca üç öğe kalır (Ana Sayfa, Çalışmalarım, Kaynaklar).
+  "arac": ileri araçlar (Analiz Merkezi, Belge Kontrol) kenar çubuğunda
+  açık adlı "Araçlar" grubunda; "yardim": Kullanım Kılavuzu ve Destek
+  kenar çubuğunun altındaki "Yardım" grubunda. Eskiden altısı da ana
+  listedeydi; öğrenci ilk açılışta hangisinin günlük iş olduğunu
+  ayıramıyordu. Hiçbiri kaldırılmadı: yalnızca yeri değişti.
+*/
+export type OsYer = "hesap" | "yonetim" | "arac" | "yardim";
 
 export const ANA_SAYFA = "/dashboard";
 
@@ -111,8 +120,8 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
         sahibi "iki sekme çıkmasın, tek sayfa" dedi.
       */
     },
-    { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
-    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
+    { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"], yer: "arac" },
+    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"], yer: "arac" },
     /*
       Kılavuz kataloğu ve doçentlik dock'tan çıktı: öğrencinin kılavuzu
       çalışma merkezinde zaten görünüyor, katalog çoğunlukla personelin
@@ -141,6 +150,7 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       href: "/dashboard/expert-requests",
       ikon: "destek",
       yollar: ["/dashboard/expert-requests", "/dashboard/support"],
+      yer: "yardim",
       /* Bölüm yok: uzman ve uygulama desteği aynı sayfanın iki kartı
          (Kaynaklar'la aynı karar, 26.10.2026). */
     },
@@ -149,7 +159,7 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       Kullanım Kılavuzu (30.10.2026): dock'ta yer kaplamıyor (yeni başlayan
       birkaç kez açar); başlatıcıda, Ctrl+K'da ve kullanıcı menüsünde.
     */
-    { key: "yardim", label: t({ tr: "Kullanım Kılavuzu", en: "User Guide" }), kisa: t({ tr: "Kılavuz", en: "Guide" }), href: "/dashboard/yardim", ikon: "kilavuz", yollar: ["/dashboard/yardim"], yalnizBaslatici: true, yer: "hesap" },
+    { key: "yardim", label: t({ tr: "Kullanım Kılavuzu", en: "User Guide" }), kisa: t({ tr: "Kılavuz", en: "Guide" }), href: "/dashboard/yardim", ikon: "kilavuz", yollar: ["/dashboard/yardim"], yalnizBaslatici: true, yer: "yardim" },
     /*
       Abonelik ve kredi (26.10.2026): bireysel abone aboneliğini ve asistan
       kredisini buradan yönetiyor. Dock'ta yer kaplamıyor (ayda bir açılan
@@ -293,11 +303,15 @@ export function komutHedefleri(uygulamalar: OsUygulama[]): OsKomutHedefi[] {
   listesindeki sıradır.
 */
 
-/** Kullanıcının kendi hesabıyla ilgili sayfalar: Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi. */
+/** Kullanıcının kendi hesabıyla ilgili sayfalar: Ayarlar, Abonelik ve Kredi. (Kullanım Kılavuzu 17.11.2026'dan beri Yardım grubunda.) */
 export const hesapUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "hesap");
 
 /** "Personel Araçları": yalnızca rolü yetenlere görünen araçlar (öğrencide boş). */
 export const personelAraclari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "yonetim");
+/** Kenar çubuğundaki "Araçlar" grubu: Analiz Merkezi, Belge Kontrol. */
+export const aracUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "arac");
+/** Kenar çubuğunun altındaki "Yardım" grubu: Destek, Kullanım Kılavuzu. */
+export const yardimUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "yardim");
 
 /*
   ═══ UYARLANIR GEZİNME (Phase 3, 04.11.2026) ═══
@@ -311,7 +325,8 @@ export const personelAraclari = (gorunen: OsUygulama[]) => gorunen.filter((u) =>
 */
 
 /** Telefondaki alt çubukta kalıcı duran uygulamalar (geri kalanı "Daha fazla"da). */
-export const ALT_CUBUK = ["home", "tez", "kaynaklar", "analiz"] as const;
+/* 17.11.2026: üç ana öğe (onaylı tasarım). Analiz Merkezi "Daha fazla"ya geçti; eskiden dördüncü sıradaydı. */
+export const ALT_CUBUK = ["home", "tez", "kaynaklar"] as const;
 
 /*
   ANA GEZİNME (Phase 5.1d-3, 14.11.2026, kurum sahibinin kararı). Kenar

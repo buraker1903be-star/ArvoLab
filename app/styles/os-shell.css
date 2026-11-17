@@ -32,7 +32,7 @@
 }
 .os-gezinme-liste { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 /* `hidden` özniteliği display:flex'e yenilmesin (kapalı alt menü). */
-.os-gezinme-liste[hidden], .os-gezinme-baglam[hidden] { display: none; }
+.os-gezinme-liste[hidden] { display: none; }
 .os-gezinme-oge {
   display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 40px; padding: 0 var(--s-3);
   border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
@@ -42,16 +42,24 @@
 .os-gezinme-oge > svg { flex: none; }
 .os-gezinme-oge:hover { background: var(--surface-2); color: var(--ink); }
 .os-gezinme-oge.is-active { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
-.os-gezinme-oge:focus-visible, .os-gezinme-alt:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-gezinme-oge:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .os-gezinme-ad { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .os-gezinme-kisa { display: none; }
 
-/* Yalnızca masaüstünde görünenler: logo, alt menü düğmesi, çalışma alt menüsü, hesap. */
-.os-gezinme-logo, .os-gezinme-ac, .os-gezinme-baglam, .os-gezinme-hesap { display: none; }
+/* Yalnızca masaüstünde görünenler: logo ve hesap. */
+.os-gezinme-logo, .os-gezinme-hesap { display: none; }
 /* Sarmalayıcılar telefonda ve tablette düzene karışmaz. */
-.os-gezinme-govde, .os-gezinme-satir, .os-gezinme-bas { display: contents; }
+.os-gezinme-govde, .os-gezinme-bas { display: contents; }
 /* Daraltma düğmesi yalnızca masaüstünde (Phase 5.1c): tablet her zaman ray, telefon alt çubuk. */
 .os-gezinme-daralt { display: none; }
+/*
+  Gruplar ("Araçlar", "Yardım") ve alt bölge (Ayarlar + Yardım) telefonda
+  çizilmez: alt çubukta yalnızca üç ana öğe ve "Daha fazla" durur, gruptaki
+  her sayfa "Daha fazla"da (lib/os/uygulamalar.ts: dahaFazlasi).
+*/
+.os-gezinme-takim, .os-gezinme-alt-bolge { display: none; }
+.os-gezinme-takim-ok { flex: none; margin-left: auto; transition: transform var(--os5-sure-orta) var(--os5-egri); }
+.os-gezinme-takim-bas[aria-expanded="false"] .os-gezinme-takim-ok { transform: rotate(-90deg); }
 
 /* ---------- Masaüstü: koyu lacivert kenar çubuğu ---------- */
 @media (min-width: 1200px) {
@@ -101,47 +109,16 @@
     background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); font-weight: 600;
     box-shadow: inset 3px 0 0 var(--os5-kenar-isaret);
   }
-  /* Alt menüdeki sayfa etkinken üst öğe ("Çalışmalarım") belirgin ama işaretsiz. */
-  .os-gezinme .os-gezinme-oge.is-ust { color: var(--os5-kenar-yazi-guclu); font-weight: 600; }
-  .os-gezinme .os-gezinme-oge:focus-visible,
-  .os-gezinme .os-gezinme-alt:focus-visible,
-  .os-gezinme-ac:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
+  .os-gezinme .os-gezinme-oge:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
   .os-gezinme .os-gezinme-oge.is-active:focus-visible { box-shadow: inset 3px 0 0 var(--os5-kenar-isaret), var(--os5-kenar-odak); }
 
-  /* Üst öğe + alt menü düğmesi */
-  .os-gezinme-satir { display: flex; align-items: center; gap: 2px; }
-  .os-gezinme-satir > .os-gezinme-oge { flex: 1; min-width: 0; }
-  .os-gezinme-ac {
-    display: grid; place-items: center; flex: none;
-    border: 0; border-radius: var(--os5-kontrol-r); background: transparent;
-    color: var(--os5-kenar-yazi); font: inherit; cursor: pointer;
-    transition: background-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
-  }
-  .os-gezinme-ac { width: var(--os5-kontrol-h-sik); height: var(--os5-kontrol-h-sik); }
-  .os-gezinme-ac:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
-  .os-gezinme-ac > svg { transition: transform var(--os5-sure-orta) var(--os5-egri); }
-  .os-gezinme-ac[aria-expanded="false"] > svg { transform: rotate(-90deg); }
-
-  /* Açık çalışmanın alt menüsü: "Çalışmalarım"ın altında, ince bir çizgiyle girintili. */
-  .os-gezinme-baglam {
-    display: block; margin: 4px 0 6px calc(var(--os5-gezinme-ic) + 9px); padding-left: 10px;
-    border-left: 1px solid var(--os5-kenar-cizgi);
-  }
-  .os-gezinme-calisma {
-    display: -webkit-box; margin: 6px 10px 6px; overflow: hidden;
-    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    color: var(--os5-kenar-yazi-guclu); font-size: var(--os5-fs-meta); font-weight: 600; line-height: 1.35;
-  }
-  .os-gezinme .os-gezinme-alt {
-    display: flex; align-items: center; min-height: var(--os5-gezinme-alt); padding: 0 10px;
-    border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi);
-    font-size: var(--os5-fs-meta); text-decoration: none;
-  }
-  .os-gezinme .os-gezinme-alt:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
-  .os-gezinme .os-gezinme-alt.is-active { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); font-weight: 600; }
-  .os-gezinme-alt-baslik {
-    display: block; margin: 10px 10px 4px;
-    color: var(--os5-kenar-baslik); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  /* Gruplar: açık adlı başlık + kapanabilen liste. Alt bölge kenar çubuğunun dibinde, ince bir çizgiyle. */
+  .os-gezinme-takim { display: flex; flex-direction: column; gap: 2px; }
+  .os-gezinme-takim-liste[data-kapali] { display: none; }
+  .os-gezinme-takim-liste .os-gezinme-oge { padding-left: calc(var(--os5-gezinme-ic) + 12px); }
+  .os-gezinme-alt-bolge {
+    display: flex; flex: none; flex-direction: column; gap: 2px;
+    margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi);
   }
 
   /*
@@ -162,8 +139,12 @@
   /* Logo ve hesap kenar çubuğunda: üst çubukta yalnızca sayfa adı. */
   .os-root .os-marka-logo, .os-root .os-kullanici--ust { display: none; }
   .os-root .os-marka-sayfa { padding-left: 0; border-left: 0; color: var(--ink); font-size: var(--os5-fs-govde); }
-  /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin. */
-  .os-root .calisma-sekmeleri { display: none; }
+  /*
+    Çalışma bölümleri artık her ekran boyunda sayfanın kendi sekmelerinde
+    (17.11.2026). Eskiden açık masaüstünde sekmeler gizlenip aynı bölümler
+    kenar çubuğunda "Çalışmalarım"ın altında açılıyordu; editöre girmek
+    uygulama gezinmesini değiştiriyordu.
+  */
 }
 
 /* ---------- Masaüstü DAR: 64 px ray (Phase 5.1c, 13.11.2026) ----------
@@ -181,7 +162,6 @@
   /* Liste kabı taşmayı KESMEZ: ad etiketi rayın sağına açılıyor (kesseydi etiket kırpılırdı). */
   html[data-gezinme="dar"] .os-gezinme-govde { align-items: center; gap: var(--s-1); width: 100%; margin: 0; padding: var(--s-2) 0; overflow: visible; }
   html[data-gezinme="dar"] .os-gezinme-liste { align-items: center; gap: var(--s-1); }
-  html[data-gezinme="dar"] .os-gezinme-satir { justify-content: center; }
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge { position: relative; justify-content: center; width: 44px; min-height: 44px; padding: 0; }
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge.is-active { box-shadow: inset 3px 0 0 var(--os5-kenar-isaret); }
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-ad {
@@ -194,18 +174,19 @@
   }
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
-  /* Çalışma alt menüsü metin başlıklı; 64 px'e sığmaz. Onun yerine
-     sayfadaki çalışma sekmeleri ve "Daha fazla" (tabletteki gibi). */
-  html[data-gezinme="dar"] .os-gezinme-ac,
-  html[data-gezinme="dar"] .os-gezinme-baglam,
   html[data-gezinme="dar"] .os-gezinme-hesap { display: none; }
   html[data-gezinme="dar"] .os-gezinme-daha-li { display: list-item; }
-  html[data-gezinme="dar"] .os-gezinme-son { display: flex; margin-top: auto; }
+  html[data-gezinme="dar"] .os-gezinme-son { display: flex; }
   html[data-gezinme="dar"] .os-root .dashboard-content-shell { margin-left: var(--os5-kenar-ray); }
   html[data-gezinme="dar"] .os-root .os-marka-logo { display: flex; }
   html[data-gezinme="dar"] .os-root .os-kullanici--ust { display: block; }
   html[data-gezinme="dar"] .os-root .os-marka-sayfa { padding-left: 12px; border-left: 1px solid var(--line); }
-  html[data-gezinme="dar"] .os-root .calisma-sekmeleri { display: inline-flex; }
+  /* Rayda grup başlığı gizli, öğeler simge olarak doğrudan görünür (kapalı grup da). */
+  html[data-gezinme="dar"] .os-gezinme-takim-bas { display: none; }
+  html[data-gezinme="dar"] .os-gezinme-takim { align-items: center; }
+  html[data-gezinme="dar"] .os-gezinme-takim-liste[data-kapali] { display: flex; }
+  html[data-gezinme="dar"] .os-gezinme-takim-liste .os-gezinme-oge { padding-left: 0; }
+  html[data-gezinme="dar"] .os-gezinme-alt-bolge { align-items: center; width: 100%; margin-top: auto; }
   /*
     KÂĞIT GEOMETRİSİ SABİT (kurum sahibinin kararı, Phase 5.1c): daraltmanın
     kazandırdığı 176 px belgeyi genişletmez. Yazım düzeni açık kenar
@@ -261,7 +242,10 @@
   .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
   .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
   .os-gezinme .os-gezinme-kisa { display: none; }
-  .os-gezinme-son { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+  .os-gezinme-takim, .os-gezinme-alt-bolge { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
+  .os-gezinme-takim-bas { display: none; }
+  .os-gezinme-alt-bolge { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+  .os-gezinme-son { padding-top: var(--s-1); }
   .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--os5-kenar-ray); }
 }
 
@@ -291,7 +275,7 @@
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .os-gezinme, .os-gezinme-oge, .os-gezinme-ac, .os-gezinme-ac > svg, .os-gezinme .os-gezinme-ad { transition: none; }
+  .os-gezinme, .os-gezinme-oge, .os-gezinme-takim-ok, .os-gezinme .os-gezinme-ad { transition: none; }
 }
 
 /* ---------- "Daha fazla" ---------- */
@@ -368,7 +352,8 @@
   flex: 1 1 280px; max-width: 480px; margin-inline: auto;
   display: flex; align-items: center; gap: 12px;
   height: 40px; padding: 0 12px;
-  border: 1px solid var(--line); border-radius: var(--r-md);
+  /* Kontrol köşesi 4 px (premium çalışma alanı): girişteki alanlarla aynı aile. */
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
   background: var(--surface-2); color: var(--muted);
   font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
   transition: border-color .18s var(--ease-spring), background-color .18s var(--ease-spring);

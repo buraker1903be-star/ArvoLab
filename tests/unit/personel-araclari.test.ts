@@ -42,10 +42,16 @@ describe("hesap menüsü merkezi listeden", () => {
 });
 
 describe("sade kenar çubuğu", () => {
-  test("Diğer grubu ve bağımsız Ayarlar yok; ana liste anaUygulamalar'dan", () => {
-    assert.doesNotMatch(gezinme, /os-gezinme-diger|os-gezinme-grup|digerAcik|DIGER_GRUBU_ANAHTARI/);
-    assert.doesNotMatch(gezinme, /oge\(ayarlar\)|gezinmeGruplari/);
+  /*
+    17.11.2026 (onaylı premium tasarım): Ayarlar kenar çubuğunun altına
+    geri geldi ve açık adlı "Araçlar" / "Yardım" grupları eklendi. Eski
+    "Diğer" grubu (her şeyin karıştığı tek kutu) dönmüyor: o adlar hâlâ
+    yasak. Ayarlar aynı zamanda hesap menüsünde de durur.
+  */
+  test("eski Diğer grubu yok; ana liste anaUygulamalar'dan; Ayarlar altta", () => {
+    assert.doesNotMatch(gezinme, /os-gezinme-diger|digerAcik|DIGER_GRUBU_ANAHTARI|gezinmeGruplari/);
     assert.match(gezinme, /const ana = anaUygulamalar\(uygulamalar\);/);
+    assert.match(gezinme, /oge\(ayarlar\)/);
   });
 
   test("Daha fazla ve kalıcı dar/açık tercihi yerinde", () => {
@@ -55,7 +61,7 @@ describe("sade kenar çubuğu", () => {
   });
 
   test("CSS: Diğer kuralları kalktı; açık masaüstünde boş alt liste gizli", () => {
-    assert.doesNotMatch(kabuk, /os-gezinme-diger|os-gezinme-grup/);
+    assert.doesNotMatch(kabuk, /os-gezinme-diger/);
     assert.match(kabuk, /\.os-gezinme-son \{\s*display: none;/);
   });
 });

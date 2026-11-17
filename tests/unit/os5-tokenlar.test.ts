@@ -19,10 +19,11 @@ const deger = (b: string, ad: string) => new RegExp(`${ad}:\\s*([^;]+);`).exec(b
 
 describe("onaylı başlangıç değerleri", () => {
   const kok = blok(":root");
-  test("kontrol 40 px, radius 4 px; kart 16 px; kenar çubuğu 240 px", () => {
+  // 17.11.2026: kart 16 → 8 px (onaylı premium tasarım: düz yüzey, kısa köşe).
+  test("kontrol 40 px, radius 4 px; kart 8 px; kenar çubuğu 240 px", () => {
     assert.equal(deger(kok, "--os5-kontrol-h"), "40px");
     assert.equal(deger(kok, "--os5-kontrol-r"), "4px");
-    assert.equal(deger(kok, "--os5-r-kart"), "16px");
+    assert.equal(deger(kok, "--os5-r-kart"), "8px");
     assert.equal(deger(kok, "--os5-kenar-genis"), "240px");
   });
   test("Paddle ritmi: gezinme 42/38/32, içerik 1248, form 400, bölüm 40", () => {

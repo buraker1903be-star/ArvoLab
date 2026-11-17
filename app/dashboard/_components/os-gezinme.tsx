@@ -1,24 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ChevronDown, Ellipsis, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { ChevronDown, Ellipsis, LifeBuoy, PanelLeftClose, PanelLeftOpen, Wrench, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import {
   ALT_CUBUK,
   anaUygulamalar,
-  calismaBaglantilari,
-  calismaIcindeMi,
+  aracUygulamalari,
   dahaFazlasi,
-  etkinBaglanti,
   etkinUygulama,
+  yardimUygulamalari,
   type OsUygulama,
 } from "@/lib/os/uygulamalar";
 import { grupAcikMi } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
-import { useCalismaBaglami } from "./calisma-baglami";
 import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
 
 /*
@@ -27,13 +25,17 @@ import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_compo
   boyuna göre üç biçim (os-shell.css; kırılımlar lib/os/kirilimlar.ts):
 
   - masaüstü (≥1200): solda 240 px koyu lacivert, sabit kenar çubuğu.
-    Üstte resmî logo, altta hesap menüsü. Bir çalışmanın
-    içindeyken o çalışmanın bölümleri "Çalışmalarım"ın ALT MENÜSÜ olarak
-    açılır (eskiden listenin üstünde ayrı bir "Açık çalışma" kutusuydu;
-    çalışma bağlamı artık ana gezinmenin bir parçası, ikinci bir sistem
-    değil). Yalnızca akademik uygulamalar: hesap sayfaları ve personel
-    araçları hesap menüsünde (Phase 5.1d-3; eskiden altta bir "Diğer"
-    grubu ve ayrı bir Ayarlar bağlantısı vardı).
+    Üstte resmî logo; ortada üç ana öğe (Ana Sayfa, Çalışmalarım,
+    Kaynaklar) ve açık adlı "Araçlar" grubu; altta Ayarlar, "Yardım"
+    grubu ve hesap menüsü (premium çalışma alanı, 17.11.2026; onaylı
+    tasarım). Personel araçları hesap menüsünde kalır.
+
+    EDİTÖR AÇILINCA GEZİNME DEĞİŞMEZ (17.11.2026, kurum sahibinin şartı).
+    Eskiden bir çalışmanın içindeyken "Çalışmalarım"ın altında o
+    çalışmanın bölümleri (Özet, Yazım, Kanıt, Etik, araçlar) açılıyordu:
+    editöre girmek kenar çubuğunun boyunu ve içeriğini değiştiriyordu.
+    Bölümler artık her ekran boyunda sayfadaki çalışma sekmelerinde
+    (calisma-sekmeleri.tsx).
   - tablet (761–1199): 64 px koyu ray, yalnızca simge. Ad, fareyle ya da
     klavyeyle üzerine gelince yanında belirir; ekran okuyucu her zaman
     okur. Çalışma bölümleri sayfanın kendi sekmelerinde kalır.
@@ -48,26 +50,27 @@ import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_compo
 export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; hesap?: ReactNode }) {
   const t = useCeviri();
   const yol = usePathname();
-  const sorgu = useSearchParams();
   const pencere = useRef<HTMLDialogElement>(null);
-  const baglam = useCalismaBaglami();
   const etkin = etkinUygulama(uygulamalar, yol);
   const ana = anaUygulamalar(uygulamalar);
+  const araclar = aracUygulamalari(uygulamalar);
+  const yardim = yardimUygulamalari(uygulamalar);
+  const ayarlar = uygulamalar.find((u) => u.key === "ayarlar");
   const cubukta = new Set<string>(ALT_CUBUK);
 
-  const baglamGorunur = Boolean(baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString())));
-  const baglantilar = baglam && baglamGorunur ? calismaBaglantilari(baglam, t) : [];
-  const baglamEtkin = baglamGorunur ? etkinBaglanti(baglantilar, yol) : null;
-  const calismaBolumleri = baglantilar.filter((b) => b.grup === "calisma");
-  const calismaAraclari = baglantilar.filter((b) => b.grup === "arac");
-
   /*
-    Oturum içi seçimler o anki ADRESE bağlı: başka sayfaya geçince seçim
-    düşer ve varsayılan kural yeniden işler (etkin sayfanın grubu açık).
-    Efektte sıfırlamak yerine adresle anahtarlamak, çizim sırasında
-    durum değiştirmeden aynı sonucu verir.
+    Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
+    seçim düşer ve varsayılan kural yeniden işler (etkin sayfa gruptaysa
+    açık, değilse kapalı). Efektte sıfırlamak yerine adresle anahtarlamak,
+    çizim sırasında durum değiştirmeden aynı sonucu verir.
   */
-  const [calismaSecimi, setCalismaSecimi] = useState<{ yol: string; acik: boolean } | null>(null);
+  const [secim, setSecim] = useState<{ yol: string; grup: string; acik: boolean } | null>(null);
+  const grupAcik = (grup: string, uyeler: OsUygulama[]) =>
+    grupAcikMi({
+      secim: secim?.yol === yol && secim.grup === grup ? secim.acik : null,
+      etkinIcinde: uyeler.some((u) => u.key === etkin?.key),
+      varsayilan: false,
+    });
   /*
     Masaüstü dar/açık (Phase 5.1c). Durum <html data-gezinme>'den okunur;
     genişliği yalnızca CSS belirler, bu yüzden sunucu çizimi ("açık") ile
@@ -75,20 +78,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     hydration'dan hemen sonra düzelir — yerleşim hiç kaymaz.
   */
   const dar = useSyncExternalStore(gezinmeAbone, gezinmeDarMi, () => false);
-
-  const calismaAcik = grupAcikMi({
-    secim: calismaSecimi?.yol === yol ? calismaSecimi.acik : null,
-    etkinIcinde: Boolean(baglamEtkin),
-    varsayilan: true,
-  });
-
-  /*
-    Tek etkin işaret: çalışmaya süzülmüş bir araçtayken (Kaynaklar
-    ?calisma=…) işaret alt menüdeki bağlantıda; ana listedeki "Kaynaklar"
-    ikinci kez işaretlenmez. "Çalışmalarım" o sırada üst öğe olarak
-    belirginleşir (is-ust), sayfa işareti taşımaz.
-  */
-  const anaEtkinKey = baglamEtkin ? null : etkin?.key;
 
   const ogeIcerik = (u: OsUygulama) => (
     <>
@@ -101,7 +90,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   );
 
   const oge = (u: OsUygulama) => {
-    const acik = anaEtkinKey === u.key;
+    const acik = etkin?.key === u.key;
     return (
       <li key={u.key} data-alt-cubuk={cubukta.has(u.key) || undefined}>
         <Link href={u.href} className={acik ? "os-gezinme-oge is-active" : "os-gezinme-oge"} aria-current={acik ? "page" : undefined} title={u.label}>
@@ -111,52 +100,34 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     );
   };
 
-  /* "Çalışmalarım" + açık çalışmanın alt menüsü (yalnızca masaüstünde görünür). */
-  const calismaOgesi = (u: OsUygulama) => {
-    const acik = anaEtkinKey === u.key;
-    const sinif = ["os-gezinme-oge", acik ? "is-active" : "", baglamEtkin ? "is-ust" : ""].filter(Boolean).join(" ");
+  /*
+    Açık adlı grup ("Araçlar", "Yardım"). Açık kenar çubuğunda başlık bir
+    açılır düğme; rayda (tablet ve dar masaüstü) başlık gizlenir ve öğeler
+    simge olarak doğrudan görünür — 64 px'te açılır menü sığmaz, öğe gizli
+    kalırsa ulaşılamaz olurdu. Liste `hidden` değil data-kapali taşır:
+    kapalılık yalnızca açık kenar çubuğunda anlamlı (os-shell.css).
+  */
+  const grup = (anahtar: string, baslik: string, simge: ReactNode, uyeler: OsUygulama[]) => {
+    if (!uyeler.length) return null;
+    const acik = grupAcik(anahtar, uyeler);
+    const kimlik = `os-gezinme-takim-${anahtar}`;
     return (
-      <li key={u.key} data-alt-cubuk={cubukta.has(u.key) || undefined} className="os-gezinme-ust-oge">
-        <div className="os-gezinme-satir">
-          <Link href={u.href} className={sinif} aria-current={acik ? "page" : undefined} title={u.label}>
-            {ogeIcerik(u)}
-          </Link>
-          <button
-            type="button"
-            className="os-gezinme-ac"
-            aria-expanded={calismaAcik}
-            aria-controls="os-gezinme-calisma"
-            aria-label={t({ tr: "Açık çalışmanın bölümleri", en: "Sections of the open work" })}
-            onClick={() => setCalismaSecimi({ yol, acik: !calismaAcik })}
-          >
-            <ChevronDown size={16} aria-hidden="true" />
-          </button>
-        </div>
-        <div id="os-gezinme-calisma" className="os-gezinme-baglam" hidden={!calismaAcik}>
-          <b className="os-gezinme-calisma" title={baglam?.baslik}>
-            {baglam?.baslik}
-          </b>
-          <ul className="os-gezinme-liste" aria-label={t({ tr: `Açık çalışma: ${baglam?.baslik ?? ""}`, en: `Open work: ${baglam?.baslik ?? ""}` })}>
-            {calismaBolumleri.map((b) => (
-              <li key={b.key}>
-                <Link href={b.href} className={baglamEtkin?.key === b.key ? "os-gezinme-alt is-active" : "os-gezinme-alt"} aria-current={baglamEtkin?.key === b.key ? "page" : undefined}>
-                  {b.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <span className="os-gezinme-alt-baslik">{t({ tr: "Bu çalışmada", en: "In this work" })}</span>
-          <ul className="os-gezinme-liste">
-            {calismaAraclari.map((b) => (
-              <li key={b.key}>
-                <Link href={b.href} className={baglamEtkin?.key === b.key ? "os-gezinme-alt is-active" : "os-gezinme-alt"} aria-current={baglamEtkin?.key === b.key ? "page" : undefined}>
-                  {b.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </li>
+      <div className="os-gezinme-takim" key={anahtar}>
+        <button
+          type="button"
+          className="os-gezinme-oge os-gezinme-takim-bas"
+          aria-expanded={acik}
+          aria-controls={kimlik}
+          onClick={() => setSecim({ yol, grup: anahtar, acik: !acik })}
+        >
+          {simge}
+          <span className="os-gezinme-ad">{baslik}</span>
+          <ChevronDown size={16} aria-hidden="true" className="os-gezinme-takim-ok" />
+        </button>
+        <ul id={kimlik} className="os-gezinme-liste os-gezinme-takim-liste" data-kapali={acik ? undefined : ""} aria-label={baslik}>
+          {uyeler.map(oge)}
+        </ul>
+      </div>
     );
   };
 
@@ -189,7 +160,13 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
         </div>
 
         <div className="os-gezinme-govde">
-          <ul className="os-gezinme-liste os-gezinme-ana">{ana.map((u) => (u.key === "tez" && baglamGorunur ? calismaOgesi(u) : oge(u)))}</ul>
+          <ul className="os-gezinme-liste os-gezinme-ana">{ana.map(oge)}</ul>
+          {grup("araclar", t({ tr: "Araçlar", en: "Tools" }), <Wrench size={20} aria-hidden="true" />, araclar)}
+        </div>
+
+        <div className="os-gezinme-alt-bolge">
+          {ayarlar ? <ul className="os-gezinme-liste os-gezinme-ayar">{oge(ayarlar)}</ul> : null}
+          {grup("yardim", t({ tr: "Yardım", en: "Help" }), <LifeBuoy size={20} aria-hidden="true" />, yardim)}
         </div>
 
         <ul className="os-gezinme-liste os-gezinme-son">

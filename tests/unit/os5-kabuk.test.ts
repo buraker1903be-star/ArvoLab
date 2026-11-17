@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as gezinmeModulu from "@/lib/os5/gezinme";
 import { grupAcikMi } from "@/lib/os5/gezinme";
-import { anaUygulamalar, gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari } from "@/lib/os/uygulamalar";
+import { anaUygulamalar, aracUygulamalari, gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, yardimUygulamalari } from "@/lib/os/uygulamalar";
 
 /*
   Signature OS 5 / Phase 3: uygulama kabuğu ve gezinme. Kimin neyi
@@ -49,9 +49,9 @@ describe("rol bazlı görünürlük değişmedi", () => {
     const kurucu = personelAraclari(gorunenUygulamalar(labUygulamalari(), "founder")).map((u) => u.key);
     assert.ok(kurucu.includes("ekip") && kurucu.includes("asistan"));
   });
-  test("hiçbir uygulama düşmüyor: her biri ana gezinmede ya da hesap menüsünde, tam bir yerde", () => {
+  test("hiçbir uygulama düşmüyor: her biri ana gezinmede, bir grupta ya da hesap menüsünde, tam bir yerde", () => {
     const hepsi = gorunenUygulamalar(labUygulamalari(), "founder");
-    const yerler = [...anaUygulamalar(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key);
+    const yerler = [...anaUygulamalar(hepsi), ...aracUygulamalari(hepsi), ...yardimUygulamalari(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key);
     assert.deepEqual([...yerler].sort(), hepsi.map((u) => u.key).sort());
     assert.equal(new Set(yerler).size, yerler.length);
   });
@@ -72,19 +72,26 @@ describe("hesap menüsü iki yerleşimde aynı", () => {
   });
 });
 
-describe("çalışma bağlamı aynı gezinmede", () => {
-  const gezinme = oku("app/dashboard/_components/os-gezinme.tsx");
-  test("bağlam 'Çalışmalarım'ın alt menüsü; ayrı bir gezinme bileşeni yok", () => {
-    assert.match(gezinme, /u\.key === "tez" && baglamGorunur \? calismaOgesi\(u\) : oge\(u\)/);
+/*
+  EDİTÖR AÇILINCA GEZİNME DEĞİŞMEZ (17.11.2026, kurum sahibinin şartı).
+  Eskiden (Phase 5.1d) çalışmanın içindeyken "Çalışmalarım"ın altında o
+  çalışmanın alt menüsü açılıyordu; bu blok onu sabitliyordu. Artık
+  gezinme çalışma bağlamını HİÇ okumuyor; bölümler sayfadaki sekmelerde.
+*/
+describe("editörde gezinme sabit; gruplar erişilebilir", () => {
+  const gezinme = yorumsuz(oku("app/dashboard/_components/os-gezinme.tsx"));
+  test("gezinme çalışma bağlamını okumuyor; tek <nav>", () => {
+    assert.doesNotMatch(gezinme, /useCalismaBaglami|calismaBaglantilari|calismaIcindeMi/);
     assert.equal(gezinme.match(/<nav /g)?.length, 1);
   });
-  test("alt menü düğmeleri aria-expanded ve aria-controls taşıyor", () => {
-    assert.match(gezinme, /aria-expanded=\{calismaAcik\}\s+aria-controls="os-gezinme-calisma"/);
-    // "Diğer" grubu kalktı (Phase 5.1d-3): kenar çubuğunda tek alt menü çalışmanınki.
+  test("grup düğmeleri aria-expanded ve aria-controls taşıyor; adı görünür", () => {
+    assert.match(gezinme, /aria-expanded=\{acik\}\s+aria-controls=\{kimlik\}/);
+    assert.match(gezinme, /grup\("araclar", t\(\{ tr: "Araçlar", en: "Tools" \}\)/);
+    assert.match(gezinme, /grup\("yardim", t\(\{ tr: "Yardım", en: "Help" \}\)/);
     assert.doesNotMatch(gezinme, /os-gezinme-diger|digerAcik/);
   });
-  test("araç sayfasında tek etkin işaret: ana listedeki kopya işaretlenmez", () => {
-    assert.match(gezinme, /const anaEtkinKey = baglamEtkin \? null : etkin\?\.key;/);
+  test("tek etkin işaret: etkin uygulama adresten", () => {
+    assert.match(gezinme, /const acik = etkin\?\.key === u\.key;/);
   });
 });
 
@@ -101,8 +108,9 @@ describe("kabuk stilleri", () => {
     assert.match(tablet, /\.os-gezinme \.os-gezinme-ad \{[^}]*opacity: 0/);
     assert.doesNotMatch(tablet, /\.os-gezinme-ad \{[^}]*display: none/);
   });
-  test("kapalı alt menü gerçekten gizli ([hidden] display:flex'e yenilmiyor)", () => {
-    assert.match(css, /\.os-gezinme-liste\[hidden\], \.os-gezinme-baglam\[hidden\] \{ display: none; \}/);
+  test("kapalı grup açık kenar çubuğunda gizli, rayda öğeleri görünür", () => {
+    assert.match(css, /\.os-gezinme-takim-liste\[data-kapali\] \{ display: none; \}/);
+    assert.match(css, /html\[data-gezinme="dar"\] \.os-gezinme-takim-liste\[data-kapali\] \{ display: flex; \}/);
   });
   test("azaltılmış hareket karşılığı var", () => {
     assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.os-gezinme, \.os-gezinme-oge/);
