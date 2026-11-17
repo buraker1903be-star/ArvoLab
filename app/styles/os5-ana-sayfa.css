@@ -154,3 +154,64 @@
 @media (prefers-reduced-motion: reduce) {
   .os5-ana-arac { transition: none; }
 }
+
+/* ============================================================
+   PREMIUM ÇALIŞMA ALANI — ÖĞRENCİ ANA SAYFASI (17.11.2026, onaylı
+   tasarım; app/dashboard/page.tsx). İki bölüm: "Çalışmanıza devam
+   edin" (tek kart, tek birincil eylem) ve "Son kaynaklar" (sade liste).
+   Düz yüzey, ince çizgi; kart içinde kart yok. Satırlar ince çizgiyle
+   ayrılır, kutuya alınmaz.
+   ============================================================ */
+.os5-ana .pw-bolum { display: grid; gap: 12px; width: 100%; max-width: 820px; margin: 0 0 8px; }
+.os5-ana .pw-bolum-bas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.os5-ana .pw-bolum-bas h2 { margin: 0; color: var(--ink); font-family: var(--os5-font-govde); font-size: var(--os5-fs-form-baslik); font-weight: 600; letter-spacing: -.005em; }
+.os5-ana .pw-bolum-baglanti {
+  display: inline-flex; align-items: center; min-height: var(--os5-kontrol-h-sik); padding: 0 4px;
+  border-radius: var(--os5-kontrol-r); color: var(--ink-soft); font-size: var(--os5-fs-govde); font-weight: 500; text-decoration: none;
+}
+.os5-ana .pw-bolum-baglanti:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; }
+.os5-ana .pw-bolum-baglanti:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-ana .pw-bolum-alt { justify-self: start; }
+
+.os5-ana .pw-devam {
+  display: flex; align-items: center; gap: 16px; min-width: 0;
+  padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--os5-r-kart);
+  background: var(--os5-yuzey-kart);
+}
+.os5-ana .pw-devam-simge {
+  display: grid; flex: none; place-items: center; width: 40px; height: 40px;
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); color: var(--ink-soft);
+}
+.os5-ana .pw-devam-metin { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.os5-ana .pw-devam-metin h3 { margin: 0; overflow: hidden; font-size: var(--fs-md, 16px); font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.os5-ana .pw-devam-metin h3 a { color: var(--ink); text-decoration: none; border-radius: var(--os5-kontrol-r); }
+.os5-ana .pw-devam-metin h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.os5-ana .pw-devam-metin h3 a:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-ana .pw-devam-metin p { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+.os5-ana .pw-devam > :last-child { flex: none; }
+
+.os5-ana .pw-liste { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.os5-ana .pw-liste > li { border-bottom: 1px solid var(--line); }
+.os5-ana .pw-satir {
+  display: flex; align-items: flex-start; gap: 14px; min-height: 56px; padding: 10px 8px;
+  color: inherit; text-decoration: none; border-radius: var(--os5-kontrol-r);
+}
+.os5-ana .pw-satir:hover { background: var(--surface-2); }
+.os5-ana .pw-satir:focus-visible { outline: none; box-shadow: inset var(--os5-odak-halka); }
+.os5-ana .pw-satir-simge { flex: none; margin-top: 2px; color: var(--muted); }
+.os5-ana .pw-satir-metin { display: grid; gap: 2px; min-width: 0; }
+.os5-ana .pw-satir-metin b { overflow: hidden; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.os5-ana .pw-satir-metin small { overflow: hidden; color: var(--muted); font-size: var(--os5-fs-meta); text-overflow: ellipsis; white-space: nowrap; }
+
+.os5-ana .pw-bos { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border: 1px dashed var(--line); border-radius: var(--os5-r-kart); color: var(--muted); font-size: var(--os5-fs-govde); }
+.os5-ana .pw-bos p { flex: 1 1 280px; margin: 0; }
+.os5-ana .pw-not { max-width: 820px; margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+.os5-ana .pw-not a { color: var(--ink-soft); text-underline-offset: 3px; }
+
+/* Telefon: kart alt alta; birincil düğme tam genişlik (başparmak hedefi). */
+@media (max-width: 760px) {
+  .os5-ana .pw-devam { flex-wrap: wrap; padding: 14px 16px; }
+  .os5-ana .pw-devam-metin h3 { white-space: normal; }
+  .os5-ana .pw-devam > :last-child { flex: 1 1 100%; justify-content: center; }
+  .os5-ana .pw-satir-metin b { white-space: normal; }
+}

@@ -62,8 +62,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "You accept the Terms of Use when you sign up: ticking the box opens the text, and \"I have read and agree\" becomes active once you scroll to the end. A copy of your approval is emailed to you. If a new version is published, you're asked to accept it again when you sign in.",
       },
       {
-        tr: "Gezinmede günlük işin bölümleri sırayla durur: Ana Sayfa, Çalışmalarım, Kaynaklar, Analiz Merkezi, Belge Kontrol, Destek, Ayarlar. Bir çalışmayı açtığınızda bilgisayarda o çalışmanın bölümleri (Özet, Yazım, Kanıt matrisi, Etik kurul) en üstte görünür.",
-        en: "The navigation holds the everyday sections in order: Home, My works, Sources, Analysis Center, Document Check, Support, Settings. When you open a work, on a computer that work's sections (Overview, Writing, Evidence matrix, Ethics) appear at the top.",
+        tr: "Gezinmede günlük işin üç bölümü durur: Ana Sayfa, Çalışmalarım, Kaynaklar. Analiz Merkezi ve Belge Kontrol \"Araçlar\" altında; Kullanım Kılavuzu ve Destek \"Yardım\" altında; Ayarlar en altta. Bir çalışmayı açtığınızda o çalışmanın bölümleri (Özet, Yazım, Kanıt matrisi, Etik kurul) sayfanın üstündeki sekmelerde görünür; gezinme değişmez.",
+        en: "The navigation holds the three everyday sections: Home, My works, Sources. Analysis Center and Document Check are under \"Tools\"; the User Guide and Support are under \"Help\"; Settings is at the bottom. When you open a work, its sections (Overview, Writing, Evidence matrix, Ethics) appear as tabs at the top of the page; the navigation stays the same.",
       },
       {
         tr: "Seyrek açılan sayfalar (örneğin Abonelik ve Kredi, bu kılavuz) bilgisayarda \"Diğer\" başlığının altında, tablet ve telefonda \"Daha fazla\" düğmesindedir.",
@@ -102,8 +102,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "On Home, click \"New work\" (or the same button in My works).",
       },
       {
-        tr: "Başlığı yazın, türü seçin (Tez, Makale, Proje). Üniversite, anabilim dalı ve teslim tarihi isteğe bağlıdır; teslim tarihi verirseniz ana sayfa kalan günü sayar.",
-        en: "Enter the title and choose the type (Thesis, Article, Project). University, department and due date are optional; if you give a due date, Home counts down the days left.",
+        tr: "Başlığı yazın, türü seçin (Tez, Makale, Proje). Üniversite, anabilim dalı ve teslim tarihi isteğe bağlıdır; teslim tarihi verirseniz çalışma özeti kalan günü sayar.",
+        en: "Enter the title and choose the type (Thesis, Article, Project). University, department and due date are optional; if you give a due date, the work overview counts down the days left.",
       },
       {
         tr: "Kaynakça sistemini seçin (APA, IEEE vb.) ve \"Çalışmayı oluştur\"a basın.",
@@ -204,8 +204,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Upload a RIS or BibTeX file from Zotero, Mendeley or EndNote with \"Import\" (up to 5 MB), or add a single DOI.",
       },
       {
-        tr: "Her kaynağın durumunu ilerletin: Okunacak → \"Okudum\" → \"Metinde kullandım\". Ana sayfadaki sayılar buradan gelir.",
-        en: "Move each source along: To read → \"Read\" → \"Used in text\". The numbers on Home come from here.",
+        tr: "Her kaynağın durumunu ilerletin: Okunacak → \"Okudum\" → \"Metinde kullandım\". Çalışma özetindeki sayılar buradan gelir.",
+        en: "Move each source along: To read → \"Read\" → \"I cited it\". The numbers in the work overview come from here.",
       },
       {
         tr: "\"Kaynakçamı denetle\" editördeki kaynakçanızı (ya da yapıştırdığınız metni) biçim, atıf eşleşmesi ve dizin kaydı açısından kontrol eder.",
@@ -431,8 +431,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "The link is shown only once and copied to your clipboard; send it to your advisor by email.",
       },
       {
-        tr: "Bireysel abonelikte Ana Sayfa'daki \"Danışmanıma gönder\" kartı aynı işi tek düğmeyle yapar ve danışmanınızın bağlantıyı kaç kez açtığını gösterir.",
-        en: "On an individual subscription, the \"Send to my advisor\" card on Home does the same in one click and shows how many times your advisor opened the link.",
+        tr: "Bireysel abonelikte çalışma özetindeki (Çalışmalarım → çalışma) \"Danışmanıma gönder\" kartı aynı işi tek düğmeyle yapar ve danışmanınızın bağlantıyı kaç kez açtığını gösterir.",
+        en: "On an individual subscription, the \"Send to my advisor\" card in the work overview (My works → the work) does the same in one click and shows how many times your advisor opened the link.",
       },
       {
         tr: "Bağlantıyı istediğiniz an \"İptal et\" ile kapatabilirsiniz.",

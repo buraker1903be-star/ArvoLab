@@ -19,6 +19,13 @@ const yorumsuz = (m: string) => m.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/
 const sayfa = oku("app/dashboard/page.tsx");
 const ogrenci = sayfa.slice(sayfa.indexOf(") : ogrenciGorunumu && resume ? ("), sayfa.indexOf("<SeriKarti"));
 
+/*
+  PREMIUM ÇALIŞMA ALANI (17.11.2026, onaylı tasarım): öğrencinin ana
+  sayfası iki bölüm — "Çalışmanıza devam edin" ve "Son kaynaklar".
+  Eskiden (Phase 4) burada ölçüler, ilerleme çubukları ve "Teslim için
+  kalanlar" vardı; o testler (uydurma yüzde yok, tam liste) artık çalışma
+  özetini (calisma-durum-karti.tsx) ilgilendiriyor ve bu dosyada değil.
+*/
 describe("tek birincil eylem", () => {
   test("öğrenci görünümünde yalnızca bir birincil düğme var: Yazmaya devam et", () => {
     const kod = yorumsuz(ogrenci);
@@ -26,39 +33,45 @@ describe("tek birincil eylem", () => {
     assert.doesNotMatch(kod, /projects-primary-button/);
     assert.match(kod, /tur="birincil">\s*<PenLine[^>]*\/>\s*\{resumeStats \? t\(\{ tr: "Yazmaya devam et"/);
   });
-  test("ritim kartı ana sayfada ikinci 'Yazmaya devam et' bağlantısı çizmiyor", () => {
-    assert.match(ogrenci, /<RitimKarti ritim=\{ritim\} \/>/);
-  });
   test("boş hesapta da tek birincil: İlk çalışmayı oluştur", () => {
     const bas = sayfa.slice(sayfa.indexOf("{yeniKullanici ? ("), sayfa.indexOf(") : ogrenciGorunumu && resume ? ("));
     assert.equal(yorumsuz(bas).match(/tur="birincil"/g)?.length, 1);
   });
 });
 
-describe("ilerleme yalnızca gerçek veriden", () => {
-  test("yazılan çubuğu yalnızca kılavuz hedefi varken (yazilanYuzde)", () => {
-    assert.match(ogrenci, /\{yazilanYuzde !== null \? \(\s*<div className="os5-ana-cubuk" role="progressbar" aria-valuenow=\{yazilanYuzde\}/);
-    assert.match(sayfa, /const yazilanYuzde = tempo \?/);
+describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
+  test("ölçüler, araç ızgarası ve abonelik kartı öğrenci ana sayfasında yok", () => {
+    const kod = yorumsuz(ogrenci);
+    for (const yok of ["os5-ana-olcu", "os5-ana-arac", "AbonelikOzetKarti", "RitimKarti", "DanismanaGonder", "TeslimTarihiFormu"]) {
+      assert.doesNotMatch(kod, new RegExp(yok), yok);
+    }
   });
-  test("hazırlık çubuğu teslim kontrol listesinin done/total değerlerinden", () => {
-    assert.match(ogrenci, /aria-valuenow=\{resumeReadiness\.done\}/);
-    assert.match(ogrenci, /aria-valuemax=\{resumeReadiness\.total\}/);
+  test("ayrıntılara giden yol açık: çalışma özeti bağlantısı ve son kaynaklarda kütüphane", () => {
+    assert.match(ogrenci, /href=\{calismaAdresi\(resume\.id\)\}/);
+    assert.match(ogrenci, /\/dashboard\/literature\?calisma=/);
   });
-  test("sabit ya da uydurma yüzde yok", () => {
-    assert.doesNotMatch(yorumsuz(ogrenci), /--w": `\d+%`|aria-valuenow=\{\d+\}/);
+  test("son kaynaklar okunamazsa 'kaynak yok' çizilmez, uyarı çıkar", () => {
+    assert.match(ogrenci, /\{sonKaynakHatasi \? \(/);
+  });
+  test("çok çalışmalı öğrenci: en fazla üç çalışma daha, tamamı Çalışmalarım'da", () => {
+    assert.match(sayfa, /const sonrakiCalismalar = resume \? activeProjects\.filter\(\(p\) => p\.id !== resume\.id\)\.slice\(0, 3\) : \[\];/);
+  });
+  test("Danışmanıma gönder kartı çalışma özetine taşındı (bireysel abone)", () => {
+    const ozet = oku("app/dashboard/editor/page.tsx");
+    assert.match(ozet, /\{secili && gorunum\.bireysel \? \(\s*<DanismanaGonder /);
   });
 });
 
-describe("veri modeli ve sorgular değişmedi", () => {
-  test("yeni tablo ya da RPC okunmuyor", () => {
+describe("veri modeli ve sorgular", () => {
+  test("yeni tablo ya da RPC okunmuyor; kaldırılan kartların sorguları da yok", () => {
     const tablolar = new Set([...sayfa.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1]));
-    const izinli = ["project_manuscripts", "literature_sources", "citation_checks", "consultancy_requests", "app_support_requests", "profiles", "manuscript_comments", "kanit_kayitlari", "manuscript_share_links"];
-    for (const t of tablolar) assert.ok(izinli.includes(t) || t === "document_uploads" || t === "tablo", `beklenmeyen tablo: ${t}`);
+    const izinli = ["project_manuscripts", "literature_sources", "citation_checks", "consultancy_requests", "app_support_requests", "profiles", "manuscript_comments", "document_uploads", "tablo"];
+    for (const t of tablolar) assert.ok(izinli.includes(t), `beklenmeyen tablo: ${t}`);
     const rpc = new Set([...sayfa.matchAll(/\.rpc\("([a-z_]+)"/g)].map((m) => m[1]));
-    assert.deepEqual([...rpc].sort(), ["ai_kredi_durumum", "calisma_hareketlerim", "yazim_ritmi"]);
+    assert.deepEqual([...rpc].sort(), ["calisma_hareketlerim", "yazim_ritmi"]);
   });
   test("sunucu eylemi çağrısı eklenmedi", () => {
-    assert.doesNotMatch(sayfa, /from "@\/app\/actions\/(?!projects|profile|geri-bildirim|tez-takvimi)/);
+    assert.doesNotMatch(sayfa, /from "@\/app\/actions\/(?!projects|profile|geri-bildirim)/);
   });
 });
 
@@ -76,31 +89,5 @@ describe("ana sayfa stili yalnızca .os5-ana altında", () => {
   });
   test("os5-ana yalnızca öğrenci ve boş hesap görünümüne verilir (personel ana sayfası değişmez)", () => {
     assert.match(sayfa, /className=\{ogrenciGorunumu \|\| yeniKullanici \? "dashboard-page gb gb-ana-sayfa os5-ana" : "dashboard-page gb gb-ana-sayfa"\}/);
-  });
-});
-
-describe("bağımsız incelemede yakalananlar (Phase 4 kabulü)", () => {
-  const css = oku("app/styles/os5-ana-sayfa.css").replace(/\/\*[\s\S]*?\*\//g, "");
-  test("'Şimdi' satırının aciliyet seçicileri lib/siradaki-is.ts'teki değerlerle aynı", () => {
-    const tip = oku("lib/siradaki-is.ts").match(/export type Aciliyet = ([^;]+);/)?.[1] ?? "";
-    const degerler = [...tip.matchAll(/"([a-z]+)"/g)].map((m) => m[1]);
-    assert.ok(degerler.includes("yaklasiyor") && degerler.includes("acil"));
-    const css5 = [...css.matchAll(/\.os5-ana-simdi\[data-aciliyet="([a-z]+)"\]/g)].map((m) => m[1]);
-    assert.ok(css5.length >= 2);
-    for (const d of css5) assert.ok(degerler.includes(d), `CSS'te var olmayan aciliyet: ${d}`);
-    assert.ok(css5.includes("yaklasiyor") && css5.includes("acil"));
-  });
-  test("gecikmiş kilometre taşı ayrı tonda", () => {
-    assert.match(css, /\.os5-ana-satir\[data-durum="gecikti"\]/);
-  });
-  test("tutarsızlıklar listede başta: taşan kısım yalnızca teslim kontrol listesinde (bağlantı hepsini açar)", () => {
-    const blok = sayfa.slice(sayfa.indexOf("const teslimKalanlariTam = ["), sayfa.indexOf("const teslimKalanlari = "));
-    assert.ok(blok.indexOf("resumeTutarsizliklari") < blok.indexOf("readinessGaps"));
-  });
-  test("'Teslim için kalanlar' tam listeden kuruluyor; fazlası notla ve bağlantıyla söyleniyor", () => {
-    assert.match(sayfa, /const teslimKalanlariTam = \[\s*\.\.\.resumeTutarsizliklari\.map[\s\S]*?\.\.\.readinessGaps\.map/);
-    assert.match(sayfa, /const teslimKalanSayisi = teslimKalanlariTam\.length;/);
-    assert.match(sayfa, /teslimKalanSayisi > teslimKalanlari\.length \? t\(\{ tr: `ilk \$\{teslimKalanlari\.length\} gösteriliyor`/);
-    assert.match(sayfa, /href=\{teslimKalanSayisi > teslimKalanlari\.length \? `\/dashboard\/editor\/\$\{resume\.id\}\/write\?teslim=liste`/);
   });
 });

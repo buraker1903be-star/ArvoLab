@@ -30,6 +30,7 @@ import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
 import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
+import DanismanaGonder from "../_components/danismana-gonder";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -193,6 +194,47 @@ export default async function ProjectsPage({
     },
   );
   const secili = seciliId ? visible.find((project) => project.id === seciliId) ?? null : null;
+  /*
+    DANIŞMANIMA GÖNDER (premium çalışma alanı, 17.11.2026): bireysel
+    abonenin kartı ana sayfadan seçili çalışmanın özetine geldi; iş ve
+    sorgu aynı (son geçerli paylaşım bağlantısı, açılma sayısı). Kurumu
+    olan öğrencide çizilmez: danışmanı sistemde, yorumlar editörde.
+    Okunamazsa kart "henüz gönderilmedi" gibi davranır, sayfa düşmez.
+  */
+  const sonBaglantiYaniti =
+    secili && gorunum.bireysel
+      ? await (await createClient())
+          .from("manuscript_share_links")
+          .select("created_at, last_viewed_at, view_count, expires_at")
+          .eq("project_id", secili.id)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : null;
+  if (sonBaglantiYaniti?.error) console.error("[çalışmalarım] danışman bağlantısı okunamadı:", sonBaglantiYaniti.error.message);
+  const sonBaglanti = sonBaglantiYaniti?.data ?? null;
+  const sonGonderim = sonBaglanti
+    ? {
+        olusturuldu: sonBaglanti.created_at as string,
+        sonAcilis: (sonBaglanti.last_viewed_at as string | null) ?? null,
+        acilmaSayisi: Number(sonBaglanti.view_count ?? 0),
+        bitis: sonBaglanti.expires_at as string,
+      }
+    : null;
+  const once = (damga: string) => editedAgo(damga, simdi(), dil, saatDilimi);
+  const sonGonderimMetni = sonGonderim
+    ? sonGonderim.acilmaSayisi
+      ? t({
+          tr: `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu)}`,
+          en: `Your advisor opened it ${sonGonderim.acilmaSayisi} time${sonGonderim.acilmaSayisi === 1 ? "" : "s"} · last ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu)}`,
+        })
+      : t({
+          tr: `Bağlantı ${once(sonGonderim.olusturuldu)} gönderildi · henüz açılmadı`,
+          en: `Link sent ${once(sonGonderim.olusturuldu)} · not opened yet`,
+        })
+    : null;
 
   async function handleApprove(projectId: string) {
     "use server";
@@ -453,6 +495,9 @@ export default async function ProjectsPage({
                 kilavuzAc={params.kilavuz === "1" && params.sec === secili.id}
                 takvimAc={params.takvim === "1" && params.sec === secili.id}
               />
+            ) : null}
+            {secili && gorunum.bireysel ? (
+              <DanismanaGonder projectId={secili.id} baslik={secili.title} sonGonderim={sonGonderim} sonGonderimMetni={sonGonderimMetni} />
             ) : null}
           </section>
         ) : (
