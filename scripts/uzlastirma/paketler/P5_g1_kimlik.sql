@@ -1,7 +1,12 @@
 -- ============================================================
 -- P5_g1_kimlik  (RELEASE CLOSURE 06 hazırlık paketi — Production'a UYGULANMADI)
 -- Amaç: G1: e-posta onayında şifre temizleme ve profil kurma tetikleyicileri (auth.users), arvoos_uyeligini_bagla'nın onaya bağlı sürümü, ilk şifre kapısı (ilk_sifre_gerekli). VERİ ADIMI: onaysız hesapların kurum bağı sökülür (17.11.2026 ölçümü: etkilenecek satır 0).
--- ÖN KOŞUL (salt okunur): select count(*) from auth.users where email_confirmed_at is null;  -- veri adımının etkileyeceği hesap sayısı (17.11: 0); GoTrue OTP süresi 3600 sn doğrulanmış olmalı
+-- ÖN KOŞUL (salt okunur, UYGULAMA PENCERESİNDE YENİDEN ÖLÇÜLÜR — 17.11.2026'daki 0 kalıcı varsayım DEĞİL):
+--   select count(*) from auth.users where email_confirmed_at is null;  -- onaysız hesap
+--   select p.id from public.profiles p join auth.users u on u.id=p.id where u.email_confirmed_at is null and p.organization_id is not null;
+--     -- veri adımının sökeceği kurum bağları: KİMLİK LİSTESİ uygulamadan hemen önce kaydedilir (geri dönüşün tek yolu).
+--     -- 0 değilse: listeyi kaydet, kurum yöneticisiyle doğrula, P5'i o pencerede yeniden değerlendir.
+--   GoTrue OTP süresi 3600 sn doğrulanmış olmalı (UNVERIFIED; panel: Authentication → Providers → Email).
 -- DOĞRULAMA (uygulama sonrası): select tgname from pg_trigger where tgrelid='auth.users'::regclass and tgname like 'eposta_onayinda_%';  -- 2 satır; select proname from pg_proc where proname='ilk_sifre_gerekli';  -- 1 satır; ardından PostgREST şema önbelleği yenilenmeli (paketin notify satırı) ve uygulamada ilk şifre kapısı sınanmalı
 -- DURDURMA: auth.users'a tetikleyici eklenemezse (yetki) ya da veri adımı beklenenden fazla satır etkilerse işlemi geri al ve dur.
 -- GERİ DÖNÜŞ: işlem tek transaction; hata olursa hiçbir şey kalmaz. Uygulandıktan

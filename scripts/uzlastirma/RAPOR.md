@@ -2,6 +2,9 @@
 
 17.11.2026 · Depo `design/os5` @ `11044d6` · Production `zpfpocyajnxcketdjbxm`
 
+> **Güncelleme (RC06b):** açık noktaların tamamlanması, migration geçmişi manifestosu, geçmiş provası, rol/yetki,
+> Yazım Stüdyosu düzeltmeleri ve güncellenmiş uygulama sırası `RAPOR-RC06b.md`'de. Çelişki olursa o belge geçerli.
+
 **Production'a hiçbir yazma yapılmadı.** Production'da yalnızca katalog ve toplu sayım
 SELECT'leri çalıştı (kişisel veri okunmadı). Paylaşılan Test'e dokunulmadı. Migration
 repair, `db push`, main birleştirmesi ve yayın yok. Paketler yalnızca yerel yığında
@@ -336,8 +339,8 @@ hiçbiri kayıtlı değil.
    kaydedilir.
 5. SAPMIŞ olanlar ancak karar sonrasında: ya paket uygulanır (P6, P7) ya da "kabul
    edilen sapma" olarak belgelenip kaydedilir.
-6. Depoda olmayan 12 eski kayıt `--status reverted` ile işaretlenir; bırakılırsa
-   `db push` ve entegrasyon "uzakta olup yerelde olmayan sürüm" diye durur.
+6. ~~Depoda olmayan 12 eski kayıt `--status reverted` ile işaretlenir.~~ **RC06b'de değişti:** eski kayıtlar SİLİNMEZ ve
+   `reverted` yapılmaz; depoya 12 boş yer tutucu eklenir (`gecmis/yer-tutucular/`, `RAPOR-RC06b.md` §4–5).
 
 **Zamanlama:** geçmiş onarımı **main birleştirmesinden ve Supabase GitHub
 entegrasyonu doğrulanmadan önce** yapılmalı; aksi hâlde entegrasyon depodaki bütün

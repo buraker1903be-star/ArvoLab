@@ -1,0 +1,765 @@
+[
+ {
+  "v": "20260806234000",
+  "ad": "academic_unit_directory",
+  "durum": "SAPMIŞ",
+  "dml": false,
+  "kanit": "validate_academic_unit_parent() yok; set_academic_unit_updated_at() yok; validate_academic_unit_parent_trigger tetikleyicisi yok; set_academic_unit_updated_at_trigger tetikleyicisi yok"
+ },
+ {
+  "v": "20260806235500",
+  "ad": "academic_unit_import_pipeline",
+  "durum": "SAPMIŞ",
+  "dml": false,
+  "kanit": "academic_unit_import_staging: yapı farklı (başka soy); academic_unit_import_staging@service_role: SELECT,INSERT,UPDATE,DELETE Production'da yok; import_academic_units(): 20260914090000 yerine geçti"
+ },
+ {
+  "v": "20260807113000",
+  "ad": "thesis_guideline_intelligence",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "set_thesis_guideline_updated_at() md5 eşit; thesis_guidelines yapı özeti eşit; dizin thesis_guidelines_university_id_idx: thesis_guidelines yapı özeti eşit; dizin thesis_guidelines_academic_unit_id_idx: thesis_guidelines yapı özeti eşit"
+ },
+ {
+  "v": "20260817120000",
+  "ad": "seed_istanbul_university_root_units",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "tohum verisi: Production'daki akademik dizin farklı soydan (2870 kök birim, academic_programs/data_sources); tohumun kendisi aranmadı; academic_units@authenticated yetkisi var"
+ },
+ {
+  "v": "20260818110000",
+  "ad": "grant_academic_units_service_role_access",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "academic_units@service_role yetkisi var"
+ },
+ {
+  "v": "20260818113000",
+  "ad": "guideline_automatic_discovery",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "universities yapı özeti eşit; dizin universities_guideline_discovery_idx: universities yapı özeti eşit; universities@service_role yetkisi var; thesis_guidelines@service_role yetkisi var"
+ },
+ {
+  "v": "20260913120000",
+  "ad": "phase1_role_guards",
+  "durum": "SAPMIŞ",
+  "dml": false,
+  "kanit": "guard_consultancy_request_update_trigger tetikleyicisi yok; guard_support_request_update_trigger tetikleyicisi yok; guard_academic_project_update() md5 eşit; guard_consultancy_request_update(): 20260924100001 yerine geçti"
+ },
+ {
+  "v": "20260914090000",
+  "ad": "phase2_live_alignment",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "prevent_self_role_escalation(): 20260924100011 yerine geçti; import_academic_units() md5 eşit"
+ },
+ {
+  "v": "20260915090000",
+  "ad": "guideline_sync",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "şema kısmı eşit; çalışmalara kılavuz atayan geri doldurma (update) sonradan resync ile yeniden yapılıyor, tek başına doğrulanamaz; best_guideline_for(): 20260926131150 yerine geçti; sync_academic_project_guideline(): 20260924100034 yerine geçti; resync_project_guidelines(): 20261029143810 yerine geçti; academic_projects yapı özeti eşit"
+ },
+ {
+  "v": "20260916090000",
+  "ad": "manuscript_versions_comments",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "can_view_project(): 20260924100028 yerine geçti; can_write_project(): 20260924100028 yerine geçti; prune_manuscript_versions() md5 eşit; project_manuscript_versions yapı özeti eşit"
+ },
+ {
+  "v": "20260917090000",
+  "ad": "literature_publication_fields",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "literature_sources yapı özeti eşit"
+ },
+ {
+  "v": "20260918090000",
+  "ad": "notifications",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "project_status_label() md5 eşit; notify() md5 eşit; notify_manuscript_comment() md5 eşit; notify_project_changes(): 20260924100035 yerine geçti"
+ },
+ {
+  "v": "20260919090000",
+  "ad": "heading_numbering",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "project_manuscripts yapı özeti eşit"
+ },
+ {
+  "v": "20260920090000",
+  "ad": "manuscript_share_links",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "son hâl: INSERT 20261029133812'de beş sütuna daraltıldı; Production'da aynı beş sütun (attacl); manuscript_share_links@authenticated: INSERT Production'da yok; manuscript_share_links yapı özeti eşit; dizin manuscript_share_links_project_idx: manuscript_share_links yapı özeti eşit"
+ },
+ {
+  "v": "20260921090000",
+  "ad": "share_view_notifications",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "notifications yapı özeti eşit"
+ },
+ {
+  "v": "20260922090000",
+  "ad": "arvoos_license_sync",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "organizations yapı özeti eşit"
+ },
+ {
+  "v": "20260923090000",
+  "ad": "bridge_health",
+  "durum": "EŞDEĞER",
+  "dml": true,
+  "kanit": "bridge_health yapı özeti eşit, tohum satırı var (1); bridge_health yapı özeti eşit"
+ },
+ {
+  "v": "20260923100000",
+  "ad": "bridge_health_grants",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "bridge_health@service_role yetkisi var"
+ },
+ {
+  "v": "20260923110000",
+  "ad": "arvoos_service_grants",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "profiles@service_role yetkisi var; organizations@service_role yetkisi var"
+ },
+ {
+  "v": "20260924090000",
+  "ad": "share_links_service_grants",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "bump_share_view() md5 eşit; manuscript_share_links@service_role yetkisi var; academic_projects@service_role yetkisi var; project_manuscripts@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100000",
+  "ad": "project_files_bucket_limits",
+  "durum": "EŞDEĞER",
+  "dml": true,
+  "kanit": "project-files kovası: özel, 20 MB, 5 MIME türü — Production'da birebir"
+ },
+ {
+  "v": "20260924100001",
+  "ad": "guvenlik_sertlestirme",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "prevent_self_role_escalation(): 20260924100011 yerine geçti; guard_academic_project_insert() md5 eşit; guard_consultancy_request_insert() md5 eşit; guard_support_request_insert() md5 eşit"
+ },
+ {
+  "v": "20260924100002",
+  "ad": "hiz_siniri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "rate_limit_hit() md5 eşit; prune_auth_rate_limits() md5 eşit; auth_rate_limits yapı özeti eşit; auth_rate_limits@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100003",
+  "ad": "abonelik_kapisi_veritabaninda",
+  "durum": "SAPMIŞ",
+  "dml": false,
+  "kanit": "individual_subscriptions: deneme_hatirlatildi_at + dizin yok; subscription_open(): 20261029151315 yerine geçti; guard_subscription() md5 eşit; individual_subscriptions@authenticated yetkisi var"
+ },
+ {
+  "v": "20260924100004",
+  "ad": "ai_geri_bildirim_tablosu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_feedback_requests yapı özeti eşit; dizin ai_feedback_requests_document_id_idx: ai_feedback_requests yapı özeti eşit; ai_feedback_requests@authenticated yetkisi var; ai_feedback_requests@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100005",
+  "ad": "ai_asistan_kayitlari",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "son hâl: INSERT 20261029133812'de depoda da kaldırıldı; Production'la aynı (authenticated=SELECT,UPDATE); ai_assistant_runs@authenticated: INSERT Production'da yok; guard_ai_run_update(): 20260924100006 yerine geçti; ai_assistant_runs yapı özeti eşit; dizin ai_assistant_runs_user_idx: ai_assistant_runs yapı özeti eşit"
+ },
+ {
+  "v": "20260924100006",
+  "ad": "asistan_calismaya_baglandi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_ai_run_update() md5 eşit; ai_assistant_runs yapı özeti eşit; dizin ai_assistant_runs_project_idx: ai_assistant_runs yapı özeti eşit"
+ },
+ {
+  "v": "20260924100007",
+  "ad": "kilavuz_onay_kuyrugu",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "şema kısmı eşit (fonksiyon, tetikleyici, dizin); kılavuz kuyruk durumunu dolduran update doğrulanamaz; set_thesis_guideline_ready(): 20260926135648 yerine geçti; notify_guideline_ready() md5 eşit; thesis_guidelines yapı özeti eşit; dizin thesis_guidelines_onay_kuyrugu_idx: thesis_guidelines yapı özeti eşit"
+ },
+ {
+  "v": "20260924100008",
+  "ad": "kilavuz_bildirim_tetikleyici_duzeltme",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "notify_guideline_ready_trigger tetikleyici var"
+ },
+ {
+  "v": "20260924100009",
+  "ad": "kilavuz_kosullu_istek",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "thesis_guidelines yapı özeti eşit"
+ },
+ {
+  "v": "20260924100010",
+  "ad": "kilavuz_ocr",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "fonksiyon yerine geçti; OCR kılavuzlarının durumunu düzelten update doğrulanamaz; set_thesis_guideline_ready(): 20260926135648 yerine geçti"
+ },
+ {
+  "v": "20260924100011",
+  "ad": "arvoos_uyeleri_ilk_giriste_baglansin",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_uyeligini_bagla(): 20261106184046 yerine geçti; prevent_self_role_escalation() md5 eşit; handle_new_user(): 20260924100026 yerine geçti; arvoos_uyeligimi_bagla() md5 eşit"
+ },
+ {
+  "v": "20260924100012",
+  "ad": "arvoos_ai_kullanim_olcumu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_ai_kullanimi() md5 eşit; dizin ai_assistant_runs_created_idx: ai_assistant_runs yapı özeti eşit; ai_assistant_runs@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100013",
+  "ad": "ai_kredi_kapisi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_kredi_durumum(): 20261026181929 yerine geçti; organizations yapı özeti eşit"
+ },
+ {
+  "v": "20260924100014",
+  "ad": "ai_kredi_bakiyesi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_kredi_hesabini_hazirla(): 20261029133812 yerine geçti; ai_kredi_dus(): 20261029133812 yerine geçti; ai_kredi_durumum(): 20261026181929 yerine geçti; ai_kredi_yukle() md5 eşit"
+ },
+ {
+  "v": "20260924100015",
+  "ad": "arvoos_uye_adi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_uyeligini_bagla(): 20261106184046 yerine geçti; arvoos_members yapı özeti eşit"
+ },
+ {
+  "v": "20260924100016",
+  "ad": "arvoos_kredi_bakiyesini_okur",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_ai_kredi_durumu(): 20260924100017 yerine geçti"
+ },
+ {
+  "v": "20260924100017",
+  "ad": "kredi_durumu_bildirilmemis_limiti_ayirsin",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_ai_kredi_durumu() md5 eşit"
+ },
+ {
+  "v": "20260924100018",
+  "ad": "denetim_rolleri_metni_duzeltebilsin",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "can_write_project(): 20260924100028 yerine geçti; can_view_project(): 20260924100028 yerine geçti; calisma_klasoru() md5 eşit"
+ },
+ {
+  "v": "20260924100019",
+  "ad": "kullanim_geri_bildirimi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "product_feedback yapı özeti eşit; dizin product_feedback_updated_idx: product_feedback yapı özeti eşit; product_feedback@authenticated yetkisi var; product_feedback@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100020",
+  "ad": "mla_atif_stili",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "citation_style kısıtı iki tabloda 'mla' içeriyor (Production pg_constraint)"
+ },
+ {
+  "v": "20260924100021",
+  "ad": "kaynak_dogrulama_onbellegi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "kaynak_onbellegini_temizle() md5 eşit; kaynak_dogrulama_onbellegi yapı özeti eşit; dizin kaynak_dogrulama_onbellegi_gecerlilik_idx: kaynak_dogrulama_onbellegi yapı özeti eşit; kaynak_dogrulama_onbellegi@service_role yetkisi var"
+ },
+ {
+  "v": "20260924100022",
+  "ad": "destek_yaniti",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_support_request_update(): 20261027074716 yerine geçti; app_support_requests yapı özeti eşit"
+ },
+ {
+  "v": "20260924100023",
+  "ad": "docentlik_kayit_duzenleme",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "academic_score_entries@authenticated yetkisi var; guard_subscription_trigger tetikleyici var"
+ },
+ {
+  "v": "20260924100024",
+  "ad": "analiz_sonuclari",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "analiz_sonuclari yapı özeti eşit; dizin analiz_sonuclari_owner_idx: analiz_sonuclari yapı özeti eşit; analiz_sonuclari@authenticated yetkisi var; guard_subscription_trigger tetikleyici var"
+ },
+ {
+  "v": "20260924100025",
+  "ad": "anon_tablo_yetkileri_ve_analiz_calisma_bagi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_analiz_sonucu_project_trigger tetikleyici var"
+ },
+ {
+  "v": "20260924100026",
+  "ad": "kvkk_onayi_kaydi",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "handle_new_user() gövdesi farklı; profiles.kvkk_onay_at Production'da yok"
+ },
+ {
+  "v": "20260924100027",
+  "ad": "deneme_hatirlatma_isareti",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "individual_subscriptions.deneme_hatirlatildi_at Production'da yok"
+ },
+ {
+  "v": "20260924100028",
+  "ad": "kurum_kapsamli_okuma",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "kullanici_kurumu() md5 eşit; gozetim_kapsami() md5 eşit; can_view_project() md5 eşit; can_write_project() md5 eşit"
+ },
+ {
+  "v": "20260924100029",
+  "ad": "olcum_ic_ekip_abonelikleri_gorur",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "individual_subscriptions politika grubu özeti eşit"
+ },
+ {
+  "v": "20260924100030",
+  "ad": "olcum_sayimi_veritabaninda",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "olcum_ozeti() md5 eşit"
+ },
+ {
+  "v": "20260924100031",
+  "ad": "calisma_yazma_kurumla_sinirli",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "academic_projects politika grubu özeti eşit"
+ },
+ {
+  "v": "20260924100032",
+  "ad": "puanlama_kriterleri_kuruma_ait",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "scoring_criteria yapı özeti eşit; dizin scoring_criteria_organization_idx: scoring_criteria yapı özeti eşit; dizin scoring_criteria_kurum_kod_key: scoring_criteria yapı özeti eşit"
+ },
+ {
+  "v": "20260924100033",
+  "ad": "ortak_veri_ve_yorum_yazma_kapsami",
+  "durum": "SAPMIŞ",
+  "dml": false,
+  "kanit": "politika universities: depoda fazladan yinelenen SELECT politikası; thesis_guidelines yapı özeti eşit; dizin thesis_guidelines_organization_idx: thesis_guidelines yapı özeti eşit"
+ },
+ {
+  "v": "20260924100034",
+  "ad": "kilavuz_eslestirme_kurumu_gozetir",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "sync fonksiyonu md5 eşit; best_guideline_for 20260926131150'de değişti (EKSİK); kılavuz yeniden eşleştirme update'i doğrulanamaz; best_guideline_for(): 20260926131150 yerine geçti; sync_academic_project_guideline() md5 eşit"
+ },
+ {
+  "v": "20260924100035",
+  "ad": "kilavuz_bildirimi_stili_soyluyor",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "citation_style_label(): 20261103162214 yerine geçti; notify_project_changes() md5 eşit"
+ },
+ {
+  "v": "20260925110522",
+  "ad": "hesap_silme",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "academic_projects yapı özeti eşit; consultancy_requests yapı özeti eşit; project_manuscripts yapı özeti eşit; scoring_criteria yapı özeti eşit"
+ },
+ {
+  "v": "20260926131150",
+  "ad": "kilavuz_secimi_kararli",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "best_guideline_for() gövdesi farklı"
+ },
+ {
+  "v": "20260926135648",
+  "ad": "ocr_tek_tik_onaya_girmesin",
+  "durum": "BELİRSİZ",
+  "dml": true,
+  "kanit": "fonksiyon md5 eşit; tek tıkla onaya düşen kılavuzları geri çeken update doğrulanamaz; set_thesis_guideline_ready() md5 eşit"
+ },
+ {
+  "v": "20260926150217",
+  "ad": "asistan_model_ozeti_veritabaninda",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "asistan_model_ozetleri() md5 eşit"
+ },
+ {
+  "v": "20261025131500",
+  "ad": "kilavuz_sayi_bicimi",
+  "durum": "EŞDEĞER",
+  "dml": true,
+  "kanit": "sütun+kısıt yapı özeti eşit; veri: 9 onaylı anlık görüntünün 9'unda anahtar var; thesis_guidelines yapı özeti eşit"
+ },
+ {
+  "v": "20261025222734",
+  "ad": "calisma_kilavuzu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "calisma_kilavuzu yapı özeti eşit; calisma_kilavuzu@authenticated yetkisi var; calisma_kilavuzu_sinyali@authenticated yetkisi var"
+ },
+ {
+  "v": "20261026064755",
+  "ad": "calisma_kilavuzu_tablo_yetkileri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "calisma_kilavuzu@authenticated yetkisi var; calisma_kilavuzu@service_role yetkisi var; calisma_kilavuzu_sinyali@authenticated yetkisi var; calisma_kilavuzu_sinyali@service_role yetkisi var"
+ },
+ {
+  "v": "20261026065320",
+  "ad": "kanit_zinciri_ve_makale_calisma_alani",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "kanit_metni_normallestir() md5 eşit; kanit_kaydi_denetle() md5 eşit; kanit_kayitlari yapı özeti eşit; makale_profili yapı özeti eşit"
+ },
+ {
+  "v": "20261026073148",
+  "ad": "calisma_hareketlerim",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "calisma_hareketlerim() md5 eşit"
+ },
+ {
+  "v": "20261026075358",
+  "ad": "yazim_ritmi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "yazim_ritmi() md5 eşit"
+ },
+ {
+  "v": "20261026101921",
+  "ad": "calisma_yapilacaklari",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "calisma_yapilacaklari yapı özeti eşit; dizin calisma_yapilacaklari_proje_idx: calisma_yapilacaklari yapı özeti eşit; dizin calisma_yapilacaklari_tekil_idx: calisma_yapilacaklari yapı özeti eşit; calisma_yapilacaklari@authenticated yetkisi var"
+ },
+ {
+  "v": "20261026110024",
+  "ad": "kaynak_pdfleri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "kaynak_pdfleri yapı özeti eşit; dizin kaynak_pdfleri_proje_idx: kaynak_pdfleri yapı özeti eşit; kaynak_pdfleri@authenticated yetkisi var; kaynak_pdfleri@service_role yetkisi var"
+ },
+ {
+  "v": "20261026120339",
+  "ad": "calisma_ornek_atif",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "academic_projects yapı özeti eşit"
+ },
+ {
+  "v": "20261026131044",
+  "ad": "analiz_teze_ekleme",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "analiz_sonuclari yapı özeti eşit; dizin analiz_sonuclari_proje_sira_idx: analiz_sonuclari yapı özeti eşit"
+ },
+ {
+  "v": "20261026181929",
+  "ad": "bireysel_ai_kredisi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_bireysel_aylik_hak() md5 eşit; ai_bireysel_mi() md5 eşit; ai_bireysel_hesabini_hazirla(): 20261029133812 yerine geçti; ai_kredi_dus(): 20261029133812 yerine geçti"
+ },
+ {
+  "v": "20261026202222",
+  "ad": "yazim_kontrol_gecmisi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "yazim_kontrolleri yapı özeti eşit; dizin yazim_kontrolleri_proje_tarih_idx: yazim_kontrolleri yapı özeti eşit; yazim_kontrolleri@authenticated yetkisi var"
+ },
+ {
+  "v": "20261027061010",
+  "ad": "tez_icindekiler_varsayilan",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "veri: içindekiler kutusu kapalı tez sayısı 0"
+ },
+ {
+  "v": "20261027070012",
+  "ad": "arvoos_uye_adi_her_esitlemede",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_uye_adini_isle() md5 eşit; arvoos_uye_adini_isle tetikleyici var"
+ },
+ {
+  "v": "20261027074716",
+  "ad": "destek_yazismasi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "destek_mesaji_hazirla() md5 eşit; destek_talebini_yeniden_ac() md5 eşit; guard_support_request_update(): yalnız yorum/CRLF farkı (satır satır); destek_mesajlari yapı özeti eşit"
+ },
+ {
+  "v": "20261027081037",
+  "ad": "docentlik_hedef_yazar_belge_tarih",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "docentlik_profili yapı özeti eşit; docentlik_hedefleri yapı özeti eşit; scoring_criteria yapı özeti eşit; academic_score_entries yapı özeti eşit"
+ },
+ {
+  "v": "20261027083309",
+  "ad": "uak_tablolari_temel_alan",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "uak_tablolari yapı özeti eşit; scoring_criteria yapı özeti eşit; docentlik_hedefleri yapı özeti eşit; docentlik_profili yapı özeti eşit"
+ },
+ {
+  "v": "20261027122336",
+  "ad": "docentlik_tavan_esit_bolusum",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "scoring_criteria yapı özeti eşit; docentlik_hedefleri yapı özeti eşit; dizin docentlik_hedefleri_kapsam_grup_key: docentlik_hedefleri yapı özeti eşit"
+ },
+ {
+  "v": "20261027142035",
+  "ad": "docentlik_alt_alan",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "scoring_criteria yapı özeti eşit; docentlik_hedefleri yapı özeti eşit; docentlik_profili yapı özeti eşit"
+ },
+ {
+  "v": "20261028035441",
+  "ad": "tez_takvimi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "calisma_takvimi yapı özeti eşit; dizin calisma_takvimi_proje_idx: calisma_takvimi yapı özeti eşit; dizin calisma_takvimi_tekil_idx: calisma_takvimi yapı özeti eşit; calisma_takvimi@authenticated yetkisi var"
+ },
+ {
+  "v": "20261028092453",
+  "ad": "arayuz_dili",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "profiles.arayuz_dili var; tablonun farkı yalnız kvkk_onay_at ve rol varsayılanında"
+ },
+ {
+  "v": "20261028174054",
+  "ad": "bildirim_odeme_turu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "notifications yapı özeti eşit"
+ },
+ {
+  "v": "20261028180659",
+  "ad": "kurum_kredi_hareketleri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_kurum_kredi_hareketleri() md5 eşit"
+ },
+ {
+  "v": "20261029113842",
+  "ad": "harvard_atif_stili",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "citation_style_label(): 20261103162214 yerine geçti"
+ },
+ {
+  "v": "20261029115836",
+  "ad": "kagit_boyutu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "project_manuscripts yapı özeti eşit"
+ },
+ {
+  "v": "20261029133812",
+  "ad": "ai_kredi_yenileme_ve_kayit_yetkisi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_kredi_hesabini_hazirla() md5 eşit; ai_bireysel_hesabini_hazirla() md5 eşit; ai_kredi_dus() md5 eşit"
+ },
+ {
+  "v": "20261029140126",
+  "ad": "profil_silme_ve_kvkk_korumasi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_profile_lifecycle(): 20261029164231 yerine geçti; guard_profile_lifecycle_trigger tetikleyici var"
+ },
+ {
+  "v": "20261029143148",
+  "ad": "kanit_hukmu_korumasi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_kanit_hukmu() md5 eşit; guard_kanit_hukmu tetikleyici var"
+ },
+ {
+  "v": "20261029143810",
+  "ad": "kilavuz_esitleme_kurum_kapsami",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "resync_project_guidelines() md5 eşit; product_feedback_kurumu() md5 eşit; product_feedback_kurumu tetikleyici var"
+ },
+ {
+  "v": "20261029151315",
+  "ad": "abonelik_aynasi_erisim_karari",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "subscription_open() md5 eşit"
+ },
+ {
+  "v": "20261029152936",
+  "ad": "arvoos_uyelik_baglama_kurum_doner",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "arvoos_uyeligimi_bagla_kurum() md5 eşit"
+ },
+ {
+  "v": "20261029153742",
+  "ad": "sozlesme_onaylari",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "sozlesme_onayi_degismez() md5 eşit; sozlesme_onaylari yapı özeti eşit; dizin sozlesme_onaylari_kullanici_idx: sozlesme_onaylari yapı özeti eşit; sozlesme_onaylari@authenticated yetkisi var"
+ },
+ {
+  "v": "20261029163058",
+  "ad": "sozlesme_onay_konumu",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "sozlesme_onaylari yapı özeti eşit"
+ },
+ {
+  "v": "20261029164231",
+  "ad": "profil_koruma_kvkk_sutunsuz",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "guard_profile_lifecycle() md5 eşit"
+ },
+ {
+  "v": "20261102102456",
+  "ad": "deneme_bitti_bildirimi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "deneme_bitti sütunu+dizini var; tablonun farkı yalnız deneme_hatirlatildi_at'te"
+ },
+ {
+  "v": "20261102124048",
+  "ad": "sozlesme_onayi_kayit_olayi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "sozlesme_onaylari yapı özeti eşit"
+ },
+ {
+  "v": "20261102134543",
+  "ad": "etik_kurul",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "etik_kurul yapı özeti eşit; consultancy_requests yapı özeti eşit; etik_kurul@authenticated yetkisi var; etik_kurul@service_role yetkisi var"
+ },
+ {
+  "v": "20261102151330",
+  "ad": "dipnot_atif_stili",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "citation_style_label(): 20261103162214 yerine geçti"
+ },
+ {
+  "v": "20261102175708",
+  "ad": "kaynak_basim_yeri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "literature_sources yapı özeti eşit"
+ },
+ {
+  "v": "20261102195427",
+  "ad": "kilavuz_yetenegi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_assistant_runs yapı özeti eşit"
+ },
+ {
+  "v": "20261103124752",
+  "ad": "yazim_yetenegi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_assistant_runs yapı özeti eşit"
+ },
+ {
+  "v": "20261103131215",
+  "ad": "kaynak_sohbeti_yetenegi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "ai_assistant_runs yapı özeti eşit"
+ },
+ {
+  "v": "20261103162214",
+  "ad": "csl_atif_stilleri",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "citation_style_label() md5 eşit"
+ },
+ {
+  "v": "20261104064252",
+  "ad": "literatur_kaynak_proje_indeksi",
+  "durum": "EŞDEĞER",
+  "dml": false,
+  "kanit": "dizin literature_sources_project_status_idx: literature_sources yapı özeti eşit"
+ },
+ {
+  "v": "20261106184046",
+  "ad": "eposta_onayi_kimlik_sabitleme",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "eposta_onayinda_sifreyi_temizle() yok; eposta_onayinda_profili_kur() yok; eposta_onayinda_sifreyi_temizle tetikleyicisi yok; eposta_onayinda_profili_kur tetikleyicisi yok"
+ },
+ {
+  "v": "20261107113542",
+  "ad": "sifre_durumum",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "sifre_durumum(): depoda sonradan kaldırıldı"
+ },
+ {
+  "v": "20261107120542",
+  "ad": "ilk_sifre_gerekli",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "ilk_sifre_gerekli() yok"
+ },
+ {
+  "v": "20261112195236",
+  "ad": "rate_limit_take",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "rate_limit_take() yok"
+ },
+ {
+  "v": "20261115203504",
+  "ad": "metin_surum_damgasi",
+  "durum": "EKSİK",
+  "dml": false,
+  "kanit": "metin_surum_damgasi() yok; metin_surum_damgasi tetikleyicisi yok"
+ }
+]

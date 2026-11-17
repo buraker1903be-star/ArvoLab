@@ -23,6 +23,7 @@ migration'larından satır aralığıyla alındı (`handle_new_user` = 202609241
 | P6 destek/danışmanlık | R6: 2 tetikleyici | 2 tetikleyici | Yok | Yok |
 | P7 akademik birim | R7: 2 tetikleyici + 2 fonksiyon | — | Yok | Yok |
 | P8 rol varsayılanı | R8: varsayılan → `'employee'` | Sütun varsayılanı | Arada açılan hesapların rolü **değişmez** | Yok |
+| P9 yetim profil silme yetkisi (RC06b) | R9: `revoke delete on public.profiles from service_role` | Tek tablo yetkisi | Yok | Düzeltilmiş kodda yetim dal yeniden "ertelendi" raporlanır; eski kod yanlış "silindi" der |
 
 ## Geri dönüş sırası
 
