@@ -10,7 +10,7 @@ import { kaynaklaSohbet, type KaynakSohbetYaniti } from "@/app/actions/ai-kaynak
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { kunyeBasligi, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 import { kaynakEslesmesi, SECIM_EN_KISA, type KaynakEslesmesi } from "@/lib/pdf-secim";
-import type { KaynakMesaji } from "@/lib/ai/kaynak-sohbeti";
+import { SECIM_ANALIZ_SORUSU, type KaynakMesaji } from "@/lib/ai/kaynak-sohbeti";
 import type { OkumaKonumu, PdfSecimi } from "./pdf-goruntuleyici";
 
 /*
@@ -254,7 +254,7 @@ export default function KaynakPdfPaneli({
                   <small>{t({ tr: "Analiz ve alıntı için biraz daha uzun bir pasaj seçin.", en: "Select a slightly longer passage to analyse or quote it." })}</small>
                 ) : (
                   <div className="kaynak-secim-eylem">
-                    <button type="button" className="yazim-hizli-dugme" disabled={soruluyor} onClick={() => void sor(undefined, t({ tr: "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla.", en: "Explain this passage's main claim, its evidence and its limitations." }))}>
+                    <button type="button" className="yazim-hizli-dugme" disabled={soruluyor} onClick={() => void sor(undefined, t(SECIM_ANALIZ_SORUSU))}>
                       <Sparkles size={14} aria-hidden="true" /> {t({ tr: "Arvo AI ile analiz et", en: "Analyse with Arvo AI" })}
                     </button>
                     <button type="button" className="yazim-hizli-dugme" disabled={atif?.adim === "dogrulaniyor"} onClick={() => void atifBaslat()}>
