@@ -20,7 +20,7 @@ ister).
 | `kimlik-kabul.mjs <adres>` | Gerçek Next + GoTrue: mevcut kullanıcı, Ayarlar'da mevcut şifre (yanlış/doğru), 12 karakter, diğer oturumların düşmesi, kurtarma, kurtarma sayfası atlatması, davetli kapısı (proxy + panel dışından sunucu işlemi), kayıt, telefon/masaüstü. Sonuç `sonuclar/kimlik-kabul.json`. |
 | `sentetik-pdf.mjs` | Bağımlılıksız, metni bilinen PDF üretici (tek/iki sütun). |
 | `model-taklidi.mjs` | OpenAI uyumlu yerel model taklidi (54900); asistan hattını (kapı, istem, doğrulama, kayıt) sağlayıcısız sınamak için. Cevap KALİTESİNİ ölçmez. Gelen istemleri `STUDYO_ISTEM_KAYDI`'na yazar. |
-| `studyo-kabul.mjs <adres>` | Yazım Stüdyosu: PDF uç noktasının yetkisi, editör + PDF yan yana, sayfa/yakınlaştırma/arama, panel genişliği, AI paneliyle çakışma, seçim doğrulaması (uydurma/yanlış sayfa/kısa/sayfa aşan), DOI ile kesin / belirsiz / eşleşmeyen kaynak, atıf ekleme, otomatik kayıt, asistan analizi (model taklidiyle), büyük PDF, yazdırma ve Word çıktısı, telefon. Sonuç `sonuclar/studyo-kabul.json`. |
+| `studyo-kabul.mjs <adres>` | Yazım Stüdyosu: PDF uç noktasının yetkisi, editör + PDF yan yana, sayfa/yakınlaştırma/arama, panel genişliği, AI paneliyle çakışma, seçim doğrulaması (uydurma/yanlış sayfa/kısa/sayfa aşan), DOI ile kesin / belirsiz / eşleşmeyen kaynak, atıf ekleme, otomatik kayıt, asistan analizi (model taklidiyle), büyük PDF, yazdırma ve Word çıktısı, telefon. **`STUDYO_DERLEME=uretim|gelistirme` zorunlu**: işlem bildirimi o derlemeden okunur, üretimde sunucunun HTML'indeki BUILD_ID ile eşleşmezse koşu başlamaz (çıkış 2). Sonuç `sonuclar/studyo-kabul.json`; sınanan derleme (git HEAD, BUILD_ID, bildirim yolu ve SHA-256) `sonuclar/studyo-kabul-derleme.json`. |
 | `kayit-tarayici-kabul.mjs <adres>` | Gerçek Next uygulaması (`next dev`) yığına bağlıyken tarayıcıda: zorla kayıt (yedek düşerken ve meşru), sürüm geri yükleme (yarış ve meşru). |
 
 ## Koşturma
@@ -89,7 +89,7 @@ STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/model-taklidi.mjs &
 PDF_ISLEM_SAATLIK=12 AI_TABAN_URL=http://127.0.0.1:54900/v1 AI_MODEL=taklit \
   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon JWT> \
   SUPABASE_SERVICE_ROLE_KEY=<service_role JWT> npx next dev -p 3124
-PDF_ISLEM_SAATLIK=12 STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124
+PDF_ISLEM_SAATLIK=12 STUDYO_ISTEM_KAYDI=/tmp/istem.jsonl STUDYO_DERLEME=gelistirme node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124
 ```
 
 Kabul sırasında bulunup düzeltilenler: PDF paneli kapatılıp yeniden
@@ -107,5 +107,14 @@ da çalışır; sınır dolunca kaynak sohbeti modele gitmez), sayaç arızası 
 PDF (R3: 10 eşzamanlı seçim tek çözümlemeye iner, sayaç +1, sıcak yanıt
 ~0,2 sn; önbellek kullanıcılar arasında sızmaz; görüntüleyicide açılış
 ~2,4 sn), PDF panelinin konumu (U1), asistan açıkken araç çubuğu (U2: 1440/
-1280/1200 px, U3: 1024 px ve telefon). `PDF_ISLEM_SAATLIK` next dev ile
+1280/1200 px, U3: 1024 px ve telefon; U4: sayfa aşağıdayken açılış, yukarı dönüş,
+boyut değişimi ve kapat/aç — dört genişlikte, kendi kullanıcısıyla, K0'dan sonra). R3'ün
+"tek çözümleme" iddiası yalnızca SÜREÇ İÇİNDE geçerli; her sunucu örneği kendi önbelleğini tutar.
+`PDF_ISLEM_SAATLIK` next dev ile
 kabul betiğine aynı verilmeli (varsayılan 60).
+
+## 17.11.2026 sonucu (RC06e, `next build` + `next start`)
+
+`STUDYO_DERLEME=uretim`: 67 PASS · 0 FAIL · 1 UNVERIFIED (U5-dokunma: dokunmatik kaydırma başsız
+tarayıcıda üretilemiyor). Sınanan derleme `sonuclar/studyo-kabul-derleme.json`'da. Birleşik aday
+kabulünde bu dosya, adayın commit SHA'sı ve şema özetiyle birlikte rapora geçer.

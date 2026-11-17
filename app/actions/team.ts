@@ -293,10 +293,16 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     davetGitmedi = true;
   }
 
-  // Profil satırı kayıt tetikleyicisiyle (handle_new_user) "Üye / Öğrenci" olarak açılır.
-  // Rol ve kurum, yöneticinin kendi oturumuyla atanır (RLS + rol tetikleyicisi geçerli kalır).
+  /*
+    Profil satırını kayıt tetikleyicisi (handle_new_user) açar ve rolü YAZMAZ:
+    rol sütun varsayılanından gelir. Rol ve kurum, yöneticinin kendi oturumuyla
+    atanır (RLS + rol tetikleyicisi geçerli kalır). Rol HER ZAMAN açıkça yazılır.
+    Eskiden "Üye / Öğrenci" (client) davetinde güncelleme atlanıyordu, varsayılanın
+    client olduğu sanılıyordu; Production'da varsayılan 'employee' çıktı (RC06,
+    17.11.2026) ve öğrenci olarak davet edilen kişi Personel oluyordu.
+  */
   const invitedId = data.user?.id;
-  if (invitedId && (role !== "client" || organizationId)) {
+  if (invitedId) {
     const { error: profileError } = await auth.supabase
       .from("profiles")
       .update({ role, organization_id: organizationId })
