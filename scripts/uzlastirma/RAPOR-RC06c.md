@@ -58,6 +58,9 @@ adımında (4b) yazar. Dalga A'nın onayı bu üçünü KAPSAMAZ.
   Bu yüzden Onay K verilmeden Dalga B'den sonra bile CLI temiz değildir ve **main birleştirmesi yapılmaz**.
 - Eksik nesneler kayıt geri çekilerek değil, yeni sürümlü bir migration'la teslim edilir; o migration
   ayrı bir PR ve ayrı bir Production onayıdır.
+- Prova (RC06d, `sonuclar/prova-gecmis-rc06d.txt`): Dalga A (97) sonrası bekleyen 12, Dalga A-K (3) sonrası
+  bekleyen 9; iki repair de şemayı 0 satır değiştirdi; paketlerden sonra 121/0/0, bekleyen 0, depo hedefine
+  göre fark yine 142 satır (liste birebir aynı).
 
 ### Kabul edilen şema farkları (CLI temizken kalanlar)
 
@@ -186,7 +189,7 @@ kümesini depoya taşıma önerisi) bu turda **kaldırıldı**. Yalnızca P9 kal
 
 | | |
 |---|---|
-| HEAD | `2d780b2e65026dc809e33e7bf35ed19222eb63b4` |
+| HEAD | `33f77d14666856177e25501fc709f3d69df8fe28` (RC06d: `2d780b2` + yalnızca `scripts/yerel-yigin/studyo-kabul.mjs` kanıt toplaması; uygulama kodu `2d780b2` ile aynı) |
 | Taban | `design/os5` @ `11044d61846a160c73131f294cf175f4e319e82c` (birleşme tabanı aynı) |
 | Commit'ler | `4dd20d0` düzeltmeler · `2d780b2` U4 kendi kullanıcısıyla ve K0'dan sonra |
 | CI | `kontrol` ×2 success · Vercel success · Supabase Preview skipped |
@@ -229,6 +232,60 @@ hariç: ikinci son koşu turunda **U3-telefon** bir kez yalnızca "Geri al" dü�
 İlk U4 sürümünün K0 düşmesi ve bir U4-1280 "kaydırma 0 px" düşmesi ise nedeni bulunmuş test kusurlarıydı
 (tek oturum etkileşimi; kaydırma ön koşulunun tek karede denenmesi). İkisi de düzeltildi ve denetimli deneyle ayrıldı.
 
+### RC06d: U3/U4 kanıtlı tekrarlar — AÇIK KABUL BULGUSU
+
+Sonradan görülen **U3-telefon** düşmesi (ikinci son koşu turu, yalnızca "Geri al" erişilemez, panel
+üstü 345) **açık kabul bulgusu** olarak tutuluyor; nedeni kanıtlanmadı. Aşağıdaki 10 turda U3-telefon hiç
+düşmedi; bu, o düşmenin olmadığını değil, yeniden üretilemediğini gösterir.
+
+**Düzenek** (PR #102 `33f77d1` — `2d780b2` + yalnızca test kanıt toplaması; geçme ölçütü değişmedi):
+`studyo-kabul.mjs` U3/U4'te her adımda viewport, görsel viewport, kaydırma, belge yüksekliği,
+yaprak ve araç çubuğu kutusu, odak, her düğmenin üstündeki öğe ve ekran görüntüsü yazar; senaryo
+patlarsa hata yığını da. Anlık görüntü edilgendir (kaydırmaz, odak değiştirmez). Yerel yığın,
+Production benzeri şema + P1–P6, P8 (`sema-ozeti` md5 `358efe9c…`), `next dev`, 4 çekirdek, makinede
+başka iş yok. **10 tam stüdyo turu** (her tur 61 denetim). Kanıt: `sonuclar/rc06d-u3u4/tur1…10/`
+(senaryo başına JSON, tur çıktısı), temsilci görüntüler `goruntu/`.
+
+| Senaryo | PASS | FAIL | Düşmelerin ortak imzası |
+|---|---|---|---|
+| **U3-1024** | 3 | **7** | 7/7: asistan tıklaması sayfayı **314 px** aşağı kaydırmış (yaprak içindeki metin kutusu odak alıyor); 3/3 PASS: kaydırma 0. Tek erişilemeyen hep "Geri al", üstündeki öğe yaprağın kendi içeriği `div.yazim-bos-bas` @97,314, ölçüm sonunda yaprak üstü 371 |
+| U3-telefon | 10 | 0 | — (tıklama sayfayı hiç kaydırmadı) |
+| **U4-1440** | 8 | **2** | 2/2: **ön koşul sağlanmadı** — sayfa 420'deyken tıklandı, açılışta kaydırma 0 oldu; dört adımın hepsinde 0/24 erişilemez, taşma 0 |
+| **U4-1280** | 8 | **2** | aynı (açılışta kaydırma 0); dört adım temiz |
+| U4-1024 | 10 | 0 | — |
+| U4-telefon | 10 | 0 | — |
+
+Tur toplamı: 61/61 yalnızca iki turda (3 ve 5). Bütün düşmeler U3-1024, U4-1440 ve U4-1280; öteki 58 denetim 10 turun 10unda PASS.
+**Bu turlar U3-1024 ve U4-1440/1280 için PASS VERMEZ.**
+
+**U3-1024 — denetimli deney (kanıt, `sonuclar/rc06d-u3u4/kare-deneyi*`):** sayfa 314'e kaydırılıp
+yaprak o konuma göre oturduktan sonra U3'ün dizisi (yukarı kaydır → düğmeyi görünüme al → ölç)
+kare kare tekrarlandı, 1024 ve telefonda 20'şer kez:
+
+| Ölçüm anı | Örtük (1024) | Örtük (telefon) | Yaprak üstü |
+|---|---|---|---|
+| kaydırmayla eşzamanlı | 20/20 | 20/20 | eski (230 / 199) |
+| 1 rAF sonra (U3'ün ölçtüğü an) | 20/20 | 20/20 | eski |
+| aynı karenin çiziminden sonraki ilk görev | **0/20** | **0/20** | yeni (321 / 345) |
+| 2 rAF sonra | 0/20 | 0/20 | yeni |
+
+Kanıtlanan: U3'ün 1024'teki düşmesi, yaprağın kaydırmada yeniden hizalandığı (PR #102,
+`yazim-paneli.tsx`: `scroll` → `requestAnimationFrame` → `hizala`) karenin İÇİNDE, yaprağın kendi
+rAF'ı koşmadan önce alınan bir ölçüm. O karenin çiziminden sonra örtme 40/40 ölçümde yok; ekran
+görüntüleri (`tur1-U3-1024-04.png`) de çizilen hâlde yaprağın araç çubuğunun altında olduğunu gösteriyor.
+Kanıtlanmayan: kullanıcının kendi kaydırmasında (kompozitör iş parçacığı) tek bir karenin eski konumla
+çizilip çizilmediği — başsız tarayıcıda ölçülemedi. **Bulgu açık; düzeltme yapılmadı.** Seçenekler
+(karar sizin): (a) ölçümü çizilmiş kareye taşımak (testte iki kare beklemek — ölçütü değiştirir),
+(b) `hizala`'yı `scroll` dinleyicisinde eşzamanlı çağırmak (ürün değişikliği; aynı karede düzeltir).
+
+**U4-1440/1280:** düşme, senaryonun kendi ön koşulunun ("yaprak sayfa aşağıdayken açıldı") sağlanmaması:
+masaüstünde yaprağın odak aldığı metin kutusu sayfayı değişken bir konuma kaydırıyor (10 turda 0, 65,
+115, 420, 499). 0 olduğunda senaryo eski hatayı üretemez; ölçüm yapılmamış sayılır, PASS yazılmaz.
+
+**İlk ×5 turundaki dört açıklanamayan düşme** (U3-1024, U3-telefon, U4-1440, U4-telefon) korunuyor.
+U3-1024 ve U4-1440'ın bugünkü imzalarla örtüşmesi MÜMKÜN, ama o turların gözlenen değerleri saklanmadığı
+için bağlanmıyor. U3-telefon ve U4-telefon için bugün bir imza yok.
+
 ## 6. Yayın planı (güncel, RC06d)
 
 **Entegrasyon davranışının doğrulanması BÜTÜN birleştirme adımlarının önündedir.** Sebep: GitHub
@@ -250,16 +307,19 @@ kanıtı değil.
 
 Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapılırsa geçersizdir; yeniden koşulur.
 
-## 7. PASS / FAIL / UNVERIFIED (değişenler)
+## 7. PASS / FAIL / UNVERIFIED (değişenler, RC06d dahil)
 
 | Konu | Sonuç |
 |---|---|
 | P8 hedefi | **KARARLAŞTIRILDI** (`client`); Production uygulaması onay bekliyor |
 | CLI "bekleyen 0" açıklaması | PASS — sürüm bazında; 3 KISMİ, eksik parçalar adıyla |
-| CLI temizken kalan şema farkları | PASS — 142 satırın tamamı kabul edilen listede |
+| KISMİ kayıtlar | **ayrı onay maddesi (Onay K)**; Dalga A 97 + A-K 3, provada doğrulandı |
+| CLI temizken kalan şema farkları | PASS — 142 satırın tamamı kabul edilen listede; Production'a özgü tablolar §2b |
+| Çevrimdışı birim içe aktarma hattı (Production) | **FAIL (bulgu, düzeltilmedi)** — `import_academic_units()` olmayan sütunlara başvuruyor; uygulamayı etkilemez |
 | Yer tutucular: temiz kurulum | PASS (0 fark, test:db 350/350); depoya alma `check-migrations` istisnası İSTER |
-| Eski kayıt izi | PASS (12/12 parmak izi; 3 birebir, 1 şema aynı + veri farklı, 8 Production'a özgü) |
-| P9 tam tanım | PASS (hazırlık); uygulama onayı **yok** |
-| PR #102 testleri | PASS; 4 açıklanamayan erken düşme + 1 açıklanamayan U3-telefon kayıtlı |
-| Yedek / PITR / entegrasyon ayarı | **UNVERIFIED** |
-| Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — birleşik aday üzerinde yapılacak |
+| Eski kayıt izi | PASS (12/12 parmak izi) |
+| P9 tam tanım | PASS (hazırlık); uygulama onayı **yok**; R9 veri geri getirmez |
+| PR #102 Yazım Stüdyosu kabulü | **FAIL / AÇIK** — U3-1024 7/10 (mekanizma deneyle kanıtlı, çizilmiş karede örtme yok; kullanıcı kaydırmasında UNVERIFIED), U4-1440 ve U4-1280 2/10 ön koşul sağlanamadı; U3-telefon önceki düşmesi açık bulgu; ilk ×5'in dört düşmesi açıklanamadı |
+| PR #101 CI @ `a6efca4` | PASS — `kontrol` ×2 success, Vercel success, Supabase Preview skipped |
+| Yedek / PITR / entegrasyon ayarı | **UNVERIFIED** — bütün birleştirmelerin ön koşulu |
+| Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |
