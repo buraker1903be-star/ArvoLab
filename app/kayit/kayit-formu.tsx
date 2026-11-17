@@ -12,6 +12,7 @@ import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-soz
 import { Bildirim } from "@/app/_components/ui/bildirim";
 import { Dugme, DugmeBaglanti } from "@/app/_components/ui/dugme";
 import { Girdi } from "@/app/_components/ui/girdi";
+import { TELEFON_DESENI } from "@/lib/kayit";
 
 /*
   KAYIT FORMU (02.11.2026'da yeniden yazıldı, kurum sahibinin isteği:
@@ -149,7 +150,7 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             required
           />
 
-          {/* Desen lib/kayit.ts telefonuTemizle ile aynı aralık: boşluk, tire, parantez serbest. */}
+          {/* Desen lib/kayit.ts'te (TELEFON_DESENI): tarayıcının `v` kipinde geçerli olmalı; asıl denetim sunucuda. */}
           <Girdi
             id="kayit-telefon"
             name="phone"
@@ -158,7 +159,7 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             autoComplete="tel"
             inputMode="tel"
             placeholder={t({ tr: "05xx xxx xx xx", en: "+44 20 7946 0958" })}
-            pattern="\+?[\d\s().\-]{10,20}"
+            pattern={TELEFON_DESENI}
             title={t({ tr: "10–15 rakamlı bir telefon numarası", en: "A phone number with 10–15 digits" })}
             required
           />

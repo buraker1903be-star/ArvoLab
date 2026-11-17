@@ -10,6 +10,7 @@ import YapilacagaEkle from "../_components/yapilacaga-ekle";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
 import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
 import KaynakPdfSatiri from "./kaynak-pdf-satiri";
+import { pdfSatirinaDoi } from "@/lib/academic-reference-verification";
 import { showToast } from "../_components/toast-events";
 import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
 import {
@@ -64,6 +65,7 @@ interface AcademicVerification {
   googleScholarUrl: string;
   bestMatch: AcademicMatch | null;
   matches: AcademicMatch[];
+  istenenDoi?: string | null;
 }
 
 interface InTextCitation {
@@ -291,7 +293,9 @@ export default function CitationCheckForm({
     const adaylar = result.references
       .map((kunye) => {
         const dogrulama = dogrulamaHaritasi.get(kunye.raw);
-        return { kunye: kunye.raw, doi: dogrulama?.bestMatch?.doi ?? null, dogrulama: dogrulama?.status ?? null };
+        /* Künyenin kendi DOI'si ya da doğrulanmış eşleşmenin DOI'si: olası
+           eşleşmenin (başka bir eser olabilir) PDF'i bu künyeye indirilmez. */
+        return { kunye: kunye.raw, doi: pdfSatirinaDoi(dogrulama), dogrulama: dogrulama?.status ?? null };
       })
       .filter((k) => k.dogrulama !== null)
       .filter((k) => {
@@ -813,7 +817,7 @@ export default function CitationCheckForm({
                       <KaynakPdfSatiri
                         projectId={projectId}
                         kunye={reference.raw}
-                        doi={eslesme?.doi ?? null}
+                        doi={pdfSatirinaDoi(dogrulama)}
                         satir={pdfDurumu(reference.raw) ? pdfler.get(kunyeAnahtari(reference.raw)) ?? null : null}
                         onGuncelle={(satir) => pdfGuncelle([satir])}
                       />

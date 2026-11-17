@@ -19,6 +19,7 @@ import type { Dil } from "@/lib/dil";
 import { createClient } from "@/lib/supabase/server";
 import type { Bulgu } from "./bulgu";
 import type { YetenekAdi } from "./kayit-gorunum";
+import { kayitliLiteraturCevabi } from "./literatur-taramasi";
 
 /** Kayıtlı cevabın geçerli sayıldığı süre. */
 const GECERLILIK_GUN = 30;
@@ -124,7 +125,14 @@ export async function gecmisSorgular(
 
   return (data ?? [])
     .map((satir) => {
-      const { bulgular, aramalar } = bulgulariAyikla(satir.findings);
+      const ayiklanan = bulgulariAyikla(satir.findings);
+      /*
+        Literatür geçmişi de kod → şablon yolundan geçer (PR #105): eski
+        kayıtların serbest bulguları "Önceki sorgularım" listesinden
+        kullanıcıya ulaşmasın. Dönüştürülemeyen bulgu gösterilmez.
+      */
+      const { bulgular, aramalar } =
+        yetenek === "literatur" ? kayitliLiteraturCevabi(ayiklanan, satir.context ?? "", dil) : { bulgular: ayiklanan.bulgular, aramalar: ayiklanan.aramalar };
       return { id: satir.id, created_at: satir.created_at, ozet: baglamOzeti(satir.context, undefined, dil), bulgular, aramalar };
     })
     .filter((kayit) => kayit.bulgular.length || kayit.aramalar?.length);
