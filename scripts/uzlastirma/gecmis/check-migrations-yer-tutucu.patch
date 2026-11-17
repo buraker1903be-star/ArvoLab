@@ -1,0 +1,33 @@
+diff --git a/scripts/check-migrations.mjs b/scripts/check-migrations.mjs
+index 81f1768..2024c9a 100644
+--- a/scripts/check-migrations.mjs
++++ b/scripts/check-migrations.mjs
+@@ -57,6 +57,10 @@ const DUSURULEN = new RegExp(String.raw`drop\s+policy\s+if\s+exists\s+${POLITIKA
+ const politikaAdi = (m) => m[1] ?? m[2];
+ 
+ const problems = [];
++const PRODUCTION_ESKI_KAYITLAR = new Set([
++  "20260815134724", "20260815134754", "20260815143714", "20260815145249", "20260817140252", "20260818072457",
++  "20260818073414", "20260818084045", "20260818085709", "20260818090326", "20260818090724", "20260818091259",
++]);
+ const entries = fs.readdirSync(DIR).filter((name) => name.endsWith(".sql")).sort();
+ const versions = new Map();
+ 
+@@ -159,6 +163,17 @@ if (tracked && tracked.size) {
+     .pop();
+   for (const [version, name] of versions) {
+     if (isShipped(name)) continue;
++    /*
++      Production'ın geçmiş tablosunda depodan ÖNCE kaydedilmiş 12 sürüm (RC06c, scripts/uzlastirma/
++      gecmis/). Depoya yalnızca BOŞ yer tutucu olarak girerler: CLI ve GitHub entegrasyonu uzak-yalnız
++      sürümde durmasın diye. İstisna dar: liste sabit ve dosya yorum + "select 1;" dışında bir şey
++      içerirse yine hata (yer tutucu kılığında gerçek bir değişiklik sıranın önüne sokulamaz).
++    */
++    if (PRODUCTION_ESKI_KAYITLAR.has(version)) {
++      const govde = yorumsuz(fs.readFileSync(path.join(DIR, name), "utf8")).replace(/\s+/g, " ").trim().toLowerCase();
++      if (govde !== "select 1;") problems.push(`${name}: Production eski kayıt yer tutucusu yalnızca "select 1;" içerebilir.`);
++      continue;
++    }
+     if (shippedMax && version <= shippedMax) {
+       problems.push(
+         `${name}: sürümü (${version}) gönderilmiş en son migration'dan (${shippedMax}) küçük. ` +

@@ -30,6 +30,9 @@ liste() { "${CLI[@]}" migration list --db-url "$URL" --workdir "$W" 2>&1; }
 sayim() { liste | node -e 'const t=require("fs").readFileSync(0,"utf8");const j=JSON.parse(t.slice(t.indexOf("{")));let b=0,y=0,u=0;for(const m of j.migrations){if(m.local&&m.remote)b++;else if(m.local)y++;else u++}console.log(`ikisinde=${b} yalnız-yerel=${y} yalnız-uzak=${u}`)'; }
 bekleyen() { "${CLI[@]}" db push --dry-run --include-all --db-url "$URL" --workdir "$W" 2>&1 | grep -cE "^\s*•\s*[0-9]{14}" || true; }
 
+# Depo hedefi (temiz kurulum): CLI'ın "temiz" dediği son durumla şema karşılaştırması için.
+bash "$KOK/scripts/yerel-yigin/kur-depo.sh" >/dev/null 2>&1
+ozet gecmis-depo-hedefi
 bash "$KOK/scripts/yerel-yigin/kur-depo.sh" "${HARIC[@]}" >/dev/null 2>&1
 "${PSQL[@]}" -f "$KOK/scripts/uzlastirma/prova/00-production-taklidi.sql" >/dev/null 2>&1
 "${PSQL[@]}" <<'SQL'
@@ -48,7 +51,7 @@ ozet gecmis-once
 
 echo "== 2) Yer tutucusuz depo"
 echo "   liste: $(sayim)"
-r=$("${CLI[@]}" db push --dry-run --db-url "$URL" --workdir "$W" 2>&1 | grep -oE "DbPushMissingLocalError|Remote database is up to date" | head -1); echo "   db push --dry-run: ${r:-beklenmeyen çıktı}"
+r=$("${CLI[@]}" db push --dry-run --db-url "$URL" --workdir "$W" 2>&1 | grep -oE "DbPushMissingLocalError|Remote database is up to date" | head -1 || true); echo "   db push --dry-run: ${r:-beklenmeyen çıktı}"
 
 echo "== 3) 12 yer tutucu eklendi"
 cp "$G"/yer-tutucular/*.sql "$W/supabase/migrations/"
@@ -74,4 +77,8 @@ echo "   liste: $(sayim) · dry-run bekleyen: $(bekleyen)"
 echo "   dry-run çıktısı: $("${CLI[@]}" db push --dry-run --db-url "$URL" --workdir "$W" 2>&1 | tail -1)"
 echo "   geçmiş kaydı: $("${PSQL[@]}" -At -c 'select count(*) from supabase_migrations.schema_migrations')"
 liste > "$CIKTI/gecmis-son-liste.txt"
+# CLI temiz ≠ şema depoyla aynı: kalan farklar nesne nesne listelenir (RAPOR-RC06c §2).
+ozet gecmis-son
+diff <(sort "$CIKTI/ozet-gecmis-depo-hedefi.txt") <(sort "$CIKTI/ozet-gecmis-son.txt") | grep -E '^[<>]' | sed 's/^</DEPO /; s/^>/PROD /' | cut -d'|' -f1,2 | sort -t'|' -k2 > "$CIKTI/gecmis-son-fark.txt" || true
+echo "   CLI temizken şema farkı (depo hedefine göre): $(wc -l < "$CIKTI/gecmis-son-fark.txt") satır → $CIKTI/gecmis-son-fark.txt"
 rm -rf "$W"

@@ -31,6 +31,18 @@ const VERI = {
   "20261106184046": ["onaysız hesapların kurum bağını sökme (G1)", "uygulama PENCERESİNDE yeniden ölçülür (17.11: 0)", "P5'in parçası; 0 ölçümü kalıcı varsayım DEĞİL"],
 };
 // Kabul edilen sapmalar: son nesne Production'da farklı ama bilerek bırakılıyor; geçmişe yine de yazılır (yoksa CLI yeniden çalıştırmaya kalkar).
+// KISMİ kayıtlar: sürüm "uygulandı" yazılır çünkü yeniden çalıştırmak güvenli değil (oturmuş tabloyu,
+// dizinleri ve politikaları gözden geçirilmeden yeniden kurar); EKSİK PARÇA burada adıyla durur ve
+// ileride YENİ bir migration'la (yeni sürüm) teslim edilir — kaydı geri çekerek değil.
+const KISMI = {
+  "20260806234000": { var: "tablo, RLS, SELECT politikası, yazma politikaları (sonraki migration'ların adlarıyla; politika grubu özeti eşit)", yok: "validate_academic_unit_parent() + tetikleyicisi, set_academic_unit_updated_at() + tetikleyicisi (P7, ertelendi); academic_units_university_parent_idx, academic_units_active_lookup_idx (Production'da yerine academic_units_root_unique); \"Authenticated users can view universities\" (Production'da yok, aynı koşulu \"All authenticated users can view universities\" sağlıyor)" },
+  "20260806235500": { var: "academic_unit_import_staging tablosu (farklı yapıda), içe aktarma fonksiyonu (sonraki sürümle aynı)", yok: "staging tablosunun depodaki yapısı (Production'da farklı soy; çalışma anı kullanmıyor)" },
+  "20260924100033": { var: "thesis_guidelines kurum sütunu/dizini ve öteki politikalar (özet eşit)", yok: "depodaki yinelenen universities SELECT politikası" },
+};
+// NET-EŞDEĞER: içeriği bir sonraki migration tarafından geri alınmış; ikisi birlikte uygulandığında net etki aynı.
+const NET = { "20261107113542": "sifre_durumum() fonksiyonunu kurar; 20261107120542 onu kaldırır (P5 ikisini birlikte karşılar) — net etki yok" };
+// Kendi içeriği eşit, fark başka bir migration'dan geliyor.
+const DOLAYLI = { "20260924100003": "kendi nesneleri (guard_subscription, subscription_open, politikalar) özet eşit; individual_subscriptions farkı 20260924100027'nin deneme_hatirlatildi_at sütunundan (P3)" };
 const KABUL = {
   "20260806234000": "academic_units tetikleyicileri (P7) bu yayında ertelendi. Uygulama etkisi: üst birim doğrulaması ve updated_at yalnızca çevrimdışı dizin betiğinde eksik; çalışma anı kullanmıyor. Yeni ortam: depodan kurulunca tetikleyiciler VAR (depo hedefi).",
   "20260806235500": "academic_unit_import_staging Production'da farklı soydan; yalnızca çevrimdışı scripts/academic-directory kullanıyor. Yeni ortam: depo yapısıyla kurulur; Production soyu (academic_programs, data_sources) depoya alınmadı.",
@@ -72,16 +84,21 @@ for (const r of satirlar) {
     onKosul = "Dalga 0 tamam (entegrasyon + yedek)";
     gerekce = veri ? `veri işlemi yeniden çalıştırılmaz: ${veri[2]}` : "DDL idempotent; ara hâller kalıcı değil";
   }
-  satir.push({ surum: r.v, ad: r.ad, sinif: r.durum, sonNesne, tarihsel, islem, dalga, onKosul, gerekce });
+  let kayit = "TAM";
+  if (KISMI[r.v]) { kayit = `KISMİ — var: ${KISMI[r.v].var} · yok: ${KISMI[r.v].yok}`; }
+  else if (NET[r.v]) { kayit = `NET-EŞDEĞER — ${NET[r.v]}`; }
+  else if (DOLAYLI[r.v]) { kayit = "TAM (kendi içeriği)"; sonNesne = `evet (kendi nesneleri) — ${DOLAYLI[r.v]}`; }
+  else if (r.durum === "EKSİK" || paket) { kayit = `TAM — ancak ${paket} uygulanıp doğrulandıktan sonra`; }
+  satir.push({ surum: r.v, ad: r.ad, sinif: r.durum, sonNesne, tarihsel, kayit, islem, dalga, onKosul, gerekce });
 }
 // Production'daki 12 eski kayıt: DOKUNULMAZ; depoya boş yer tutucu eklenir.
 const eski = fs.readdirSync(`${KOK}yer-tutucular`).sort().map((f) => {
   const ic = fs.readFileSync(`${KOK}yer-tutucular/${f}`, "utf8").match(/Production'daki içerik: (.*)/)[1];
-  return { surum: f.slice(0, 14), ad: f.slice(15, -4), sinif: "ESKİ KAYIT", sonNesne: "—", tarihsel: ic, islem: "DOKUNMA (silme/reverted YOK)", dalga: "A0", onKosul: "boş yer tutucu dosya depoya alındı", gerekce: "CLI ve entegrasyon yerelde olmayan uzak sürümde durur; silmek geçmişi yok eder" };
+  return { surum: f.slice(0, 14), ad: f.slice(15, -4), sinif: "ESKİ KAYIT", sonNesne: "—", tarihsel: ic, kayit: "Production'da zaten kayıtlı (dokunulmaz)", islem: "DOKUNMA (silme/reverted YOK)", dalga: "A0", onKosul: "boş yer tutucu dosya depoya alındı", gerekce: "CLI ve entegrasyon yerelde olmayan uzak sürümde durur; silmek geçmişi yok eder" };
 });
 const hepsi = [...eski, ...satir].sort((a, b) => a.surum.localeCompare(b.surum));
 
-fs.writeFileSync(`${KOK}manifesto.tsv`, ["sürüm\tad\tsınıf\tson_nesne\ttarihsel_etki\tişlem\tdalga\tön_koşul\tgerekçe", ...hepsi.map((s) => [s.surum, s.ad, s.sinif, s.sonNesne, s.tarihsel, s.islem, s.dalga, s.onKosul, s.gerekce].join("\t"))].join("\n") + "\n");
+fs.writeFileSync(`${KOK}manifesto.tsv`, ["sürüm\tad\tsınıf\tson_nesne\ttarihsel_etki\tkayıt_durumu\tişlem\tdalga\tön_koşul\tgerekçe", ...hepsi.map((s) => [s.surum, s.ad, s.sinif, s.sonNesne, s.tarihsel, s.kayit, s.islem, s.dalga, s.onKosul, s.gerekce].join("\t"))].join("\n") + "\n");
 const dalga = (d) => hepsi.filter((s) => s.dalga.startsWith(d) && s.islem.startsWith("repair")).map((s) => s.surum);
 fs.writeFileSync(`${KOK}dalga-A.txt`, dalga("A").join("\n") + "\n");
 for (const p of ["P1", "P2", "P3", "P4", "P5", "P6"]) fs.writeFileSync(`${KOK}dalga-B-${p}.txt`, hepsi.filter((s) => s.dalga === `B (${p} sonrası)`).map((s) => s.surum).join("\n") + "\n");
@@ -98,11 +115,13 @@ const md = [
   `Toplam ${hepsi.length} kayıt: depo ${satir.length} + Production'daki eski ${eski.length}.`,
   `Dalga A (paketten bağımsız): ${dalga("A").length} · Dalga B (paket sonrası): ${say((s) => s.dalga.startsWith("B"))} · Dokunulmayan eski kayıt: ${eski.length}.`,
   "",
+  "Kayıt durumu: **TAM** = içeriği Production'da (paketli olanlar paketten SONRA); **KISMİ** = kabul edilen sapma, eksik parça adıyla yazılı ve yeni bir migration'la teslim edilecek; **NET-EŞDEĞER** = sonraki migration içeriğini geri alıyor. CLI'ın \"bekleyen 0\" demesi şemanın depoyla aynı olduğu anlamına GELMEZ (RAPOR-RC06c §2).",
+  "",
   "Kural: **hiçbir kayıt silinmez ya da `reverted` yapılmaz.** Eski 12 kayıt için depoya boş yer tutucu eklenir (`yer-tutucular/`).",
   "",
-  "| Sürüm | Ad | Sınıf | Son nesne | Tarihsel etki | İşlem | Dalga | Ön koşul | Gerekçe |",
-  "|---|---|---|---|---|---|---|---|---|",
-  ...hepsi.map((s) => `| \`${s.surum}\` | ${s.ad} | ${s.sinif} | ${s.sonNesne} | ${s.tarihsel} | ${s.islem} | ${s.dalga} | ${s.onKosul} | ${s.gerekce} |`),
+  "| Sürüm | Ad | Sınıf | Son nesne | Tarihsel etki | Kayıt durumu | İşlem | Dalga | Ön koşul | Gerekçe |",
+  "|---|---|---|---|---|---|---|---|---|---|",
+  ...hepsi.map((s) => `| \`${s.surum}\` | ${s.ad} | ${s.sinif} | ${s.sonNesne} | ${s.tarihsel} | ${s.kayit} | ${s.islem} | ${s.dalga} | ${s.onKosul} | ${s.gerekce} |`),
   "",
 ].join("\n");
 fs.writeFileSync(`${KOK}MANIFESTO.md`, md);

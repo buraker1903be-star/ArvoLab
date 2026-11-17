@@ -9,4 +9,6 @@
 --
 -- Yeni bir ortam kurulurken bu dosya hiçbir şey yapmaz; içerik ya depodaki eşdeğer
 -- migration'dadır ya da Production'a özgü tek seferlik bir veri işlemidir.
+-- Production kaydının parmak izi (17.11.2026, salt okunur): 1 ifade, 4992 karakter, boşluksuz md5 c78d70228d77c3aa715ca03a370e2ed0.
+-- İz: scripts/uzlastirma/gecmis/ESKI-KAYITLAR.md
 select 1;

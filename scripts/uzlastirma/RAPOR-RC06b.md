@@ -264,7 +264,7 @@ studyo-kabul, kayit-butunlugu), ama **tek zincir olarak ve gerçek AI ile koşul
 | 6 BELİRSİZ: son koşul | PASS (6/6 sağlanıyor) | §4.1 — tarihsel etki ayrıca kanıtlanamaz |
 | 12 eski kayıt eşleşmesi | PASS (4 eşleşti, 8 Production'a özgü) | §4.3 |
 | Geçmiş uzlaştırma provası (CLI) | PASS | §5 — son: bekleyen 0, 121/0/0 |
-| Rol varsayılanı + davet yolu | PASS (yerel) · Production'da P8 bekliyor | §6.1 |
+| Rol varsayılanı + davet yolu | PASS (yerel) · hedef karar verildi (client), Production uygulaması onay bekliyor | §6.1 |
 | En küçük yetki (P9) + yetim profil düzeltmesi | PASS (yerel) | §6.3 |
 | U3 kök neden + düzeltme | PASS | §7.1 |
 | R3 `next start` (süreç içi tekilleştirme) | PASS (düzeltmeden sonra) · düzeltmeden önce FAIL | §7.2 |
@@ -283,5 +283,5 @@ studyo-kabul, kayit-butunlugu), ama **tek zincir olarak ve gerçek AI ile koşul
 2. Yedek/PITR: son yedek ve PITR aralığı (panel); geri yükleme provası yok.
 3. Gerçek AI kabulü: test anahtarı yok.
 4. Uçtan uca yayın zinciri: tek zincir hâlinde koşulmadı.
-5. Kararlar: P8 (varsayılan `client`) onayı; iki `employee` hesabının durumu; P9 ve yetki politikası.
+5. Kararlar: P8 hedef rolü `client` — **KARARLAŞTIRILDI** (RC06c); iki `employee` hesabının durumu (dokunulmuyor, kullanıcı doğrulaması); P9 onayı.
 6. Dar düzeltme PR'ının (#102) incelenip `design/os5`'e alınması.
