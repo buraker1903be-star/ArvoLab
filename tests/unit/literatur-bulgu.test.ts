@@ -158,3 +158,25 @@ describe("BİLİNEN AÇIK: arama dizelerinde serbest metin", () => {
     assert.equal(kayitli.aramalar.length, 2, "açık kapanmış görünüyor: rapor ve testi güncelleyin");
   });
 });
+
+/*
+  BİLİNEN KULLANIM SORUNU — ARAMA DİZESİ SÖZDİZİMİ (RC06l, gerçek Haiku,
+  17.11.2026). Arama dizeleri modelin serbest metni; sözdizimi denetlenmiyor.
+  Aşağıdaki iki gerçek çıktı kullanıcıya olduğu gibi ulaştı:
+    - parantezsiz OR grubu: veri tabanı `A OR (B AND C AND D)` diye okur
+      (istem parantezi şart koşuyor, model bir kez uymadı);
+    - `site:` işleci: Google sözdizimi, YÖK Tez ve TR Dizin arama kutusu anlamaz.
+  Arama üretimi bu PR'larda yeniden tasarlanmadı; test sınırı görünür tutar.
+  Biri kapanırsa testi ve rapordaki notu güncelleyin.
+*/
+describe("BİLİNEN KULLANIM SORUNU: arama dizesi sözdizimi", () => {
+  test("parantezsiz OR ve site: işleci içeren gerçek dizeler süzülmeden geçiyor", () => {
+    const gercek = [
+      '"e-öğrenme" OR "çevrimiçi öğrenme" AND "yalnızlık" AND "üniversite"',
+      '"öz yeterlik" AND "çevrimiçi" AND "ders tamamlama" site:tez.yok.gov.tr OR site:trdizin.gov.tr',
+    ];
+    const sonuc = taramaCozumle(JSON.stringify({ aramalar: gercek, bulgular: [] }));
+    assert.deepEqual(sonuc.aramalar, gercek, "sözdizimi denetimi eklendiyse bu testi güncelleyin");
+    assert.equal(kayitliLiteraturCevabi(sonuc, "").aramalar.length, 2);
+  });
+});

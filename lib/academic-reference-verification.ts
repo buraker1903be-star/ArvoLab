@@ -233,9 +233,39 @@ type EslesmeHukmu = "verified" | "possible_match" | "not_found";
     kutusuna yazılan kayıt, künyeden bağımsız bir dizin bilgisi kalır.
   - Yazar tutmuyorsa ya da eser başka DOI'nin ise "doğrulandı" denmez.
 */
+/*
+  DOI'SİZ EŞLEŞMEDE "DOĞRULANDI" İÇİN OLUMLU KANIT (RC06l, 17.11.2026).
+  Gerçek dizin kabulünde iki farklı yazarın 2021 tarihli "Guest editorial"
+  künyesi, Journal of Forestry'nin 1972 tarihli YAZARSIZ "Guest
+  Editorial"ına doğrulandı: birebir aynı başlık tek başına 0,82 puan
+  veriyor (eşik 0,78) ve yazar kapısı yazarsız adayı "bilinmiyor" sayıp
+  geçiriyordu. Puan EKSİK yılı da yarım puanla ödüllendiriyor (0,5).
+  Kimliği DOI kurmuyorsa başlık benzerliği yetmez; künyede yazılı olan
+  her bilgi adayda da bulunmalı ve tutmalı:
+    - künyede yıl varsa adayda da olmalı ve fark en çok 1 olmalı
+      (baskı/çevrim içi yıl farkı);
+    - künyede yazar varsa adayda yazar olmalı ve ilk yazarın soyadı
+      geçmeli;
+    - künyede ikisi de yoksa başlık tek başına doğrulamaz.
+  Eksik bilgi olumlu kanıt sayılmaz; aday puanı yetiyorsa "olası eşleşme"
+  olarak kalır (gösterilir, kesin sayılmaz, PDF satırına DOI geçmez).
+*/
+function doisizKanitVar(reference: ParsedReference, eser: AcademicMatch): boolean {
+  const kunyeYili = Number.parseInt(reference.year?.match(/\d{4}/)?.[0] ?? "", 10);
+  const yilYazili = Number.isFinite(kunyeYili);
+  if (yilYazili && (eser.year === null || Math.abs(eser.year - kunyeYili) > 1)) return false;
+  const ilk = reference.authors?.[0];
+  const aranan = ilk ? soyad(ilk) : "";
+  const yazarYazili = aranan.length >= 2;
+  if (yazarYazili && !eser.authors.some((yazar) => soyad(yazar) === aranan)) return false;
+  return yilYazili || yazarYazili;
+}
+
 function eslesmeHukmu(reference: ParsedReference, eser: AcademicMatch, istenenDoi: string | null): EslesmeHukmu {
   const kimlikTutmuyor = Boolean(istenenDoi) && !ayniEser(eser, istenenDoi);
-  if (eser.confidence >= 0.78 && !yazarTutmuyor(reference, eser.authors) && !kimlikTutmuyor) return "verified";
+  // DOI kimliği kurulduysa (künyenin DOI'sinin eseri) eski kural; değilse olumlu kanıt şart.
+  const kanit = istenenDoi && !kimlikTutmuyor ? !yazarTutmuyor(reference, eser.authors) : doisizKanitVar(reference, eser);
+  if (eser.confidence >= 0.78 && kanit && !kimlikTutmuyor) return "verified";
   if (istenenDoi && !kimlikTutmuyor) return "possible_match";
   return eser.confidence >= 0.55 ? "possible_match" : "not_found";
 }
@@ -342,7 +372,8 @@ async function verifyReference(reference: ParsedReference): Promise<DizinSonucu>
     başlık/yıldaki iki eserden yanlış olanı "en iyi" olup yazar kapısına
     takılıyor, doğru eser hiç değerlendirilmiyordu.
   */
-  const yazariTutan = deduplicated.find((match) => match.confidence >= 0.78 && !yazarTutmuyor(reference, match.authors)) ?? null;
+  // Doğrulanabilecek ilk aday (aynı kural: eslesmeHukmu); yoksa en yüksek puanlı aday "olası eşleşme" olur.
+  const yazariTutan = deduplicated.find((match) => eslesmeHukmu(reference, match, null) === "verified") ?? null;
   const bestMatch = istenenDoi ? kimlikEslesen ?? deduplicated[0] ?? null : yazariTutan ?? deduplicated[0] ?? null;
   /*
     YAZAR BİR KAPI, ağırlık değil.
@@ -473,6 +504,7 @@ export async function verifyAcademicReferences(
 
   const sonuclar: ReferenceVerification[] = [];
   const bakilacak: ParsedReference[] = [];
+  const gecersizKayit = new Set<string>();
 
   for (const reference of references) {
     if (yetersiz(reference)) {
@@ -486,6 +518,8 @@ export async function verifyAcademicReferences(
       sonuclar.push({ ...yerelAlanlar(reference), ...sicak });
       continue;
     }
+    // Kayıt vardı ama bu künye için geçersiz (ör. eski kuralla yazılmış yanlış "verified"): yenisi üstüne yazılacak.
+    if (anahtar && kayit) gecersizKayit.add(anahtar);
     // Sınır YALNIZCA bakılmamışlara harcanıyor.
     if (bakilacak.length < limit) bakilacak.push(reference);
   }
@@ -525,10 +559,14 @@ export async function verifyAcademicReferences(
          eşleşme); olası eşleşme bir sonraki denetimde yeniden sorulur. */
       /* İstenen DOI'nin eseri değilse YAZILMAZ: ortak önbelleğe başka bir
          eserin kaydı DOI anahtarıyla girmesin (bir sonraki denetimde yine sorulur). */
+      /* Sıcak okumada geçersiz bulunan kayıt (RC06l: eski kuralla yazılmış
+         yanlış "verified") kısmi sonuçla da DEĞİŞTİRİLİR: aksi hâlde yanlış
+         satır 90 gün kalır ve her denetim dizine yeniden gider. Yeni hüküm
+         en çok "olası eşleşme" olabileceği için bu kesinlik iddiasını artırmaz. */
       const saklanir =
         sonuc.status !== "insufficient_data" &&
         sonuc.status !== "ulasilamadi" &&
-        (!kismi || sonuc.status === "verified") &&
+        (!kismi || sonuc.status === "verified" || (anahtar !== null && gecersizKayit.has(anahtar))) &&
         kayitKunyeyeAit(sonuc, sonuc.istenenDoi ?? null);
       if (anahtar && saklanir) {
         yeni.set(anahtar, { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches });
