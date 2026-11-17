@@ -522,7 +522,15 @@ export default async function ProjectsPage({
             menü) ve onlarca çalışmada sayfa kilometrelerce kayıyordu.
             Solda öğrenci adıyla liste ve küçük işaretler (yorum, tutarsızlık,
             onay), sağda seçili çalışmanın ayrıntısı ve denetim eylemleri.
+
+            Seçili çalışmanın sekmeleri personelde de (17.11.2026): telefonda
+            yazım ekranı sekmeleri gizliyor ve geri düğmesi buraya getiriyor.
+            İlk turda sekmeler yalnızca öğrenci düzenindeydi; personel telefonda
+            yazım ekranından Kanıt matrisi ve Etik kurula ulaşamıyordu
+            (gezinme-temizlik-kabul, system_admin).
           */
+          <>
+          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalar", en: "Works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
@@ -608,6 +616,7 @@ export default async function ProjectsPage({
               />
             ) : null}
           </section>
+          </>
         )}
         </>
       )}

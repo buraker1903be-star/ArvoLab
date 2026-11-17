@@ -82,4 +82,6 @@ hata bu PR'ındır.
 | 1024×500 tablette "Daha fazla" klavye odağında görünmüyor | geçiyor | Grupların simgeleri raydaydı | Rayda gruplar çizilmez; sayfaları "Daha fazla"da |
 | Tablette ve telefonda "Kılavuzumu yükle" / "Kurumu seç" 28 px | geçiyor | Tek satıra inen kılavuz uyarısının bağlantıları | Dokunmatikte 44 px |
 | Telefonda "Daha fazla" penceresi adsız simgeler gösteriyor; bağlantıların erişilebilir adı yok | **aynı hata tabanda da var** | Alt çubuk kuralı (`.os-gezinme-ad { display:none }`) kapsamsızdı, pencereye de uyuyordu | Kural `.os-gezinme`'ye bağlandı; birim testi |
+| Kenar çubuğunda "Yardım"ı açmak "Araçlar"ı kapatıyor | — (gruplar yeni) | Açık/kapalı seçimi tek bir grup için tutuluyordu | Seçim grup başına |
+| Personel telefonda yazım ekranından Kanıt matrisi / Etik kurula ulaşamıyor | tabanda yazım ekranında sekmeler vardı | Telefonda yazım ekranı sekmeleri gizliyor; geri düğmesinin götürdüğü personel özetinde sekme yoktu | Sekmeler personel özetinde de |
 | Kaynakça görüntüsü kaynak listesini gösteriyor | — | Görüntü betiği `/dashboard/citations`'ı açıyordu, o da Kaynaklar sekmesine yönleniyordu | Betik Kaynakça sekmesini açar, sekme etkin ve içerik görünür değilse durur; yönlendirme ve özet adımı da sekmeye gider |
