@@ -107,5 +107,8 @@ da çalışır; sınır dolunca kaynak sohbeti modele gitmez), sayaç arızası 
 PDF (R3: 10 eşzamanlı seçim tek çözümlemeye iner, sayaç +1, sıcak yanıt
 ~0,2 sn; önbellek kullanıcılar arasında sızmaz; görüntüleyicide açılış
 ~2,4 sn), PDF panelinin konumu (U1), asistan açıkken araç çubuğu (U2: 1440/
-1280/1200 px, U3: 1024 px ve telefon). `PDF_ISLEM_SAATLIK` next dev ile
+1280/1200 px, U3: 1024 px ve telefon; U4: sayfa aşağıdayken açılış, yukarı dönüş,
+boyut değişimi ve kapat/aç — dört genişlikte, kendi kullanıcısıyla, K0'dan sonra). R3'ün
+"tek çözümleme" iddiası yalnızca SÜREÇ İÇİNDE geçerli; her sunucu örneği kendi önbelleğini tutar.
+`PDF_ISLEM_SAATLIK` next dev ile
 kabul betiğine aynı verilmeli (varsayılan 60).
