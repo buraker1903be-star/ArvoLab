@@ -3,6 +3,7 @@
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
+import { kayitliLiteraturCevabi } from "@/lib/ai/literatur-taramasi";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
@@ -24,8 +25,11 @@ import { aktifDil } from "@/lib/dil-sunucu";
 */
 
 /** Kayıtlı bulgular iki biçimde olabilir: dizi ya da {bulgular,aramalar}. */
-function sonBulgular(findings: unknown): AsistanBulgusu[] {
+function sonBulgular(findings: unknown, yetenek: unknown): AsistanBulgusu[] {
   const liste = Array.isArray(findings) ? findings : (findings as { bulgular?: unknown })?.bulgular;
+  /* Literatür bulguları kayıttaki serbest metinden değil koddan çizilir (PR #105);
+     kod taşımayan eski bulgu düşer. */
+  if (yetenek === "literatur") return kayitliLiteraturCevabi({ bulgular: liste }, "").bulgular.slice(0, 3);
   return Array.isArray(liste) ? (liste as AsistanBulgusu[]).slice(0, 3) : [];
 }
 
@@ -84,7 +88,7 @@ export async function calismaOzeti(
     sayim("consultancy_requests"),
     supabase
       .from("ai_assistant_runs")
-      .select("created_at, findings", { count: "exact" })
+      .select("created_at, capability, findings", { count: "exact" })
       .eq("project_id", projectId)
       .eq("status", "completed")
       .order("created_at", { ascending: false })
@@ -165,7 +169,7 @@ export async function calismaOzeti(
     asistan: {
       toplam: asistan.count ?? 0,
       sonTarih: asistan.data?.[0]?.created_at ?? null,
-      sonBulgular: sonBulgular(asistan.data?.[0]?.findings),
+      sonBulgular: sonBulgular(asistan.data?.[0]?.findings, asistan.data?.[0]?.capability),
     },
     /* Stil geçmezse çıkarıcı APA'ya düşer ve IEEE/Vancouver/MLA yazan
        öğrenciye her kaynak "metinde atfı yok" görünürdü. */

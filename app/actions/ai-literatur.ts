@@ -5,7 +5,7 @@ import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import type { Bulgu } from "@/lib/ai/bulgu";
-import { kunyeIzi, literaturIstemi, taramaCozumle, yazarOnerileriniAyikla, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
+import { kayitliLiteraturCevabi, kunyeIzi, literaturIstemi, taramaCozumle, yazarOnerileriniAyikla, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
@@ -38,6 +38,8 @@ export type LiteraturDenetimYaniti = {
   kayitId?: string | null;
   /** Kayıtlı cevap gösterildi: model çağrılmadı, hak yanmadı. */
   kayitliCevap?: { tarih: string } | null;
+  /** Nötr duyuru (ör. kayıtlı cevabın eski biçimli bulguları gösterilmedi). */
+  bilgi?: string;
 };
 
 export const literaturAsistaniAcik = async () => aiYapilandirildi();
@@ -91,11 +93,31 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   */
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "literatur", kaynak);
-    /* Kayıtlı cevap da aynı süzgeçten geçer: bu düzeltmeden önce tamamlanmış
-       bir cevaptaki yazar önerisi "kayıtlı cevap" yoluyla yeniden sunulmasın. */
-    const temiz = onceki ? yazarOnerileriniAyikla({ bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [] }, kaynak).sonuc : null;
-    if (onceki && temiz && (temiz.bulgular.length || temiz.aramalar.length))
-      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: temiz.bulgular, aramalar: temiz.aramalar, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+    /*
+      Kayıtlı cevap da kod → şablon yolundan geçer (kayitliLiteraturCevabi).
+      Kod taşımayan eski bulgular GÖSTERİLMEZ ve bu yüzden modele
+      KENDİLİĞİNDEN gidilmez: ücretli çağrı kullanıcının "yeniden sorgula"
+      kararıdır. Eskiden süzgeçten bir şey kalmazsa akış sessizce yeni bir
+      model çağrısına düşüyordu.
+    */
+    if (onceki) {
+      const kayitli = kayitliLiteraturCevabi({ bulgular: onceki.bulgular, aramalar: onceki.aramalar }, kaynak, dil);
+      const eksik = kayitli.dusenBulgu > 0 || kayitli.dusenArama > 0;
+      return {
+        krediUyarisi: kapi.uyari ?? undefined,
+        bulgular: kayitli.bulgular,
+        aramalar: kayitli.aramalar,
+        kirpilanlar,
+        kayitId: onceki.id,
+        kayitliCevap: { tarih: onceki.created_at },
+        bilgi: eksik
+          ? t({
+              tr: "Bu kayıtlı cevabın bir kısmı eski biçimde olduğu için gösterilmiyor. Güncel bir tarama için yeniden sorgulayabilirsiniz.",
+              en: "Part of this saved answer is in an older format and isn't shown. You can ask again for an up-to-date search.",
+            })
+          : undefined,
+      };
+    }
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -106,7 +128,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
 
   try {
     const yanit = await sor(mesajlar, { yetenek: "literatur", jsonBekle: true, sicaklik: 0.3, enFazlaJeton: 3200 });
-    const cozulen = taramaCozumle(yanit.metin);
+    const cozulen = taramaCozumle(yanit.metin, dil);
     if (!cozulen.bulgular.length && !cozulen.aramalar.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return { hata: t({ tr: "Asistan tarama stratejisi üretemedi. Araştırma sorusunu biraz daha açık yazmayı deneyin.", en: "The assistant couldn't produce a search strategy. Try writing your research question a bit more clearly." }), kirpilanlar };

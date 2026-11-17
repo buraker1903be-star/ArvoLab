@@ -91,7 +91,9 @@ describe("literatür: modelin eklediği yazar önerisi", () => {
     }
   });
 
-  /* BİLİNEN YANLIŞ ALARM: iyelikli yer adı + eser sözcüğü. Bedeli tek bulgunun düşmesi, cevabın değil. */
+  /* BİLİNEN YANLIŞ ALARM: iyelikli yer adı + eser sözcüğü. Bulgular artık koddan
+     çizildiği için (literatur-bulgu.ts) bu süzgeç yalnızca ARAMA DİZELERİNDE
+     çalışıyor; orada bedeli o dizenin düşmesi. Girdide geçen ifade serbest. */
   test("BİLİNEN YANLIŞ ALARM: 'Türkiye'nin araştırma politikaları'", () => {
     assert.deepEqual(eklenenYazarlar("Türkiye'nin araştırma politikaları", ""), ["Türkiye'nin araştırma"]);
   });

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { gecmisSorgular } from "@/lib/ai/gecmis";
+import { aktifDil } from "@/lib/dil-sunucu";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
 import type { YetenekAdi } from "@/lib/ai/kayit-gorunum";
 
@@ -20,5 +21,6 @@ export async function asistanGecmisim(yetenek: YetenekAdi, limit = 5, projectId?
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return [];
-  return gecmisSorgular(user.id, yetenek, limit, projectId);
+  // Dil verilir: literatür bulguları kayıttan değil şablondan, arayüz dilinde çiziliyor.
+  return gecmisSorgular(user.id, yetenek, limit, projectId, await aktifDil());
 }

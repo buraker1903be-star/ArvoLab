@@ -23,7 +23,8 @@
 
 import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
-import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu, cikisDiliMesaji, dilliKaynak } from "./bulgu";
+import { jsonOku, kunyeIziMetinde, type Bulgu, cikisDiliMesaji, dilliKaynak } from "./bulgu";
+import { kodListesiIstemi, literaturBulgulari } from "./literatur-bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KayitOzeti = {
@@ -58,22 +59,24 @@ GÖREVİN İKİ PARÇA:
    (b) En az bir Boole operatörü (AND / OR) bulunacak ve HER OR grubu PARANTEZ içine alınacak. Parantez şart: veri tabanlarının çoğunda AND, OR'dan önce bağlar; "a" OR "b" AND "c" dizesi "a" OR ("b" AND "c") diye okunur ve ilk terimi geçen her şeyi döndürür.
    (c) Uygun yerlerde kök operatörü kullanılacak — "özyeterlik*", "achiev*".
    Anahtar kelimeleri yan yana dizmek YETERLİ DEĞİLDİR: veri tabanı bunu tam ifade araması olarak okumaz, binlerce alakasız sonuç döner. Dizeleri geniş taramadan dar taramaya sırala ve en az birini Türkçe gri literatüre ayır (TR Dizin, YÖK Tez).
-2. LİSTE DENETİMİ: Verilen kaynak listesinde boşlukları göster — yıl dağılımı (yalnızca eski ya da yalnızca çok yeni kaynaklar), tek bir dergiye/yazara yığılma, yöntem çeşitliliğinin eksikliği, araştırma sorusuyla ilgisi zayıf görünen kayıtlar, ölçek/kuram kaynağının eksikliği. Liste verilmediyse bu bölümde tarama planını nasıl kuracağını anlat.
+2. LİSTE DENETİMİ: Verilen kaynak listesindeki boşlukları YALNIZCA aşağıdaki kodlardan seçerek bildir. Açıklama YAZMA: kullanıcıya gösterilecek başlık ve açıklamayı sistem koddan kendisi üretir. Listedeki bir boşluğa uyan kod yoksa o boşluğu bildirme. Liste verilmediyse "tarama_plani" kodunu kullan.
+KODLAR:
+${kodListesiIstemi()}
 
 GÖREVİNİN SINIRI: Yalnızca araştırma sorusunu netleştirmeye ve arama terimi/dizesi üretmeye yardım edersin. Eser, yazar, kuramcı, ölçek sahibi ya da dergi ÖNERMEK görevin değildir. Bir boşluğu anlatırken kavram düzeyinde kal: "yalnızlık kuramlarına ilişkin kuramsal kaynaklar", "yalnızlık ölçeklerinin Türkçe uyarlamaları" — kimin yazdığını söyleme.
 
 KESİNLİKLE YAPMAYACAKLARIN (en önemlisi budur):
 1. KAYNAK ÖNERME. Hiçbir yazar adı, makale başlığı, dergi adı, yıl ya da DOI uydurma. "Şu çalışmaya bakın" deme. Var olduğunu bildiğini düşündüğün kaynakları, kuramcıları ve yazar çiftlerini (ör. "X & Y", "X vd.") bile yazma — kaynakları araştırmacı dizinden bulacak. Yalnızca araştırma sorusunda ya da toplanan kaynaklar listesinde ZATEN geçen adlara değinebilirsin.
 2. Araştırmacının metnine yapıştırabileceği paragraf yazma. Denetlersin, yazmazsın.
-3. Sana verilmeyen hiçbir sayıyı bulgu metninde kullanma. Kaç kaynağın eski olduğunu sayıyla değil sözle ifade et ("kaynakların çoğu", "birkaç kayıt").
+3. Bulgularda "kod" ve "tur" dışında hiçbir alan yazma; yazsan da gösterilmez.
 4. Kaynakların bilimsel kalitesi ya da dergi itibarı hakkında yargı verme.
 
 YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma:
-{"aramalar":["arama dizesi"],"bulgular":[{"tur":"uyari","baslik":"kısa başlık","aciklama":"tek paragraf açıklama"}]}
+{"aramalar":["arama dizesi"],"bulgular":[{"kod":"yil_dagilimi_eski","tur":"uyari"}]}
 - "aramalar": en fazla 6 arama dizesi, her biri tek satır, veri tabanına doğrudan yapıştırılabilir.
+- "kod": yukarıdaki listeden biri, birebir. Listede olmayan kod gösterilmez.
 - "tur": ciddi bir boşluk için "uyari", iyileştirme için "oneri", yalnızca dikkat çekmek için "bilgi".
-- "baslik": en fazla 60 karakter. "aciklama": en fazla 400 karakter, Türkçe.
-- En fazla 8 bulgu.`;
+- En fazla 8 bulgu, her kod bir kez.`;
 
 /** Kayıt listesini modele kısa, okunur bir listeye çevirir. */
 export function kayitOzeti(kayitlar: KayitOzeti[]): string {
@@ -102,11 +105,16 @@ export function literaturIstemi(girdi: LiteraturGirdisi, butce = BAGLAM_BUTCESI)
   return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
 }
 
-/** Yanıttaki arama dizeleri ve bulgular. */
-export function taramaCozumle(ham: string): LiteraturSonucu {
-  const bulgular = bulgulariCozumle(ham);
+/*
+  Yanıttaki arama dizeleri ve bulgular. Bulgular KODDAN çizilir
+  (lib/ai/literatur-bulgu.ts): modelin yazdığı başlık/açıklama okunmaz
+  bile. Eskiden bulgulariCozumle serbest başlık ve açıklamayı olduğu gibi
+  geçiriyordu; yazar önerisi oradan kullanıcıya ulaşıyordu.
+*/
+export function taramaCozumle(ham: string, dil: Dil = "tr"): LiteraturSonucu {
+  const veri = jsonOku(ham) as { aramalar?: unknown; bulgular?: unknown } | null;
+  const { bulgular } = literaturBulgulari(veri?.bulgular, dil);
 
-  const veri = jsonOku(ham) as { aramalar?: unknown } | null;
   const aramalar = Array.isArray(veri?.aramalar)
     ? veri.aramalar
         .map((satir) => String(satir ?? "").replace(/\s+/g, " ").trim().slice(0, EN_UZUN_ARAMA))
@@ -242,4 +250,22 @@ export function yazarOnerileriniAyikla(
     return izler.length === 0;
   });
   return { sonuc: { bulgular, aramalar }, ayiklanan };
+}
+
+/*
+  KAYITLI CEVAPLAR da aynı yoldan geçer (geçmiş listesi, "kayıtlı cevap",
+  çalışma özeti). Bu düzeltmeden önce kaydedilen bulgular serbest metindir
+  ve `kod` taşımaz: güvenle dönüştürülemez, GÖSTERİLMEZ (`dusenBulgu`).
+  Arama dizeleri yeni cevapla aynı süzgeçten geçer; bağlam, kullanıcının o
+  günkü girdisidir (sorusunda geçen adlar serbest kalsın diye).
+*/
+export function kayitliLiteraturCevabi(
+  kayit: { bulgular?: unknown; aramalar?: unknown },
+  baglam: string,
+  dil: Dil = "tr",
+): { bulgular: Bulgu[]; aramalar: string[]; dusenBulgu: number; dusenArama: number } {
+  const { bulgular, dusen } = literaturBulgulari(kayit.bulgular, dil);
+  const hamAramalar = Array.isArray(kayit.aramalar) ? kayit.aramalar.filter((a): a is string => typeof a === "string") : [];
+  const aramalar = hamAramalar.filter((arama) => !kunyeIziMetinde(arama) && eklenenYazarlar(arama, baglam).length === 0);
+  return { bulgular, aramalar, dusenBulgu: dusen, dusenArama: hamAramalar.length - aramalar.length };
 }
