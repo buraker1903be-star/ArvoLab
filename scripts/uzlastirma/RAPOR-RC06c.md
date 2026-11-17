@@ -379,7 +379,7 @@ Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapıl
 | Supabase entegrasyonu (Deploy to production, otomatik dallanma) | **PASS (panel, kullanıcı)** — ikisi de kapalı |
 | Fiziksel yedek | **PASS (panel)** — son yedek 17.11.2026 05:00:49 UTC; Storage dosyalarını KAPSAMAZ |
 | PITR | **YOK** (kapalı) — geri dönüş sınırları §8.3 |
-| Vercel / GitHub Actions otomatik Production işlemi | **UNVERIFIED** |
+| Vercel / GitHub Actions otomatik Production işlemi | Vercel Production dalı `main` (panel); `design/os5` → Preview. GitHub Actions Production'a yazmıyor (iş akışları okundu). Preview ortam değişkeni ataması **UNVERIFIED** (Vercel erişimi 403) |
 | Auth ayarları ↔ G1 | **AÇIK KARAR MADDESİ (Karar A1, §8.4)** — G1 koruması yalnızca uygulama düzeyinde; Auth API'si doğrudan çağrılınca mevcut şifre sorulmuyor. Eski Production davranışıyla aynı olması maddeyi KAPATMAZ |
 | Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |
 
@@ -430,6 +430,30 @@ ayara kopyalanmamalı.
   işlemi **UNVERIFIED**.
 - Uygulamanın kendi cron rotaları (hesap silme vb.) Production verisine zaten yazıyor; bunlar
   migration değil, bugün de çalışan davranış.
+
+### 8.2a Vercel panel kanıtı (17.11.2026, kullanıcı; ayar değiştirilmedi)
+
+| Ayar | Değer |
+|---|---|
+| Production → Branch Tracking | **`main`** |
+| Preview | **All unassigned git branches** |
+
+Sonuç:
+- `design/os5`'e birleştirme Vercel'de Production dağıtımı DEĞİL, Preview dağıtımı üretir. Cron'lar
+  yalnızca Production dağıtımında çalıştığı için birleştirme yeni kodu Production verisine karşı
+  çalıştırmaz.
+- Production'a çıkış yalnızca `main`'e birleştirmeyle olur (plan adım 3).
+
+`design/os5` Preview'unun Production Supabase'e bağlanmaması:
+- **Kod düzeyinde (doğrulandı):** `design/os5`'te `lib/supabase/ortam-guvenligi.ts` var ve `next.config.ts`,
+  `proxy.ts`, `lib/supabase/{server,client,admin}.ts` onu çağırıyor (PR #75'in koruması).
+  - Production dışında (`VERCEL_ENV≠production`) adres Production kimliğine (koda sabit) giderse
+    derleme ve bağlantı **reddedilir**; değişkenler ne derse desin.
+  - Üç beyan değişkeni (`ARVOLAB_SUPABASE_ORTAMI=test`, `ARVOLAB_TEST_SUPABASE_REF`,
+    `ARVOLAB_URETIM_SUPABASE_REF`) eksik ya da tutarsızsa da reddedilir (fail-closed).
+- **Panel düzeyinde: UNVERIFIED.** Vercel ekip kapsamı bu bağlantıya 403 döndü. Preview ortam
+  değişkenlerinin hangi projeyi gösterdiği ve dala özel (`gitBranch`) atama olup olmadığı okunamadı.
+  Yetki verilince yalnızca adlar, hedefler ve dal atamaları okunur; değerler okunmaz.
 
 ### 8.3 PITR olmadan geri dönüşün sınırları
 
