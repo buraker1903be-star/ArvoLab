@@ -79,7 +79,10 @@ const kayit = (kimlik, ad, beklenen, gozlenen, gecti, sonuc) => {
   console.log(`${s}  ${kimlik}  ${ad}\n      beklenen: ${beklenen}\n      gözlenen: ${gozlenen}`);
 };
 let hataSayfasi = null; // senaryo düşerse ekran görüntüsü buradan alınır
+// Hedefli koşu (RC06d): STUDYO_YALNIZ="U3,U4,U5" yalnızca bu önekli senaryoları koşturur; tohum yine kurulur.
+const YALNIZ = (process.env.STUDYO_YALNIZ ?? "").split(",").map((x) => x.trim()).filter(Boolean);
 async function senaryo(etiket, fn) {
+  if (YALNIZ.length && !YALNIZ.some((o) => etiket.startsWith(o))) return;
   try {
     await fn();
   } catch (hata) {
@@ -1079,17 +1082,52 @@ for (const [ad, gorunum] of [["U4-1440", { viewport: { width: 1440, height: 900 
     const olc = async (adim) => { await sayfa.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); await sayfa.waitForTimeout(150); await kanit.adim(`${adim} (ölçüm öncesi)`); const r = await ulasim(sayfa); await sayfa.evaluate(() => window.scrollTo(0, 0)); adimlar.push({ adim, ...r }); };
     const asistan = () => sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first();
     // Belge kısaysa kaydırılacak yer olsun diye alt boşluk; yalnızca bu tarayıcı oturumunda, kaydedilmez.
-    await sayfa.evaluate(async () => {
+    await sayfa.evaluate(() => {
       const b = document.createElement("div"); b.className = "u4-dolgu"; b.setAttribute("aria-hidden", "true"); b.style.height = "1600px"; document.body.appendChild(b);
-      // Kaydırma bazen ilk karede tutmuyor (yerleşim henüz oturmamış); etkili olana kadar birkaç kare dene.
-      for (let i = 0; i < 20 && window.scrollY < 200; i++) { window.scrollTo(0, 420); await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))); }
     });
-    await kanit.adim("dolgu + aşağı kaydırma");
-    await asistan().click();
-    await sayfa.waitForSelector(".yazim-paneli");
-    await kanit.adim("asistan aşağıdayken açıldı");
-    // Ön koşul kanıtı: yaprak sayfa AŞAĞIDAYKEN açıldı (0 olsaydı senaryo eski hatayı üretemezdi).
-    const acilisKaydirma = await sayfa.evaluate(() => Math.round(window.scrollY));
+    /*
+      Ön koşul (RC06d): yaprak, sayfa GERÇEKTEN aşağıdayken DOM'a girmeli — eski hata açılış
+      anındaki ölçümdeydi. Eskiden ön koşul tıklamadan SONRAKİ kaydırmaya bakıyordu; ama
+      tıklama, yaprağın metin kutusu odak alınca sayfayı kendisi kaydırıyor (10 turda 0, 65,
+      115, 420, 499) ve 0 çıktığında senaryo "kurulamadı"yı FAIL diye yazıyordu. Artık iki şey
+      ayrı kaydedilir: yaprağın DOM'a girdiği andaki kaydırma (ön koşul, MutationObserver ile
+      eşzamanlı) ve tıklamanın kendi yaptığı kaydırma (bilgi). Ön koşul tutmazsa kurulum en çok
+      üç kez denenir; yine tutmazsa sonuç KURULAMADI'dır, PASS sayılmaz.
+    */
+    const asagiKaydir = () => sayfa.evaluate(async () => {
+      for (let i = 0; i < 20 && Math.abs(window.scrollY - 420) > 2; i++) { window.scrollTo(0, 420); await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))); }
+      return Math.round(window.scrollY);
+    });
+    const kurulum = [];
+    let acilisKaydirma = -1;
+    for (let deneme = 1; deneme <= 3 && acilisKaydirma < 200; deneme++) {
+      const tiklamaOncesi = await asagiKaydir();
+      await sayfa.evaluate(() => {
+        window.__u4Acilis = null;
+        const g = new MutationObserver(() => {
+          if (document.querySelector(".yazim-paneli")) { window.__u4Acilis = Math.round(window.scrollY); g.disconnect(); }
+        });
+        g.observe(document.body, { childList: true, subtree: true });
+      });
+      await kanit.adim(`kurulum ${deneme}: dolgu + aşağı kaydırma`);
+      await asistan().click();
+      await sayfa.waitForSelector(".yazim-paneli");
+      // Yaprak odağı kendi rAF'ında veriyor; tıklamanın kaydırma etkisi odaktan sonra okunur.
+      await sayfa.waitForFunction(() => document.activeElement?.closest?.(".yazim-paneli"), null, { timeout: 5000 }).catch(() => {});
+      acilisKaydirma = await sayfa.evaluate(() => window.__u4Acilis ?? -1);
+      const tiklamaSonrasi = await sayfa.evaluate(() => Math.round(window.scrollY));
+      kurulum.push({ deneme, tiklamaOncesi, acilisAnindaKaydirma: acilisKaydirma, tiklamaSonrasi, tiklamaninKaydirmasi: tiklamaSonrasi - tiklamaOncesi });
+      await kanit.adim(`kurulum ${deneme}: yaprak açıldı (açılış anında kaydırma ${acilisKaydirma})`);
+      if (acilisKaydirma < 200) {
+        await sayfa.locator(".yazim-paneli .yazim-ikon[aria-label]").first().click();
+        await sayfa.waitForSelector(".yazim-paneli", { state: "detached" });
+      }
+    }
+    if (acilisKaydirma < 200) {
+      kayit(ad, `${en} px: kaydırılmış açılış senaryosu`, "yaprak sayfa ≥ 200 px aşağıdayken açılır", `senaryo kurulamadı — ${JSON.stringify(kurulum)}`, false, "KURULAMADI");
+      kanit.bitir("KURULAMADI", { kurulum });
+      return;
+    }
     await sayfa.evaluate(() => window.scrollTo(0, 0));
     await olc("kaydırılmış açılış → yukarı");
     await sayfa.setViewportSize({ width: Math.max(360, en - 120), height: gorunum.viewport ? gorunum.viewport.height - 100 : 600 });
@@ -1101,9 +1139,9 @@ for (const [ad, gorunum] of [["U4-1440", { viewport: { width: 1440, height: 900 
     await asistan().click();
     await sayfa.waitForSelector(".yazim-paneli");
     await olc("kapat/aç");
-    const gecti = acilisKaydirma > 0 && adimlar.every((a) => a.erisilemeyen === 0 && a.tasma <= 0 && (!masaustu || a.editor >= 420));
-    kayit(ad, `${en} px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir`, "her adımda erişilemeyen 0, taşma 0" + (masaustu ? ", editör ≥ 420 px" : ""), `açılışta kaydırma ${acilisKaydirma} px · ` + adimlar.map((a) => `${a.adim}: ${a.erisilemeyen}/${a.dugme} erişilemez${a.erisilemeyen ? ` [${a.erisilemeyenAdlar.join("; ")}]` : ""}, taşma ${a.tasma}${masaustu ? `, editör ${a.editor}` : ""}`).join(" · "), gecti);
-    kanit.bitir(gecti ? "PASS" : "FAIL", { acilisKaydirma, adimlar });
+    const gecti = adimlar.every((a) => a.erisilemeyen === 0 && a.tasma <= 0 && (!masaustu || a.editor >= 420));
+    kayit(ad, `${en} px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir`, "her adımda erişilemeyen 0, taşma 0" + (masaustu ? ", editör ≥ 420 px" : ""), `yaprak açılırken kaydırma ${acilisKaydirma} px (tıklamanın kendi kaydırması ${kurulum.at(-1).tiklamaninKaydirmasi} px, deneme ${kurulum.length}) · ` + adimlar.map((a) => `${a.adim}: ${a.erisilemeyen}/${a.dugme} erişilemez${a.erisilemeyen ? ` [${a.erisilemeyenAdlar.join("; ")}]` : ""}, taşma ${a.tasma}${masaustu ? `, editör ${a.editor}` : ""}`).join(" · "), gecti);
+    kanit.bitir(gecti ? "PASS" : "FAIL", { acilisKaydirma, kurulum, adimlar });
   } catch (hata) {
     await kanit.hata(hata);
     throw hata;
@@ -1113,8 +1151,106 @@ for (const [ad, gorunum] of [["U4-1440", { viewport: { width: 1440, height: 900 
 });
 
 
+/*
+  U5 (RC06d, 17.11.2026): NORMAL etkileşimle görünür örtüşme. U3/U4 düğmeyi programla görünüme
+  alıp ölçüyor; burada sayfa fare tekerleği ve klavyeyle kaydırılır, kaydırma sürerken HER
+  KARENİN çiziminden sonra (rAF → görev) araç çubuğunun ekranda görünen düğmelerinden biri
+  yaprağın altında mı diye bakılır, sonunda fare düğmenin üstüne götürülüp gerçek isabet
+  (:hover) okunur. Beklemeler süreye değil koşula bağlı: kaydırma beş kare boyunca durana
+  kadar. Kompozitörün kendi çizdiği kareler başsız tarayıcıda görülmez — o kısım UNVERIFIED.
+*/
+for (const [ad, gorunum] of [["U5-1024", { viewport: { width: 1024, height: 768 } }], ["U5-telefon", { ...devices["iPhone 13"] }]]) await senaryo(ad, async () => {
+  const { c, sayfa } = await kullaniciSayfasi(U4K, U4_PROJE, gorunum);
+  const kanit = kanitBaslat(ad, sayfa);
+  try {
+    await sayfa.evaluate(() => {
+      const b = document.createElement("div"); b.setAttribute("aria-hidden", "true"); b.style.height = "1600px"; document.body.appendChild(b);
+    });
+    await sayfa.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+    await sayfa.waitForSelector(".yazim-paneli");
+    await kanit.adim("asistan normal tıklamayla açıldı");
+    const dur = () => sayfa.evaluate(async () => {
+      let son = -1, ayni = 0;
+      for (let i = 0; i < 600 && ayni < 5; i++) { await new Promise((r) => requestAnimationFrame(r)); if (Math.round(scrollY) === son) ayni++; else { ayni = 0; son = Math.round(scrollY); } }
+      return Math.round(scrollY);
+    });
+    const ornekBaslat = () => sayfa.evaluate(() => {
+      const o = { kare: 0, ortukKare: 0, ilk: null };
+      window.__u5 = o; window.__u5dur = false;
+      const ornek = () => {
+        const p = document.querySelector(".yazim-paneli");
+        const gorunen = [...document.querySelectorAll(".manuscript-araclar button")].filter((x) => {
+          if (!x.offsetParent) return false;
+          const k = x.getBoundingClientRect();
+          return k.left >= 0 && k.right <= innerWidth && k.top >= 0 && k.bottom <= innerHeight;
+        });
+        const ortuk = gorunen.filter((x) => { const k = x.getBoundingClientRect(); const u = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2); return !(u === x || x.contains(u)) && p?.contains(u); });
+        o.kare++;
+        if (ortuk.length) { o.ortukKare++; if (!o.ilk) o.ilk = { kaydirma: Math.round(scrollY), yaprakUst: p ? Math.round(p.getBoundingClientRect().top) : null, dugme: (ortuk[0].getAttribute("aria-label") || "").slice(0, 24) }; }
+      };
+      const dongu = () => requestAnimationFrame(() => setTimeout(() => { ornek(); if (!window.__u5dur) dongu(); }, 0));
+      dongu();
+    });
+    const ornekBitir = () => sayfa.evaluate(() => { window.__u5dur = true; return window.__u5; });
+    // Fare gerçekten düğmenin üstündeyken tarayıcının isabet testi hangi öğeyi seçiyor?
+    const isabet = async () => {
+      const hedef = await sayfa.evaluate(() => {
+        const x = [...document.querySelectorAll(".manuscript-araclar button")].find((d) => { if (!d.offsetParent) return false; const k = d.getBoundingClientRect(); return k.left >= 0 && k.right <= innerWidth && k.top >= 0 && k.bottom <= innerHeight; });
+        if (!x) return null;
+        const k = x.getBoundingClientRect();
+        return { ad: (x.getAttribute("aria-label") || x.textContent.trim()).slice(0, 24), x: k.left + k.width / 2, y: k.top + k.height / 2 };
+      });
+      if (!hedef) return { hedef: null, isabet: false };
+      await sayfa.mouse.move(hedef.x, hedef.y);
+      const ok = await sayfa.evaluate(() => { const h = [...document.querySelectorAll(":hover")].at(-1); return !!h?.closest(".manuscript-araclar button") && !h.closest(".yazim-paneli"); });
+      return { hedef: hedef.ad, isabet: ok };
+    };
+    const sonuc = {};
+    // Fare tekerleği: aşağı, sonra yukarı (yukarı dönüş, eski hatanın yolu).
+    await sayfa.mouse.move(Math.round(sayfa.viewportSize().width / 2), 140);
+    await sayfa.mouse.wheel(0, 700);
+    const asagi = await dur();
+    await kanit.adim(`tekerlek aşağı (kaydırma ${asagi})`);
+    await ornekBaslat();
+    await sayfa.mouse.wheel(0, -2000);
+    const yukari = await dur();
+    sonuc.tekerlek = { asagi, yukari, ...(await ornekBitir()), ...(await isabet()) };
+    await kanit.adim(`tekerlek yukarı (kaydırma ${yukari})`);
+    // Klavye: odak metin kutusundan alınır (End/Home metin içinde imleç oynatmasın), sonra End → Home.
+    await sayfa.evaluate(() => document.activeElement?.blur());
+    await sayfa.keyboard.press("End");
+    const kAsagi = await dur();
+    await kanit.adim(`klavye End (kaydırma ${kAsagi})`);
+    await ornekBaslat();
+    await sayfa.keyboard.press("Home");
+    const kYukari = await dur();
+    sonuc.klavye = { asagi: kAsagi, yukari: kYukari, ...(await ornekBitir()), ...(await isabet()) };
+    await kanit.adim(`klavye Home (kaydırma ${kYukari})`);
+    for (const [yol, r] of Object.entries(sonuc)) {
+      const kaydi = r.asagi >= 200 && r.yukari <= 5;
+      const etiket = `${ad}-${yol}`;
+      if (!kaydi) {
+        kayit(etiket, `${yol}: kaydırma sırasında görünür örtüşme`, "sayfa ≥ 200 px aşağı iner ve en üste döner", `kaydırma kurulamadı (aşağı ${r.asagi}, yukarı ${r.yukari}) — bu yol bu cihazda sınanamadı`, false, "UNVERIFIED");
+        continue;
+      }
+      kayit(etiket, `${yol}: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder`, "örtük kare 0, isabet evet", `${r.kare} kare örneklendi, örtük ${r.ortukKare}${r.ilk ? ` (ilk: ${JSON.stringify(r.ilk)})` : ""} · fare "${r.hedef}" → isabet ${r.isabet}`, r.ortukKare === 0 && r.isabet === true);
+    }
+    kanit.bitir("BİTTİ", sonuc);
+  } catch (hata) {
+    await kanit.hata(hata);
+    throw hata;
+  } finally {
+    await c.close();
+  }
+});
+await senaryo("U5-dokunma", async () => {
+  // Playwright parmakla kaydırmayı (touch scroll) gerçekçi üretemiyor; sınanmadı olarak yazılır.
+  kayit("U5-dokunma", "Telefonda parmakla kaydırırken görünür örtüşme", "örtük kare 0", "dokunmatik kaydırma başsız tarayıcıda üretilemedi; kompozitör kareleri görülmüyor", false, "UNVERIFIED");
+});
+
 await tarayici.close();
 fs.writeFileSync(new URL("./sonuclar/studyo-kabul.json", import.meta.url), `${JSON.stringify(sonuclar, null, 2)}\n`);
 const say = (s) => sonuclar.filter((x) => x.sonuc === s).length;
-console.log(`\nPASS ${say("PASS")} · FAIL ${say("FAIL")} · UNVERIFIED ${say("UNVERIFIED")}`);
-process.exit(say("FAIL") ? 1 : 0);
+console.log(`\nPASS ${say("PASS")} · FAIL ${say("FAIL")} · KURULAMADI ${say("KURULAMADI")} · UNVERIFIED ${say("UNVERIFIED")}`);
+// Kurulamayan senaryo PASS değildir: çıkış kodu FAIL ile aynı (RC06d).
+process.exit(say("FAIL") || say("KURULAMADI") ? 1 : 0);
