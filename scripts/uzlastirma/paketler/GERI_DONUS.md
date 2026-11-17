@@ -35,6 +35,9 @@ sırayla aynı); yine de tek bir paket geri alınacaksa yalnızca onun R'si yete
 
 - **Şema dönüşü** bu dosyalarla yapılır, saniyeler sürer, yedeğe ihtiyaç duymaz.
 - **Veri dönüşü** (P5'in veri adımı, P3'ün `tam=1` kipi) bu dosyalarla yapılamaz.
-  Yedek/PITR doğrulanmadan (rapor §6: UNVERIFIED) veri değiştiren adım
-  uygulanmamalı. P5 için ön koşul sorgusunun döndürdüğü kimlik listesi
+  17.11.2026 panel kontrolü (RAPOR-RC06c §8): günlük fiziksel yedek VAR (son
+  05:00:49 UTC), **PITR YOK**, yedekler Storage'ı kapsamıyor. Veri değiştiren bir
+  adımın tek dönüşü bütün veritabanını son yedeğe geri yüklemek; aradaki her
+  yazma kaybolur. Bu yüzden veri değiştiren adım (P5 veri adımı 0 değilse, P9)
+  ayrı onayla ve yedeğin saatine yakın bir pencerede uygulanır. P5 için ön koşul sorgusunun döndürdüğü kimlik listesi
   uygulamadan hemen önce kaydedilmeli; 17.11'de liste boş.

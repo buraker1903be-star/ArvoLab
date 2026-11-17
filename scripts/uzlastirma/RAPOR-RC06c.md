@@ -352,7 +352,7 @@ kanıtı değil.
 
 | Adım | Ne | Ön koşul | Kayıt |
 |---|---|---|---|
-| **0a** | **Entegrasyon davranışı** (panel): Production dalı hangisi, "Deploy to production" açık mı, Branching'in birleştirmede migration uygulayıp uygulamadığı; son yedek ve PITR | — | **UNVERIFIED** — kullanıcı; ekran görüntüsü/ayar değerleri rapora |
+| **0a** | **Entegrasyon davranışı** (panel) | — | **Supabase tarafı DOĞRULANDI (17.11.2026, kullanıcı, §8):** "Deploy to production" kapalı, otomatik dallanma kapalı, Production dalı alanı pasif. **Vercel / GitHub Actions kaynaklı otomatik Production işlemi DOĞRULANMIŞ SAYILMAZ** (§8.2) |
 | 0b | PR #102 incelemesi (kod sahibi) | — (birleştirme değil) | — |
 | 0c | #102 → `design/os5`, sonra #101 → `design/os5` (yalnızca belgeler) | **0a** | birleşik adayın commit SHA'sı |
 | 0d | Yer tutucular + `check-migrations` istisnası ayrı PR → `design/os5` | **0a** (bu PR `supabase/migrations/`'a dosya ekliyor) | — |
@@ -376,5 +376,118 @@ Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapıl
 | P9 tam tanım | PASS (hazırlık); uygulama onayı **yok**; R9 veri geri getirmez |
 | PR #102 Yazım Stüdyosu kabulü | **PASS (yerel, `next start`, `8b3dddf`)** — U3K 10/10 (eski kodda 3/3 FAIL), U3/U4/U5 10/10, tam koşu 67/0/1; dokunma ve kompozitör UNVERIFIED; eski U3-telefon ve ilk ×5'in dört düşmesi açık bulgu (kanıtsız) |
 | PR #101 CI @ `a6efca4` | PASS — `kontrol` ×2 success, Vercel success, Supabase Preview skipped |
-| Yedek / PITR / entegrasyon ayarı | **UNVERIFIED** — bütün birleştirmelerin ön koşulu |
+| Supabase entegrasyonu (Deploy to production, otomatik dallanma) | **PASS (panel, kullanıcı)** — ikisi de kapalı |
+| Fiziksel yedek | **PASS (panel)** — son yedek 17.11.2026 05:00:49 UTC; Storage dosyalarını KAPSAMAZ |
+| PITR | **YOK** (kapalı) — geri dönüş sınırları §8.3 |
+| Vercel / GitHub Actions otomatik Production işlemi | **UNVERIFIED** |
+| Auth ayarları ↔ G1 | §8.4 — yayını engelleyen bir açık yok; G1'in "mevcut şifre" koruması API düzeyinde değil, uygulama düzeyinde |
 | Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |
+
+## 8. Production panel kanıtı (RC06f, 17.11.2026)
+
+Kaynak: kullanıcının Supabase panelinde yaptığı salt okunur kontrol. Hiçbir ayar değiştirilmedi.
+Bu rapor ayarları yalnızca kullanıcının bildirdiği değerlerle kaydediyor.
+
+| Ayar | Değer |
+|---|---|
+| Proje | ArvoLab, `zpfpocyajnxcketdjbxm` |
+| Son listelenen fiziksel yedek | 17.11.2026 05:00:49 UTC (08:00:49 Türkiye) |
+| PITR | **kapalı** (panel "Enable add-on" gösteriyor) |
+| Yedeklerin kapsamı | yalnızca veritabanı; **Storage dosyaları dahil değil** |
+| GitHub bağlantısı | `buraker1903be-star/ArvoLab`, çalışma dizini `.` |
+| Deploy to production | **kapalı** |
+| Production branch alanı | pasif, değer yok |
+| Automatic branching | **kapalı** |
+| Email OTP expiration | 3600 s |
+| Minimum password length | 8 |
+| Secure password change | kapalı |
+| Require current password when updating | kapalı |
+| Prevent use of leaked passwords | açık |
+
+**Proje kimliği:** mesajda yazılan kimliğin 11. ve 19. karakterleri Latin `x` değil, Kiril `х`
+(U+0445). Bu, ekran görüntüsünden aktarılırken oluşmuş bir görünüm benzerliği. Doğru kimlik Latin
+`zpfpocyajnxcketdjbxm`: bu oturumdaki salt okunur sorgular o kimlikle yapıldı, Supabase Preview
+denetiminin bağlantısı da aynı kimliğe gidiyor. Kiril karakterli hâli hiçbir komuta, betiğe ya da
+ayara kopyalanmamalı.
+
+### 8.1 Entegrasyonun yayın planına etkisi
+
+- "Deploy to production" ve otomatik dallanma kapalı. Supabase GitHub entegrasyonu bugünkü ayarla
+  `main`'e ya da `design/os5`'e giren bir migration'ı Production'a **kendiliğinden uygulamaz**.
+  Gözlemle de uyumlu: `main` 104 migration taşıyor, Production geçmişinde yalnızca eski 12 kayıt var.
+- Production migration'ları yalnızca planlı, ayrı onaylı adımlarla gider: Dalga A, Dalga A-K
+  (Onay K), Dalga B paketleri, P8, P9. Ayar ileride açılırsa bu varsayım geçersiz olur; 0a yeniden
+  doğrulanır.
+
+### 8.2 Doğrulanmamış kalan: Vercel ve GitHub Actions
+
+- Depodaki dosyalarda Production veritabanına yazan bir adım **görülmedi**:
+  - `.github/workflows/ci.yml` yalnızca denetim ve test koşuyor;
+  - `academic-directory.yml` Supabase'e değinmiyor;
+  - Vercel derleme komutu `check-css-tokens && check-migrations && next build`.
+- Bu, Vercel proje ayarlarını, ortam değişkenleriyle tetiklenen işleri, Vercel cron'larını ya da
+  depo dışı iş akışlarını kapsamaz. Bu yüzden Vercel/GitHub Actions kaynaklı otomatik Production
+  işlemi **UNVERIFIED**.
+- Uygulamanın kendi cron rotaları (hesap silme vb.) Production verisine zaten yazıyor; bunlar
+  migration değil, bugün de çalışan davranış.
+
+### 8.3 PITR olmadan geri dönüşün sınırları
+
+| Geri dönüş | Ne geri gelir | Ne geri GELMEZ |
+|---|---|---|
+| Şema betikleri R1–R9 | fonksiyon, tetikleyici, varsayılan, yetki — saniyeler, yedek gerekmez | hiçbir veri |
+| Geçmiş tablosu (Dalga A / A-K / B kayıtları) | yalnızca `schema_migrations` satırları; şemaya dokunmaz (provada 0 satır fark) | — |
+| Günlük fiziksel yedekten geri yükleme | bütün veritabanı, yedek anına | **yedekten sonraki her yazma**: yeni hesaplar, çalışmalar, asistan kayıtları, ödemeler. Tek tablo ya da tek satır geri yüklenemez; geri yükleme süresince hizmet kesilir; yedek en çok ~24 saat eski |
+| Storage | — | **hiçbir dosya**: yedekler Storage'ı kapsamıyor |
+
+Bu yüzden veri değiştiren her adım ya geri alınabilir değil ya da yalnızca bütün veritabanını geri
+alarak döner:
+
+- **P5 veri adımı** (kurum bağı söküm). 17.11'de ön koşul sorgusu 0 satır döndürüyordu; pencerede
+  yeniden ölçülür. 0 değilse dönüş yalnızca uygulamadan hemen önce kaydedilen kimlik listesinden
+  elle yapılır. Bu liste kişisel veri içermez (yalnızca kimlikler), ama yine de depoya yazılmaz.
+- **P9** (`service_role`'e DELETE). R9 yalnızca yetkiyi geri alır. Silinen yetim profiller ve
+  kaskadları (o kişinin yorumları, bildirimleri, paylaşım bağlantıları; SET NULL yapılan beş sütun)
+  ancak bütün veritabanı geri yüklenerek döner, aradaki her şey kaybedilerek.
+- **P3 `tam=1` kipi** KVKK onay zamanlarını siler; **kullanılmaz**.
+- **P1, P2, P4, P6, P7, P8** veri değiştirmez; R'leri tam dönüş sağlar.
+
+Öneri (karar sizin; bu turda yapılmadı, ayar değişikliği gerektirmez): veri değiştiren adımları (P5
+pencerede 0 değilse, P9) yalnızca son fiziksel yedeğin saatine yakın bir pencerede uygulamak. Bir de
+uygulamadan önce etkilenecek satırların kimliklerini ve sayısını kaydetmek. PITR'in açılması bir
+ayar/ücret kararıdır ve onay gerektirir.
+
+### 8.4 Auth ayarları ↔ G1'in sunucu denetimleri
+
+| Kural | G1 (uygulama, sunucu işlemi) | Supabase Auth (panel) | Uyum |
+|---|---|---|---|
+| Şifre uzunluğu | 12–64 karakter, 72 bayt, yaygın şifre reddi (`lib/kimlik-kurallari.ts`, `EN_KISA_SIFRE = 12`) | en az 8 | **uyumlu**: kural "Supabase ≤ uygulama" (8 ≤ 12); uygulamanın kabul ettiği şifre Supabase'ten ret almaz |
+| Sızıntıdaki şifre | Supabase'in `weak_password` / `pwned` nedeni okunur, açık metne çevrilir (`lib/sifre-hatasi.ts`) | açık | **uyumlu** |
+| Doğrulama bağlantısı süresi | `DOGRULAMA_BAGLANTISI_SANIYE = 3600`; e-postalar "1 saat" der | 3600 s | **uyumlu** |
+| Ayarlar'da şifre değişikliği | mevcut şifre `signInWithPassword` ile doğrulanır, giriş sayacına yazılır (`app/actions/auth.ts`, `mevcutSifreyiDogrula`) | Require current password **kapalı**, Secure password change **kapalı** | aşağıda |
+| Mevcut şifresiz yol (sıfırlama / ilk şifre) | yalnızca e-posta bağlantısıyla açılmış ya da şifresi olmayan oturuma (`lib/sifre-yetkisi.ts`, AMR) | — | uygulama düzeyinde |
+| Diğer oturumlar | şifre değişince `signOut({ scope: "others" })` | — | uygulama düzeyinde |
+
+**Bulgu (yayını engellemiyor):** G1'in "mevcut şifre" ve "yalnızca e-posta bağlantısıyla sıfırlama"
+korumaları uygulamanın sunucu işlemindedir; Supabase Auth bunları ayrıca uygulamıyor.
+
+- Geçerli bir erişim belirtecine sahip biri (örneğin ele geçirilmiş bir oturum) uygulamayı atlayıp
+  Auth API'sine doğrudan `PUT /auth/v1/user {password}` gönderebilir. Bu yolda mevcut şifre
+  sorulmaz, 12 yerine 8 karakter yeter ve öteki oturumlar kapanmaz.
+- Bu, bugünkü Production davranışıyla **aynıdır**: Production'daki kodda mevcut şifre denetimi hiç
+  yok. Yayın bir şeyi kötüleştirmiyor, yalnızca uygulama içi yolu düzeltiyor. Bu yüzden yayın için
+  zorunlu bir açık değil.
+- Raporlarda ve kullanıcıya dönük metinlerde G1 korumasının "uygulama içinden yapılan değişiklikler
+  için" geçerli olduğu yazılmalı; API düzeyinde bir garanti gibi anlatılmamalı.
+
+**En küçük öneri (yayından sonra; uygulanmadı):** "Require current password when updating" ayarının
+açılması API yolunu da kapatır. Ama doğrulanmadan açılmamalı, çünkü:
+- uygulamanın `updateUser({ password })` çağrısı bugün `current_password` göndermiyor; Ayarlar
+  akışı kod değişikliği olmadan kırılabilir;
+- sıfırlama ve ilk şifre akışlarında mevcut şifre yok; bu ayar o oturumlara nasıl davranıyor,
+  doğrulanmadı.
+
+Ayar değişikliği + küçük kod değişikliği + yerel/Test kabulü ayrı bir iş olarak önerilir. Minimum
+uzunluğu 12'ye çıkarmak da aynı API yolunu 12'ye bağlar; bugünkü uyum kuralını bozmaz (12 ≤ 12).
+Mevcut şifreleri etkilemez, yalnızca yeni belirlenenleri. İkisi de ayar değişikliğidir, onay
+gerektirir.
