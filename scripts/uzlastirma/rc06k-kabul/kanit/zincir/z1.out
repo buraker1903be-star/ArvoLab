@@ -1,0 +1,16 @@
+OK kayit Türkçe English Posta kutunuza bakın Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlan
+OK posta 2 posta · konu "ArvoLab hesabınızı doğrulayın" · bağlantı http://localhost:3124/auth/confirm?token_hash=…&type=signup&next=%2Freset-password%3Filk%3D1
+OK dogrula http://localhost:3124/reset-password?ilk=1
+OK ilk-sifre http://localhost:3124/dashboard
+OK calisma http://localhost:3124/dashboard/editor/1eff7ad1-22c3-4a3c-8025-6da5e987b354/write
+OK doi ynak yok Tarama asistanı İçe aktar Kaynak bul DOI ile kaynak ekle Ekle Eklendi: Remote learning and student wellbeing — listede “Okunacak” olarak. "Kaynak bul" ile OpenAlex ve Crossref dizinlerinde arayın, "İçe aktar" ile Zotero/Mendeley
+OK metin Uzaktan öğrenimin birinci sınıf öğrencilerinin iyi oluşuna etkisi bu çalışmanın konusudur. Kaynakça Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219
+OK kaynakca-denetimi PDF'e henüz bakılmadı PDF yükle
+OK pdf-yukle PDF yüklendi PDF'i aç Kaynağa sor Değiştir
+OK kaynak-panel pdf 556d6b95-6e95-4fd3-b62d-5b6ad09c55c2
+OK ai-analiz cevap true · PDF s.1 true · editör aynı true · Bu pasajın ana iddiasını ve dayandığı kanıtı açıkla. Okunan sayfalarda yazarların belirttiği bir sınırlılık varsa alıntıyla göster; yoksa yazılı olmadığını söyle, kendin sınırlılık üretme. Pasajın ana iddiası, uzaktan eğitimin birinci sınıf
+OK atif-ekle panel: Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students.” Kaynak DOI ile Literatür kütüphanenizdeki tek  · editör: Uzaktan öğrenimin birinci sınıf öğrencilerinin “Remote learning increased reported isolation among first-year students.” (Kaya, 2021, s. 203)iyi oluşuna etkisi bu çalışmanın konusudur. Kaynakça Kaya, A. (2021). Remote learning and student wellbeing. Journal of
+OK disa-aktar-pdf alıntı true · atıf true · kaynakça true
+OK disa-aktar-word 9.9 KB · alıntı true · atıf true · kaynakça true
+OK yeniden-giris editör: alıntı true · atıf true · kaynakça true
+OK butunluk {"kullanici":"true/true","profil":"1","sozlesme":"1","calisma":"1","literatur":"1 / doi 10.5555/arvo.rc06k.c5fda8","pdf":"1 / yuklendi / doi 10.5555/arvo.rc06k.c5fda8","metin":"true/true/true","asistan":"kaynak:completed:claude-sonnet-5","posta":"ArvoLab hesabınızı doğrulayın | ArvoLab Kullanım Sözleşmesi onayınız | ArvoLab'a hoş geldiniz"}

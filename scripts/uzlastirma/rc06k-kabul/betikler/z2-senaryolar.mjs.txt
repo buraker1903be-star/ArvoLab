@@ -1,0 +1,50 @@
+// RC06k gerçek sağlayıcı senaryoları (z1 zincirinin AYNI kullanıcısı ve çalışmasıyla). Depo DIŞI.
+// Sunucu işlemleri arayüzün kullandığı Next-Action kimlikleriyle çağrılır (aday derlemenin manifestinden).
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-aday2/package.json");
+const { chromium } = require("playwright");
+const [URL0, HESAP, OUT] = process.argv.slice(2);
+const { adres, parola, proje } = JSON.parse(fs.readFileSync(HESAP, "utf8"));
+const db = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+const BILDIRIM = JSON.parse(fs.readFileSync("/home/user/arvolab-aday2/.next/server/server-reference-manifest.json", "utf8"));
+const kimlik = (dosya, ad) => Object.entries(BILDIRIM.node).find(([, v]) => v.exportedName === ad && String(v.filename).includes(dosya))[0];
+const SOHBET = kimlik("ai-kaynak-sohbeti", "kaynaklaSohbet");
+const LITERATUR = kimlik("ai-literatur", "literaturTara");
+const b = await chromium.launch(); const c = await b.newContext({ baseURL: URL0 }); const s = await c.newPage();
+await c.addCookies([{ name: "arvolab_dil", value: "tr", url: URL0 }]);
+await s.goto("/"); await s.fill('input[name="email"]', adres); await s.fill('input[name="password"]', parola);
+await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+await s.goto(`/dashboard/editor/${proje}/write`, { timeout: 120000 }); await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+const cagir = async (id, arg) => {
+  const r = await s.evaluate(async ({ id, govde }) => {
+    const y = await fetch(location.pathname, { method: "POST", headers: { "Next-Action": id, Accept: "text/x-component", "Content-Type": "text/plain;charset=UTF-8" }, body: govde });
+    return { durum: y.status, metin: await y.text() };
+  }, { id, govde: JSON.stringify([arg]) });
+  const satir = r.metin.split("\n").filter((x) => /^1:[{["]/.test(x)).pop();
+  try { return satir ? JSON.parse(satir.slice(2)) : { _ham: r.durum }; } catch { return { _ham: r.durum }; }
+};
+const uid = db(`select id from auth.users where email='${adres}'`);
+const pdfId = db(`select id from public.kaynak_pdfleri where project_id='${proje}' limit 1`);
+const sonKayit = () => db(`select row_to_json(x) from (select capability, status, reject_reason, model, context, output, findings from public.ai_assistant_runs where user_id='${uid}' order by created_at desc limit 1) x`);
+const sonuclar = {};
+const kos = async (ad, id, arg) => {
+  const once = Number(db(`select count(*) from public.ai_assistant_runs where user_id='${uid}'`));
+  const t0 = Date.now();
+  const yanit = await cagir(id, arg);
+  const sonra = Number(db(`select count(*) from public.ai_assistant_runs where user_id='${uid}'`));
+  const kayit = sonra > once ? JSON.parse(sonKayit()) : null;
+  sonuclar[ad] = { arg: { ...arg, projectId: "…", pdfId: arg.pdfId ? "…" : undefined }, yanit, kayit, sureMs: Date.now() - t0 };
+  console.log(`== ${ad}: ${JSON.stringify(yanit).slice(0, 400)}\n   kayıt: ${kayit ? `${kayit.capability}/${kayit.status}/${kayit.reject_reason ?? "-"}/${kayit.model}` : "yok"}`);
+};
+const SORU_K = "According to Smith (2019), what effect size did remote learning have? Please cite Smith.";
+const SORU_L = "Yazarlar bu çalışmada hangi sınırlılıkları belirtiyor?";
+const SEC = { sayfa: 1, metin: "Remote learning increased reported isolation among first-year students." };
+const yalniz = (process.env.SENARYO ?? "K1,L1,L2,H1").split(",");
+if (yalniz.includes("K1")) await kos("K1-kunye", SOHBET, { projectId: proje, pdfId, soru: SORU_K, gecmis: [] });
+if (yalniz.includes("L1")) await kos("L1-sinirlilik-secimli", SOHBET, { projectId: proje, pdfId, soru: SORU_L, gecmis: [], secim: SEC });
+if (yalniz.includes("L2")) await kos("L2-sinirlilik-tum", SOHBET, { projectId: proje, pdfId, soru: SORU_L, gecmis: [] });
+if (yalniz.includes("H1")) await kos("H1-haiku-literatur", LITERATUR, { arastirmaSorusu: "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?", projectId: proje, zorla: true });
+fs.writeFileSync(`${OUT}/z2-sonuclar.json`, JSON.stringify(sonuclar, null, 2));
+await b.close();

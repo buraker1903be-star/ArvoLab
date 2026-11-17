@@ -1,0 +1,224 @@
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-aday2/package.json");
+const { chromium } = require("playwright");
+const URL0 = process.argv[2], POSTA = process.argv[3], OUT = process.argv[4];
+const ek = crypto.randomBytes(3).toString("hex");
+const { sentetikPdf } = await import("/home/user/arvolab-aday2/scripts/yerel-yigin/sentetik-pdf.mjs");
+// Sentetik kaynak: yazarların sınırlılıkları YALNIZCA 3. sayfada (seçim kipi s.1–2 okur).
+const SAYFALAR = [
+  ["Remote learning and student wellbeing", "Kaya, A. Journal of Synthetic Studies 12(3)", "", "Remote learning increased reported isolation among first-year students.", "The effect was strongest in programmes without weekly live sessions.", "Students who joined peer study groups reported lower isolation scores.", "We surveyed 412 students across three faculties in autumn 2020."],
+  ["Method", "Participants completed the Synthetic Isolation Scale at two time points.", "The scale has twelve items rated on a five point agreement format.", "Internal consistency was acceptable in both waves of the survey."],
+  ["Discussion", "Structured peer contact appears to buffer the isolation of remote study.", "Institutions should schedule regular synchronous sessions for new cohorts.", "Limitations include self-report measures and a single country sample."],
+];
+const PDF_YOLU = `${OUT}/zincir-${ek}.pdf`;
+fs.writeFileSync(PDF_YOLU, sentetikPdf(SAYFALAR));
+const adres = `zincir-${ek}@yerel.test`;
+const parola = `Zn!${crypto.randomBytes(9).toString("base64url")}`;
+const b = await chromium.launch(); const c = await b.newContext({ baseURL: URL0, acceptDownloads: true }); const s = await c.newPage();
+await c.addCookies([{ name: "arvolab_dil", value: "tr", url: URL0 }]);
+const konsol = [];
+s.on("console", (m) => { if (m.type() === "error") konsol.push(m.text().slice(0, 200)); });
+s.on("pageerror", (e) => konsol.push(`pageerror ${String(e).slice(0, 200)}`));
+const adim = async (ad, fn) => { try { const r = await fn(); console.log("OK", ad, r ?? ""); } catch (h) { await s.screenshot({ path: `${OUT}/hata-${ad}.png` }); console.log("HATA", ad, String(h.message).split("\n")[0]); console.log("KONSOL", konsol.slice(-5).join(" || ")); console.log("SAYFA", (await s.locator("body").innerText()).replace(/\s+/g, " ").slice(-400)); throw h; } };
+await adim("kayit", async () => {
+  await s.goto("/kayit");
+  await s.fill("#kayit-ad", "Sentetik Zincir");
+  await s.fill("#kayit-eposta", adres);
+  await s.fill("#kayit-telefon", "0555 000 00 00");
+  await s.getByRole("button", { name: /Kullanım Sözleşmesi/ }).click();
+  await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); });
+  await s.waitForTimeout(500);
+  await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).click();
+  await s.check('input[name="kvkk"]');
+  const once = fs.existsSync(POSTA) ? fs.readFileSync(POSTA, "utf8").split("\n").filter(Boolean).length : 0;
+  await s.getByRole("button", { name: /Ücretsiz hesabımı oluştur/ }).click();
+  for (let i = 0; i < 40; i++) { const n = fs.existsSync(POSTA) ? fs.readFileSync(POSTA, "utf8").split("\n").filter(Boolean).length : 0; if (n > once) break; await s.waitForTimeout(500); }
+  return (await s.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 160);
+});
+let baglanti;
+await adim("posta", async () => {
+  const p = fs.readFileSync(POSTA, "utf8").split("\n").filter(Boolean).map(JSON.parse).filter((x) => JSON.stringify(x.to).includes(adres));
+  const dog = p.find((x) => /auth\/confirm\?token_hash=/.test(x.html));
+  baglanti = dog.html.match(/href="([^"]*\/auth\/confirm\?token_hash=[^"]+)"/)[1].replace(/&amp;/g, "&");
+  return `${p.length} posta · konu "${dog.subject}" · bağlantı ${baglanti.replace(/token_hash=[^&]+/, "token_hash=…")}`;
+});
+await adim("dogrula", async () => {
+  await s.goto(baglanti);
+  await s.getByRole("button", { name: /Devam et/ }).click();
+  await s.waitForURL(/reset-password|dashboard/, { timeout: 30000 });
+  return s.url();
+});
+await adim("ilk-sifre", async () => {
+  await s.fill('input[name="password"]', parola);
+  await s.fill('input[name="passwordConfirm"]', parola);
+  await s.getByRole("button", { name: /Şifreyi kaydet ve devam et/ }).click();
+  await s.waitForURL(/dashboard/, { timeout: 30000 });
+  return s.url();
+});
+let proje;
+await adim("calisma", async () => {
+  await s.goto("/dashboard/editor?yeni=1");
+  await s.getByRole("button", { name: /^Tez/ }).first().click().catch(() => {});
+  await s.fill('input[name="title"]', `Zincir kabul tezi ${ek}`);
+  await s.getByRole("button", { name: /Çalışmayı oluştur/ }).click();
+  await s.getByText(/Kılavuzu sonra eklerim, yazmaya başla/).click({ timeout: 60000 });
+  await s.waitForURL(/dashboard\/editor\/[0-9a-f-]{36}/, { timeout: 60000 });
+  proje = s.url().match(/editor\/([0-9a-f-]{36})/)[1];
+  return `${s.url()}`;
+});
+const DOI = `10.5555/arvo.rc06k.${ek}`;
+const KUNYE = `Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/${DOI}`;
+await adim("doi", async () => {
+  await s.goto("/dashboard/literature");
+  await s.getByLabel(/DOI ile kaynak ekle/).fill(`https://doi.org/${DOI}`);
+  await s.getByLabel(/DOI ile kaynak ekle/).press("Enter");
+  await s.getByText("Remote learning and student wellbeing").first().waitFor({ timeout: 30000 });
+  return (await s.locator("main").innerText()).replace(/\s+/g, " ").match(/.{0,80}Remote learning and student wellbeing.{0,120}/)?.[0];
+});
+await adim("metin", async () => {
+  await s.goto(`/dashboard/editor/${proje}/write`, { timeout: 120000 });
+  await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  await s.locator(".ProseMirror").click();
+  await s.keyboard.press("Control+End");
+  await s.keyboard.type("Uzaktan öğrenimin birinci sınıf öğrencilerinin iyi oluşuna etkisi bu çalışmanın konusudur. ");
+  await s.keyboard.press("Enter");
+  await s.keyboard.type("## Kaynakça");
+  await s.keyboard.press("Enter");
+  await s.keyboard.type(KUNYE);
+  await s.waitForFunction(() => /Kaydedildi/.test(document.body.innerText), null, { timeout: 60000 });
+  await s.waitForTimeout(2500);
+  return (await s.locator(".ProseMirror").innerText()).replace(/\s+/g, " ").slice(0, 200);
+});
+await adim("kaynakca-denetimi", async () => {
+  await s.goto(`/dashboard/citations?calisma=${proje}`);
+  await s.getByRole("button", { name: /Kaynakçamı denetle/ }).first().click();
+  await s.waitForTimeout(800);
+  await s.locator('[role="dialog"]').getByRole("button", { name: /^Kaynakçamı denetle$/ }).click();
+  await s.locator(".kaynak-pdf-satiri").first().waitFor({ timeout: 60000 });
+  return (await s.locator(".kaynak-pdf-satiri").first().innerText()).replace(/\s+/g, " ");
+});
+await adim("pdf-yukle", async () => {
+  await s.locator(".kaynak-pdf-satiri input[type=file]").first().setInputFiles(PDF_YOLU);
+  await s.locator(".kaynak-pdf-satiri").first().getByText(/PDF yüklendi|PDF'i aç/).first().waitFor({ timeout: 60000 });
+  return (await s.locator(".kaynak-pdf-satiri").first().innerText()).replace(/\s+/g, " ");
+});
+fs.writeFileSync(`${OUT}/z1-hesap.json`, JSON.stringify({ adres, parola, proje, DOI, KUNYE }));
+const SEC = "Remote learning increased reported isolation among first-year students.";
+const { execFileSync } = await import("node:child_process");
+const db = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+let pdfId;
+await adim("kaynak-panel", async () => {
+  pdfId = db(`select id from public.kaynak_pdfleri where project_id='${proje}' limit 1`);
+  await s.goto(`/dashboard/editor/${proje}/write`, { timeout: 120000 });
+  await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  await s.getByRole("button", { name: /Kaynak PDF/ }).first().click();
+  await s.waitForSelector(".kaynak-pdf-paneli select", { timeout: 60000 });
+  await s.selectOption(".kaynak-pdf-paneli select", pdfId);
+  await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 90000 });
+  return `pdf ${pdfId}`;
+});
+const sec = async (metin) => {
+  const ok = await s.evaluate((ilk) => {
+    const sp = [...document.querySelectorAll(".pdf-sayfa .textLayer span")].filter((x) => x.firstChild?.nodeType === 3);
+    const b = sp.find((x) => x.textContent.includes(ilk));
+    if (!b) return false;
+    const r = document.createRange();
+    r.setStart(b.firstChild, b.textContent.indexOf(ilk));
+    r.setEnd(b.firstChild, b.textContent.indexOf(ilk) + ilk.length);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    return true;
+  }, metin);
+  if (!ok) throw new Error("seçim kurulamadı");
+  await s.waitForSelector(".kaynak-secim", { timeout: 15000 });
+};
+const editorOnce = { metin: "" };
+await adim("ai-analiz", async () => {
+  editorOnce.metin = (await s.locator(".ProseMirror").innerText()).replace(/\s+/g, " ");
+  await sec(SEC);
+  await s.getByRole("button", { name: /Arvo AI ile analiz et/ }).click();
+  await s.waitForSelector(".kaynak-analiz .kaynak-cevap, .kaynak-analiz .kaynak-hata", { timeout: 150000 });
+  const metin = (await s.locator(".kaynak-analiz").innerText()).replace(/\s+/g, " ");
+  const editorSonra = (await s.locator(".ProseMirror").innerText()).replace(/\s+/g, " ");
+  fs.writeFileSync(`${OUT}/z1-ai-ekran.txt`, metin);
+  return `cevap ${(await s.locator(".kaynak-analiz .kaynak-cevap").count()) > 0} · PDF s.1 ${/PDF s\. 1/.test(metin)} · editör aynı ${editorSonra === editorOnce.metin} · ${metin.slice(0, 240)}`;
+});
+await adim("atif-ekle", async () => {
+  // İmleç: ilk paragrafın sonu (atıf kaynakçadan önce, cümlenin ardına).
+  const ilkP = s.locator(".ProseMirror p").first();
+  const kutu = await ilkP.boundingBox();
+  await s.mouse.click(kutu.x + kutu.width - 2, kutu.y + kutu.height / 2);
+  await s.keyboard.press("End");
+  await s.keyboard.type(" ");
+  await sec(SEC);
+  await s.getByRole("button", { name: /Alıntı ve atıf ekle/ }).click();
+  await s.waitForSelector(".kaynak-atif .kaynak-dogrulandi, .kaynak-atif .kaynak-hata", { timeout: 60000 });
+  const panel = (await s.locator(".kaynak-atif").innerText()).replace(/\s+/g, " ");
+  await s.getByLabel(/Basılı sayfa/).fill("203");
+  const ekle = s.getByRole("button", { name: /İmlece ekle/ });
+  if (!(await ekle.isEnabled())) throw new Error(`ekleme kapalı: ${panel.slice(0, 200)}`);
+  await ekle.click();
+  await s.waitForFunction(() => /\(Kaya/.test(document.querySelector(".ProseMirror")?.textContent ?? ""), null, { timeout: 20000 });
+  await s.waitForFunction(() => /Kaydedildi/.test(document.body.innerText), null, { timeout: 60000 });
+  await s.waitForTimeout(3000);
+  return `panel: ${panel.slice(0, 160)} · editör: ${(await s.locator(".ProseMirror").innerText()).replace(/\s+/g, " ").slice(0, 260)}`;
+});
+await adim("disa-aktar-pdf", async () => {
+  const p = await c.newPage();
+  await p.goto(`/print/manuscript/${proje}`, { timeout: 120000 });
+  await p.waitForLoadState("networkidle");
+  const metin = (await p.locator("body").innerText()).replace(/\s+/g, " ");
+  fs.writeFileSync(`${OUT}/z1-yazdir.txt`, metin);
+  await p.pdf({ path: `${OUT}/z1-yazdir.pdf` }).catch(() => {});
+  await p.close();
+  return `alıntı ${/isolation among first-year/.test(metin)} · atıf ${/\(Kaya, 2021/.test(metin)} · kaynakça ${/Journal of Synthetic Studies/.test(metin)}`;
+});
+await adim("disa-aktar-word", async () => {
+  await s.goto(`/dashboard/editor/${proje}/write`, { timeout: 120000 });
+  await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  await s.getByRole("button", { name: /Dışa aktar|Word, PDF ya da LaTeX/ }).first().click();
+  const [indirme] = await Promise.all([s.waitForEvent("download", { timeout: 90000 }), s.getByRole("button", { name: /Word \(\.docx\)/ }).click()]);
+  const hedef = `${OUT}/z1-cikti.docx`;
+  await indirme.saveAs(hedef);
+  const duz = execFileSync("unzip", ["-p", hedef, "word/document.xml"], { encoding: "utf8", maxBuffer: 1 << 26 }).replace(/<[^>]+>/g, "");
+  fs.writeFileSync(`${OUT}/z1-word.txt`, duz);
+  return `${(fs.statSync(hedef).size / 1024).toFixed(1)} KB · alıntı ${/isolation among first-year/.test(duz)} · atıf ${/\(Kaya, 2021/.test(duz)} · kaynakça ${/Journal of Synthetic Studies/.test(duz)}`;
+});
+await adim("yeniden-giris", async () => {
+  await c.clearCookies();
+  await c.addCookies([{ name: "arvolab_dil", value: "tr", url: URL0 }]);
+  await s.goto("/");
+  await s.fill('input[name="email"]', adres);
+  await s.fill('input[name="password"]', parola);
+  await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  await s.goto(`/dashboard/editor/${proje}/write`, { timeout: 120000 });
+  await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  const metin = (await s.locator(".ProseMirror").innerText()).replace(/\s+/g, " ");
+  return `editör: alıntı ${/isolation among first-year/.test(metin)} · atıf ${/\(Kaya, 2021/.test(metin)} · kaynakça ${/Journal of Synthetic Studies/.test(metin)}`;
+});
+await adim("butunluk", async () => {
+  const uid = db(`select id from auth.users where email='${adres}'`);
+  const r = {
+    kullanici: db(`select (email_confirmed_at is not null)::text || '/' || (encrypted_password is not null and encrypted_password <> '')::text from auth.users where id='${uid}'`),
+    profil: db(`select count(*) from public.profiles where id='${uid}'`),
+    sozlesme: db(`select count(*) from public.sozlesme_onaylari where user_id='${uid}'`),
+    calisma: db(`select count(*) from public.academic_projects where owner_id='${uid}'`),
+    literatur: db(`select count(*) || ' / doi ' || coalesce(max(doi_or_url),'-') from public.literature_sources where owner_id='${uid}'`),
+    pdf: db(`select count(*) || ' / ' || coalesce(max(durum),'-') || ' / doi ' || coalesce(max(doi),'-') from public.kaynak_pdfleri where project_id='${proje}'`),
+    metin: db(`select (plain_text like '%isolation among first-year%')::text || '/' || (plain_text like '%(Kaya, 2021%')::text || '/' || (plain_text like '%Journal of Synthetic Studies%')::text from public.project_manuscripts where project_id='${proje}'`),
+    asistan: db(`select string_agg(capability || ':' || status || ':' || coalesce(model,'-'), ', ' order by created_at) from public.ai_assistant_runs where user_id='${uid}'`),
+    posta: fs.readFileSync(POSTA, "utf8").split("\n").filter(Boolean).map(JSON.parse).filter((x) => JSON.stringify(x.to).includes(adres)).map((x) => x.subject).join(" | "),
+  };
+  fs.writeFileSync(`${OUT}/z1-butunluk.json`, JSON.stringify(r, null, 2));
+  return JSON.stringify(r);
+});
+if (process.env.YOKLA) {
+  await s.waitForTimeout(1500);
+  await s.goto("/dashboard/literature"); await s.waitForTimeout(2000);
+  console.log("BUTONLAR:", (await s.locator("button:visible").allInnerTexts()).join(" | ").slice(0, 600));
+  console.log("BAGLANTILAR:", (await s.locator("a:visible").evaluateAll((l) => l.map((e) => `${e.innerText.trim().slice(0,30)}→${e.getAttribute("href")}`))).join(" | ").slice(0, 900));
+  await s.screenshot({ path: process.argv[4] + "/yokla-panel.png" });
+}
+await b.close();

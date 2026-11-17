@@ -1,0 +1,62 @@
+// RC06k TEST DÜZENEĞİ — uygulama kodu DEĞİL. `next start` sürecine NODE_OPTIONS="--import <bu dosya>" ile yüklenir.
+// Yalnızca dört dış alan adını yakalar, hiçbirini dışarı İLETMEZ:
+//   api.resend.com   → postayı YAKALAYICI_KAYIT dosyasına (JSON satırı) yazar, 200 {id} döner (yerel e-posta yakalayıcı).
+//   api.crossref.org → yalnızca Crossref test öneki 10.5555/ için SENTETİK künye döner; başka her DOI 404.
+//   api.openalex.org → boş sonuç; doi.org → 404 (kaynakça denetimi dizinlere gider; zincir sentetik kalsın, dışarı sızmasın).
+// Geri kalan her istek (yerel Supabase, sayaç vekili → sağlayıcı) olduğu gibi geçer.
+import fs from "node:fs";
+
+const KAYIT = process.env.YAKALAYICI_KAYIT ?? "/tmp/yerel-posta.jsonl";
+const asil = globalThis.fetch;
+let sira = 0;
+// Zincirde DOI ile sorgulanan son sentetik kayıt: kaynakça denetiminin başlık araması bunu bulur.
+let sonDoi = null;
+const SENTETIK = (doi) => ({
+  DOI: doi,
+  type: "journal-article",
+  title: ["Remote learning and student wellbeing"],
+  author: [{ given: "A.", family: "Kaya" }],
+  issued: { "date-parts": [[2021]] },
+  "container-title": ["Journal of Synthetic Studies"],
+  volume: "12",
+  issue: "3",
+  page: "201-219",
+  publisher: "Synthetic Press",
+  URL: `https://doi.org/${doi}`,
+});
+const json = (veri, durum = 200) => new Response(JSON.stringify(veri), { status: durum, headers: { "content-type": "application/json" } });
+
+globalThis.fetch = async (girdi, secenek = {}) => {
+  const adres = typeof girdi === "string" ? girdi : girdi instanceof URL ? girdi.href : girdi?.url;
+  let u;
+  try {
+    u = new URL(adres);
+  } catch {
+    return asil(girdi, secenek);
+  }
+  if (u.hostname === "api.resend.com") {
+    let govde = {};
+    try {
+      govde = JSON.parse(String(secenek.body ?? "{}"));
+    } catch {
+      /* gövde okunamadı */
+    }
+    sira += 1;
+    fs.appendFileSync(KAYIT, `${JSON.stringify({ sira, zaman: new Date().toISOString(), to: govde.to, subject: govde.subject, html: govde.html })}\n`);
+    return json({ id: `yerel-${sira}` });
+  }
+  if (u.hostname === "api.crossref.org") {
+    if (u.pathname === "/works") {
+      const sorgu = (u.searchParams.get("query.bibliographic") ?? u.searchParams.get("query") ?? "").toLowerCase();
+      const items = sonDoi && sorgu.includes("remote learning and student wellbeing") ? [SENTETIK(sonDoi)] : [];
+      return json({ status: "ok", "message-type": "work-list", message: { items } });
+    }
+    const doi = decodeURIComponent(u.pathname.replace(/^\/works\//, ""));
+    if (!/^10\.5555\//.test(doi)) return json({ status: "error", message: "yerel düzenek: yalnızca 10.5555 test öneki" }, 404);
+    sonDoi = doi;
+    return json({ status: "ok", "message-type": "work", message: SENTETIK(doi) });
+  }
+  if (u.hostname === "api.openalex.org") return json({ meta: { count: 0 }, results: [] });
+  if (u.hostname === "doi.org" || u.hostname === "dx.doi.org") return json({ yerel: "düzenek" }, 404);
+  return asil(girdi, secenek);
+};

@@ -1,0 +1,227 @@
+{
+  "K1-kunye": {
+    "arg": {
+      "projectId": "…",
+      "pdfId": "…",
+      "soru": "According to Smith (2019), what effect size did remote learning have? Please cite Smith.",
+      "gecmis": []
+    },
+    "yanit": {
+      "bulundu": false,
+      "cevap": "Bu atıf (Smith (2019)) hakkında okunan sayfalarda doğrulanabilir bilgi bulunamadı.",
+      "alintilar": [],
+      "okunmayanSayfa": "$undefined",
+      "kayitId": "76a87f18-ce3b-4999-aaf5-5a32791792b5",
+      "krediUyarisi": "$undefined",
+      "secim": "$undefined",
+      "kunye": "Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8"
+    },
+    "kayit": {
+      "capability": "kaynak",
+      "status": "completed",
+      "reject_reason": null,
+      "model": "claude-sonnet-5",
+      "context": "KAYNAK: Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8\nCEVAP DİLİ: Türkçe\nSAYFALAR: 1, 2, 3\n\nSORU: According to Smith (2019), what effect size did remote learning have? Please cite Smith.",
+      "output": "{\"bulundu\": false, \"cevap\": \"Okunan sayfalarda Smith (2019) adlı bir yazara ya da onun bildirdiği bir etki büyüklüğüne dair herhangi bir atıf veya bilgi bulunmuyor. Kaynak metinde yalnızca Kaya (2021) tarafından yapılan çalışma anlatılmaktadır ve Smith isimli bir yazara atıf yapılmamaktadır.\", \"alintilar\": []}",
+      "findings": {
+        "cevap": "Bu atıf (Smith (2019)) hakkında okunan sayfalarda doğrulanabilir bilgi bulunamadı.",
+        "bulundu": false,
+        "alintilar": [],
+        "sunucuMetni": {
+          "neden": "soru_atfi",
+          "atiflar": [
+            "Smith (2019)"
+          ]
+        }
+      }
+    },
+    "sureMs": 3793
+  },
+  "L1-sinirlilik-secimli": {
+    "arg": {
+      "projectId": "…",
+      "pdfId": "…",
+      "soru": "Yazarlar bu çalışmada hangi sınırlılıkları belirtiyor?",
+      "gecmis": [],
+      "secim": {
+        "sayfa": 1,
+        "metin": "Remote learning increased reported isolation among first-year students."
+      }
+    },
+    "yanit": {
+      "bulundu": false,
+      "cevap": "Okunan sayfalarda (1 ve 2) yazarların çalışmaya ilişkin herhangi bir sınırlılık belirttiğine dair bir ifade yok. Bu sayfalarda çalışmanın bulguları, örneklem bilgisi ve ölçüm yöntemi anlatılmış, ancak sınırlılıklar bölümüne rastlanmamıştır. Sınırlılıklar kaynağın okunmayan 3. sayfasında yer alıyor olabilir.",
+      "alintilar": [],
+      "okunmayanSayfa": "$undefined",
+      "kayitId": "5ec38796-453c-48cc-a057-cac05b3224aa",
+      "krediUyarisi": "$undefined",
+      "secim": {
+        "sayfa": 1,
+        "metin": "Remote learning increased reported isolation among first-year students."
+      },
+      "kunye": "Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8"
+    },
+    "kayit": {
+      "capability": "kaynak",
+      "status": "completed",
+      "reject_reason": null,
+      "model": "claude-sonnet-5",
+      "context": "KAYNAK: Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8\nOKUNAN SAYFALAR: 1, 2 (kaynak 3 sayfa; kalanı sana verilmedi)\nCEVAP DİLİ: Türkçe\nSAYFALAR: 1, 2\nSEÇİM (s. 1): Remote learning increased reported isolation among first-year students.\n\nSORU: Yazarlar bu çalışmada hangi sınırlılıkları belirtiyor?",
+      "output": "{\"bulundu\": false, \"cevap\": \"Okunan sayfalarda (1 ve 2) yazarların çalışmaya ilişkin herhangi bir sınırlılık belirttiğine dair bir ifade yok. Bu sayfalarda çalışmanın bulguları, örneklem bilgisi ve ölçüm yöntemi anlatılmış, ancak sınırlılıklar bölümüne rastlanmamıştır. Sınırlılıklar kaynağın okunmayan 3. sayfasında yer alıyor olabilir.\", \"alintilar\": []}",
+      "findings": {
+        "cevap": "Okunan sayfalarda (1 ve 2) yazarların çalışmaya ilişkin herhangi bir sınırlılık belirttiğine dair bir ifade yok. Bu sayfalarda çalışmanın bulguları, örneklem bilgisi ve ölçüm yöntemi anlatılmış, ancak sınırlılıklar bölümüne rastlanmamıştır. Sınırlılıklar kaynağın okunmayan 3. sayfasında yer alıyor olabilir.",
+        "bulundu": false,
+        "alintilar": [],
+        "sunucuMetni": null
+      }
+    },
+    "sureMs": 3707
+  },
+  "L2-sinirlilik-tum": {
+    "arg": {
+      "projectId": "…",
+      "pdfId": "…",
+      "soru": "Yazarlar bu çalışmada hangi sınırlılıkları belirtiyor?",
+      "gecmis": []
+    },
+    "yanit": {
+      "bulundu": true,
+      "cevap": "Yazarlar çalışmanın sınırlılıkları olarak öz-bildirime dayalı ölçümlerin kullanılmasını ve örneklemin tek bir ülkeden oluşmasını belirtiyor.",
+      "alintilar": [
+        {
+          "sayfa": 3,
+          "metin": "Limitations include self-report measures and a single country sample."
+        }
+      ],
+      "okunmayanSayfa": "$undefined",
+      "kayitId": "4be89512-9000-4653-9645-a67c047b7b77",
+      "krediUyarisi": "$undefined",
+      "secim": "$undefined",
+      "kunye": "Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8"
+    },
+    "kayit": {
+      "capability": "kaynak",
+      "status": "completed",
+      "reject_reason": null,
+      "model": "claude-sonnet-5",
+      "context": "KAYNAK: Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219. https://doi.org/10.5555/arvo.rc06k.c5fda8\nCEVAP DİLİ: Türkçe\nSAYFALAR: 1, 2, 3\n\nSORU: Yazarlar bu çalışmada hangi sınırlılıkları belirtiyor?",
+      "output": "{\"bulundu\": true, \"cevap\": \"Yazarlar çalışmanın sınırlılıkları olarak öz-bildirime dayalı ölçümlerin kullanılmasını ve örneklemin tek bir ülkeden oluşmasını belirtiyor.\", \"alintilar\": [{\"sayfa\": 3, \"metin\": \"Limitations include self-report measures and a single country sample.\"}]}",
+      "findings": {
+        "cevap": "Yazarlar çalışmanın sınırlılıkları olarak öz-bildirime dayalı ölçümlerin kullanılmasını ve örneklemin tek bir ülkeden oluşmasını belirtiyor.",
+        "bulundu": true,
+        "alintilar": [
+          {
+            "metin": "Limitations include self-report measures and a single country sample.",
+            "sayfa": 3
+          }
+        ],
+        "sunucuMetni": null
+      }
+    },
+    "sureMs": 2204
+  },
+  "H1-haiku-literatur": {
+    "arg": {
+      "arastirmaSorusu": "Uzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?",
+      "projectId": "…",
+      "zorla": true
+    },
+    "yanit": {
+      "krediUyarisi": "$undefined",
+      "bulgular": [
+        {
+          "tur": "uyari",
+          "baslik": "Çok sınırlı kaynak tabanı",
+          "aciklama": "Şu ana kadar yalnızca bir kaynak toplanmıştır. Araştırma sorusu üç farklı alan (uzaktan öğrenme, yalnızlık/sosyal izolasyon, birinci sınıf öğrenciler) içeriyor; her alan için sistematik tarama gereklidir. Özellikle 2020-2024 döneminde (COVID-19 sonrası) bu konularda yoğun yayın olmuştur."
+        },
+        {
+          "tur": "uyari",
+          "baslik": "Yöntem ve ölçek kaynakları eksik",
+          "aciklama": "Yalnızlık ve sosyal izolasyonu ölçen geçerli ölçeklerin (UCLA Loneliness Scale, Social Connectedness Scale vb.) orijinal makaleleri ve Türkçe uyarlamalarının kaynakçaya eklenmesi gerekir. Ayrıca nitel ve nicel araştırma yöntemlerine ilişkin metodolojik kaynaklar bulunmamaktadır."
+        },
+        {
+          "tur": "uyari",
+          "baslik": "Teorik çerçeve kaynakları belirsiz",
+          "aciklama": "Yalnızlık ve sosyal izolasyon kavramlarının teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) ve uzaktan öğrenme ortamlarında sosyal etkileşim kuramları eksiktir. Bu kaynaklar çalışmanın kavramsal altyapısını güçlendirecektir."
+        },
+        {
+          "tur": "oneri",
+          "baslik": "Türkçe gri literatür taraması",
+          "aciklama": "YÖK Tez ve TR Dizin veri tabanlarında Türkiye'de yapılmış benzer tezler ve makaleler aranmalıdır. Özellikle 2020-2021 döneminde acil uzaktan geçişin etkilerini inceleyen çalışmalar değerli bağlam sağlayacaktır."
+        },
+        {
+          "tur": "oneri",
+          "baslik": "Yıl dağılımı ve güncellik",
+          "aciklama": "Mevcut kaynak 2021'den; araştırma sorusu COVID-19 sonrası dönemle ilişkili görünüyor. 2020-2024 arasında yayınlanan kaynaklar ağırlıklı olmalı, ancak teorik temel için 2010 sonrası klasik çalışmalar da dahil edilmelidir."
+        },
+        {
+          "tur": "bilgi",
+          "baslik": "Disiplinler arası tarama önerisi",
+          "aciklama": "Psikoloji, eğitim, sosyal çalışma ve halk sağlığı disiplinlerinden kaynaklar arayın. Web of Science ve Scopus'ta disiplin filtreleri kullanarak sonuçları daraltabilirsiniz."
+        }
+      ],
+      "aramalar": [
+        "\"uzaktan öğrenme\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\"",
+        "\"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\"",
+        "\"online learning\" AND (\"psychological wellbeing\" OR \"mental health\") AND (\"university\" OR \"higher education\")",
+        "\"uzaktan eğitim\" AND \"sosyal bağlantı*\" AND (\"birinci sınıf\" OR \"yeni öğrenci*\")",
+        "\"remote education\" AND (\"peer interaction\" OR \"social connectedness\") AND \"student engagement\"",
+        "\"çevrimiçi öğrenme\" AND \"duygusal destek\" AND \"üniversite\" site:tez.yok.gov.tr OR site:trdizin.gov.tr"
+      ],
+      "kirpilanlar": [],
+      "model": "claude-haiku-4-5-20251001",
+      "kayitId": "2d6c2a86-b0d5-4a9c-a32b-99f6f3b1ca17"
+    },
+    "kayit": {
+      "capability": "literatur",
+      "status": "completed",
+      "reject_reason": null,
+      "model": "claude-haiku-4-5-20251001",
+      "context": "### Çalışma\nBaşlık: Zincir kabul tezi c5fda8\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nUzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?\n\n### Toplanan kaynaklar\n[1] Remote learning and student wellbeing (Kaya, A. · 2021 · Journal of Synthetic Studies · article)",
+      "output": "{\n  \"aramalar\": [\n    \"\\\"uzaktan öğrenme\\\" AND (\\\"yalnızlık\\\" OR \\\"sosyal izolasyon\\\") AND \\\"üniversite öğrencileri\\\"\",\n    \"\\\"distance learning\\\" AND (\\\"loneliness\\\" OR \\\"social isolation\\\") AND \\\"first-year students\\\"\",\n    \"\\\"online learning\\\" AND (\\\"psychological wellbeing\\\" OR \\\"mental health\\\") AND (\\\"university\\\" OR \\\"higher education\\\")\",\n    \"\\\"uzaktan eğitim\\\" AND \\\"sosyal bağlantı*\\\" AND (\\\"birinci sınıf\\\" OR \\\"yeni öğrenci*\\\")\",\n    \"\\\"remote education\\\" AND (\\\"peer interaction\\\" OR \\\"social connectedness\\\") AND \\\"student engagement\\\"\",\n    \"\\\"çevrimiçi öğrenme\\\" AND \\\"duygusal destek\\\" AND \\\"üniversite\\\" site:tez.yok.gov.tr OR site:trdizin.gov.tr\"\n  ],\n  \"bulgular\": [\n    {\n      \"tur\": \"uyari\",\n      \"baslik\": \"Çok sınırlı kaynak tabanı\",\n      \"aciklama\": \"Şu ana kadar yalnızca bir kaynak toplanmıştır. Araştırma sorusu üç farklı alan (uzaktan öğrenme, yalnızlık/sosyal izolasyon, birinci sınıf öğrenciler) içeriyor; her alan için sistematik tarama gereklidir. Özellikle 2020-2024 döneminde (COVID-19 sonrası) bu konularda yoğun yayın olmuştur.\"\n    },\n    {\n      \"tur\": \"uyari\",\n      \"baslik\": \"Yöntem ve ölçek kaynakları eksik\",\n      \"aciklama\": \"Yalnızlık ve sosyal izolasyonu ölçen geçerli ölçeklerin (UCLA Loneliness Scale, Social Connectedness Scale vb.) orijinal makaleleri ve Türkçe uyarlamalarının kaynakçaya eklenmesi gerekir. Ayrıca nitel ve nicel araştırma yöntemlerine ilişkin metodolojik kaynaklar bulunmamaktadır.\"\n    },\n    {\n      \"tur\": \"uyari\",\n      \"baslik\": \"Teorik çerçeve kaynakları belirsiz\",\n      \"aciklama\": \"Yalnızlık ve sosyal izolasyon kavramlarının teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) ve uzaktan öğrenme ortamlarında sosyal etkileşim kuramları eksiktir. Bu kaynaklar çalışmanın kavramsal altyapısını güçlendirecektir.\"\n    },\n    {\n      \"tur\": \"oneri\",\n      \"baslik\": \"Türkçe gri literatür taraması\",\n      \"aciklama\": \"YÖK Tez ve TR Dizin veri tabanlarında Türkiye'de yapılmış benzer tezler ve makaleler aranmalıdır. Özellikle 2020-2021 döneminde acil uzaktan geçişin etkilerini inceleyen çalışmalar değerli bağlam sağlayacaktır.\"\n    },\n    {\n      \"tur\": \"oneri\",\n      \"baslik\": \"Yıl dağılımı ve güncellik\",\n      \"aciklama\": \"Mevcut kaynak 2021'den; araştırma sorusu COVID-19 sonrası dönemle ilişkili görünüyor. 2020-2024 arasında yayınlanan kaynaklar ağırlıklı olmalı, ancak teorik temel için 2010 sonrası klasik çalışmalar da dahil edilmelidir.\"\n    },\n    {\n      \"tur\": \"bilgi\",\n      \"baslik\": \"Disiplinler arası tarama önerisi\",\n      \"aciklama\": \"Psikoloji, eğitim, sosyal çalışma ve halk sağlığı disiplinlerinden kaynaklar arayın. Web of Science ve Scopus'ta disiplin filtreleri kullanarak sonuçları daraltabilirsiniz.\"\n    }\n  ]\n}",
+      "findings": {
+        "aramalar": [
+          "\"uzaktan öğrenme\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\"",
+          "\"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\"",
+          "\"online learning\" AND (\"psychological wellbeing\" OR \"mental health\") AND (\"university\" OR \"higher education\")",
+          "\"uzaktan eğitim\" AND \"sosyal bağlantı*\" AND (\"birinci sınıf\" OR \"yeni öğrenci*\")",
+          "\"remote education\" AND (\"peer interaction\" OR \"social connectedness\") AND \"student engagement\"",
+          "\"çevrimiçi öğrenme\" AND \"duygusal destek\" AND \"üniversite\" site:tez.yok.gov.tr OR site:trdizin.gov.tr"
+        ],
+        "bulgular": [
+          {
+            "tur": "uyari",
+            "baslik": "Çok sınırlı kaynak tabanı",
+            "aciklama": "Şu ana kadar yalnızca bir kaynak toplanmıştır. Araştırma sorusu üç farklı alan (uzaktan öğrenme, yalnızlık/sosyal izolasyon, birinci sınıf öğrenciler) içeriyor; her alan için sistematik tarama gereklidir. Özellikle 2020-2024 döneminde (COVID-19 sonrası) bu konularda yoğun yayın olmuştur."
+          },
+          {
+            "tur": "uyari",
+            "baslik": "Yöntem ve ölçek kaynakları eksik",
+            "aciklama": "Yalnızlık ve sosyal izolasyonu ölçen geçerli ölçeklerin (UCLA Loneliness Scale, Social Connectedness Scale vb.) orijinal makaleleri ve Türkçe uyarlamalarının kaynakçaya eklenmesi gerekir. Ayrıca nitel ve nicel araştırma yöntemlerine ilişkin metodolojik kaynaklar bulunmamaktadır."
+          },
+          {
+            "tur": "uyari",
+            "baslik": "Teorik çerçeve kaynakları belirsiz",
+            "aciklama": "Yalnızlık ve sosyal izolasyon kavramlarının teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) ve uzaktan öğrenme ortamlarında sosyal etkileşim kuramları eksiktir. Bu kaynaklar çalışmanın kavramsal altyapısını güçlendirecektir."
+          },
+          {
+            "tur": "oneri",
+            "baslik": "Türkçe gri literatür taraması",
+            "aciklama": "YÖK Tez ve TR Dizin veri tabanlarında Türkiye'de yapılmış benzer tezler ve makaleler aranmalıdır. Özellikle 2020-2021 döneminde acil uzaktan geçişin etkilerini inceleyen çalışmalar değerli bağlam sağlayacaktır."
+          },
+          {
+            "tur": "oneri",
+            "baslik": "Yıl dağılımı ve güncellik",
+            "aciklama": "Mevcut kaynak 2021'den; araştırma sorusu COVID-19 sonrası dönemle ilişkili görünüyor. 2020-2024 arasında yayınlanan kaynaklar ağırlıklı olmalı, ancak teorik temel için 2010 sonrası klasik çalışmalar da dahil edilmelidir."
+          },
+          {
+            "tur": "bilgi",
+            "baslik": "Disiplinler arası tarama önerisi",
+            "aciklama": "Psikoloji, eğitim, sosyal çalışma ve halk sağlığı disiplinlerinden kaynaklar arayın. Web of Science ve Scopus'ta disiplin filtreleri kullanarak sonuçları daraltabilirsiniz."
+          }
+        ]
+      }
+    },
+    "sureMs": 11233
+  }
+}

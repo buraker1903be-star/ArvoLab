@@ -1,0 +1,6 @@
+16:02:47 | kaynak | completed | - | claude-sonnet-5 | -
+16:03:22 | kaynak | completed | - | claude-sonnet-5 | soru_atfi
+16:03:26 | kaynak | completed | - | claude-sonnet-5 | -
+16:03:28 | kaynak | completed | - | claude-sonnet-5 | -
+16:03:40 | literatur | completed | - | claude-haiku-4-5-20251001 | -
+ai-asistan:<kullanıcı> | 5
