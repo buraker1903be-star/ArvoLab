@@ -94,6 +94,62 @@ async function senaryo(etiket, fn) {
 // ── Tohum ────────────────────────────────────────────────────────────────
 const ek = crypto.randomBytes(3).toString("hex");
 const SOZLESME_SURUMU = fs.readFileSync(path.join(KOK, "lib/sozlesme/kullanim-sozlesmesi.ts"), "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+/*
+  ÇALIŞAN DERLEME AÇIKÇA SABİTLENİR (RC06e, 17.11.2026). İşlem kimlikleri derlemeye göre
+  değişir: `next dev` .next/dev/server/'a, `next build` .next/server/'a yazar. Bir ara en yeni
+  dosya (değiştirilme zamanı) seçiliyordu; bu, sunucunun gerçekte hangi derlemeyi koşturduğunu
+  KANITLAMAZ (eski bir `next build` çıktısı, `next dev` açıkken de en yeni olabilir). Artık:
+    STUDYO_DERLEME=uretim     → .next/server/…; .next/BUILD_ID sunucunun döndürdüğü HTML'de
+                                 geçmek ZORUNDA (geçmiyorsa sunucu bu derlemeyi çalıştırmıyor)
+    STUDYO_DERLEME=gelistirme → .next/dev/server/…; HTML'de bir üretim BUILD_ID'si geçerse durur
+    STUDYO_ISLEM_BILDIRIMI    → (isteğe bağlı) bildirim yolu; üretimde BUILD_ID o bildirimin kendi
+                                 derleme dizininden okunur, sunucununkiyle eşleşmezse koşu başlamaz
+  Seçilen kip, BUILD_ID, bildirim yolu ve SHA-256'sı ile git HEAD sonuclar/studyo-kabul-derleme.json'a
+  yazılır: birleşik aday kabulünde hangi derlemenin sınandığı kayıtlı kalsın.
+*/
+const DERLEME = process.env.STUDYO_DERLEME;
+if (DERLEME !== "uretim" && DERLEME !== "gelistirme") {
+  console.error('ÖN KOŞUL: STUDYO_DERLEME "uretim" (next build + next start) ya da "gelistirme" (next dev) olmalı');
+  process.exit(2);
+}
+const BILDIRIM_YOLU = path.resolve(
+  process.env.STUDYO_ISLEM_BILDIRIMI ?? path.join(KOK, DERLEME === "uretim" ? ".next/server/server-reference-manifest.json" : ".next/dev/server/server-reference-manifest.json"),
+);
+if (!fs.existsSync(BILDIRIM_YOLU)) {
+  console.error(`ÖN KOŞUL: işlem bildirimi yok: ${BILDIRIM_YOLU}`);
+  process.exit(2);
+}
+const BILDIRIM_HAM = fs.readFileSync(BILDIRIM_YOLU);
+const ISLEM_BILDIRIMI = JSON.parse(BILDIRIM_HAM.toString("utf8"));
+// BUILD_ID bildirimin KENDİ derleme dizininden okunur (…/<dist>/server/bildirim → …/<dist>/BUILD_ID):
+// başka bir derlemenin bildirimi verilirse kimlik HTML'le eşleşmez ve koşu başlamaz.
+const BUILD_ID_YOLU = path.join(path.dirname(path.dirname(BILDIRIM_YOLU)), "BUILD_ID");
+const BUILD_ID = fs.existsSync(BUILD_ID_YOLU) ? fs.readFileSync(BUILD_ID_YOLU, "utf8").trim() : null;
+{
+  const html = await fetch(`${UYGULAMA}/`).then((r) => r.text());
+  if (DERLEME === "uretim" && (!BUILD_ID || !html.includes(BUILD_ID))) {
+    console.error(`ÖN KOŞUL: sunucu ${path.relative(KOK, BUILD_ID_YOLU)} (${BUILD_ID ?? "yok"}) derlemesini çalıştırmıyor — bildirim bu derlemenin mi, next start bu dizinden mi?`);
+    process.exit(2);
+  }
+  const uretimKimligi = fs.existsSync(path.join(KOK, ".next/BUILD_ID")) ? fs.readFileSync(path.join(KOK, ".next/BUILD_ID"), "utf8").trim() : null;
+  if (DERLEME === "gelistirme" && uretimKimligi && html.includes(uretimKimligi)) {
+    console.error(`ÖN KOŞUL: sunucu bir üretim derlemesi (${uretimKimligi}) çalıştırıyor; STUDYO_DERLEME=uretim kullanın`);
+    process.exit(2);
+  }
+}
+const DERLEME_KAYDI = {
+  tarih: new Date().toISOString(),
+  gitHead: execFileSync("git", ["-C", KOK, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  gitTemiz: execFileSync("git", ["-C", KOK, "status", "--porcelain", "--", "app", "lib", "proxy.ts", "next.config.ts", "package.json"], { encoding: "utf8" }).trim() === "",
+  derleme: DERLEME,
+  buildId: DERLEME === "uretim" ? BUILD_ID : null,
+  bildirim: path.relative(KOK, BILDIRIM_YOLU),
+  bildirimSha256: crypto.createHash("sha256").update(BILDIRIM_HAM).digest("hex"),
+  uygulama: UYGULAMA,
+};
+fs.writeFileSync(new URL("./sonuclar/studyo-kabul-derleme.json", import.meta.url), `${JSON.stringify(DERLEME_KAYDI, null, 2)}\n`);
+console.log(`derleme: ${JSON.stringify(DERLEME_KAYDI)}`);
+
 async function kullaniciAc(ad) {
   const adres = `${ad}-${ek}@yerel.test`;
   const parola = `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
@@ -242,19 +298,8 @@ async function kaynakDegistir(sayfa, pdfId) {
 
 // Sunucu işlemini arayüz olmadan çağırır (oturum çerezleriyle): istemci denetimini aşan
 // biri ne görür? Kimlikler Next'in sunucu başvuru manifestinden.
-/*
-  İşlem kimlikleri derlemeye göre değişir: `next dev` .next/dev/'e, `next build` .next/server/'a
-  yazar. Eskiden yalnızca geliştirme dosyası okunuyordu; `next start` altında eski kimliklerle
-  çağrılan her işlem boş dönüyor ve S5/S6/R1–R3 "null" ile düşüyordu (RC06d). En yeni dosya,
-  sunucunun o anda kullandığı derlemedir.
-*/
 function islemKimligi(dosyaParcasi, ad) {
-  const adaylar = [".next/dev/server/server-reference-manifest.json", ".next/server/server-reference-manifest.json"]
-    .map((y) => path.join(KOK, y))
-    .filter((y) => fs.existsSync(y))
-    .sort((x, y) => fs.statSync(y).mtimeMs - fs.statSync(x).mtimeMs);
-  if (!adaylar.length) throw new Error("işlem bildirimi (server-reference-manifest) yok");
-  const m = JSON.parse(fs.readFileSync(adaylar[0], "utf8"));
+  const m = ISLEM_BILDIRIMI;
   for (const [kimlik, kayit] of Object.entries(m.node ?? {})) {
     if (kayit.exportedName === ad && String(kayit.filename ?? "").includes(dosyaParcasi)) return kimlik;
   }

@@ -192,7 +192,7 @@
     "kimlik": "S5f",
     "ad": "Uydurma seçimle asistan çağrısı modele gitmeden reddedilir",
     "beklenen": "secimReddi; modele istek yok; yeni asistan kaydı yok",
-    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 48→48 · kayıt 0→0",
+    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 52→52 · kayıt 0→0",
     "sonuc": "PASS"
   },
   {
@@ -220,7 +220,7 @@
     "kimlik": "S9",
     "ad": "Seçili pasaj Arvo AI ile analiz edilir (aynı kapı, istem, doğrulama, kayıt); editöre kendiliğinden girmez",
     "beklenen": "cevap + 'PDF s. 1' alıntısı; istemde seçili pasaj ve yalnızca s.1–2; asistan kaydı +1; editör değişmez",
-    "gozlenen": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasaj, uzaktan öğrenmenin birinci sınıf öğrencilerinde bildirilen yalnızlığı artır · istem sayfaları 1,2 · pasaj istemde true · modele istek 48→49 · kayıt 0→1 · editör değişmedi true",
+    "gozlenen": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasaj, uzaktan öğrenmenin birinci sınıf öğrencilerinde bildirilen yalnızlığı artır · istem sayfaları 1,2 · pasaj istemde true · modele istek 52→53 · kayıt 0→1 · editör değişmedi true",
     "sonuc": "PASS"
   },
   {
@@ -262,14 +262,14 @@
     "kimlik": "P1",
     "ad": "Büyük PDF (300 sayfa): yalnızca görünen sayfa çizilir; açılış ve gidiş makul",
     "beklenen": "/ 300, tek kanvas, açılış < 15 sn, 250. sayfaya gidiş < 5 sn",
-    "gozlenen": "1259 KB · / 300 · açılış 572 ms · gidiş 44 ms · kanvas 1 · JS yığını 24.8→24.8 MB",
+    "gozlenen": "1259 KB · / 300 · açılış 1116 ms · gidiş 48 ms · kanvas 1 · JS yığını 26.3→26.3 MB",
     "sonuc": "PASS"
   },
   {
     "kimlik": "P1b",
     "ad": "Büyük PDF'te arama (300 sayfa metni)",
     "beklenen": "299. sayfaya gider",
-    "gozlenen": "sayfa 299 · 503 ms",
+    "gozlenen": "sayfa 299 · 642 ms",
     "sonuc": "PASS"
   },
   {
@@ -297,7 +297,7 @@
     "kimlik": "R1c",
     "ad": "Sınır dolunca kaynak sohbeti modele gitmez; asistan hakkı ve kaydı oluşmaz",
     "beklenen": "sınır hatası; model isteği yok; ai-asistan sayacı 0; kayıt 0",
-    "gozlenen": "{\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimle · model 50→50 · ai-asistan 0 · kayıt 0",
+    "gozlenen": "{\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimle · model 54→54 · ai-asistan 0 · kayıt 0",
     "sonuc": "PASS"
   },
   {
@@ -311,7 +311,7 @@
     "kimlik": "R3",
     "ad": "19 MB / 300 sayfa: 10 eşzamanlı seçim tek çözümlemeye iner; önbellekten sıcak yanıt hızlı",
     "beklenen": "10/10 doğrulanır; sayaç +1; sıcak < 1000 ms",
-    "gozlenen": "19.0 MB · eşzamanlı 10/10 · süre en az 1536 / en çok 1995 ms · sayaç 0→1 · sıcak 228 ms (doğrulandı)",
+    "gozlenen": "19.0 MB · eşzamanlı 10/10 · süre en az 1791 / en çok 2210 ms · sayaç 0→1 · sıcak 204 ms (doğrulandı)",
     "sonuc": "PASS"
   },
   {
@@ -325,7 +325,7 @@
     "kimlik": "R3c",
     "ad": "19 MB PDF tarayıcıda açılır; tek sayfa çizilir",
     "beklenen": "açılış < 20 sn, 280. sayfa < 5 sn, tek kanvas",
-    "gozlenen": "açılış 1567 ms · gidiş 44 ms · kanvas 1",
+    "gozlenen": "açılış 1117 ms · gidiş 57 ms · kanvas 1",
     "sonuc": "PASS"
   },
   {
@@ -416,14 +416,14 @@
     "kimlik": "U4-1440",
     "ad": "1440 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
     "beklenen": "her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px",
-    "gozlenen": "yaprak açılırken kaydırma 499 px (tıklamanın kendi kaydırması 79 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 738 · küçültme: 0/24 erişilemez, taşma 0, editör 618 · geri büyütme: 0/24 erişilemez, taşma 0, editör 738 · kapat/aç: 0/24 erişilemez, taşma 0, editör 738",
+    "gozlenen": "yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 2) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 738 · küçültme: 0/24 erişilemez, taşma 0, editör 618 · geri büyütme: 0/24 erişilemez, taşma 0, editör 738 · kapat/aç: 0/24 erişilemez, taşma 0, editör 738",
     "sonuc": "PASS"
   },
   {
     "kimlik": "U4-1280",
     "ad": "1280 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
     "beklenen": "her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px",
-    "gozlenen": "yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 578 · küçültme: 0/24 erişilemez, taşma 0, editör 1030 · geri büyütme: 0/24 erişilemez, taşma 0, editör 578 · kapat/aç: 0/24 erişilemez, taşma 0, editör 578",
+    "gozlenen": "yaprak açılırken kaydırma 499 px (tıklamanın kendi kaydırması 79 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 578 · küçültme: 0/24 erişilemez, taşma 0, editör 1030 · geri büyütme: 0/24 erişilemez, taşma 0, editör 578 · kapat/aç: 0/24 erişilemez, taşma 0, editör 578",
     "sonuc": "PASS"
   },
   {
@@ -458,14 +458,14 @@
     "kimlik": "U5-telefon-tekerlek",
     "ad": "tekerlek: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
     "beklenen": "örtük kare 0, isabet evet",
-    "gozlenen": "9 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
+    "gozlenen": "8 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
     "sonuc": "PASS"
   },
   {
     "kimlik": "U5-telefon-klavye",
     "ad": "klavye: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
     "beklenen": "örtük kare 0, isabet evet",
-    "gozlenen": "15 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
+    "gozlenen": "14 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
     "sonuc": "PASS"
   },
   {
