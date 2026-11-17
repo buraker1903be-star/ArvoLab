@@ -14,7 +14,7 @@ ister).
 |---|---|
 | `kur.sh [hariç.sql …]` | Docker'da Postgres 17 (56432), GoTrue (59998), PostgREST (53001). `supabase/schema.sql` + bütün migration'lar. Argüman olarak verilen migration atlanır (düzeltmeden önceki davranışı yeniden üretmek için). |
 | `roller.sql`, `kabuk.sql` | Supabase rollerinin, `auth.jwt()`'nin ve storage'ın en küçük taklidi. |
-| `kur-depo.sh` | `kur.sh` + storage-api (55000) ve özel `project-files` kovası: dosya isteyen akışlar (kaynak PDF'leri) için. |
+| `kur-depo.sh [hariç.sql …]` | `kur.sh` + storage-api (55000) ve özel `project-files` kovası: dosya isteyen akışlar (kaynak PDF'leri) için. Argüman olarak verilen migration atlanır (Production benzeri şema: `scripts/uzlastirma/prova.sh`). |
 | `gecit.mjs` | Tek adres `127.0.0.1:54401`: `/auth/v1` → GoTrue, `/rest/v1` → PostgREST, `/storage/v1` → storage-api. `/__gecit/kanca`: eşleşen ilk isteğin cevabı dönmeden önce başka bir oturumun isteğini çalıştırır (yedekle yazma arasındaki yarışı belirlenimci kurmak için). |
 | `kayit-butunlugu.mjs <yeni\|eski>` | 14 senaryo; `lib/metin-yazimi.ts`'i (sunucu eylemlerinin kodu) gerçek PostgREST'e karşı koşturur. `eski` = 97a2943'teki eylem gövdelerinin birebir aktarımı. |
 | `kimlik-kabul.mjs <adres>` | Gerçek Next + GoTrue: mevcut kullanıcı, Ayarlar'da mevcut şifre (yanlış/doğru), 12 karakter, diğer oturumların düşmesi, kurtarma, kurtarma sayfası atlatması, davetli kapısı (proxy + panel dışından sunucu işlemi), kayıt, telefon/masaüstü. Sonuç `sonuclar/kimlik-kabul.json`. |

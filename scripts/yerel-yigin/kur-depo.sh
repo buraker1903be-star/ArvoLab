@@ -44,7 +44,13 @@ alter default privileges in schema public grant all on sequences to anon, authen
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 SQL
 "${PSQL[@]}" -f "$KOK/supabase/schema.sql" >/dev/null
-for f in "$KOK"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f" >/dev/null 2>&1 || { echo "migration düştü: $(basename "$f")"; exit 1; }; done
+# Argüman olarak verilen migration'lar atlanır (kur.sh ile aynı): Production'da uygulanmamış olanları
+# dışarıda bırakıp Production benzeri bir şema kurmak için (scripts/uzlastirma/prova.sh).
+for f in "$KOK"/supabase/migrations/*.sql; do
+  ad="$(basename "$f")"
+  for h in "$@"; do [ "$ad" = "$h" ] && { echo "hariç: $ad"; continue 2; }; done
+  "${PSQL[@]}" -f "$f" >/dev/null 2>&1 || { echo "migration düştü: $ad"; "${PSQL[@]}" -f "$f" 2>&1 | grep -m3 ERROR; exit 1; }
+done
 "${PSQL[@]}" -c "insert into storage.buckets (id, name, public) values ('project-files','project-files',false) on conflict do nothing"
 docker run -d --name p52rest --network p52ag -p 127.0.0.1:53001:3000 -e PGRST_DB_URI="postgres://authenticator:yerel-yigin@p52db:5432/postgres" \
  -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon -e PGRST_JWT_SECRET="$SIR" -e PGRST_DB_MAX_ROWS=1000 \

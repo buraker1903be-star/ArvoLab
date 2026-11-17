@@ -73,10 +73,21 @@ async function hesap(email) {
   const r = await fetch(`${GECIT}/auth/v1/admin/users`, {
     method: "POST",
     headers: { apikey: SERVIS, authorization: `Bearer ${SERVIS}`, "content-type": "application/json" },
-    body: JSON.stringify({ email, password: SIFRE, email_confirm: true }),
+    body: JSON.stringify({ email, email_confirm: true }),
   });
   const govde = await r.json();
-  if (r.ok) return govde.id;
+  if (r.ok) {
+    // Şifre ONAYDAN SONRA konur. Eskiden şifre ve onay tek istekte gidiyordu: GoTrue onayı ayrı
+    // bir güncellemeyle yazıyor, G1 tetikleyicisi (20261106184046) o anda şifreyi siliyor ve
+    // G1'li veritabanında (RC06 provası) her giriş "Invalid login credentials" ile düşüyordu.
+    const s = await fetch(`${GECIT}/auth/v1/admin/users/${govde.id}`, {
+      method: "PUT",
+      headers: { apikey: SERVIS, authorization: `Bearer ${SERVIS}`, "content-type": "application/json" },
+      body: JSON.stringify({ password: SIFRE }),
+    });
+    if (!s.ok) throw new Error(`şifre konamadı: ${email}: ${s.status}`);
+    return govde.id;
+  }
   // Daha önce açılmış: kimliği veritabanından al.
   return psql(`select id from auth.users where email = '${email}'`);
 }

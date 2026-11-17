@@ -1,0 +1,58 @@
+// RC06d denetimli deney (depo dışı): U3 ölçümünün "örtüldü" bulgusu, kaydırmadan sonra
+// kaç karelik bir eski yaprak konumunu mu görüyor? Yalnızca yerel yığın, sentetik hesap.
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-rc06-duzeltme/package.json");
+const { chromium, devices } = require("playwright");
+const UYG = "http://localhost:3124", GECIT = "http://127.0.0.1:54401", SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
+const imzala = (y) => { const b = (o) => Buffer.from(JSON.stringify(o)).toString("base64url"); const g = `${b({ alg: "HS256", typ: "JWT" })}.${b({ iss: "yerel-yigin", iat: 1763200000, exp: 2079000000, ...y })}`; return `${g}.${crypto.createHmac("sha256", SIR).update(g).digest("base64url")}`; };
+const ANON = imzala({ role: "anon" }), SERVIS = imzala({ role: "service_role" });
+const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+const auth = async (yol, o = {}) => { const r = await fetch(`${GECIT}/auth/v1${yol}`, { method: o.yontem ?? "POST", headers: { apikey: o.k ?? ANON, Authorization: `Bearer ${o.k ?? ANON}`, "Content-Type": "application/json" }, body: o.govde ? JSON.stringify(o.govde) : undefined }); return { durum: r.status, json: await r.json().catch(() => null) }; };
+const SURUM = fs.readFileSync("/home/user/arvolab-rc06-duzeltme/lib/sozlesme/kullanim-sozlesmesi.ts", "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+const ek = crypto.randomBytes(3).toString("hex");
+const adres = `kare-${ek}@yerel.test`, parola = `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
+const u = await auth("/admin/users", { govde: { email: adres, email_confirm: true }, k: SERVIS });
+await auth(`/admin/users/${u.json.id}`, { yontem: "PUT", govde: { password: parola }, k: SERVIS });
+psql(`insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi) values ('${u.json.id}', 'kullanim_sozlesmesi', '${SURUM}', 'tr', '${"0".repeat(64)}', 'giris', true)`);
+const P = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${u.json.id}', 'thesis', 'Kare ${ek}') returning id`).split("\n")[0];
+const BELGE = JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Giris paragrafi." }] }, { type: "paragraph" }] });
+psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${P}', '${BELGE}'::jsonb, 'Giris paragrafi.')`);
+const N = Number(process.argv[2] ?? 10);
+const tarayici = await chromium.launch();
+const sonuc = {};
+for (const [ad, gor] of [["1024", { viewport: { width: 1024, height: 768 } }], ["telefon", { ...devices["iPhone 13"] }]]) {
+  const c = await tarayici.newContext({ baseURL: UYG, ...gor }); const s = await c.newPage();
+  await s.goto("/"); await s.fill('input[name="email"]', adres); await s.fill('input[name="password"]', parola);
+  await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  await s.goto(`/dashboard/editor/${P}/write`, { timeout: 120000 }); await s.waitForSelector(".ProseMirror", { timeout: 120000 });
+  await s.evaluate(() => { const b = document.createElement("div"); b.style.height = "1600px"; b.setAttribute("aria-hidden", "true"); document.body.appendChild(b); });
+  await s.getByRole("button", { name: /^Yazım asistanı/ }).first().click(); await s.waitForSelector(".yazim-paneli"); await s.waitForTimeout(400);
+  const turlar = [];
+  for (let i = 0; i < N; i++) {
+    turlar.push(await s.evaluate(async () => {
+      const raf = () => new Promise((r) => requestAnimationFrame(r));
+      // Hazırlık: sayfa aşağıda, yaprak o konuma göre ölçülmüş (iki kare bekle).
+      window.scrollTo(0, 314); await raf(); await raf(); await raf();
+      const geri = [...document.querySelectorAll(".manuscript-araclar button")].find((x) => x.offsetParent && /Geri al/.test(x.getAttribute("aria-label") || ""));
+      const olc = (etiket) => { const k = geri.getBoundingClientRect(); const ust = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2); return { etiket, yaprakUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top), geriUst: Math.round(k.top), ortuk: !(ust === geri || geri.contains(ust)) }; };
+      const once = Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top);
+      // U3'ün dizisi: scrollTo(0,0) → scrollIntoView → TEK rAF → ölç.
+      window.scrollTo(0, 0); geri.scrollIntoView({ block: "nearest", inline: "nearest" });
+      const r0 = olc("eşzamanlı");
+      await raf(); const r1 = olc("1 rAF");
+      // 1. karenin rAF evresinden SONRA ama çizimden ÖNCE değil: setTimeout(0) o karenin çiziminden sonra koşar.
+      await new Promise((r) => setTimeout(r, 0)); const r1b = olc("1 rAF + görev (çizim sonrası)");
+      await raf(); const r2 = olc("2 rAF");
+      return { kaydirilmisYaprakUst: once, r0, r1, r1b, r2 };
+    }));
+  }
+  sonuc[ad] = turlar;
+  const say = (k) => turlar.filter((t) => t[k].ortuk).length;
+  console.log(`${ad}: N=${N} · kaydırılmışken yaprak üstü ${[...new Set(turlar.map((t) => t.kaydirilmisYaprakUst))]} · örtük: eşzamanlı ${say("r0")}/${N}, 1 rAF ${say("r1")}/${N}, 1 rAF+görev ${say("r1b")}/${N}, 2 rAF ${say("r2")}/${N} · yaprak üstü (eşz/1/2): ${[...new Set(turlar.map((t) => `${t.r0.yaprakUst}/${t.r1.yaprakUst}/${t.r1b.yaprakUst}/${t.r2.yaprakUst}`))]} · geri al üstü: ${[...new Set(turlar.map((t) => `${t.r0.geriUst}/${t.r1.geriUst}/${t.r2.geriUst}`))]}`);
+  await c.close();
+}
+fs.writeFileSync(process.argv[3] ?? "/dev/null", JSON.stringify(sonuc, null, 2));
+await tarayici.close();

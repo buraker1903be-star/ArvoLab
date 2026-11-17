@@ -1,0 +1,10 @@
+# R3 — next build + next start (yerel yığın, sentetik 19 MB / 300 sayfa PDF, 10 eşzamanlı istek)
+## Düzeltmeden önce (ilk derleme)
+{"asama":"soguk","ornek":1,"eszamanli":10,"dogrulanan":10,"cozumleme_sayaci":1,"en_az_ms":1950,"medyan_ms":1968,"en_cok_ms":2373,"onbellekten_ms":165,"onbellekten_ok":true,"ikinci_ornek_onbellekten_ms":null}
+{"asama":"sicak","ornek":1,"eszamanli":10,"dogrulanan":10,"cozumleme_sayaci":1,"en_az_ms":1453,"medyan_ms":1459,"en_cok_ms":1921,"onbellekten_ms":209,"onbellekten_ok":true,"ikinci_ornek_onbellekten_ms":null}
+{"asama":"iki-ornek","ornek":2,"eszamanli":10,"dogrulanan":5,"cozumleme_sayaci":1,"en_az_ms":206,"medyan_ms":1775,"en_cok_ms":1779,"onbellekten_ms":20,"onbellekten_ok":false,"ikinci_ornek_onbellekten_ms":228}
+(iki-ornek satırı ölçüm hatası: aynı kullanıcının ikinci bağlamda girişi ilk oturumu düşürdü; tek oturumla yeniden ölçüldü:)
+{"asama":"iki-ornek (tek oturum)","cozumleme_sayaci":3} ×3, tek örnek tekrar: 2
+## Düzeltmeden sonra, temiz başlatma (günlükle çözümleme sayısı doğrulandı)
+tek örnek ×5: çözümleme 1,1,1,1,1 · medyan 1275–1720 ms
+iki örnek ×3: çözümleme 2,2,2 (her örnek 1) · 1664–1986 ms · önbellekten 152–211 ms

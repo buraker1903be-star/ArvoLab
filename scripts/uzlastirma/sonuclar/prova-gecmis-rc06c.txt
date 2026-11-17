@@ -1,0 +1,20 @@
+== 2) Yer tutucusuz depo
+   liste: ikisinde=0 yalnız-yerel=109 yalnız-uzak=12
+   db push --dry-run: DbPushMissingLocalError
+== 3) 12 yer tutucu eklendi
+   liste: ikisinde=12 yalnız-yerel=109 yalnız-uzak=0 · dry-run bekleyen: 109
+== 4) Dalga A repair (100 sürüm)
+   liste: ikisinde=112 yalnız-yerel=9 yalnız-uzak=0 · dry-run bekleyen: 9
+   repair şemayı değiştirdi mi: 0 satır
+== 5) Paketler + dalga B
+   P1: uygulandı + 1 sürüm kaydedildi · bekleyen: 8
+   P2: uygulandı + 1 sürüm kaydedildi · bekleyen: 7
+   P6: uygulandı + 1 sürüm kaydedildi · bekleyen: 6
+   P4: uygulandı + 1 sürüm kaydedildi · bekleyen: 5
+   P3: uygulandı + 2 sürüm kaydedildi · bekleyen: 3
+   P5: uygulandı + 3 sürüm kaydedildi · bekleyen: 0
+== 6) Son durum
+   liste: ikisinde=121 yalnız-yerel=0 yalnız-uzak=0 · dry-run bekleyen: 0
+   dry-run çıktısı: {"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Remote database is up to date."}
+   geçmiş kaydı: 121
+   CLI temizken şema farkı (depo hedefine göre): 142 satır → /tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad/prova/gecmis-son-fark.txt

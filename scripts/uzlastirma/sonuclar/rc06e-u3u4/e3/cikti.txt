@@ -1,0 +1,18 @@
+tohum: proje 11acc823-7387-45b5-a142-23ca59584e0c · pdf 88dd9f05-a418-4b1a-9783-31799790f2a8/bb18c756-eb3c-4b1e-bd59-325282e0a8af/3a84de27-095e-4dc2-99a8-df0290aaf01c · kütüphane 3bbf596d-0c89-44a4-87f4-35325c9edb62/224edcf5-3027-4083-b2ca-e9deefc0e2f9/f244a7a8-9302-4459-a63a-bef46f4780c6
+PASS  U3-1024  1024 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: tıklama sonrası kaydırma 0 · 24 düğme, erişilemeyen [] · panel üst 371 eni 1024 · taşma 0
+PASS  U3-telefon  390 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: tıklama sonrası kaydırma 0 · 24 düğme, erişilemeyen [] · panel üst 345 eni 390 · taşma 0
+FAIL  U3K-1024  1024 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: kurulum {"kaydirma":314,"yaprakUst":230} · 24 düğme, erişilemeyen [Geri al (Ctrl+Z) ← div.yazim-bos-bas @97,314 y0] · panel üst 371 eni 1024 · taşma 0
+FAIL  U3K-telefon  390 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: kurulum {"kaydirma":314,"yaprakUst":199} · 24 düğme, erişilemeyen [Geri al (Ctrl+Z) ← svg.[object.SVGAnimatedString] @17,288 y0] · panel üst 345 eni 390 · taşma 0
+PASS  K0  Sayfa hatası (pageerror) yok
+      beklenen: 0
+      gözlenen: 0
+
+PASS 3 · FAIL 2 · KURULAMADI 0 · UNVERIFIED 0
