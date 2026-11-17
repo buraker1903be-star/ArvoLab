@@ -227,11 +227,17 @@
   --shadow-inset: inset 0 1px 1px #0f233c06;
 
   /* ---- Yarıçaplar ---- */
-  --r-xs: 8px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  /*
+    Premium çalışma alanı (17.11.2026, onaylı tasarım): kısa köşeler.
+    Eskiden 8/10/14/18/24 px idi; girişteki Paddle ölçüleri (kontrol 4,
+    kart 8) ile uygulamanın geri kalanı iki ayrı aile gibi duruyordu.
+    Hiyerarşi korunur (xs ≤ sm ≤ md ≤ lg ≤ xl), yalnızca ölçek kısalır.
+  */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 8px;
+  --r-xl: 10px;
   --r-pill: 999px;
 
   /* ---- Denetim ölçeği: düğme, giriş, seçici, tarih alanı ----
@@ -265,9 +271,9 @@
      sayı/bağlantı karosu. */
   --kart-dolgu: 20px 24px;
   /* 17.11.2026: 18 → 8 px. Onaylı tasarımda kartlar düz ve köşeleri kısa; kontrol köşesi (4 px) ile kart arasında tek bir aile. */
-  --kart-r: var(--r-xs);
+  --kart-r: var(--r-md);
   --karo-dolgu: 14px 16px;
-  --karo-r: var(--r-xs);
+  --karo-r: var(--r-md);
 
   /* ---- Tipografi ----
      Apple cihazlarda sistemin SF Pro'su, diğerlerinde Inter (app/layout.tsx). */

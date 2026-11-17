@@ -39,3 +39,38 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     assert.match(calisma, /@media \(min-width: 761px\) and \(max-width: 1439px\) \{\s*\.manuscript-araclar \{ flex-wrap: wrap;/);
   });
 });
+
+describe("Kaynaklar: tek liste, tek giriş, kaynakça ayrı sekmede", () => {
+  const sayfa = oku("app/dashboard/literature/page.tsx");
+  test("tek birincil giriş: Kaynak ekle; üç yol menüde", () => {
+    const menu = sayfa.slice(sayfa.indexOf('<details className="kaynak-ekle"'), sayfa.indexOf("</details>", sayfa.indexOf('<details className="kaynak-ekle"')));
+    assert.match(menu, /tr: "Kaynak ekle"/);
+    assert.match(menu, /tr: "DOI ile ekle"/);
+    assert.match(menu, /<IceAktarma /);
+    assert.match(menu, /<LiteraturPenceresi/);
+  });
+  test("kaynaklar sekmesinde tek birincil düğme (Kaynak ekle)", () => {
+    const liste = sayfa.slice(sayfa.indexOf(') : (\n          <section className="kaynak-tek"'), sayfa.indexOf("</main>"));
+    assert.equal(liste.match(/projects-primary-button/g)?.length, 1);
+  });
+  test("kaynakça ayrı sekmede ve denetim penceresi yerinde", () => {
+    assert.match(sayfa, /const kaynakcaSekmesi = sekme === "kaynakca";/);
+    assert.match(sayfa, /<KaynakcaPenceresi/);
+  });
+  test("DOI kutusu kaybolmadı: menüden ya da adresteki DOI ile açılıyor", () => {
+    assert.match(sayfa, /const ekleMenusuAcik = ekle === "1" \|\| typeof gelenDoi === "string";/);
+    assert.match(sayfa, /\{ekleMenusuAcik \? \(\s*<DoiEkleKutusu/);
+  });
+  test("menü dışarı tıklayınca kapanır (AcilirKapatici)", () => {
+    assert.match(oku("app/dashboard/_components/acilir-kapatici.tsx"), /details\.kaynak-ekle\[open\]/);
+  });
+});
+
+describe("düz yüzey: birincil düğmede gradyan ve gölge yok", () => {
+  const css = oku("app/styles/components.css");
+  test(".projects-primary-button düz lacivert", () => {
+    const blok = css.slice(css.indexOf(".projects-primary-button {"), css.indexOf("}", css.indexOf(".projects-primary-button {")));
+    assert.doesNotMatch(blok, /gradient/);
+    assert.match(blok, /box-shadow: none;/);
+  });
+});

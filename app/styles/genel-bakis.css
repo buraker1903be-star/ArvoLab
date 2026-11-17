@@ -161,7 +161,7 @@
   .gb-grafik .gb-kart-bas { flex-wrap: wrap; }
 }
 @media (max-width: 760px) {
-  .gb-kart { padding: 16px; border-radius: 20px; }
+  .gb-kart { padding: 16px; border-radius: var(--kart-r); }
   .gb-ozet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
   .gb-cubuklar { gap: 4px; }
   .gb-cubuk-deger { display: none; }
@@ -1355,3 +1355,44 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .doi-kutusu-donen { animation: doi-don .9s linear infinite; }
 @keyframes doi-don { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .doi-kutusu-donen { animation: none; } }
+
+/* ============================================================
+   KAYNAKLAR — PREMIUM ÇALIŞMA ALANI (17.11.2026, onaylı tasarım;
+   app/dashboard/literature/page.tsx). Tek sütun, tek liste; sekme
+   sırası (Kaynaklar | Kaynakça) çalışma sekmeleriyle aynı görünüm.
+   "Kaynak ekle" tek birincil giriş: altında üç yol açık adlarıyla.
+   ============================================================ */
+.kaynak-tek { display: flex; flex: 1; flex-direction: column; min-height: 0; width: 100%; max-width: 1040px; }
+.kaynak-tek-kart { flex: 1; min-height: 0; }
+.kaynak-tek-bas { align-items: center; }
+.kaynak-tek-bas p { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+.kaynak-sekme-sayi {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 6px;
+  border-radius: var(--os5-r-rozet); background: var(--surface-2); color: var(--ink-soft); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.kaynak-ekle { position: relative; }
+.kaynak-ekle > summary { list-style: none; cursor: pointer; }
+.kaynak-ekle > summary::-webkit-details-marker { display: none; }
+.kaynak-ekle-menu {
+  position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: var(--z-menu);
+  display: grid; gap: 2px; width: min(320px, calc(100vw - 32px)); padding: var(--s-1);
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface-raised); box-shadow: var(--os5-golge-katman);
+}
+.kaynak-ekle-menu .kaynak-ekle-oge {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 48px; padding: 8px var(--s-3);
+  border: 0; border-radius: var(--os5-kontrol-r); background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--os5-fs-govde); font-weight: 500; text-align: left; text-decoration: none; cursor: pointer;
+}
+.kaynak-ekle-menu .kaynak-ekle-oge:hover { background: var(--surface-2); }
+.kaynak-ekle-menu .kaynak-ekle-oge:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.kaynak-ekle-menu .kaynak-ekle-oge > svg { flex: none; color: var(--primary-ink); }
+.kaynak-ekle-oge > span { display: grid; gap: 1px; }
+.kaynak-ekle-oge small { color: var(--muted); font-size: var(--os5-fs-meta); font-weight: 400; }
+.pw-kaynak-bos { display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 1px dashed var(--line); border-radius: var(--os5-r-kart); color: var(--muted); font-size: var(--os5-fs-govde); }
+.pw-kaynak-bos p { margin: 0; }
+.pw-kaynak-bos > svg { flex: none; margin-top: 2px; }
+@media (max-width: 760px) {
+  .kaynak-tek-bas { align-items: stretch; }
+  .kaynak-ekle-menu { right: auto; left: 0; }
+}
