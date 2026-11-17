@@ -69,7 +69,7 @@ export async function kaynaklaSohbet(girdi: {
   if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   const supabase = await createClient();
-  const okuma = await kaynakPdfSayfalari(supabase, girdi.projectId, girdi.pdfId, "[kaynak-sohbeti]");
+  const okuma = await kaynakPdfSayfalari(supabase, kapi.kullaniciId, girdi.projectId, girdi.pdfId, "[kaynak-sohbeti]");
   if (!okuma.ok) return { hata: t(okuma.hata) };
   const { sayfalar } = okuma;
   const satir = { kunye: okuma.kunye };

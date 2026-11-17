@@ -49,23 +49,31 @@ function pdfjsYukle(): Promise<Pdf> {
 }
 
 export type PdfSecimi = { sayfa: number; metin: string };
+/** Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), panel yeniden açılınca geri yüklenir. */
+export type OkumaKonumu = { sayfa: number; olcek: number | "sigdir" };
 
 export default function PdfGoruntuleyici({
   pdfId,
   gidilecekSayfa,
   onSecim,
+  konumAl,
+  onKonum,
 }: {
   pdfId: string;
   /** Dışarıdan istenen sayfa (ör. asistanın alıntısındaki "PDF s. N"); değişince oraya gidilir. */
   gidilecekSayfa?: { sayfa: number; anahtar: number } | null;
   onSecim: (secim: PdfSecimi | null) => void;
+  /** Bu PDF için hatırlanan konum (yoksa null). */
+  konumAl?: (pdfId: string) => OkumaKonumu | null;
+  /** Belge hazırken sayfa ya da yakınlaştırma değişince; konum PDF kimliğiyle bildirilir. */
+  onKonum?: (pdfId: string, konum: OkumaKonumu) => void;
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
   const [durum, setDurum] = useState<"yukleniyor" | "hazir" | "hata">("yukleniyor");
   const [sayfaNo, setSayfaNo] = useState(1);
   const [sayfaGirdi, setSayfaGirdi] = useState("1");
-  const [olcek, setOlcek] = useState<number | "sigdir">("sigdir");
+  const [olcek, setOlcek] = useState<number | "sigdir">(() => konumAl?.(pdfId)?.olcek ?? "sigdir");
   const [cizilenOlcek, setCizilenOlcek] = useState(1);
   const [arama, setArama] = useState("");
   const [eslesenler, setEslesenler] = useState<number[] | null>(null);
@@ -88,7 +96,13 @@ export default function PdfGoruntuleyici({
     setDurum("yukleniyor");
     setBelge(null);
     setEslesenler(null);
+    // Yeni PDF kendi hatırlanan yakınlaştırmasıyla açılır; öncekinin değeri taşınmaz.
+    setOlcek(konumAl?.(pdfId)?.olcek ?? "sigdir");
   }
+  const konumAlRef = useRef(konumAl);
+  useEffect(() => {
+    konumAlRef.current = konumAl;
+  }, [konumAl]);
 
   /* Yükleme: önbelleksiz istek; PDF değişince öncekinin işçi kaynakları bırakılır. */
   useEffect(() => {
@@ -109,9 +123,11 @@ export default function PdfGoruntuleyici({
           void yuklenen.destroy();
           return;
         }
+        // Hatırlanan sayfa (panel yeniden açıldıysa), belgenin sayfa sayısına sıkıştırılarak.
+        const ilk = Math.min(Math.max(1, Math.trunc(konumAlRef.current?.(pdfId)?.sayfa ?? 1)), yuklenen.numPages);
         setBelge(yuklenen);
-        setSayfaNo(1);
-        setSayfaGirdi("1");
+        setSayfaNo(ilk);
+        setSayfaGirdi(String(ilk));
         setDurum("hazir");
       } catch {
         if (!iptal) setDurum("hata");
@@ -126,13 +142,18 @@ export default function PdfGoruntuleyici({
   }, [pdfId]);
 
   /* Cevaptaki "PDF s. N" bağlantısı: her istek kendi anahtarıyla bir kez uygulanır (render sırasında, aynı kalıp). */
-  const [uygulananGidis, setUygulananGidis] = useState<number | null>(null);
+  // Bağlanırken elde olan istek uygulanmış sayılır: panel yeniden açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin.
+  const [uygulananGidis, setUygulananGidis] = useState<number | null>(() => gidilecekSayfa?.anahtar ?? null);
   if (gidilecekSayfa && belge && gidilecekSayfa.anahtar !== uygulananGidis) {
     setUygulananGidis(gidilecekSayfa.anahtar);
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
     setSayfaNo(n);
     setSayfaGirdi(String(n));
   }
+
+  useEffect(() => {
+    if (durum === "hazir") onKonum?.(pdfId, { sayfa: sayfaNo, olcek });
+  }, [durum, pdfId, sayfaNo, olcek, onKonum]);
 
   /* Çizili sayfadaki arama eşleşmelerini işaretler (parça düzeyinde). */
   const vurgula = useCallback(() => {

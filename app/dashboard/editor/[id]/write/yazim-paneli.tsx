@@ -64,6 +64,7 @@ export default function YazimPaneli({
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
   const listeRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -190,6 +191,34 @@ export default function YazimPaneli({
     void asistanPuanla(kayitId, "faydasiz", "panelde beğenilmedi").catch(() => undefined);
   };
 
+  /*
+    ALTTAN AÇILAN YAPRAK ARAÇ ÇUBUĞUNU ÖRTMEZ (17.11.2026, RELEASE CLOSURE 05).
+    1180 px ve altında panel alttan açılan bir yaprak; eskiden yüksekliği
+    sabit %70'ti ve sayfa en üstteyken araç çubuğu (1024 px'te 255–313, 390
+    px'te 279–337) yaprağın altında kalıyordu (studyo-kabul.mjs U3). Yaprağın
+    üst kenarı açılışta ve yeniden boyutlanınca araç çubuğunun altına
+    hizalanır; yaprak yine de ekranın en az %40'ını kaplar, en çok %70'ini.
+    Belge kaydırılınca araç çubuğu üste yapışır, yaprağın üstünde kalır.
+  */
+  useEffect(() => {
+    if (!acik) return;
+    const hizala = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      if (!window.matchMedia("(max-width: 1180px)").matches) {
+        panel.style.removeProperty("--yaprak-ust");
+        return;
+      }
+      const cubuk = document.querySelector(".manuscript-araclar")?.getBoundingClientRect();
+      const yuk = window.innerHeight;
+      const ust = cubuk ? Math.min(Math.max(cubuk.bottom + 8, yuk * 0.3), yuk * 0.6) : yuk * 0.3;
+      panel.style.setProperty("--yaprak-ust", `${Math.round(ust)}px`);
+    };
+    hizala();
+    window.addEventListener("resize", hizala);
+    return () => window.removeEventListener("resize", hizala);
+  }, [acik]);
+
   if (!acik) return null;
   const hizli: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
@@ -241,7 +270,7 @@ export default function YazimPaneli({
   ];
 
   return (
-    <aside className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
+    <aside ref={panelRef} className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
       <header className="yazim-paneli-bas">
         <span>
           <Sparkles size={16} aria-hidden="true" />

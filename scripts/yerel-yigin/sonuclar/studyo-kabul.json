@@ -192,7 +192,7 @@
     "kimlik": "S5f",
     "ad": "Uydurma seçimle asistan çağrısı modele gitmeden reddedilir",
     "beklenen": "secimReddi; modele istek yok; yeni asistan kaydı yok",
-    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 11→11 · kayıt 0→0",
+    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 2→2 · kayıt 0→0",
     "sonuc": "PASS"
   },
   {
@@ -220,7 +220,7 @@
     "kimlik": "S9",
     "ad": "Seçili pasaj Arvo AI ile analiz edilir (aynı kapı, istem, doğrulama, kayıt); editöre kendiliğinden girmez",
     "beklenen": "cevap + 'PDF s. 1' alıntısı; istemde seçili pasaj ve yalnızca s.1–2; asistan kaydı +1; editör değişmez",
-    "gozlenen": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasaj, uzaktan öğrenmenin birinci sınıf öğrencilerinde bildirilen yalnızlığı artır · istem sayfaları 1,2 · pasaj istemde true · modele istek 11→12 · kayıt 0→1 · editör değişmedi true",
+    "gozlenen": "Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasaj, uzaktan öğrenmenin birinci sınıf öğrencilerinde bildirilen yalnızlığı artır · istem sayfaları 1,2 · pasaj istemde true · modele istek 2→3 · kayıt 0→1 · editör değişmedi true",
     "sonuc": "PASS"
   },
   {
@@ -262,14 +262,14 @@
     "kimlik": "P1",
     "ad": "Büyük PDF (300 sayfa): yalnızca görünen sayfa çizilir; açılış ve gidiş makul",
     "beklenen": "/ 300, tek kanvas, açılış < 15 sn, 250. sayfaya gidiş < 5 sn",
-    "gozlenen": "1259 KB · / 300 · açılış 1139 ms · gidiş 51 ms · kanvas 1 · JS yığını 57.5→57.5 MB",
+    "gozlenen": "1259 KB · / 300 · açılış 1309 ms · gidiş 51 ms · kanvas 1 · JS yığını 54.2→54.2 MB",
     "sonuc": "PASS"
   },
   {
     "kimlik": "P1b",
     "ad": "Büyük PDF'te arama (300 sayfa metni)",
     "beklenen": "299. sayfaya gider",
-    "gozlenen": "sayfa 299 · 658 ms",
+    "gozlenen": "sayfa 299 · 641 ms",
     "sonuc": "PASS"
   },
   {
@@ -277,6 +277,104 @@
     "ad": "20 MB üstü PDF depoya yüklenemez",
     "beklenen": "4xx",
     "gozlenen": "400",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1",
+    "ad": "PDF işlem sınırı: saatte 12 yeni PDF, sonraki reddedilir",
+    "beklenen": "12 kabul, 13. 'sınıra ulaştınız'",
+    "gozlenen": "12/12 kabul · fazla: {\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimler etkilenmez; yeni b · sayaç 13",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1b",
+    "ad": "Sınır dolduktan sonra önbellekteki PDF'te seçim çalışır, sayaç artmaz",
+    "beklenen": "metin döner, sayaç sabit",
+    "gozlenen": "{\"sayfa\":1,\"metin\":\"Remote learning increased reported isolation among first-yea · sayaç 13→13",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1c",
+    "ad": "Sınır dolunca kaynak sohbeti modele gitmez; asistan hakkı ve kaydı oluşmaz",
+    "beklenen": "sınır hatası; model isteği yok; ai-asistan sayacı 0; kayıt 0",
+    "gozlenen": "{\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimle · model 4→4 · ai-asistan 0 · kayıt 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R2",
+    "ad": "Sayaç çalışmazsa pahalı işlem yapılmaz (arızada kapalı), anlaşılır hata",
+    "beklenen": "'sayaca ulaşılamıyor… işlenmedi'",
+    "gozlenen": "{\"hata\":\"PDF işleme sayacına şu anda ulaşılamıyor; güvenlik için PDF işlenmedi. Biraz sonra tekrar deneyin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3",
+    "ad": "19 MB / 300 sayfa: 10 eşzamanlı seçim tek çözümlemeye iner; önbellekten sıcak yanıt hızlı",
+    "beklenen": "10/10 doğrulanır; sayaç +1; sıcak < 1000 ms",
+    "gozlenen": "19.0 MB · eşzamanlı 10/10 · süre en az 2347 / en çok 2910 ms · sayaç 0→1 · sıcak 194 ms (doğrulandı)",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3b",
+    "ad": "Önbellek kullanıcılar arasında sızmaz (A, C'nin önbellekteki PDF'ini okuyamaz)",
+    "beklenen": "iki çağrıda {hata}, metin yok",
+    "gozlenen": "{\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"} · {\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3c",
+    "ad": "19 MB PDF tarayıcıda açılır; tek sayfa çizilir",
+    "beklenen": "açılış < 20 sn, 280. sayfa < 5 sn, tek kanvas",
+    "gozlenen": "açılış 2248 ms · gidiş 44 ms · kanvas 1",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U1",
+    "ad": "PDF paneli yeniden açılınca son sayfa ve yakınlaştırma korunur",
+    "beklenen": "sayfa 3, 132%",
+    "gozlenen": "sayfa 3, 132%",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U1b",
+    "ad": "PDF değişince önceki PDF'in konumu yeni belgeye taşınmaz; geri dönünce korunur",
+    "beklenen": "öteki: 1 ve ≠ 132%; geri: 3, 132%",
+    "gozlenen": "öteki: 1, 82% · geri: 3, 132%",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1440",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1440 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "24 düğme, erişilemeyen [] · editör 738 px (sağ 1011 < panel 1024) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1280",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1280 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "24 düğme, erişilemeyen [] · editör 578 px (sağ 851 < panel 864) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1200",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1200 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "24 düğme, erişilemeyen [] · editör 498 px (sağ 771 < panel 784) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3-1024",
+    "ad": "1024 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "24 düğme, erişilemeyen [] · panel üst 371 eni 1024 · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3-telefon",
+    "ad": "390 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "24 düğme, erişilemeyen [] · panel üst 345 eni 390 · taşma 0",
     "sonuc": "PASS"
   },
   {

@@ -138,8 +138,9 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
  * kaynakSecimiDogrula (Yazım Stüdyosu: seçilen pasajı PDF'in metnine karşı
- * doğrular; PDF'i her çağrıda indirip çözümler), kaynaklaSohbet (seçimli ya da
- * seçimsiz; ortak kapı lib/ai/erisim.ts),
+ * doğrular; PDF çözümlemesi ayrıca kullanıcı başına saatlik işlem sınırından
+ * geçer, lib/pdf-islem-siniri.ts), kaynaklaSohbet (seçimli ya da seçimsiz;
+ * ortak kapı lib/ai/erisim.ts, PDF işlem sınırı da),
  * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
  * kurul sekmesi; tarama PDF/OCR çözümlemesi),
  * cslAtifUret (CSL stilinde belgeye girecek atıf ve künye; stil araması ve
