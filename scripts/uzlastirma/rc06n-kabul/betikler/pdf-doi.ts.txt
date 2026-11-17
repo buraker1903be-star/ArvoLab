@@ -1,0 +1,4 @@
+import { readFileSync } from "node:fs";
+import { pdfSatirinaDoi } from "@/lib/academic-reference-verification";
+const kayitlar = JSON.parse(readFileSync(process.argv[2], "utf8"));
+for (const k of kayitlar) for (const v of k.sonuclar) console.log(JSON.stringify({ kullanici: k.kullanici.slice(0, 8), durum: v.status, enIyiDoi: v.bestMatch?.doi ?? null, pdfSatirinaDoi: pdfSatirinaDoi(v), kunye: v.reference.slice(0, 50) }));

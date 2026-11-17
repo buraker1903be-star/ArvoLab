@@ -1,0 +1,2 @@
+import { parseReferenceEntry } from "@/lib/apa7";
+for (const s of process.argv.slice(2)) { const r = parseReferenceEntry(s); console.log(JSON.stringify({ a: r.authors, y: r.year, t: r.title })); }

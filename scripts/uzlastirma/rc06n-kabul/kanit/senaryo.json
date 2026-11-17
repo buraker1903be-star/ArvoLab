@@ -1,0 +1,20 @@
+{
+  "kullanicilar": ["A", "B"],
+  "kaynakca": {
+    "A": [
+      "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.",
+      "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+      "Braun, V. ve Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101.",
+      "Leitón, R. (2021). Editorial. Actualidades Investigativas en Educación, 21(3). https://doi.org/10.15517/aie.v21i3.48220"
+    ],
+    "B": [
+      "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.",
+      "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+      "Braun, V. ve Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101."
+    ]
+  },
+  "adimlar": [
+    { "ad": "A-eski-yanlis-satirla", "kim": "A" },
+    { "ad": "B-sicak", "kim": "B" }
+  ]
+}

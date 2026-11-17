@@ -1,0 +1,8 @@
+{"zaman":"2026-11-17T19:19:28.553Z","alan":"api.crossref.org","yol":"/works?query.bibliographic=Guest+editorial&rows=3&select=DOI%2Ctitle%2Cauthor%2Cissued%2Cpublished-print%2Cpublished-online%2Ccontainer-title%2CURL%2Cis-referenced-by-count","durum":200,"sureMs":386}
+{"zaman":"2026-11-17T19:19:28.597Z","alan":"api.crossref.org","yol":"/works?query.bibliographic=Guest+editorial&rows=3&select=DOI%2Ctitle%2Cauthor%2Cissued%2Cpublished-print%2Cpublished-online%2Ccontainer-title%2CURL%2Cis-referenced-by-count","durum":200,"sureMs":428}
+{"zaman":"2026-11-17T19:19:28.687Z","alan":"api.openalex.org","yol":"/works?search=Using+thematic+analysis+in+psychology&per-page=3","durum":429,"sureMs":517}
+{"zaman":"2026-11-17T19:19:28.742Z","alan":"api.openalex.org","yol":"/works?search=Guest+editorial&per-page=3","durum":429,"sureMs":573}
+{"zaman":"2026-11-17T19:19:29.128Z","alan":"api.openalex.org","yol":"/works?search=Guest+editorial&per-page=3","durum":200,"sureMs":959}
+{"zaman":"2026-11-17T19:19:29.533Z","alan":"api.crossref.org","yol":"/works?query.bibliographic=Using+thematic+analysis+in+psychology&rows=3&select=DOI%2Ctitle%2Cauthor%2Cissued%2Cpublished-print%2Cpublished-online%2Ccontainer-title%2CURL%2Cis-referenced-by-count","durum":200,"sureMs":1363}
+{"zaman":"2026-11-17T19:19:34.254Z","alan":"api.openalex.org","yol":"/works?search=Guest+editorial&per-page=3","durum":429,"sureMs":516}
+{"zaman":"2026-11-17T19:19:35.759Z","alan":"api.crossref.org","yol":"/works?query.bibliographic=Guest+editorial&rows=3&select=DOI%2Ctitle%2Cauthor%2Cissued%2Cpublished-print%2Cpublished-online%2Ccontainer-title%2CURL%2Cis-referenced-by-count","durum":200,"sureMs":2021}

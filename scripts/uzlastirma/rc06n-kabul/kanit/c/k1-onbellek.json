@@ -1,0 +1,77 @@
+{
+  "kullanicilar": {
+    "C": {
+      "kimlik": "5d984b31-ec80-4055-9706-051e6cca0729",
+      "proje": "c5f4b935-489a-48e7-bc7e-33b01993211d"
+    }
+  },
+  "adimlar": [
+    {
+      "ad": "C-sicak",
+      "kim": "C",
+      "kullanici": "5d984b31-ec80-4055-9706-051e6cca0729",
+      "dogrulama": [
+        {
+          "kunye": "Heidingsfelder, M. (2021). Guest editorial. Kybernetes.",
+          "durum": "possible_match",
+          "enIyiDoi": "10.1093/jof/70.7.395",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology.",
+          "durum": "possible_match",
+          "enIyiDoi": "10.1093/jof/66.1.9",
+          "enIyiBaslik": "Guest Editorial",
+          "enIyiYazarlar": [],
+          "istenenDoi": null
+        },
+        {
+          "kunye": "Braun, V. ve Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101.",
+          "durum": "verified",
+          "enIyiDoi": "10.1191/1478088706qp063oa",
+          "enIyiBaslik": "Using thematic analysis in psychology",
+          "enIyiYazarlar": [
+            "Virginia Braun",
+            "Victoria Clarke"
+          ],
+          "istenenDoi": null
+        }
+      ],
+      "dizinIstekleri": 0,
+      "dizinDurumlari": [],
+      "onbellek": [
+        {
+          "anahtar": "v2|braun|using thematic analysis psychology|2006",
+          "durum": "verified",
+          "enIyiDoi": "10.1191/1478088706qp063oa"
+        },
+        {
+          "anahtar": "v2|doi:10.15517/aie.v21i3.48220",
+          "durum": "verified",
+          "enIyiDoi": "10.15517/aie.v21i3.48220"
+        },
+        {
+          "anahtar": "v2|doi:10.68259/raeu-bengo.v2i3.405",
+          "durum": "verified",
+          "enIyiDoi": "10.68259/raeu-bengo.v2i3.405"
+        },
+        {
+          "anahtar": "v2|heidingsfelder|guest editorial|2021",
+          "durum": "possible_match",
+          "enIyiDoi": "10.1093/jof/70.7.395"
+        },
+        {
+          "anahtar": "v2|sohret|guest editorial|2021",
+          "durum": "possible_match",
+          "enIyiDoi": "10.1093/jof/66.1.9"
+        }
+      ],
+      "ekran": "1 Heidingsfelder, M. (2021). Guest editorial. Kybernetes. Olası eşleşme DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1972 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/70.7.395 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 2 Sohret, Y. (2021). Guest editorial. Aircraft Engineering and Aerospace Technology. Olası eşleşme DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %82 Guest Editorial Yazar bilgisi yok · 1968 · Journal of Forestry · 0 atıf DOI: 10.1093/jof/66.1.9 Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle 3 Braun, V. ve Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101. Doğrulandı DİZİNDEKİ KAYIT · CROSSREF · EŞLEŞME %100 Using thematic analysis in psychology Virginia Braun, Victoria Clarke · 2006 · Qualitative Research in Psychology · 165784 atıf DOI: 10.1191/1478088706qp063oa Google Scholar’da kontrol et ↗ PDF'e henüz bakılmadı PDF yükle"
+    }
+  ],
+  "konsol": {
+    "C": []
+  }
+}
