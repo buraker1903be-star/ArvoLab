@@ -16,8 +16,16 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
   test("inceleme paneli varsayılan kapalı (sunucu ve istemci aynı)", () => {
     assert.match(editor, /tercihOku\(INCELEME_TERCIHI, false\), \(\) => false\)/);
   });
-  test("panel düğmesinin adı görünür: Kontroller", () => {
-    assert.match(editor, /metin=\{t\(\{ tr: "Kontroller", en: "Checks" \}\)\}/);
+  // İkinci tur: üç kontrol işlemi başlıkta tek "Kontroller" menüsünde; teslim durumu düğmede görünür.
+  test("Kontroller menüsü: teslim kontrolü, kılavuz/kaynakça kontrolü, inceleme paneli", () => {
+    const menu = editor.slice(editor.indexOf("tr: `Kontroller · ${checklist.done}/${checklist.total}`"), editor.indexOf("</AracMenusu>", editor.indexOf("tr: `Kontroller · ${checklist.done}/${checklist.total}`")));
+    assert.match(menu, /setChecklistOpen\(true\)/);
+    assert.match(menu, /onClick=\{handleCheck\}/);
+    assert.match(menu, /tercihYaz\(INCELEME_TERCIHI, !incelemeAcik\)/);
+  });
+  test("araç çubuğunda ikinci bir panel düğmesi yok; kayıt durumu başlıkta", () => {
+    assert.equal(editor.match(/tercihYaz\(INCELEME_TERCIHI, !incelemeAcik\)/g)?.length, 1);
+    assert.match(editor, /className="save-status yazma-kayit"/);
   });
   test("kılavuz yoksa tek satırlık bilgi; iki yol da duruyor", () => {
     const blok = editor.slice(editor.indexOf('className="kilavuz-satiri"'), editor.indexOf('className="kilavuz-satiri"') + 1200);
@@ -31,8 +39,13 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     assert.match(menu, /setFindOpen\(\(open\) => !open\)/);
     assert.match(menu, /setOdak\(\(o\) => !o\)/);
   });
-  test("yazım ekranında birincil düğme yok; kontrol düğmesi ikincil", () => {
-    assert.match(editor, /className="projects-filter-button"\s+onClick=\{handleCheck\}/);
+  test("yazım ekranının başlığında birincil düğme yok", () => {
+    const portal = editor.slice(editor.indexOf("createPortal("), editor.indexOf("eylemHedefi,", editor.indexOf("createPortal(")));
+    assert.doesNotMatch(portal, /projects-primary-button/);
+  });
+  test("telefonda kılavuz satırı kısa yazımla; bağlantının erişilebilir adı tam", () => {
+    assert.match(editor, /aria-label=\{t\(\{ tr: "Kılavuzumu yükle", en: "Upload my guideline" \}\)\}/);
+    assert.match(calisma, /\.kilavuz-satiri \.kilavuz-kisa \{ display: inline; \}/);
   });
   test("telefonda sekmeler yalnızca yazım ekranında gizli; araç çubuğu dar ekranda sarar", () => {
     assert.match(calisma, /\.dashboard-page:has\(\.manuscript-layout\) > \.calisma-sekmeleri \{ display: none; \}/);
@@ -72,5 +85,20 @@ describe("düz yüzey: birincil düğmede gradyan ve gölge yok", () => {
     const blok = css.slice(css.indexOf(".projects-primary-button {"), css.indexOf("}", css.indexOf(".projects-primary-button {")));
     assert.doesNotMatch(blok, /gradient/);
     assert.match(blok, /box-shadow: none;/);
+  });
+});
+
+describe("ikinci tur: yeni kullanıcı ve çalışma özeti", () => {
+  const sayfa = oku("app/dashboard/page.tsx");
+  test("yeni kullanıcı: tek açıklama, tek birincil, rehber isteğe bağlı", () => {
+    const bas = sayfa.slice(sayfa.indexOf("{yeniKullanici ? ("), sayfa.indexOf(") : ogrenciGorunumu && resume ? ("));
+    assert.match(bas, /<details className="pw-rehber">/);
+    assert.match(bas, /tr: "İlk çalışmayı oluştur"/);
+    assert.match(sayfa, /\{yeniKullanici \? null : <p>/);
+  });
+  test("çalışma özetinde tek birincil: Yazmaya devam et", () => {
+    const kart = oku("app/dashboard/editor/calisma-durum-karti.tsx");
+    const ana = kart.slice(kart.indexOf("return (\n    <article"));
+    assert.equal(ana.match(/projects-primary-button/g)?.length, 1);
   });
 });

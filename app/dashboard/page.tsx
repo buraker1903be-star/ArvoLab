@@ -500,13 +500,9 @@ export default async function DashboardPage() {
       <header className="gb-selam">
         <div>
           <h1>{ad ? `${selamlama(simdiAn, dil, saatDilimi)}, ${ad}` : selamlama(simdiAn, dil, saatDilimi)}</h1>
-          <p>
-            {yeniKullanici
-              ? t({
-                  tr: "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır.",
-                  en: "Your workspace is ready. Once you create your first work, your guideline, sources and checks will gather here.",
-                })
-              : isStaff
+          {/* Yeni kullanıcıda açıklama tek: aşağıdaki bölümde (ikinci tur). */}
+          {yeniKullanici ? null : <p>
+            {isStaff
                 ? /* Personel: kurumun özeti — sayaçların ilk üçü, cümle olarak. */
                   sayaclar.length
                   ? sayaclar
@@ -529,7 +525,7 @@ export default async function DashboardPage() {
                     en: `Where you left off: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} words, edited ${once(resumeStats.updatedAt)}` : ""}`,
                   })
                 : t({ tr: "Çalışmalarınız, teslim tarihleriniz ve gelen yorumlar burada.", en: "Your works, due dates and incoming comments are here." })}
-          </p>
+          </p>}
         </div>
         <div className="gb-selam-eylemler">
           {isStaff ? (
@@ -588,33 +584,31 @@ export default async function DashboardPage() {
       {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
 
       {yeniKullanici ? (
-        <article className="gb-kart gb-baslangic os5-ana-baslangic">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}</h2>
-              <p>
-                {t({
-                  tr: "Tez yazım kılavuzunuzu bir kez ekleyin; sayfa düzeni, zorunlu bölümler ve atıf sistemi editöre uygulanır.",
-                  en: "Add your thesis writing guideline once; page layout, required sections and the citation system are applied to the editor.",
-                })}
-              </p>
-            </div>
-          </header>
-          {/*
-            Adımlar BAĞLANTI DEĞİL, bilerek. Hiç çalışması olmayan birini
-            literatür ya da denetim ekranına göndermek, onu bir boş ekrana
-            daha götürmek olurdu; tek yol ileri gidiyor.
-          */}
-          {/*
-            Eskiden 1. adım "üniversitenizi seçtiğinizde kurumunuzun onaylı
-            kılavuzu bağlanır, kurallar kendiliğinden uygulanır" diyordu.
-            26.10.2026'dan beri yeni çalışmaya kılavuz ada göre BAĞLANMIYOR:
-            üniversite serbest metin, kuralları öğrencinin eklediği kılavuz
-            veriyor ve öğrenci onaylıyor (app/actions/calisma-kilavuzu.ts).
-            Yurt dışındaki öğrenci listede olmayan üniversitesini arayıp
-            bulamayınca ürünün ona göre olmadığını sanıyordu.
-          */}
-          <ol className="baslangic-adimlari">
+        /*
+          YENİ KULLANICI (ikinci tur, 17.11.2026): kısa başlık, tek açıklama,
+          tek belirgin "İlk çalışmayı oluştur". Üç adımlı rehber "Nasıl
+          başlarım?" altında isteğe bağlı açılıyor. Eskiden selamlamanın altında
+          iki cümle, ardından başlıklı bir kartta üç uzun adım ve iki düğme
+          vardı; ilk ekranın tamamı okunacak metindi.
+        */
+        <section className="pw-bolum pw-baslangic" aria-labelledby="pw-baslangic-baslik">
+          <h2 id="pw-baslangic-baslik">{t({ tr: "İlk çalışmanızı oluşturun", en: "Create your first work" })}</h2>
+          <p>
+            {t({
+              tr: "Tezinizi, makalenizi ya da projenizi açın; kılavuzunuzu ve kaynaklarınızı sonra da ekleyebilirsiniz.",
+              en: "Open your thesis, article or project; you can add your guideline and sources later.",
+            })}
+          </p>
+          <div className="pw-baslangic-eylem">
+            {/* Boş hesabın tek birincil eylemi. */}
+            <DugmeBaglanti href={yeniCalismaHref} tur="birincil">
+              <Plus size={16} aria-hidden="true" />
+              {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
+            </DugmeBaglanti>
+          </div>
+          <details className="pw-rehber">
+            <summary>{t({ tr: "Nasıl başlarım? Üç adım", en: "How do I start? Three steps" })}</summary>
+            <ol className="baslangic-adimlari">
             <li>
               <strong>{t({ tr: "Çalışmanızı açın, kılavuzunuzu ekleyin.", en: "Create your work and add your guideline." })}</strong>{" "}
               {t({
@@ -637,20 +631,12 @@ export default async function DashboardPage() {
               })}
             </li>
           </ol>
-          {/* Düğmeler yan yana ve içerik genişliğinde (Phase 3): kart boyu uzanan iki şerit düğme form gibi duruyordu. */}
-          <div className="gb-baslangic-eylemler">
-            {/* Boş hesabın tek birincil eylemi (Signature OS 5 / Phase 4: ortak düğme). */}
-            <DugmeBaglanti href={yeniCalismaHref} tur="birincil">
-              <Plus size={16} aria-hidden="true" />
-              {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
-            </DugmeBaglanti>
-            {/* Yeni kullanıcı için Kullanım Kılavuzu (30.10.2026): üç adımın ötesini merak eden buradan okur. */}
-            <DugmeBaglanti href={KILAVUZ_ADRESI} tur="ikincil">
+            <Link href={KILAVUZ_ADRESI} className="pw-bolum-baglanti">
               <BookOpen size={15} aria-hidden="true" />
               {t({ tr: "Kullanım Kılavuzu'nu okuyun", en: "Read the User Guide" })}
-            </DugmeBaglanti>
-          </div>
-        </article>
+            </Link>
+          </details>
+        </section>
       ) : ogrenciGorunumu && resume ? (
         <>
           {/*

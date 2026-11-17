@@ -1399,3 +1399,12 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .kaynak-tek-bas { align-items: stretch; }
   .kaynak-ekle-menu { right: auto; left: 0; }
 }
+
+/*
+  Kaynaklar listesi dış kutusuz (ikinci tur, 17.11.2026): liste sekme
+  sırasının hemen altında, sayfanın kendisinde durur; kart yalnızca
+  kenarlık ve iç boşluk ekleyip içerideki satır çizgileriyle ikinci bir
+  çerçeve oluşturuyordu. Kaynakça sekmesi de aynı.
+*/
+.kaynak-tek .kaynak-tek-kart { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.kaynak-tek .kaynak-tek-bas { padding-bottom: 4px; }

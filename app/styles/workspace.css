@@ -1644,3 +1644,23 @@
   .manuscript-araclar { flex-wrap: wrap; row-gap: 4px; overflow-x: visible; }
   .arac-grup + .arac-grup { border-left-color: transparent; }
 }
+
+/*
+  SADE ÜST BÖLÜM VE TELEFON (ikinci tur, 17.11.2026).
+  Kayıt durumu başlığın yanında (manuscript-editor.tsx portalı). Telefonda
+  yalnızca durum noktası kalır; metni ekran okuyucuya ve title'a açık
+  (font-size 0 erişilebilirlik ağacından düşürmez). Hata ve çakışma her
+  ekranda yazıyla görünür: kullanıcı onları kaçırmamalı.
+  Kılavuz satırı telefonda kısa yazımla tek satır; belgenin üstündeki
+  ekran boşluğu 40 → 16 px (yalnızca ekranda; yazdırma/PDF/Word düzeni
+  print.css ve dışa aktarma kodunda, değişmedi).
+*/
+.yazma-kayit { min-height: var(--os5-kontrol-h); }
+.kilavuz-kisa { display: none; }
+@media (max-width: 760px) {
+  .yazma-eylemleri .yazma-kayit:not([data-state="error"]):not([data-state="conflict"]) { gap: 0; padding: 0; font-size: 0; justify-content: center; }
+  .kilavuz-satiri { flex-wrap: nowrap; padding-block: 4px; white-space: nowrap; }
+  .kilavuz-satiri .kilavuz-uzun { display: none; }
+  .kilavuz-satiri .kilavuz-kisa { display: inline; }
+  .manuscript-editor-content { padding-top: 16px; }
+}

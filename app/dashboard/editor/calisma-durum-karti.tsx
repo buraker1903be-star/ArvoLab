@@ -238,7 +238,8 @@ export default async function CalismaDurumKarti({
         </div>
         {/* İş bittiyse düğme bu kartın kendisine gidiyordu; çizilmiyor. */}
         {sirada.bitti ? null : (
-          <Link href={sirada.href} className="projects-primary-button button-compact">
+          /* İkincil (ikinci tur, 17.11.2026): kartın tek birincil eylemi "Yazmaya devam et". Eskiden "Şimdi" satırı ve kılavuz düğmesi de birincildi; üç koyu düğme yan yana hangisinin asıl iş olduğunu söylemiyordu. */
+          <Link href={sirada.href} className="projects-filter-button button-compact">
             {sirada.eylem}
           </Link>
         )}
@@ -342,7 +343,7 @@ export default async function CalismaDurumKarti({
             calisma={calisma}
             uygulanan={uygulanan}
             kilavuzOkunamadi={kilavuzOkunamadi}
-            triggerClassName={uygulanan ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
+            triggerClassName="projects-filter-button button-compact"
             kisa
             /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
             acikBasla={kilavuzAc}
