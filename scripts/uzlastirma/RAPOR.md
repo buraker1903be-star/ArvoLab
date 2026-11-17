@@ -18,7 +18,11 @@ geçişi tutan şey prova değil, doğrulanamayan üç dış koşul:
 
 1. **Yedek / PITR UNVERIFIED** (§6). Veri adımı içeren paket (P5) ve P3'ün tam
    geri dönüşü yedeğe dayanıyor.
-2. **Supabase GitHub entegrasyonu (Production dalı, otomatik dağıtım) UNVERIFIED.**
+2. **Supabase GitHub entegrasyonu (Production dalı, otomatik dağıtım) UNVERIFIED — ama entegrasyonun
+   BAĞLI olduğu artık kesin.** Bu hazırlık PR'ında (#101) "Supabase Preview" denetimi göründü; bağlantısı
+   Production projesinin (`zpfpocyajnxcketdjbxm`) entegrasyon sayfasına gidiyor, özeti "PR başına önizleme
+   dalı kapalı". Yani depo Production projesine bağlı; hangi dalın Production sayıldığı ve birleştirmede
+   migration'ların otomatik uygulanıp uygulanmadığı hâlâ görünmüyor.
    Depo 109 migration taşıyor; Production'ın geçmiş tablosunda bunların hiçbiri yok
    (12 kayıt, sürüm ve adları depoyla uyuşmuyor). Entegrasyon açıksa main'e
    birleştirme, 109 migration'ı geçmişte yok diye yeniden çalıştırmayı deneyebilir:
