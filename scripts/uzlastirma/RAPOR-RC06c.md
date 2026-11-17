@@ -288,6 +288,22 @@ için bağlanmıyor. U3-telefon ve U4-telefon için bugün bir imza yok.
 
 ### RC06e: U3 için dar ürün düzeltmesi (karar (b)) ve sonuçları
 
+**Derleme sabitleme (`0942b86`):** `studyo-kabul.mjs` artık `STUDYO_DERLEME=uretim|gelistirme`
+olmadan başlamıyor. İşlem bildirimi seçilen derlemeden okunuyor; bir ara kullanılan "en yeni dosya"
+seçimi kaldırıldı. Üretimde BUILD_ID, bildirimin kendi derleme dizininden okunuyor ve sunucunun
+HTML'inde geçmek zorunda.
+
+| Sınama | Sonuç |
+|---|---|
+| kip verilmedi | çıkış 2 |
+| `gelistirme`, sunucu üretim derlemesi | çıkış 2 |
+| `uretim` + geliştirme bildirimi (bilerek yanlış) | sabitlemeden önce koşu başlıyor ve 14 FAIL üretiyordu; şimdi çıkış 2 |
+| `uretim`, doğru derleme | **67 PASS · 0 FAIL · 1 UNVERIFIED** |
+
+Doğru derlemenin kaydı: BUILD_ID `-SFQayB2ZxmIWo-amBVyj`, bildirim SHA-256 `c671ba16…`,
+`gitHead` `8b3dddf`, uygulama ağacı temiz. U3/U4 için yeni tekrar döngüsü açılmadı; dokunma
+**UNVERIFIED** kalıyor.
+
 PR #102 HEAD **`8b3dddf`**. Ürün değişikliği tek: `0036569`, `yazim-paneli.tsx`. Kaydırma olayında
 ölçüm artık rAF'a ertelenmiyor, olayın içinde yapılıyor; değer değişmediyse stil yazılmıyor.
 Resize ve ResizeObserver kare başına bir ölçümle rAF'ta kaldı. Yeni panel mimarisi yok.
@@ -340,11 +356,11 @@ kanıtı değil.
 | 0b | PR #102 incelemesi (kod sahibi) | — (birleştirme değil) | — |
 | 0c | #102 → `design/os5`, sonra #101 → `design/os5` (yalnızca belgeler) | **0a** | birleşik adayın commit SHA'sı |
 | 0d | Yer tutucular + `check-migrations` istisnası ayrı PR → `design/os5` | **0a** (bu PR `supabase/migrations/`'a dosya ekliyor) | — |
-| 1 | **Birleşik aday** (`design/os5`'in o anki SHA'sı) üzerinde, izole yerel yığın + Production benzeri şema ve **P1–P6, P8 uygulanmış** hâlde: gerçek AI kabulü (≤30 çağrı, güvenli test anahtarı) ve uçtan uca zincir (kayıt → e-posta doğrulama → ilk şifre → çalışma → DOI → PDF → AI → atıf/kaynakça → Word/PDF → yeniden giriş → veri bütünlüğü) | 0c, 0d; güvenli test anahtarı (**UNVERIFIED**) | **adayın commit SHA'sı + şema durumu**: `sema-ozeti` md5, uygulanan paketler, geçmiş tablosu sayımı |
+| 1 | **Birleşik aday** (`design/os5`'in o anki SHA'sı) üzerinde, izole yerel yığın + Production benzeri şema ve **P1–P6, P8 uygulanmış** hâlde: gerçek AI kabulü (≤30 çağrı, güvenli test anahtarı) ve uçtan uca zincir (kayıt → e-posta doğrulama → ilk şifre → çalışma → DOI → PDF → AI → atıf/kaynakça → Word/PDF → yeniden giriş → veri bütünlüğü) | 0c, 0d; güvenli test anahtarı (**UNVERIFIED**) | **adayın commit SHA'sı + şema durumu**: `sema-ozeti` md5, uygulanan paketler, geçmiş tablosu sayımı; **çalışan derleme**: `next build` + `next start`, kabul `STUDYO_DERLEME=uretim` ile; `sonuclar/studyo-kabul-derleme.json` (git HEAD, `gitTemiz`, BUILD_ID, bildirim yolu `.next/server/server-reference-manifest.json` ve SHA-256) rapora geçer. BUILD_ID sunucunun HTML'inde yoksa koşu başlamaz; değiştirilme zamanına güvenilmez |
 | 2 | Production: Dalga 0 → Dalga A (97) → **Onay K varsa** Dalga A-K (3) → Dalga B paketleri (P5'in veri adımı pencerede yeniden ölçülür) → P8 → (onaylanırsa, yedek doğrulandıktan sonra) P9 | 0a + 1 + her biri için ayrı Production onayı | her adım sonrası Production özeti = provanın aynı adımı |
 | 3 | `design/os5` → main | **0a**, 2 tamam, CLI bekleyen 0 (Onay K dahil) | — |
 
-Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapılırsa geçersizdir; yeniden koşulur.
+Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapılırsa geçersizdir; yeniden koşulur. Kayıttaki `gitHead` adayın SHA'sı değilse ya da `gitTemiz` false ise de geçersizdir.
 
 ## 7. PASS / FAIL / UNVERIFIED (değişenler, RC06d dahil)
 
