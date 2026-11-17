@@ -286,6 +286,45 @@ masaüstünde yaprağın odak aldığı metin kutusu sayfayı değişken bir kon
 U3-1024 ve U4-1440'ın bugünkü imzalarla örtüşmesi MÜMKÜN, ama o turların gözlenen değerleri saklanmadığı
 için bağlanmıyor. U3-telefon ve U4-telefon için bugün bir imza yok.
 
+### RC06e: U3 için dar ürün düzeltmesi (karar (b)) ve sonuçları
+
+PR #102 HEAD **`8b3dddf`**. Ürün değişikliği tek: `0036569`, `yazim-paneli.tsx`. Kaydırma olayında
+ölçüm artık rAF'a ertelenmiyor, olayın içinde yapılıyor; değer değişmediyse stil yazılmıyor.
+Resize ve ResizeObserver kare başına bir ölçümle rAF'ta kaldı. Yeni panel mimarisi yok.
+`0036569`'dan sonraki commit'ler yalnızca test betiğini ve sonuç dosyasını değiştirdi
+(`git diff 0036569 8b3dddf -- app lib` boş).
+
+Test değişiklikleri (ölçüme iki kare ya da sabit süre **eklenmedi**; U3'ün ölçütü aynı):
+- **U3K:** U3-1024'ün düştüğü durumu her seferinde kurar (yaprak açıkken sayfa 314 px aşağı). Yaprak
+  oturana kadar koşula bağlı bekler (üst kenarı üç kare aynı), sonra U3'ün AYNI ölçümünü yapar.
+- **U3** artık tıklamanın kendi kaydırmasını da yazıyor (0 ise o tur yukarı dönüş yolunu sınamıyor).
+- **U4 ön koşulu** yaprağın DOM'a girdiği andaki kaydırma; tıklamanın kendi kaydırması ayrıca kaydedilir.
+  Ön koşul tutmazsa üç denemeden sonra `KURULAMADI` olur; PASS sayılmaz, çıkış kodu 1.
+- **U5:** fare tekerleği ve klavyeyle kaydırma; çizilmiş her karede örtüşme aranır, fare düğmeye
+  gerçekten isabet ediyor mu bakılır (`:hover`). Dokunma `UNVERIFIED`.
+- İşlem kimlikleri sunucunun derlemesinden okunuyor. Eskiden `.next/dev` okunuyordu ve `next start`
+  altında S5/S6/R1–R3 boş dönüyordu.
+
+Ortam: `next build` + `next start`, yerel yığın, Production benzeri şema + P1–P6, P8 (md5 `358efe9c…`).
+Kanıt: `sonuclar/rc06e-u3u4/` (her tur, her senaryo için JSON ve çıktı).
+
+| Sınama | Eski kod `33f77d1` (ayrı derleme, kontrol) | Yeni kod |
+|---|---|---|
+| U3K-1024 | **FAIL 3/3** — "Geri al" ← `div.yazim-bos-bas` @97,314 | **PASS 10/10** |
+| U3K-telefon | **FAIL 3/3** — "Geri al" ← yaprak içeriği @17,288, panel üstü 345 | **PASS 10/10** |
+| U3-1024 / U3-telefon | PASS 3/3 (tıklama kaydırmadı → yol sınanmadı) | PASS 10/10 (tıklama sonrası kaydırma 10/10 turda 0 → yol U3K'da sınandı) |
+| U4 ×4 genişlik | — | PASS 10/10 her biri; ön koşul 40/40 ilk denemede (açılış anında 420/499/501 px; tıklamanın kendi kaydırması 0 ya da +79/+81) |
+| U5 tekerlek/klavye × 1024/telefon | — | PASS 10/10 her biri; 7–15 çizilmiş kare, örtük 0; fare isabeti var |
+| Kare deneyi: kaydırmadan sonraki ilk rAF'ta örtük | 40/40 (`next dev`, RC06d) | **0/40** |
+| Tam stüdyo kabulü | — | ilk koşu 14 FAIL: betik işlem kimliklerini geliştirme bildiriminden okuyordu; betik düzeltildi → **67 PASS · 0 FAIL · 1 UNVERIFIED** (U5-dokunma) |
+| tsc, eslint, check:css, check:rakamlar, check:migrations, test:unit, test:editor | — | temiz (2239 · 112) |
+
+- **Eski U3-telefon düşmesi:** imzası (yalnızca "Geri al", panel üstü 345) eski kodun U3K-telefon
+  düşmesiyle aynı. Bu, aynı mekanizmayla UYUMLU. O koşunun değerleri saklanmadığı için kanıtlı değil;
+  açık bulgu olarak kalıyor.
+- **İlk ×5'in dört düşmesi** hiçbir sebebe bağlanmadı.
+- **UNVERIFIED:** dokunmatik kaydırma ve kompozitörün kendi kareleri (başsız tarayıcı).
+
 ## 6. Yayın planı (güncel, RC06d)
 
 **Entegrasyon davranışının doğrulanması BÜTÜN birleştirme adımlarının önündedir.** Sebep: GitHub
@@ -319,7 +358,7 @@ Adım 1, 0c/0d'den sonraki birleşik aday dışında bir commit üzerinde yapıl
 | Yer tutucular: temiz kurulum | PASS (0 fark, test:db 350/350); depoya alma `check-migrations` istisnası İSTER |
 | Eski kayıt izi | PASS (12/12 parmak izi) |
 | P9 tam tanım | PASS (hazırlık); uygulama onayı **yok**; R9 veri geri getirmez |
-| PR #102 Yazım Stüdyosu kabulü | **FAIL / AÇIK** — U3-1024 7/10 (mekanizma deneyle kanıtlı, çizilmiş karede örtme yok; kullanıcı kaydırmasında UNVERIFIED), U4-1440 ve U4-1280 2/10 ön koşul sağlanamadı; U3-telefon önceki düşmesi açık bulgu; ilk ×5'in dört düşmesi açıklanamadı |
+| PR #102 Yazım Stüdyosu kabulü | **PASS (yerel, `next start`, `8b3dddf`)** — U3K 10/10 (eski kodda 3/3 FAIL), U3/U4/U5 10/10, tam koşu 67/0/1; dokunma ve kompozitör UNVERIFIED; eski U3-telefon ve ilk ×5'in dört düşmesi açık bulgu (kanıtsız) |
 | PR #101 CI @ `a6efca4` | PASS — `kontrol` ×2 success, Vercel success, Supabase Preview skipped |
 | Yedek / PITR / entegrasyon ayarı | **UNVERIFIED** — bütün birleştirmelerin ön koşulu |
 | Gerçek AI ve uçtan uca zincir | **UNVERIFIED** — güvenli test anahtarı yok; birleşik aday üzerinde yapılacak |

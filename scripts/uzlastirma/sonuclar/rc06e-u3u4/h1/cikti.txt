@@ -1,0 +1,45 @@
+tohum: proje c76a6b86-c413-4ffd-a970-f979c62e96d7 · pdf 15c27aee-3c80-42cc-9e84-51bd78e3108d/abcc0135-e151-45f9-8125-0a338af57fca/0f4e9975-7882-4e7e-8074-68fb8680d3ea · kütüphane 41ade1ae-1809-4d08-b865-2c974f11e56a/02b8bff5-6446-438b-bdcb-c28de601d3ee/ef5f8e62-8d27-4a08-b628-257bf507a946
+PASS  U3-1024  1024 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: tıklama sonrası kaydırma 0 · 24 düğme, erişilemeyen [] · panel üst 371 eni 1024 · taşma 0
+PASS  U3-telefon  390 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: tıklama sonrası kaydırma 0 · 24 düğme, erişilemeyen [] · panel üst 345 eni 390 · taşma 0
+PASS  U3K-1024  1024 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: kurulum {"kaydirma":314,"yaprakUst":230} · 24 düğme, erişilemeyen [] · panel üst 371 eni 1024 · taşma 0
+PASS  U3K-telefon  390 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: kurulum {"kaydirma":314,"yaprakUst":199} · 24 düğme, erişilemeyen [] · panel üst 345 eni 390 · taşma 0
+PASS  K0  Sayfa hatası (pageerror) yok
+      beklenen: 0
+      gözlenen: 0
+PASS  U4-1440  1440 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px
+      gözlenen: yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 738 · küçültme: 0/24 erişilemez, taşma 0, editör 618 · geri büyütme: 0/24 erişilemez, taşma 0, editör 738 · kapat/aç: 0/24 erişilemez, taşma 0, editör 738
+PASS  U4-1280  1280 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px
+      gözlenen: yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 578 · küçültme: 0/24 erişilemez, taşma 0, editör 1030 · geri büyütme: 0/24 erişilemez, taşma 0, editör 578 · kapat/aç: 0/24 erişilemez, taşma 0, editör 578
+PASS  U4-1024  1024 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0
+      gözlenen: yaprak açılırken kaydırma 501 px (tıklamanın kendi kaydırması 81 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0 · küçültme: 0/24 erişilemez, taşma 0 · geri büyütme: 0/24 erişilemez, taşma 0 · kapat/aç: 0/24 erişilemez, taşma 0
+PASS  U4-telefon  390 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0
+      gözlenen: yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0 · küçültme: 0/24 erişilemez, taşma 0 · geri büyütme: 0/24 erişilemez, taşma 0 · kapat/aç: 0/24 erişilemez, taşma 0
+PASS  U5-1024-tekerlek  tekerlek: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder
+      beklenen: örtük kare 0, isabet evet
+      gözlenen: 7 kare örneklendi, örtük 0 · fare "Kalın (Ctrl+B)" → isabet true
+PASS  U5-1024-klavye  klavye: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder
+      beklenen: örtük kare 0, isabet evet
+      gözlenen: 15 kare örneklendi, örtük 0 · fare "Kalın (Ctrl+B)" → isabet true
+PASS  U5-telefon-tekerlek  tekerlek: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder
+      beklenen: örtük kare 0, isabet evet
+      gözlenen: 7 kare örneklendi, örtük 0 · fare "Numaralı liste (Ctrl+Shi" → isabet true
+PASS  U5-telefon-klavye  klavye: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder
+      beklenen: örtük kare 0, isabet evet
+      gözlenen: 15 kare örneklendi, örtük 0 · fare "Numaralı liste (Ctrl+Shi" → isabet true
+UNVERIFIED  U5-dokunma  Telefonda parmakla kaydırırken görünür örtüşme
+      beklenen: örtük kare 0
+      gözlenen: dokunmatik kaydırma başsız tarayıcıda üretilemedi; kompozitör kareleri görülmüyor
+
+PASS 13 · FAIL 0 · KURULAMADI 0 · UNVERIFIED 1

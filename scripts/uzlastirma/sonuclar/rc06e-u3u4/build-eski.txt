@@ -1,0 +1,75 @@
+▲ Next.js 16.4.6 (Turbopack)
+✓ Running next.config.ts took 47ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.7s
+  Running TypeScript ...
+  Finished TypeScript in 24.7s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/35) ...
+  Generating static pages using 3 workers (8/35) 
+  Generating static pages using 3 workers (17/35) 
+  Generating static pages using 3 workers (26/35) 
+✓ Generating static pages using 3 workers (35/35) in 255ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/asistan/egitim-kumesi
+├ ƒ /api/cron/academic-directory-refresh
+├ ƒ /api/cron/deneme-hatirlatma
+├ ƒ /api/cron/guideline-refresh
+├ ƒ /api/cron/hesap-silme
+├ ƒ /api/cron/kaynak-onbellegi-temizle
+├ ƒ /api/csp-raporu
+├ ƒ /api/hesabim/verilerim
+├ ƒ /api/kaynak-pdf/[pdfId]
+├ ƒ /api/manuscripts/[projectId]/export
+├ ƒ /api/odeme-donus
+├ ƒ /api/oturum
+├ ƒ /auth/confirm
+├ ƒ /auth/dogrula
+├ ƒ /dashboard
+├ ƒ /dashboard/abonelik
+├ ƒ /dashboard/abonelik/kart/[oid]
+├ ƒ /dashboard/analysis
+├ ƒ /dashboard/asistan
+├ ƒ /dashboard/associate-professorship
+├ ƒ /dashboard/citations
+├ ƒ /dashboard/documents
+├ ƒ /dashboard/editor
+├ ƒ /dashboard/editor/[id]
+├ ƒ /dashboard/editor/[id]/edit
+├ ƒ /dashboard/editor/[id]/etik
+├ ƒ /dashboard/editor/[id]/kanit
+├ ƒ /dashboard/editor/[id]/makale
+├ ƒ /dashboard/editor/[id]/write
+├ ƒ /dashboard/editor/new
+├ ƒ /dashboard/expert-requests
+├ ƒ /dashboard/guidelines
+├ ƒ /dashboard/literature
+├ ƒ /dashboard/olcum
+├ ƒ /dashboard/settings
+├ ƒ /dashboard/support
+├ ƒ /dashboard/team
+├ ƒ /dashboard/yardim
+├ ƒ /forgot-password
+├ ○ /icon.svg
+├ ƒ /kayit
+├ ƒ /print/docentlik
+├ ƒ /print/makbuz/[id]
+├ ƒ /print/manuscript/[id]
+├ ƒ /print/proforma/[id]
+├ ƒ /reset-password
+├ ƒ /share/[token]
+└ ƒ /tasarim
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

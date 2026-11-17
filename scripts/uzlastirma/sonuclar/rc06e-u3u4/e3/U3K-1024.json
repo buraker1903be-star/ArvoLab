@@ -1,0 +1,629 @@
+{
+  "ad": "U3K-1024",
+  "tur": "e3",
+  "sonuc": "FAIL",
+  "ozet": {
+    "kurulum": {
+      "kaydirma": 314,
+      "yaprakUst": 230
+    },
+    "dugme": 24,
+    "erisilemeyen": [
+      "Geri al (Ctrl+Z) ← div.yazim-bos-bas @97,314 y0"
+    ],
+    "panel": [
+      371,
+      1024
+    ],
+    "tasma": 0
+  },
+  "adimlar": [
+    {
+      "adim": "kurulum: sayfa 314 px aşağıda, yaprak üstü 230",
+      "zaman": "2026-11-17T10:33:55.808Z",
+      "goruntu": "U3K-1024-01.png",
+      "viewport": [
+        1024,
+        768
+      ],
+      "gorselViewport": [
+        1024,
+        768,
+        0,
+        314
+      ],
+      "kaydirma": [
+        0,
+        314
+      ],
+      "belgeYuksekligi": 3443,
+      "tasma": 0,
+      "yaprak": [
+        0,
+        230,
+        1024,
+        538
+      ],
+      "aracCubugu": [
+        96,
+        72,
+        896,
+        58
+      ],
+      "odak": "textarea.field-control",
+      "ortulen": [
+        "Kaynak PDF: editörün yan ← div#panel-icerik.dashboard-main-content"
+      ],
+      "dugmeler": [
+        {
+          "ad": "Geri al (Ctrl+Z)",
+          "kutu": [
+            -140,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Yinele (Ctrl+Y)",
+          "kutu": [
+            -99,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Kalın (Ctrl+B)",
+          "kutu": [
+            241,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "İtalik (Ctrl+I)",
+          "kutu": [
+            282,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Altı çizili (Ctrl+U)",
+          "kutu": [
+            323,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Üst simge (Ctrl+Shift+=)",
+          "kutu": [
+            364,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Normal metin (Ctrl+Alt+0",
+          "kutu": [
+            421,
+            81,
+            47,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Başlık 1 (Ctrl+Alt+1)",
+          "kutu": [
+            469,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Başlık 2 (Ctrl+Alt+2)",
+          "kutu": [
+            510,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Başlık 3 (Ctrl+Alt+3)",
+          "kutu": [
+            551,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Madde işaretli liste (Ct",
+          "kutu": [
+            608,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Numaralı liste (Ctrl+Shi",
+          "kutu": [
+            649,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Alıntı (Ctrl+Shift+B)",
+          "kutu": [
+            690,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Hizalama, satır aralığı,",
+          "kutu": [
+            734,
+            81,
+            108,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Tablo, resim, dipnot, an",
+          "kutu": [
+            856,
+            81,
+            83,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Yazım asistanı",
+          "kutu": [
+            951,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Kaynak PDF: editörün yan",
+          "kutu": [
+            993,
+            81,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "div#panel-icerik.dashboard-main-content"
+        },
+        {
+          "ad": "Otomatik öneri kapalı. A",
+          "kutu": [
+            1035,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Seçili cümleye kaynak bu",
+          "kutu": [
+            1077,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Kaynaktan atıf ekle",
+          "kutu": [
+            1119,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Bul ve değiştir (Ctrl+F)",
+          "kutu": [
+            1172,
+            81,
+            57,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Sayfa ayarı, kapak, payl",
+          "kutu": [
+            1231,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "İnceleme panelini kapat",
+          "kutu": [
+            1273,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Odak modu: yalnızca meti",
+          "kutu": [
+            1315,
+            81,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        }
+      ]
+    },
+    {
+      "adim": "ölçüm sonrası",
+      "zaman": "2026-11-17T10:33:56.269Z",
+      "goruntu": "U3K-1024-02.png",
+      "viewport": [
+        1024,
+        768
+      ],
+      "gorselViewport": [
+        1024,
+        768,
+        0,
+        0
+      ],
+      "kaydirma": [
+        0,
+        0
+      ],
+      "belgeYuksekligi": 3443,
+      "tasma": 0,
+      "yaprak": [
+        0,
+        371,
+        1024,
+        397
+      ],
+      "aracCubugu": [
+        96,
+        305,
+        896,
+        58
+      ],
+      "odak": "textarea.field-control",
+      "ortulen": [
+        "Üst simge (Ctrl+Shift+=) ← a.os-gezinme-oge",
+        "Normal metin (Ctrl+Alt+0 ← div#panel-icerik.dashboard-main-content"
+      ],
+      "dugmeler": [
+        {
+          "ad": "Geri al (Ctrl+Z)",
+          "kutu": [
+            -504,
+            314,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Yinele (Ctrl+Y)",
+          "kutu": [
+            -463,
+            314,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Kalın (Ctrl+B)",
+          "kutu": [
+            -123,
+            314,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "İtalik (Ctrl+I)",
+          "kutu": [
+            -82,
+            314,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Altı çizili (Ctrl+U)",
+          "kutu": [
+            -41,
+            314,
+            40,
+            40
+          ],
+          "ekranda": false,
+          "ustte": "ekran dışı"
+        },
+        {
+          "ad": "Üst simge (Ctrl+Shift+=)",
+          "kutu": [
+            0,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "a.os-gezinme-oge"
+        },
+        {
+          "ad": "Normal metin (Ctrl+Alt+0",
+          "kutu": [
+            57,
+            314,
+            47,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "div#panel-icerik.dashboard-main-content"
+        },
+        {
+          "ad": "Başlık 1 (Ctrl+Alt+1)",
+          "kutu": [
+            105,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Başlık 2 (Ctrl+Alt+2)",
+          "kutu": [
+            146,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Başlık 3 (Ctrl+Alt+3)",
+          "kutu": [
+            187,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Madde işaretli liste (Ct",
+          "kutu": [
+            244,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Numaralı liste (Ctrl+Shi",
+          "kutu": [
+            285,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Alıntı (Ctrl+Shift+B)",
+          "kutu": [
+            326,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Hizalama, satır aralığı,",
+          "kutu": [
+            370,
+            314,
+            108,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Tablo, resim, dipnot, an",
+          "kutu": [
+            492,
+            314,
+            83,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Yazım asistanı",
+          "kutu": [
+            587,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Kaynak PDF: editörün yan",
+          "kutu": [
+            629,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Otomatik öneri kapalı. A",
+          "kutu": [
+            671,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Seçili cümleye kaynak bu",
+          "kutu": [
+            713,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Kaynaktan atıf ekle",
+          "kutu": [
+            755,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Bul ve değiştir (Ctrl+F)",
+          "kutu": [
+            808,
+            314,
+            57,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Sayfa ayarı, kapak, payl",
+          "kutu": [
+            867,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "İnceleme panelini kapat",
+          "kutu": [
+            909,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        },
+        {
+          "ad": "Odak modu: yalnızca meti",
+          "kutu": [
+            951,
+            314,
+            40,
+            40
+          ],
+          "ekranda": true,
+          "ustte": "kendisi"
+        }
+      ]
+    }
+  ]
+}
