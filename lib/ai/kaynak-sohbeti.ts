@@ -174,7 +174,8 @@ export function kaynakCevabiCozumle(ham: string): KaynakCevabi | null {
 }
 
 export type KaynakDenetimi =
-  | { gecti: true; cevap: KaynakCevabi }
+  /** sunucuMetni: model metni atıldı, cevap sunucunun sabit ret metni (sorudaki atıf kaynakta yok). */
+  | { gecti: true; cevap: KaynakCevabi; sunucuMetni?: { neden: "soru_atfi"; atiflar: string[] } }
   | { gecti: false; neden: "alinti" | "uydurma_sayi" | "kunye"; ayrinti: string[] };
 
 /*
@@ -191,16 +192,30 @@ export type KaynakDenetimi =
   İkisi ayrı ayrı ve dar tutuldu; uydurma atfın sunulması yine düşer:
     - Kaynağın kendisi: atıftaki HER soyadı künyede (sözcük sınırıyla) ve yıl
       künyede geçmeli. "Kaya (2020)" ya da "Kayalar (2021)" geçmez.
-    - Sorudaki atıf YALNIZCA "bulundu": false cevapta serbest: bu, atfın
-      kaynakta olmadığının açıkça söylenmesidir. "bulundu": true cevapta
-      kaynakta olmayan bir atıf kaynağa dayanıyormuş gibi sunulmuş olur ve
-      düşer.
-  Alıntı ve sayı denetimi değişmedi: alıntı yine birebir, sayı yine kaynakta
-  ya da soruda.
+    - Sorudaki atıf: "bulundu": true cevapta kaynakta olmayan bir atıf
+      kaynağa dayanıyormuş gibi sunulmuş olur ve düşer. "bulundu": false
+      cevapta da MODELİN METNİNE güvenilmez (PR #104 incelemesi): bayrak,
+      metnin atfı gerçekten reddettiğini kanıtlamıyor; model bayrağı false
+      verip "Smith (2019) … göstermiştir" diye olumlu iddia yükleyebilir.
+      Serbest metinde ret ile iddiayı güvenilir biçimde ayıran bir kural
+      yok, bu yüzden ayırmaya çalışılmıyor: model metni ATILIR ve kullanıcıya
+      sunucunun sabit ret metni gösterilir (soruAtfiRetMetni). Model
+      cevabı kayda olduğu gibi girer (eğitim verisi), ekrana girmez.
+  Alıntı ve sayı denetimi değişmedi ve sunucu metninden ÖNCE, model metni
+  üzerinde çalışır: uydurma sayı ya da birebir olmayan alıntı taşıyan cevap,
+  metni atılacak olsa bile düşer.
 */
 const SOYAD_ATIFTA = /\p{Lu}[\p{L}'’-]*\p{Ll}/gu;
 const kacir = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const bosluksuz = (s: string) => s.replace(/\s+/g, " ").trim();
+
+/** Sorudaki atıf kaynakta yokken gösterilen sabit metin; modelin serbest metni yerine. */
+export function soruAtfiRetMetni(atiflar: string[], dil: Dil = "tr"): string {
+  const liste = atiflar.join(", ");
+  return dil === "en"
+    ? `The citation you asked about (${liste}) does not appear in the pages of this source that were read, so the source gives no information about it.`
+    : `Sorduğunuz atıf (${liste}) bu kaynağın okunan sayfalarında geçmiyor; kaynak bu atıf hakkında bilgi vermiyor.`;
+}
 
 /** Atıf, incelenen kaynağın kendi künyesine mi işaret ediyor (soyadları ve yıl künyede)? */
 export function kaynaginKendiAtfi(atif: string, kunye: string): boolean {
@@ -215,10 +230,11 @@ export function kaynaginKendiAtfi(atif: string, kunye: string): boolean {
 
 /**
  * Alıntılar gönderilen sayfalarda geçiyor mu (sayfa gerekirse düzeltilir),
- * "bulundu" cevap alıntılı mı, sayılar ve atıflar kaynakta mı (kaynağın
- * kendi künyesi ve "bulunamadı" cevabında sorudaki atıf serbest).
+ * "bulundu" cevap alıntılı mı, sayılar ve atıflar kaynakta mı. Kaynağın kendi
+ * künyesi serbest; "bulunamadı" cevabında sorudaki atıf varsa model metni
+ * atılır ve sunucunun sabit ret metni döner (sunucuMetni).
  */
-export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru: string, kunye = ""): KaynakDenetimi {
+export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru: string, kunye = "", dil: Dil = "tr"): KaynakDenetimi {
   const duzeltilmis: KaynakAlintisi[] = [];
   for (const alinti of cevap.alintilar) {
     const belirtilen = sayfalar.find((s) => s.num === alinti.sayfa);
@@ -237,9 +253,8 @@ export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru
   const soruDuz = bosluksuz(soru);
   const atiflar = baglamDisiKunye(cevap.cevap, kaynakMetni);
   const kendiAtiflari = atiflar.filter((atif) => kaynaginKendiAtfi(atif, kunye));
-  const izinsiz = atiflar.filter(
-    (atif) => !kendiAtiflari.includes(atif) && !(cevap.bulundu === false && soruDuz.includes(bosluksuz(atif))),
-  );
+  const soruAtiflari = cevap.bulundu === false ? atiflar.filter((atif) => !kendiAtiflari.includes(atif) && soruDuz.includes(bosluksuz(atif))) : [];
+  const izinsiz = atiflar.filter((atif) => !kendiAtiflari.includes(atif) && !soruAtiflari.includes(atif));
   if (izinsiz.length) return { gecti: false, neden: "kunye", ayrinti: izinsiz };
   /*
     Kaynağın kendi atfındaki yıl ("Kaya (2021)") sayfa metninde geçmeyebilir:
@@ -251,5 +266,13 @@ export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru
   const sayiMetni = kendiAtiflari.reduce((m, atif) => m.split(atif).join(" "), cevap.cevap);
   const uydurma = uydurmaSayilar(sayiMetni, kaynakMetni, soru);
   if (uydurma.length) return { gecti: false, neden: "uydurma_sayi", ayrinti: uydurma };
+  if (soruAtiflari.length) {
+    const tekil = [...new Set(soruAtiflari.map(bosluksuz))];
+    return {
+      gecti: true,
+      cevap: { bulundu: false, cevap: soruAtfiRetMetni(tekil, dil), alintilar: [] },
+      sunucuMetni: { neden: "soru_atfi", atiflar: tekil },
+    };
+  }
   return { gecti: true, cevap: { ...cevap, alintilar: duzeltilmis } };
 }
