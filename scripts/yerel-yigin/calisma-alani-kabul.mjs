@@ -497,8 +497,10 @@ try {
     const yazdirmaMetni = async (s) => {
       const r = await s.goto(`/print/manuscript/${CIKTI}`);
       beklenen(r.status() === 200, `yazdırma ${r.status()}`);
-      await s.waitForSelector(".print-sheet");
-      return s.locator(".print-sheet").innerText();
+      // Paged.js sayfalara böldükten sonra birden çok .print-sheet olur (zamanlamaya bağlı,
+      // 18.11.2026 koşusunda çıktı); okunan, bölünmeden önceki KAYNAK sayfadır.
+      await s.waitForSelector(".print-page > .print-sheet");
+      return s.locator(".print-page > .print-sheet").first().innerText();
     };
     const icerikEksigi = (metin) => Object.entries(CIKTI_METINLERI).filter(([, v]) => !metin.includes(v)).map(([k]) => k);
     const sonuc = {};
@@ -792,6 +794,13 @@ try {
     beklenen(g.panelUst >= g.baslikAlt && g.kontroller && g.kapat, `1280 çekmece: ${JSON.stringify(g)}`);
     await goruntu(d.s, "s14-cekmece-1280");
     await d.c.close();
+    // 1472: AI paneli açılınca belge kaymaz, editör başlığı görünür kalır. (Karşılaştırma 08'de görülen 159 px
+    // kayma odaktan değil, çalışmanın geri yüklenen okuma konumundandı; temiz açılışta kayma olmamalı.)
+    const ai = await oturum(A, { genislik: 1472, yukseklik: 921 });
+    await editorAc(ai.s, "?sag=ai"); await ai.s.waitForTimeout(1500);
+    const a = await ai.s.evaluate(() => ({ kayma: Math.round(document.scrollingElement.scrollTop), baslikUst: Math.round(document.querySelector(".yazma-basligi").getBoundingClientRect().top), panelUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top) }));
+    beklenen(a.kayma === 0 && a.baslikUst > 0 && a.panelUst >= 0, `1472 AI açılışı: ${JSON.stringify(a)}`);
+    await ai.c.close();
     // Telefon: PDF alt çubuğun üstünde biter; alt çubuk görünür ve tıklanır; pasaj yokken sığdır + yakınlaştırma çalışır.
     const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
     await editorAc(m.s, "?sag=pdf");
@@ -810,7 +819,7 @@ try {
     beklenen(Number(yakin) > Number(t.olcek), `yakınlaştırma: ${t.olcek}% → ${yakin}%`);
     await goruntu(m.s, "s14-telefon-pdf");
     await m.c.close();
-    return { ayrinti: `koyu zemin lum ${zemin.map((z) => z.lum.toFixed(2)).join("/")}; 1280 panel üstü ${g.panelUst} ≥ başlık altı ${g.baslikAlt}; telefon panel altı ${t.panelAlt} ≤ alt çubuk ${t.altUst}, ölçek ${t.olcek}%→${yakin}% (pasajlı odak S15)` };
+    return { ayrinti: `koyu zemin lum ${zemin.map((z) => z.lum.toFixed(2)).join("/")}; 1280 panel üstü ${g.panelUst} ≥ başlık altı ${g.baslikAlt}; 1472 AI açılışı kayma ${a.kayma}, başlık üstü ${a.baslikUst}; telefon panel altı ${t.panelAlt} ≤ alt çubuk ${t.altUst}, ölçek ${t.olcek}%→${yakin}% (pasajlı odak S15)` };
   });
 
   /* ---------- S15 ---------- */
