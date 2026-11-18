@@ -1863,6 +1863,14 @@
 .sol-arama-govde .pencere-kart { padding: 0; border: 0; background: transparent; box-shadow: none; }
 .sol-arama-govde .pencere-kart-baslik { font-size: var(--fs-body); }
 .sol-arama-govde .bulgu-satiri { flex-direction: column; align-items: stretch; }
+/*
+  Ortak kuraldaki "flex: 1 1 320px" yatay satır için (components.css): dar
+  araçta satır DİKEY olunca 320 px'lik esas boyut YÜKSEKLİĞE dönüşüyor,
+  başlıkla yazar satırı arasında boşluk açılıyor ve rozetler iri dairelere
+  uzuyordu (kayıtlı dizin yanıtlarıyla ilk kez görüldü, 18.11.2026; canlı
+  dizine ulaşılamayan yerel ortamda sonuç listesi hiç çizilmiyordu).
+*/
+.sol-arama-govde .bulgu-govde { flex: 0 0 auto; }
 .sol-arama-govde .bulgu-eylemler { justify-content: flex-start; }
 /*
   Sabit kâğıt geçici rayla birlikte: kenar çubuğu daraltıldığında yerleşimi

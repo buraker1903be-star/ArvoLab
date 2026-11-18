@@ -282,9 +282,9 @@ for (const [ad, proto, tur] of sahneler) {
   else if (tur === "tel") await ciz(`<div style="width:${w}px;height:${h}px;position:relative;background:#f4f5f7"><img src="${veri(`${CIKTI}/ham/${ad}.png`)}" style="position:absolute;left:576px;top:1px;width:320px;height:692px;border-radius:18px;outline:1px solid #d6d9de"></div>`, w, h, uyg);
   else await ciz(`<div style="width:${w}px;height:${h}px;position:relative;background:#fff"><img src="${veri(`${CIKTI}/ham/04a.png`)}" style="position:absolute;left:0;top:0;width:728px;height:455px;outline:1px solid #d6d9de"><img src="${veri(`${CIKTI}/ham/04b.png`)}" style="position:absolute;left:744px;top:0;width:728px;height:455px;outline:1px solid #d6d9de"></div>`, w, h, uyg);
   const etiket = (t) => `<div style="height:36px;line-height:36px;padding:0 12px;font-weight:600;color:#1b2430;background:#e6e9ee">${t}</div>`;
-  await ciz(`${etiket(`Prototip · ${proto}`)}<img src="${veri(pr)}" style="display:block">${etiket(`Uygulama · ${HEAD} · BUILD_ID ${BUILD_ID} · aynı boyut ${w}×${h}`)}<img src="${veri(uyg)}" style="display:block">`, w, 2 * h + 72, `${CIKTI}/${ad}.png`);
+  await ciz(`${etiket(`Prototip · ${proto}`)}<img src="${veri(pr)}" style="display:block">${etiket(`Uygulama · ${HEAD} · BUILD_ID ${BUILD_ID} · aynı boyut ${w}×${h}${/06$/.test(ad) && process.env.KAYITLI_DIZIN_KAYDI ? " · sonuçlar SENTETİK kayıtlı yanıt, gerçek dizin değil" : ""}`)}<img src="${veri(uyg)}" style="display:block">`, w, 2 * h + 72, `${CIKTI}/${ad}.png`);
   console.log("karşılaştırma", ad, `${w}×${h}`);
 }
-fs.writeFileSync(`${CIKTI}/derleme.json`, JSON.stringify({ gitHead: HEAD, buildId: BUILD_ID, tarih: new Date().toISOString(), sayfaHatalari: [...new Set(hatalar)] }, null, 2));
+fs.writeFileSync(`${CIKTI}/derleme.json`, JSON.stringify({ gitHead: HEAD, buildId: BUILD_ID, tarih: new Date().toISOString(), sayfaHatalari: [...new Set(hatalar)], makaleBulKaynagi: process.env.KAYITLI_DIZIN_KAYDI ? "sentetik kayıtlı yanıt (scripts/yerel-yigin/kayitli-yanitlar), gerçek dizin değil" : "canlı dizin (bu ortamda ağ yok)" }, null, 2));
 if (hatalar.length) console.log("SAYFA HATALARI:", [...new Set(hatalar)].join("\n"));
 await b.close();

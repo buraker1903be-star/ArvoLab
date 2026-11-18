@@ -994,11 +994,15 @@ try {
       const tasan = satirlar.filter((x) => { const d = x.getBoundingClientRect(); return d.left < r.left - 1 || d.right > r.right + 1; }).length;
       const dugmeler = satirlar.map((x) => x.querySelector(".bulgu-eylemler button, .bulgu-eylemler .status-pill")).filter(Boolean);
       const gorunmeyen = dugmeler.filter((d) => { const b = d.getBoundingClientRect(); return b.width < 1 || b.left < r.left - 1 || b.right > r.right + 1; }).length;
-      return { sayi: satirlar.length, metin: a.innerText, tasan, gorunmeyen, yatay: a.querySelector(".os-sol-alan-yuva")?.scrollWidth > a.querySelector(".os-sol-alan-yuva")?.clientWidth + 1 };
+      // Satır içeriğine göre boylanır: başlık + yazar + rozet + düğme 260 px'i geçmez; rozet bir satır yüksekliğinde.
+      const enUzun = Math.max(...satirlar.map((x) => x.getBoundingClientRect().height));
+      const rozet = Math.max(0, ...satirlar.flatMap((x) => Array.from(x.querySelectorAll(".pill-row .status-pill")).map((p) => p.getBoundingClientRect().height)));
+      return { sayi: satirlar.length, metin: a.innerText, tasan, gorunmeyen, enUzun: Math.round(enUzun), rozet: Math.round(rozet), yatay: a.querySelector(".os-sol-alan-yuva")?.scrollWidth > a.querySelector(".os-sol-alan-yuva")?.clientWidth + 1 };
     });
     beklenen(l.sayi === 4 && /4 kayıt/.test(l.metin), `sonuç sayısı: ${l.sayi}`);
     beklenen(/Peer support and loneliness/.test(l.metin) && /Synthetic Education Council/.test(l.metin) && /Nakamura, K\., Ak, E\., Şahin, C\. vd\./.test(l.metin), "sonuç satırları beklenen içerikte değil");
     beklenen(l.tasan === 0 && l.gorunmeyen === 0 && !l.yatay, `yerleşim taşması: ${JSON.stringify({ tasan: l.tasan, gorunmeyen: l.gorunmeyen, yatay: l.yatay })}`);
+    beklenen(l.enUzun <= 260 && l.rozet <= 32, `satır boyu: en uzun ${l.enUzun}px, rozet ${l.rozet}px`);
     await goruntu(s, "s17-makale-bul-kayitli");
     const hedef = await alan.locator("select").first().inputValue().catch(() => "");
     beklenen(hedef === ESKI, `eklenecek çalışma bu çalışma değil: ${hedef}`);
@@ -1012,7 +1016,7 @@ try {
     beklenen(await alan.locator(".bulgu-satiri", { hasText: "Peer support and loneliness" }).getByRole("button", { name: /Listeme ekle/ }).count() === 0, "yeniden aramada eklenen kayıt yine eklenebilir görünüyor");
     beklenen(say() === 1, "kayıt iki kez eklendi");
     await c.close();
-    return { ayrinti: `SENTETİK kayıtlı yanıt (gerçek dizin değil): OpenAlex 3 + Crossref 2 → 4 satır (aynı DOI birleşti), taşma yok; Listeme ekle bu çalışmaya 1 kayıt yazdı, yeniden aramada "Listenizde"` };
+    return { ayrinti: `SENTETİK kayıtlı yanıt (gerçek dizin değil): OpenAlex 3 + Crossref 2 → 4 satır (aynı DOI birleşti), taşma yok, en uzun satır ${l.enUzun}px; Listeme ekle bu çalışmaya 1 kayıt yazdı, yeniden aramada "Listenizde"` };
   });
 
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
