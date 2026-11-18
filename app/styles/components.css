@@ -96,17 +96,20 @@
     border-color .2s ease,
     color .2s ease;
 }
+/*
+  Birincil düğme DÜZ lacivert (premium çalışma alanı, 17.11.2026; onaylı
+  tasarım ve girişteki birincil düğmeyle aynı: --os5-dugme-birincil).
+  Eskiden iki tonlu gradyan, iç parlama ve 16 px'lik bir gölgesi vardı;
+  düz yüzeylerin arasında "kabarık" duruyordu.
+*/
 .projects-primary-button {
   border: 1px solid transparent;
-  background: linear-gradient(180deg, var(--brand-600), var(--brand-800));
-  color: var(--on-brand);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--n-0) 12%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--primary-ink) 26%, transparent),
-    0 6px 16px color-mix(in srgb, var(--brand-900) 18%, transparent);
+  background: var(--os5-dugme-birincil);
+  color: var(--os5-dugme-birincil-yazi);
+  box-shadow: none;
 }
-html[data-theme="dark"] .projects-primary-button {
-  background: linear-gradient(180deg, var(--brand-500), var(--brand-700));
+@media (hover: hover) and (pointer: fine) {
+  .projects-primary-button:hover:not(:disabled) { background: var(--os5-dugme-birincil-hover); }
 }
 .projects-filter-button {
   border: 1px solid var(--line);
@@ -127,12 +130,6 @@ html[data-theme="dark"] .projects-primary-button {
   color: var(--success);
 }
 @media (hover: hover) and (pointer: fine) {
-  .projects-primary-button:hover {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--n-0) 12%, transparent),
-      0 0 0 1px color-mix(in srgb, var(--primary-ink) 55%, transparent),
-      0 12px 26px color-mix(in srgb, var(--brand-900) 24%, transparent);
-  }
   .projects-filter-button:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); color: var(--primary-ink); }
   .button-danger:hover { border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 }
@@ -2056,11 +2053,31 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .makale-kontrol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .makale-plan { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .makale-plan li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-sm); }
-/* Çalışma sayfalarının sekme sırası: başlığın hemen altında, her sayfada aynı yerde. */
-.calisma-sekmeleri { margin: 4px 0 18px; }
-/* Dokunma hedefi 44 px (Phase 5.1c): sekmeler yazım ekranına da geldi ve
+/*
+  Çalışma sayfalarının sekme sırası: başlığın hemen altında, her sayfada
+  aynı yerde. Premium çalışma alanı (17.11.2026): kutulu "segmented"
+  görünüm yerine ince alt çizgili sekme sırası — onaylı tasarımın düz
+  yüzey dili. Etkin sekme lacivert alt çizgi ve kalın yazıyla (renk tek
+  başına taşımasın). Dar ekranda sıra yatay kayar, kırılmaz.
+*/
+.calisma-sekmeleri {
+  display: flex; align-items: stretch; gap: 4px; max-width: 100%;
+  margin: 0 0 20px; overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+}
+.calisma-sekmeleri::-webkit-scrollbar { display: none; }
+/* Dokunma hedefi 44 px (Phase 5.1c): sekmeler yazım ekranında da var ve
    orada 40 px'ten küçük hedef kalmamalı (scripts/onizleme/kabul.mjs). */
-.calisma-sekmeleri > a { min-height: 44px; }
+.calisma-sekmeleri > a {
+  display: inline-flex; flex: none; align-items: center; min-height: 44px; padding: 0 12px;
+  margin-bottom: -1px; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: var(--os5-fs-govde); font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.calisma-sekmeleri > a:hover { color: var(--ink); }
+.calisma-sekmeleri > a[aria-current="page"] { border-bottom-color: var(--primary-ink); color: var(--ink); font-weight: 600; }
+.calisma-sekmeleri > a:focus-visible { outline: none; box-shadow: inset var(--os5-odak-halka); border-radius: var(--os5-kontrol-r); }
+.calisma-sekmeleri-ayrac { flex: none; align-self: center; width: 1px; height: 20px; margin: 0 6px; background: var(--line); }
+.calisma-sekmeleri > a.calisma-sekmeleri-arac { font-size: var(--os5-fs-meta); }
 .calisma-karolari { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--kart-araligi); }
 
 /* Çalışma kartının "⋯" menüsü: ayda bir yapılan işler (düzenle, belge, sil). */

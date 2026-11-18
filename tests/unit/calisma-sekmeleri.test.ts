@@ -68,3 +68,19 @@ describe("sayfaların bildirdiği etkin sekme, adresin etkinlik kuralıyla aynı
     });
   }
 });
+
+describe("çalışma özeti: sekmeler öğrenci ve personel düzeninde", () => {
+  /*
+    Telefonda yazım ekranı sekmeleri gizliyor ve geri düğmesi çalışma
+    özetine götürüyor. İlk turda (17.11.2026) sekmeler yalnızca öğrenci
+    düzenindeydi; personel telefonda yazım ekranından Kanıt matrisi ve
+    Etik kurula ulaşamıyordu.
+  */
+  test("editor/page.tsx iki düzende de seçili çalışmanın sekmelerini çizer", () => {
+    const kaynak = fs.readFileSync(path.join(process.cwd(), "app/dashboard/editor/page.tsx"), "utf8");
+    const cagrilar = kaynak.match(/<CalismaSekmeleri calisma=\{secili\} aktif="merkez" \/>/g) ?? [];
+    assert.equal(cagrilar.length, 2);
+    const personel = kaynak.slice(kaynak.indexOf("PERSONEL DÜZENİ"));
+    assert.match(personel, /<CalismaSekmeleri calisma=\{secili\} aktif="merkez" \/>/);
+  });
+});

@@ -85,15 +85,20 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
     // Açık hâlde gizli olan alt liste ("Daha fazla"yı taşır) dar hâlde görünür (Phase 5.1d-3).
     kural("\\.os-gezinme-son", /display: flex/);
     assert.doesNotMatch(masaustu, /os-gezinme-diger/);
-    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-baglam,/);
+    // 17.11.2026: çalışma alt menüsü kalktı. Rayda gruplar ve alt bölge çizilmez; sayfaları
+    // "Daha fazla"da. Simge olarak dursalar kısa ekranda "Daha fazla"yı ekranın dışına itiyorlardı.
+    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-takim,\s*html\[data-gezinme="dar"\] \.os-gezinme-alt-bolge \{ display: none; \}/);
   });
 
-  test("çalışma sekmeleri dar hâlde görünür", () => {
-    kural("\\.calisma-sekmeleri", /display: inline-flex/);
+  // 17.11.2026: sekmeler her ekran boyunda görünür; dar hâle özel kural gerekmiyor (gizleyen kural da yok).
+  test("çalışma sekmelerini gizleyen bir kabuk kuralı yok", () => {
+    assert.doesNotMatch(kabuk, /\.calisma-sekmeleri \{ display: none/);
   });
 
   test("kâğıt geometrisi sabit: yazım düzeni açık kenar çubuğundaki genişliğinde kalır", () => {
     kural("\\.manuscript-layout", /max-width: calc\(100% - \(var\(--os5-kenar-genis\) - var\(--os5-kenar-ray\)\)\)/);
+    // Flex kapta otomatik kenar boşluğu esnemeyi kapatır; genişlik açıkça verilmezse düzen içeriğe göre daralır.
+    kural("\\.manuscript-layout", /width: 100%/);
   });
 
   test("geçiş süresi token'dan; azaltılmış harekette kapalı", () => {
@@ -114,7 +119,8 @@ describe("yazım sayfasında çalışma sekmeleri", () => {
 
   test("tür kuralı tek yerde: Makale sekmesi yalnızca makale türünde", () => {
     // 5.1d-4: kural lib'de (calismaBaglantilari); sekmeler listeyi oradan okur.
-    assert.match(calismaSekmeleri, /calismaBolumleri\(\{ id: calisma\.id, baslik: calisma\.title \?\? "", tur: calisma\.project_type \}, t\)/);
+    assert.match(calismaSekmeleri, /const baglam = \{ id: calisma\.id, baslik: calisma\.title \?\? "", tur: calisma\.project_type \};/);
+    assert.match(calismaSekmeleri, /calismaBolumleri\(baglam, t\)/);
     assert.doesNotMatch(calismaSekmeleri, /"article"/);
     assert.match(oku("lib/os/uygulamalar.ts"), /calisma\.tur === "article"/);
   });

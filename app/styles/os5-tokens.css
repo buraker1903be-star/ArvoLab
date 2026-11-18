@@ -61,7 +61,8 @@
 
   /* Radius */
   --os5-r-kart-secim: 10px;
-  --os5-r-kart: 16px;
+  /* 17.11.2026: 16 → 8 px (premium çalışma alanı, onaylı tasarım: düz yüzey, kısa köşe). */
+  --os5-r-kart: 8px;
   --os5-r-rozet: 999px;
 
   /* Kimlik ekranları (Phase 2): sol marka alanı ve sağ form alanı. */

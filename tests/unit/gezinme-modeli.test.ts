@@ -6,6 +6,8 @@ import { ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import {
   anaUygulamalar,
+  aracUygulamalari,
+  yardimUygulamalari,
   dahaFazlasi,
   gorunenUygulamalar,
   hesapUygulamalari,
@@ -101,9 +103,17 @@ describe("Ctrl+K gezinme hedefleri tekil", () => {
 });
 
 describe("hesap menüsü sınıflandırması (yer)", () => {
-  test("hesap: Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi — her rolde aynı", () => {
+  // 17.11.2026: Kullanım Kılavuzu hesap menüsünden kenar çubuğunun "Yardım" grubuna geçti.
+  test("hesap: Ayarlar, Abonelik ve Kredi — her rolde aynı", () => {
     for (const rol of ["client", "employee", "system_admin", undefined]) {
-      assert.deepEqual(hesapUygulamalari(gorunen(rol)).map((u) => u.key), ["ayarlar", "yardim", "abonelik"], String(rol));
+      assert.deepEqual(hesapUygulamalari(gorunen(rol)).map((u) => u.key), ["ayarlar", "abonelik"], String(rol));
+    }
+  });
+
+  test("premium çalışma alanı: Araçlar ve Yardım grupları her rolde aynı", () => {
+    for (const rol of ["client", "employee", "system_admin", undefined]) {
+      assert.deepEqual(aracUygulamalari(gorunen(rol)).map((u) => u.key), ["analiz", "belge"], String(rol));
+      assert.deepEqual(yardimUygulamalari(gorunen(rol)).map((u) => u.key), ["destek", "yardim"], String(rol));
     }
   });
 
@@ -134,15 +144,16 @@ describe("hesap menüsü sınıflandırması (yer)", () => {
     assert.deepEqual(anahtar("system_admin"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik", "asistan", "ekip"]);
   });
 
-  test("5.1d-3: ana gezinmede yalnızca akademik uygulamalar; Ayarlar ve personel araçları yok", () => {
+  // 17.11.2026 (onaylı tasarım): ana gezinmede üç öğe. Eskiden altıydı (Analiz, Belge Kontrol, Destek de).
+  test("ana gezinmede yalnızca Ana Sayfa, Çalışmalarım, Kaynaklar", () => {
     for (const rol of ["client", "employee", "system_admin"]) {
-      assert.deepEqual(anaUygulamalar(gorunen(rol)).map((u) => u.key), ["home", "tez", "kaynaklar", "analiz", "belge", "destek"], rol);
+      assert.deepEqual(anaUygulamalar(gorunen(rol)).map((u) => u.key), ["home", "tez", "kaynaklar"], rol);
     }
   });
 
-  test("5.1d-3: Daha fazla hesap sayfalarını korur, personel araçlarını göstermez", () => {
+  test("Daha fazla (telefon/ray) araçları, yardımı ve hesap sayfalarını korur; personel araçlarını göstermez", () => {
     for (const rol of ["client", "employee", "system_admin"]) {
-      assert.deepEqual(dahaFazlasi(gorunen(rol)).map((u) => u.key), ["belge", "destek", "ayarlar", "yardim", "abonelik"], rol);
+      assert.deepEqual(dahaFazlasi(gorunen(rol)).map((u) => u.key), ["analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"], rol);
     }
   });
 });

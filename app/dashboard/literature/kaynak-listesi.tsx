@@ -92,7 +92,13 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
       <div className="kaynak-suzgec">
         <label className="kaynak-arama">
           <Search size={14} aria-hidden="true" />
-          <input type="search" placeholder={t({ tr: "Başlık, yazar, dergi, yayınevi ya da DOI ara", en: "Search by title, author, journal, publisher or DOI" })} value={arama} onChange={(e) => setArama(e.target.value)} aria-label={t({ tr: "Kaynaklarda ara", en: "Search sources" })} />
+          {/*
+            Yer tutucu kısa (18.11.2026): "Search by title, author, journal, publisher or DOI"
+            390 px'te, Türkçesi de 320 px'te (iPhone SE) kesiliyordu. Arama yayınevi ve
+            yılda da eşleşir (yukarıda); yer tutucu yalnızca örnek. "Ara" anlamını kutunun
+            adı (aria-label) ve büyüteç taşıyor.
+          */}
+          <input type="search" placeholder={t({ tr: "Başlık, yazar, dergi ya da DOI", en: "Title, author, journal or DOI" })} value={arama} onChange={(e) => setArama(e.target.value)} aria-label={t({ tr: "Kaynaklarda ara", en: "Search sources" })} />
         </label>
         <div className="cluster" role="group" aria-label={t({ tr: "Duruma göre süz", en: "Filter by status" })}>
           {SUZGECLER.filter((s) => s.kod !== "eksik" || sayilar.eksik).map((s) => (

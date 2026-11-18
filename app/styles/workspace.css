@@ -1577,3 +1577,94 @@
   }
   .kaynak-pdf-alt { max-height: 50%; }
 }
+
+/* ============================================================
+   PREMIUM ÇALIŞMA ALANI — YAZIM STÜDYOSU (17.11.2026, onaylı tasarım)
+
+   Kompakt kılavuz bilgisi: eskiden "Bu çalışmaya bağlı kılavuz yok"
+   iki satır açıklama + iki büyük düğmeyle ~150 px'lik bir kutuydu ve
+   telefonda belge metnini ilk ekranın altına itiyordu. Şimdi tek satır;
+   bağlantılar yine klavyeyle ulaşılır, dokunma hedefi 44 px (telefonda).
+   ============================================================ */
+.kilavuz-satiri {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+  margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2); color: var(--muted); font-size: var(--os5-fs-meta);
+}
+.kilavuz-satiri > svg { flex: none; color: var(--ink-soft); }
+.kilavuz-satiri a {
+  display: inline-flex; align-items: center; min-height: 28px;
+  color: var(--primary-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; border-radius: var(--os5-kontrol-r);
+}
+.kilavuz-satiri a:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+
+/*
+  TELEFON (390×664): belge metni ilk ekranda görünmeli (onaylı tasarım).
+  Eskiden başlık, eylemler, sekmeler, araç çubuğu, kayıt şeridi ve kılavuz
+  kutusu alt alta ~560 px tutuyor, metin ilk ekranın altında kalıyordu.
+  Şimdi: başlık ve eylemler TEK satır (eylemler yalnızca simge, adları
+  aria-label'da), çalışma sekmeleri bu ekranda gizli (geri düğmesi
+  çalışma özetine götürür, sekmeler orada), kayıt şeridi ince.
+  Editörün işlevleri, belge biçimi ve dışa aktarma değişmez.
+*/
+@media (max-width: 760px) {
+  .yazma-basligi { flex-wrap: nowrap; align-items: center; gap: var(--s-2); margin-bottom: 8px; }
+  .yazma-basligi > div:first-child { flex: 1 1 0; min-width: 0; }
+  .yazma-basligi h1 { font-size: var(--os5-fs-govde); font-family: var(--os5-font-govde); font-weight: 600; }
+  .yazma-basligi .yazma-eylemleri { width: auto; flex: none; gap: 4px; }
+  .yazma-basligi .yazma-eylemleri > :last-child { margin-left: 0; }
+  .yazma-eylemleri .yazma-etiket-kisa { display: none; }
+  .dashboard-page:has(.manuscript-layout) > .calisma-sekmeleri { display: none; }
+  .manuscript-ust { min-height: 0; padding-block: 2px; }
+  .kilavuz-satiri a { min-height: 44px; }
+}
+
+/*
+  İNCE ARAÇ ÇUBUĞU (premium çalışma alanı, 17.11.2026). 1440 px'te çubuk
+  1457 px'lik içeriği 1134 px'e sığdıramıyor, sağdaki "Kontroller" ve
+  "Atıf" kaydırmadan görünmüyordu. Orta genişlikte (≤1640, açık kenar
+  çubuğuyla 1440 dahil): yazı seçicileri daralır; "Paragraf" ve "Ekle"
+  menüleri yalnızca simge olur (adları düğmenin aria-label'ında ve
+  title'ında — arac-menusu.tsx); grup araları sıkılaşır. Görünür adla
+  kalanlar: Asistan ve Kontroller. Hiçbir düğme kaldırılmadı.
+*/
+@media (min-width: 761px) and (max-width: 1640px) {
+  .arac-grup-yazi .toolbar-select { max-width: 104px; }
+  .arac-grup-yazi .toolbar-select + .toolbar-select { max-width: 64px; }
+  .manuscript-araclar .arac-grup:not(.arac-grup-asistan):not(.arac-grup-son) .arac-menu-dugme .arac-metin,
+  .manuscript-araclar .arac-grup:not(.arac-grup-asistan):not(.arac-grup-son) .arac-menu-dugme .arac-menu-ok { display: none; }
+  .arac-grup { padding: 0 4px; }
+}
+/*
+  Daha dar ekranda (tablet, 1280 px masaüstü) içerik tek satıra sığmıyor:
+  çubuk iki satıra sarar, hiçbir düğme kaydırmanın arkasında kalmaz.
+  Telefonda (≤760) yana kayan tek satır kararı yerinde (yukarıda).
+*/
+@media (min-width: 761px) and (max-width: 1439px) {
+  .manuscript-araclar { flex-wrap: wrap; row-gap: 4px; overflow-x: visible; }
+  .arac-grup + .arac-grup { border-left-color: transparent; }
+}
+
+/*
+  SADE ÜST BÖLÜM VE TELEFON (ikinci tur, 17.11.2026).
+  Kayıt durumu başlığın yanında (manuscript-editor.tsx portalı). Telefonda
+  yalnızca durum noktası kalır; metni ekran okuyucuya ve title'a açık
+  (font-size 0 erişilebilirlik ağacından düşürmez). Hata ve çakışma her
+  ekranda yazıyla görünür: kullanıcı onları kaçırmamalı.
+  Kılavuz satırı telefonda kısa yazımla tek satır; belgenin üstündeki
+  ekran boşluğu 40 → 16 px (yalnızca ekranda; yazdırma/PDF/Word düzeni
+  print.css ve dışa aktarma kodunda, değişmedi).
+*/
+.yazma-kayit { min-height: var(--os5-kontrol-h); }
+.kilavuz-kisa { display: none; }
+/* Dokunmatikte kılavuz bağlantıları 44 px hedef (kabul.mjs: tablette 28 px'ti). */
+@media (max-width: 1199px), (pointer: coarse) {
+  .kilavuz-satiri a { min-height: 44px; min-width: 44px; justify-content: center; }
+}
+@media (max-width: 760px) {
+  .yazma-eylemleri .yazma-kayit:not([data-state="error"]):not([data-state="conflict"]) { gap: 0; padding: 0; font-size: 0; justify-content: center; }
+  .kilavuz-satiri { flex-wrap: nowrap; padding-block: 4px; white-space: nowrap; }
+  .kilavuz-satiri .kilavuz-uzun { display: none; }
+  .kilavuz-satiri .kilavuz-kisa { display: inline; }
+  .manuscript-editor-content { padding-top: 16px; }
+}

@@ -156,7 +156,8 @@ for (const [w, h] of [[1366, 768], [1440, 900]]) for (const tema of ["light", "d
     const pencere = sayfa.locator("dialog.os-daha[open]");
     await pencere.waitFor({ state: "visible", timeout: 5000 });
     const metin = await pencere.innerText();
-    bekle(/Kullanım Kılavuzu/.test(metin) && /Abonelik/.test(metin), `Daha fazla içeriği: ${metin.slice(0, 160)}`);
+    // 17.11.2026: rayda gruplar yok; Araçlar ve Yardım'ın sayfaları da burada.
+    for (const ad of ["Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik"]) bekle(metin.includes(ad), `Daha fazla'da yok: ${ad} (${metin.slice(0, 160)})`);
     await sayfa.keyboard.press("Escape");
     await ctx.close();
   });
@@ -165,7 +166,8 @@ for (const [w, h] of [[1366, 768], [1440, 900]]) for (const tema of ["light", "d
     const { ctx, sayfa } = await baglam({ w, h, tema, dar: "1" });
     await git(sayfa, "/dashboard");
     const ilk = await etiketDenetimi(sayfa, 0);
-    bekle(!ilk.yok && ilk.toplam >= 6, `öğe sayısı ${ilk.toplam}`);
+    // 17.11.2026: rayda üç ana uygulama + Daha fazla (Araçlar ve Yardım gruplarının sayfaları Daha fazla'da).
+    bekle(!ilk.yok && ilk.toplam >= 4, `öğe sayısı ${ilk.toplam}`);
     for (let i = 0; i < ilk.toplam; i++) {
       const oge = sayfa.locator("nav.os-gezinme .os-gezinme-oge:visible").nth(i);
       await oge.hover();
@@ -225,21 +227,25 @@ await senaryo("geri genişletme: 240 px'e döner, odak düğmede, tercih \"0\"",
   await ctx.close();
 });
 
-await senaryo("çalışma sekmeleri: dar hâlde yazım, kanıt, etik ve (makalede) makale sayfasında görünür; açık hâlde gizli", async () => {
+/*
+  17.11.2026: sekmeler her iki hâlde de görünür; kenar çubuğunda çalışma
+  alt menüsü yok. Eskiden açık hâlde gizli olmaları bekleniyordu. Ad,
+  sıra, tek etkin sekme ve Makale kuralı iki hâlde de denetlenir.
+*/
+await senaryo("çalışma sekmeleri: açık ve dar hâlde yazım, kanıt, etik ve (makalede) makale sayfasında görünür, tek etkin sekme", async () => {
   for (const dar of ["1", undefined]) {
     const { ctx, sayfa } = await baglam({ w: 1366, h: 768, dar });
     for (const [yol, aktif, makaleVar] of [[`/dashboard/editor/${TEZ}/write`, "Yazım", false], [`/dashboard/editor/${TEZ}/kanit`, "Kanıt matrisi", false], [`/dashboard/editor/${TEZ}/etik`, "Etik kurul", false], [`/dashboard/editor/${MAKALE}/makale`, "Makale", true]]) {
       await git(sayfa, yol);
       const o = await olcu(sayfa);
-      if (dar) {
-        bekle(o.sekmeler, `${yol}: dar hâlde sekmeler görünmüyor`);
-        const s = await sayfa.evaluate(() => [...document.querySelectorAll(".calisma-sekmeleri a")].map((a) => [a.textContent.trim(), a.getAttribute("aria-current") ?? ""]));
-        bekle(s.some(([m, c]) => m === aktif && c === "page"), `${yol}: etkin sekme yok ${JSON.stringify(s)}`);
-        bekle(s.some(([m]) => m === "Makale") === makaleVar, `${yol}: Makale sekmesi tür kuralına uymuyor`);
-        bekle(o.tasma <= 0, `${yol}: yatay taşma ${o.tasma}`);
-      } else {
-        bekle(!o.sekmeler, `${yol}: açık masaüstünde sekmeler görünmemeli (kenar çubuğunda)`);
-      }
+      const hal = dar ? "dar" : "açık";
+      bekle(o.sekmeler, `${yol}: ${hal} hâlde sekmeler görünmüyor`);
+      const s = await sayfa.evaluate(() => [...document.querySelectorAll(".calisma-sekmeleri a")].map((a) => [a.textContent.trim(), a.getAttribute("aria-current") ?? ""]));
+      bekle(s.filter(([, c]) => c === "page").length === 1, `${yol}: ${hal} hâlde etkin sekme sayısı 1 değil ${JSON.stringify(s)}`);
+      bekle(s.some(([m, c]) => m === aktif && c === "page"), `${yol}: etkin sekme yok ${JSON.stringify(s)}`);
+      bekle(s.some(([m]) => m === "Makale") === makaleVar, `${yol}: Makale sekmesi tür kuralına uymuyor`);
+      bekle(o.tasma <= 0, `${yol}: yatay taşma ${o.tasma}`);
+      bekle(!(await sayfa.locator(".os-gezinme-baglam, .os-gezinme-ac").count()), `${yol}: kenar çubuğunda çalışma alt menüsü olmamalı`);
     }
     await ctx.close();
   }

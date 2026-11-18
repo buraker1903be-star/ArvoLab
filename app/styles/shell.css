@@ -37,10 +37,9 @@
   gap: 16px;
   min-height: var(--topbar-height);
   padding: 10px 32px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  /* Düz yüzey, ince çizgi (premium çalışma alanı, 17.11.2026): eskiden buzlu cam (saydam zemin + bulanıklık) idi; onaylı tasarımda üst çubuk sayfa yüzeyiyle aynı düz renk. */
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 /*
   Marka + açık sayfa (Signature OS 5 / Phase 3). Resmî logo (ArvoLabLogosu)
@@ -56,11 +55,12 @@
 .dashboard-icon-button {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: var(--os5-kontrol-h);
+  height: var(--os5-kontrol-h);
   flex: none;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  /* 11 → 4 px (premium çalışma alanı): girişteki kontrol köşesiyle aynı aile. */
+  border-radius: var(--os5-kontrol-r);
   background: var(--surface);
   color: var(--ink-soft);
   cursor: pointer;
@@ -199,18 +199,7 @@
   .dashboard-header {
     min-height: calc(56px + env(safe-area-inset-top));
     padding: calc(8px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
-    border-bottom-color: transparent;
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    -webkit-backdrop-filter: saturate(170%) blur(16px);
-    backdrop-filter: saturate(170%) blur(16px);
-  }
-  /* Kaydırınca iOS gibi çizgi ve cam belirginleşir (destekleyen tarayıcılarda) */
-  @supports (animation-timeline: scroll()) {
-    .dashboard-header { animation: header-edge linear both; animation-timeline: scroll(root block); animation-range: 0 56px; }
-    @keyframes header-edge {
-      from { border-bottom-color: transparent; background: color-mix(in srgb, var(--bg) 0%, transparent); }
-      to { border-bottom-color: color-mix(in srgb, var(--line) 80%, transparent); background: color-mix(in srgb, var(--surface) 80%, transparent); }
-    }
+    /* Telefonda da düz yüzey + ince çizgi (17.11.2026); eskiden kaydırmayla belirginleşen buzlu camdı. */
   }
   /*
     Telefonda logo biraz küçülür ve sayfa adı üst çubukta yazılmaz:
@@ -256,3 +245,38 @@
 }
 .onizleme-serit b { color: var(--primary-ink); }
 @media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }
+
+/* ============================================================
+   ÜST ÇUBUK DİL MENÜSÜ (premium çalışma alanı, 17.11.2026;
+   app/_components/dil-secici.tsx: UstDilSecici). Tema düğmesiyle aynı
+   boy ve köşe; menü tema menüsüyle aynı katman dili.
+   ============================================================ */
+.ust-dil { position: relative; }
+.ust-dil > summary {
+  display: inline-flex; align-items: center; gap: 6px; height: var(--os5-kontrol-h); padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); background: var(--surface);
+  color: var(--ink-soft); font-size: var(--os5-fs-meta); font-weight: 600; list-style: none; cursor: pointer;
+}
+.ust-dil > summary::-webkit-details-marker { display: none; }
+.ust-dil > summary:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); color: var(--primary-ink); }
+.ust-dil > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.ust-dil-menu {
+  position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: var(--z-menu);
+  display: grid; gap: 2px; min-width: 160px; padding: var(--s-1);
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface-raised); box-shadow: var(--os5-golge-katman);
+}
+.ust-dil-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: var(--os5-kontrol-h); padding: 0 var(--s-3);
+  border: 0; border-radius: var(--os5-kontrol-r); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--os5-fs-govde); text-align: left; cursor: pointer;
+}
+.ust-dil-menu button:hover { background: var(--surface-2); color: var(--ink); }
+.ust-dil-menu button[aria-pressed="true"] { color: var(--primary-ink); font-weight: 600; }
+.ust-dil-menu button:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .ust-dil > summary, .ust-dil-menu button { min-height: var(--os5-kontrol-h-dokunma); height: auto; }
+}
+/* Telefonda üst çubukta yer dar: dil hesap menüsünde ve Ayarlar'da zaten var. */
+@media (max-width: 760px) { .ust-dil { display: none; } }

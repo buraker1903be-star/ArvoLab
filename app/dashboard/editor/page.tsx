@@ -26,10 +26,11 @@ import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
-import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
 import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
+import CalismaSekmeleri from "./[id]/calisma-sekmeleri";
+import DanismanaGonder from "../_components/danismana-gonder";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -193,6 +194,47 @@ export default async function ProjectsPage({
     },
   );
   const secili = seciliId ? visible.find((project) => project.id === seciliId) ?? null : null;
+  /*
+    DANIŞMANIMA GÖNDER (premium çalışma alanı, 17.11.2026): bireysel
+    abonenin kartı ana sayfadan seçili çalışmanın özetine geldi; iş ve
+    sorgu aynı (son geçerli paylaşım bağlantısı, açılma sayısı). Kurumu
+    olan öğrencide çizilmez: danışmanı sistemde, yorumlar editörde.
+    Okunamazsa kart "henüz gönderilmedi" gibi davranır, sayfa düşmez.
+  */
+  const sonBaglantiYaniti =
+    secili && gorunum.bireysel
+      ? await (await createClient())
+          .from("manuscript_share_links")
+          .select("created_at, last_viewed_at, view_count, expires_at")
+          .eq("project_id", secili.id)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : null;
+  if (sonBaglantiYaniti?.error) console.error("[çalışmalarım] danışman bağlantısı okunamadı:", sonBaglantiYaniti.error.message);
+  const sonBaglanti = sonBaglantiYaniti?.data ?? null;
+  const sonGonderim = sonBaglanti
+    ? {
+        olusturuldu: sonBaglanti.created_at as string,
+        sonAcilis: (sonBaglanti.last_viewed_at as string | null) ?? null,
+        acilmaSayisi: Number(sonBaglanti.view_count ?? 0),
+        bitis: sonBaglanti.expires_at as string,
+      }
+    : null;
+  const once = (damga: string) => editedAgo(damga, simdi(), dil, saatDilimi);
+  const sonGonderimMetni = sonGonderim
+    ? sonGonderim.acilmaSayisi
+      ? t({
+          tr: `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu)}`,
+          en: `Your advisor opened it ${sonGonderim.acilmaSayisi} time${sonGonderim.acilmaSayisi === 1 ? "" : "s"} · last ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu)}`,
+        })
+      : t({
+          tr: `Bağlantı ${once(sonGonderim.olusturuldu)} gönderildi · henüz açılmadı`,
+          en: `Link sent ${once(sonGonderim.olusturuldu)} · not opened yet`,
+        })
+    : null;
 
   async function handleApprove(projectId: string) {
     "use server";
@@ -370,6 +412,14 @@ export default async function ProjectsPage({
             eylem={{ etiket: t({ tr: "Filtreyi temizle", en: "Clear filter" }), href: "/dashboard/editor" }}
           />
         ) : ogrenciDuzeni ? (
+          <>
+          {/*
+            Seçili çalışmanın sekmeleri (17.11.2026): Özet, Yazım, Kanıt matrisi,
+            Etik kurul ve o çalışmaya süzülü araçlar. Eskiden bu bağlantılar
+            kenar çubuğunun çalışma alt menüsündeydi; gezinme artık editörde de
+            sabit, bölümler her çalışma sayfasında aynı sekme sırasında.
+          */}
+          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
@@ -439,8 +489,13 @@ export default async function ProjectsPage({
                 );
               })()}
             </article>
-            {/* Seçili çalışma kenar çubuğuna bildirilir (Phase 3): o çalışmanın bölümleri orada açılır. */}
-            {secili ? <CalismaBaglamiYayinla id={secili.id} baslik={secili.title} tur={secili.project_type} /> : null}
+            {/*
+              Seçili çalışmanın sütunu: durum kartı ve (bireysel abonede)
+              Danışmanıma gönder alt alta, aynı ızgara hücresinde. Kart ızgarada
+              ayrı bir öğe olsaydı tek ekranlık düzende yeni bir satır açıp durum
+              kartının altını keserdi. Çalışma bağlamını sekmeler yayınlıyor.
+            */}
+            <div className="calisma-secili-sutun">
             {secili ? (
               <CalismaDurumKarti
                 key={secili.id}
@@ -454,7 +509,12 @@ export default async function ProjectsPage({
                 takvimAc={params.takvim === "1" && params.sec === secili.id}
               />
             ) : null}
+            {secili && gorunum.bireysel ? (
+              <DanismanaGonder projectId={secili.id} baslik={secili.title} sonGonderim={sonGonderim} sonGonderimMetni={sonGonderimMetni} />
+            ) : null}
+            </div>
           </section>
+          </>
         ) : (
           /*
             PERSONEL DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği).
@@ -462,7 +522,15 @@ export default async function ProjectsPage({
             menü) ve onlarca çalışmada sayfa kilometrelerce kayıyordu.
             Solda öğrenci adıyla liste ve küçük işaretler (yorum, tutarsızlık,
             onay), sağda seçili çalışmanın ayrıntısı ve denetim eylemleri.
+
+            Seçili çalışmanın sekmeleri personelde de (17.11.2026): telefonda
+            yazım ekranı sekmeleri gizliyor ve geri düğmesi buraya getiriyor.
+            İlk turda sekmeler yalnızca öğrenci düzenindeydi; personel telefonda
+            yazım ekranından Kanıt matrisi ve Etik kurula ulaşamıyordu
+            (gezinme-temizlik-kabul, system_admin).
           */
+          <>
+          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalar", en: "Works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
@@ -548,6 +616,7 @@ export default async function ProjectsPage({
               />
             ) : null}
           </section>
+          </>
         )}
         </>
       )}

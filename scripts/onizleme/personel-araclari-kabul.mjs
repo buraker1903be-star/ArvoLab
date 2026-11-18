@@ -8,6 +8,13 @@
   "Daha fazla"da da kalır. Personel araçları yalnızca rolüne açık olana,
   yalnızca hesap menüsünde.
 
+  17.11.2026 (premium çalışma alanı): kenar çubuğunda üç ana uygulama;
+  Analiz ve Belge Kontrol "Araçlar", Kullanım Kılavuzu ve Destek "Yardım"
+  grubunda, Ayarlar en altta. Rayda (dar, tablet) ve telefonda gruplar
+  yok, sayfaları "Daha fazla"da. Hesap menüsü: Ayarlar, Abonelik ve
+  Kredi, Destek. Personel kuralı değişmedi: yalnızca rolüne açık olana,
+  yalnızca hesap menüsünde; gruplarda ve "Daha fazla"da hiçbir zaman.
+
   Menüde görünmemek bir ERİŞİM yasağı değildir; bu betik görünürlüğü
   sınar, yetkiyi değil (sayfalar kendi sunucu kapısını uygular).
 
@@ -30,8 +37,9 @@ const PERSONEL = {
 }[ROL];
 if (!PERSONEL) throw new Error(`bilinmeyen rol: ${ROL}`);
 const PERSONEL_ADRESLERI = ["/dashboard/associate-professorship", "/dashboard/asistan", "/dashboard/team"];
-const HESAP = ["Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi", "Destek"];
-const DAHA = ["Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"];
+const HESAP = ["Ayarlar", "Abonelik ve Kredi", "Destek"];
+const DAHA = ["Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"];
+const ANA = ["/dashboard", "/dashboard/editor", "/dashboard/literature"];
 
 const sonuclar = [];
 async function senaryo(ad, govde) {
@@ -100,11 +108,22 @@ async function hesapMenusu(s) {
 }
 const etiketler = (l) => l.map(([e]) => e);
 
-await senaryo(`[${ROL}] 1366 açık: kenar çubuğunda yalnızca akademik uygulamalar; Diğer, Ayarlar, personel yok; boş ayraç yok`, async () => {
+await senaryo(`[${ROL}] 1366 açık: üç ana uygulama, Araçlar ve Yardım grupları, altta Ayarlar; Diğer ve personel yok; boş ayraç yok`, async () => {
   const { ctx, sayfa, hatalar } = await sayfaAc({ w: 1366, h: 800 });
-  const adresler = await gezinmeAdresleri(sayfa);
-  const beklenen = ["/dashboard", "/dashboard/editor", "/dashboard/literature", "/dashboard/analysis", "/dashboard/documents", "/dashboard/expert-requests"];
-  bekle(JSON.stringify(adresler) === JSON.stringify(beklenen), `kenar çubuğu: ${adresler.join(", ")}`);
+  // Gruplar Ana Sayfa'da kapalı başlar: görünen yalnızca ana öğeler ve Ayarlar.
+  let adresler = await gezinmeAdresleri(sayfa);
+  bekle(JSON.stringify(adresler) === JSON.stringify([...ANA, "/dashboard/settings"]), `kenar çubuğu (gruplar kapalı): ${adresler.join(", ")}`);
+  // Grupları klavyeyle aç: içerikleri ve sırası.
+  for (const ad of ["Araçlar", "Yardım"]) {
+    const bas = sayfa.locator("nav.os-gezinme .os-gezinme-takim-bas", { hasText: ad });
+    await bas.focus();
+    await sayfa.keyboard.press("Enter");
+    bekle((await bas.getAttribute("aria-expanded")) === "true", `${ad} Enter ile açılmadı`);
+  }
+  adresler = await gezinmeAdresleri(sayfa);
+  const beklenen = [...ANA, "/dashboard/analysis", "/dashboard/documents", "/dashboard/settings", "/dashboard/yardim", "/dashboard/expert-requests"];
+  bekle(JSON.stringify([...adresler].sort()) === JSON.stringify([...beklenen].sort()), `kenar çubuğu (gruplar açık): ${adresler.join(", ")}`);
+  bekle(!adresler.some((a) => PERSONEL_ADRESLERI.includes(a)), `kenar çubuğunda personel: ${adresler.join(", ")}`);
   const durum = await sayfa.evaluate(() => ({
     diger: document.querySelectorAll(".os-gezinme-grup, #os-gezinme-diger").length,
     son: document.querySelector(".os-gezinme-son")?.checkVisibility() ?? false,
@@ -120,17 +139,17 @@ for (const d of [
   { ad: "1024 tablet", w: 1024, h: 768 },
   { ad: "390 telefon", w: 390, h: 844 },
 ]) {
-  await senaryo(`[${ROL}] ${d.ad}: Ayarlar ve personel araçları gezinmede yok; Daha fazla hesap sayfalarını korur, personeli göstermez`, async () => {
+  await senaryo(`[${ROL}] ${d.ad}: gezinmede yalnızca üç ana uygulama; Daha fazla grupların ve hesabın sayfalarını taşır, personeli göstermez`, async () => {
     const { ctx, sayfa, hatalar } = await sayfaAc(d);
     const adresler = await gezinmeAdresleri(sayfa);
-    bekle(!adresler.includes("/dashboard/settings"), `gezinmede Ayarlar: ${adresler.join(", ")}`);
+    bekle(JSON.stringify(adresler) === JSON.stringify(ANA), `gezinme: ${adresler.join(", ")}`);
     bekle(!adresler.some((a) => PERSONEL_ADRESLERI.includes(a)), `gezinmede personel: ${adresler.join(", ")}`);
     const daha = await dahaListesi(sayfa);
     bekle(JSON.stringify(etiketler(daha)) === JSON.stringify(DAHA), `Daha fazla: ${etiketler(daha).join(", ")}`);
     bekle(!daha.some(([, h]) => PERSONEL_ADRESLERI.includes(h)), "Daha fazla'da personel");
     if (d.w === 390) {
       const cubuk = await sayfa.evaluate(() => [...document.querySelectorAll("nav.os-gezinme .os-gezinme-kisa")].filter((e) => e.checkVisibility()).map((e) => e.textContent.trim()));
-      bekle(JSON.stringify(cubuk) === JSON.stringify(["Ana Sayfa", "Çalışmalar", "Kaynaklar", "Analiz", "Daha fazla"]), `alt çubuk: ${cubuk.join(", ")}`);
+      bekle(JSON.stringify(cubuk) === JSON.stringify(["Ana Sayfa", "Çalışmalar", "Kaynaklar", "Daha fazla"]), `alt çubuk: ${cubuk.join(", ")}`);
     }
     bekle(!hatalar.length, hatalar.join(" | "));
     await ctx.close();

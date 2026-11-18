@@ -214,17 +214,30 @@
   /* ---- Gölgeler ---- */
   /* Gölgeler serin nötrle birlikte sıkılaştırıldı: eski değerler
      geniş ve yayvandı, açık zeminde kart "yüzüyor" gibi görünüyordu. */
-  --shadow-sm: 0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+  /*
+    Premium çalışma alanı (17.11.2026, onaylı tasarım): DURAN yüzeylerde
+    gölge yok — kart, şerit, seçili sekme ince çizgiyle ayrışır. Eskiden
+    bu token her kartta iki katmanlı bir gölgeydi ve iç içe kartlarla
+    birleşince ekran "kabarık" görünüyordu. Açılır katmanlar (menü,
+    pencere) --shadow-md / --shadow-lg ile yükselmeye devam eder.
+  */
+  --shadow-sm: 0 0 #0000;
   --shadow-md: 0 4px 8px -2px rgba(16,24,40,.08), 0 2px 4px -2px rgba(16,24,40,.04);
   --shadow-lg: 0 20px 24px -4px rgba(16,24,40,.10), 0 8px 8px -4px rgba(16,24,40,.04);
   --shadow-inset: inset 0 1px 1px #0f233c06;
 
   /* ---- Yarıçaplar ---- */
-  --r-xs: 8px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  /*
+    Premium çalışma alanı (17.11.2026, onaylı tasarım): kısa köşeler.
+    Eskiden 8/10/14/18/24 px idi; girişteki Paddle ölçüleri (kontrol 4,
+    kart 8) ile uygulamanın geri kalanı iki ayrı aile gibi duruyordu.
+    Hiyerarşi korunur (xs ≤ sm ≤ md ≤ lg ≤ xl), yalnızca ölçek kısalır.
+  */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 8px;
+  --r-xl: 10px;
   --r-pill: 999px;
 
   /* ---- Denetim ölçeği: düğme, giriş, seçici, tarih alanı ----
@@ -257,7 +270,8 @@
      Büyük kademe içerik kabı (form kartı, çalışma kartı), küçük kademe
      sayı/bağlantı karosu. */
   --kart-dolgu: 20px 24px;
-  --kart-r: var(--r-lg);
+  /* 17.11.2026: 18 → 8 px. Onaylı tasarımda kartlar düz ve köşeleri kısa; kontrol köşesi (4 px) ile kart arasında tek bir aile. */
+  --kart-r: var(--r-md);
   --karo-dolgu: 14px 16px;
   --karo-r: var(--r-md);
 
@@ -473,7 +487,7 @@ html[data-theme="dark"] {
 
   /* Gölgeler yumuşadı (Phase 4.3): zemin artık siyah değil, eski %55'lik
      büyük gölge gece laciverti üstünde kapkara bir leke bırakıyordu. */
-  --shadow-sm: 0 1px 2px #0000002e, 0 6px 18px #0000001f;
+  --shadow-sm: 0 0 #0000;
   --shadow-md: 0 16px 40px #00000040;
   --shadow-lg: 0 28px 70px #00000066;
   --shadow-inset: inset 0 1px 1px #00000033;

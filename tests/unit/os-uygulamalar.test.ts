@@ -192,13 +192,13 @@ test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
 });
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
-import { ALT_CUBUK, anaUygulamalar, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, personelAraclari } from "@/lib/os/uygulamalar";
+import { ALT_CUBUK, anaUygulamalar, aracUygulamalari, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, personelAraclari, yardimUygulamalari } from "@/lib/os/uygulamalar";
 import { ekranSinifi } from "@/lib/os/kirilimlar";
 
 test("gezinme yerleri: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
-  // Phase 5.1d-3: ana gezinme + hesap menüsü (hesap ve personel araçları).
+  // Phase 5.1d-3: ana gezinme + hesap menüsü; 17.11.2026: + Araçlar ve Yardım grupları.
   const hepsi = labUygulamalari();
-  const yerlesen = [...anaUygulamalar(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key).sort();
+  const yerlesen = [...anaUygulamalar(hepsi), ...aracUygulamalari(hepsi), ...yardimUygulamalari(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key).sort();
   assert.deepEqual(yerlesen, hepsi.map((u) => u.key).sort());
 });
 
@@ -209,7 +209,7 @@ test("telefonda alt çubuk + Daha fazla, personel araçları dışında bütün 
   assert.equal(cubuk.length, ALT_CUBUK.length, "alt çubuktaki her anahtar listede olmalı");
   assert.equal(cubuk.length + dahaFazlasi(hepsi).length + personelAraclari(hepsi).length, hepsi.length);
   const daha = dahaFazlasi(hepsi).map((u) => u.key);
-  for (const k of ["ayarlar", "yardim", "abonelik"]) assert.ok(daha.includes(k), k);
+  for (const k of ["analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"]) assert.ok(daha.includes(k), k);
   for (const k of ["docentlik", "asistan", "ekip"]) assert.ok(!daha.includes(k), k);
 });
 

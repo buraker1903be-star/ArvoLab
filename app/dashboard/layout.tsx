@@ -17,6 +17,8 @@ import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
+import { UstDilSecici } from "@/app/_components/dil-secici";
+import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import HeaderTitle from "./_components/header-title";
 import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
@@ -131,6 +133,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <div className="dashboard-header-actions">
             <NotificationBell />
             <ThemeToggle />
+            {/* Dil seçici üst çubukta (onaylı tasarım); İngilizce yayında değilken çizilmez. */}
+            {INGILIZCE_YAYINDA ? <UstDilSecici /> : null}
             <KullaniciMenusu {...hesapMenusu} yerlesim="ust" />
           </div>
         </header>

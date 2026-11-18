@@ -18,6 +18,14 @@ import { useAcilirKonum } from "@/app/dashboard/_components/acilir-konum";
   bulanık araç çubuğunun içinde position:fixed bir çocuk ekrana göre
   konumlanmıyor. Bir öğeye basınca, dışarı tıklayınca ya da Esc'e basınca
   kapanır; odak düğmeye döner.
+
+  Rol: açılır panel (disclosure), menü DEĞİL (18.11.2026). Eskiden
+  pencere role="menu" taşıyordu ama içindeki düğmelerin menuitem rolü
+  yoktu ve ok tuşlarıyla gezinme yazılmamıştı; ekran okuyucu "menü"
+  deyip menü gibi davranmayan bir şeye sokuyordu (axe:
+  aria-required-children, Kontroller menüsü). Düğme aria-expanded ve
+  aria-controls ile paneli açar, panel adlı bir gruptur; öğeler Tab ile
+  sırayla gezilir, Esc kapatır.
 */
 export default function AracMenusu({
   ikon,
@@ -70,7 +78,6 @@ export default function AracMenusu({
         type="button"
         className={dugmeSinifi}
         data-acik={acik || undefined}
-        aria-haspopup="menu"
         aria-expanded={acik}
         aria-controls={kimlik}
         title={aciklama ?? etiket}
@@ -87,7 +94,8 @@ export default function AracMenusu({
         ref={pencere}
         id={kimlik}
         className="arac-menu-pencere"
-        role="menu"
+        role="group"
+        aria-label={etiket}
         popover="manual"
         hidden={!acik}
         // Öğe tıklanınca menü kapanır; tıklama öğenin kendi işini yaptıktan sonra.
