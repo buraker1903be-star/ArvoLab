@@ -527,6 +527,26 @@
   html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .os-gezinme { width: var(--os5-kenar-genis); }
   html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .dashboard-content-shell { margin-left: var(--os5-kenar-genis); }
 }
+/*
+  ŞERİT (4. tur, 18.11.2026): PDF belgenin yanında sütun kalsın diye araç
+  64 px'e iner (html[data-sol-alan-dar], editör koyar; karar
+  lib/calisma-alani-yerlesimi.ts "aracDar"). Başlık ve araç içeriği
+  gizlenir ama SÖKÜLMEZ: arama, süzgeç ve liste konumu korunur; yalnızca
+  genişletme düğmesi görünür.
+*/
+.os-sol-genislet { display: none; }
+@media (min-width: 1200px) {
+  html[data-sol-alan-dar] .os-root:has(> .os-sol-alan[data-acik]) { --os5-kenar-genis: var(--os5-kenar-ray); }
+  html[data-sol-alan-dar] .os-sol-alan-bas,
+  html[data-sol-alan-dar] .os-sol-alan-yuva { display: none; }
+  html[data-sol-alan-dar] .os-sol-genislet {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-1);
+    width: 44px; min-height: 64px; margin: var(--s-3) auto 0; padding: var(--s-2) 0;
+    border: 1px solid var(--os5-kenar-cizgi); border-radius: var(--os5-kontrol-r); color: var(--ink);
+  }
+  html[data-sol-alan-dar] .os-sol-genislet:hover { background: var(--os5-kenar-hover); }
+  html[data-sol-alan-dar] .os-sol-genislet:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+}
 @media (min-width: 761px) and (max-width: 1199px) {
   .os-sol-alan {
     top: var(--topbar-height); left: 0; bottom: 0; width: min(372px, calc(100vw - var(--os5-kenar-ray)));

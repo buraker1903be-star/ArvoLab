@@ -1,0 +1,28 @@
+{
+  "_kaynak": "SENTETİK KAYITLI YANIT (yerel kabul). Gerçek Crossref yanıtı değildir; biçim Crossref /works yanıtının uygulamanın okuduğu alanlarıyla aynıdır. DOI'ler 10.5555 deneme önekindedir.",
+  "status": "ok",
+  "message": {
+    "items": [
+      {
+        "DOI": "10.5555/kayitli.2022.101",
+        "title": ["Peer support and loneliness during online study: a two-wave survey"],
+        "author": [{ "given": "M.", "family": "Yıldız" }, { "given": "L.", "family": "Ortega" }],
+        "issued": { "date-parts": [[2022]] },
+        "container-title": ["Synthetic Journal of Higher Education"],
+        "type": "journal-article",
+        "is-referenced-by-count": 39,
+        "URL": "https://doi.org/10.5555/kayitli.2022.101"
+      },
+      {
+        "DOI": "10.5555/kayitli.2019.310",
+        "title": ["Synchronous sessions and first-year isolation"],
+        "author": [{ "name": "Synthetic Education Council" }],
+        "issued": { "date-parts": [[2019, 5]] },
+        "container-title": ["Synthetic Policy Reports"],
+        "type": "report",
+        "is-referenced-by-count": 3,
+        "URL": "https://doi.org/10.5555/kayitli.2019.310"
+      }
+    ]
+  }
+}

@@ -1727,6 +1727,7 @@
   }
   /* Çekmece: belgenin üstünde, sağdan; gölgeyle ayrışır. */
   .manuscript-layout[data-sag-cekmece] { grid-template-columns: minmax(0, 1fr); }
+  .manuscript-layout[data-sag-cekmece] .kaynak-pdf-cekmece-ipucu { display: inline; }
   .manuscript-layout[data-sag-cekmece] :is(.kaynak-pdf-paneli, .yazim-paneli) {
     /* --cekmece-ust: editör başlığının alt kenarı (manuscript-editor.tsx); başlık (Kontroller, Dışa aktar) örtülmesin. */
     position: fixed; top: var(--cekmece-ust, calc(var(--topbar-height) + 8px)); right: 8px; bottom: 8px; left: auto;
@@ -1735,6 +1736,9 @@
     height: auto; border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
   }
 }
+
+/* PDF çekmecesinin "geçici görünüm" ipucu: yalnızca çekmecede (yukarıda) görünür. */
+.kaynak-pdf-cekmece-ipucu { display: none; margin-left: auto; margin-right: var(--s-2); color: var(--muted); font-size: var(--fs-micro); white-space: nowrap; }
 
 /*
   İnceleme paneli çekmecesi (19.11.2026, kabul turu). Sağ panel yokken

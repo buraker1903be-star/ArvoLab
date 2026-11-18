@@ -116,3 +116,28 @@ test("inceleme paneli: tablet ve telefonda akış (belgenin üstünde/altında),
     assert.deepEqual([k.inceleme, k.sabitKagit, k.olcek], ["akis", false, 1]);
   }
 });
+
+/*
+  4. tur (18.11.2026): kaynak listesi + belge + PDF. Eskiden 1472/1440 px'te
+  300 px'lik liste açıkken PDF çekmeceye düşüyordu (en dar PDF ile bile
+  belge %69–%71). Önce araç şeride iner; belge ve PDF yan yana kalır.
+*/
+test("kaynak listesi + PDF: 1472 ve 1440'ta araç şeride iner, belge ≥ %85 ve PDF sütun", () => {
+  const a = karar(1472, "kaynaklar", "pdf", 520);
+  assert.deepEqual([a.kenar, a.sag, a.sagGenislik], ["aracDar", "sutun", 520]);
+  assert.ok(a.olcek >= BELGE_OKUNUR_EN_AZ, String(a.olcek));
+  const b = karar(1440, "kaynaklar", "pdf", 520);
+  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["aracDar", "sutun", 440]);
+  assert.ok(b.olcek >= BELGE_OKUNUR_EN_AZ, String(b.olcek));
+  // Geniş ekranda araç tam genişliğinde kalır.
+  assert.deepEqual([karar(1920, "kaynaklar", "pdf", 520).kenar, karar(1920, "kaynaklar", "pdf", 520).sag], ["arac", "sutun"]);
+});
+
+test("kaynak listesi + PDF: şeritle de sığmıyorsa (1280) ya da kullanıcı aracı geri açtıysa çekmece", () => {
+  const c = karar(1280, "kaynaklar", "pdf", 520);
+  assert.deepEqual([c.kenar, c.sag], ["arac", "cekmece"]);
+  const d = yerlesimKarari({ ekran: 1472, solArac: "kaynaklar", sagPanel: "pdf", sagGenislik: 520, kenarDar: false, solGenisIstendi: true });
+  assert.deepEqual([d.kenar, d.sag], ["arac", "cekmece"]);
+  // AI panelinde araç daraltılmaz (önceki kural yerinde).
+  assert.equal(karar(1472, "kaynaklar", "ai", 396).kenar, "arac");
+});

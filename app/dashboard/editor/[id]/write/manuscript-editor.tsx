@@ -95,6 +95,8 @@ import {
   olcekTercihiOku,
   sagPanelGenisligiSinirla,
   yerlesimKarari,
+  SOL_ALAN_DAR_OZNITELIGI,
+  SOL_ALAN_GENISLET_OLAYI,
   type OlcekTercihi,
 } from "@/lib/calisma-alani-yerlesimi";
 import { sagPanelOku, solAracOku, type SagPanel, type SolArac } from "@/lib/os/uygulamalar";
@@ -775,7 +777,31 @@ export default function ManuscriptEditor({
     (lib/calisma-alani-yerlesimi.ts, "İNCELEME PANELİ").
   */
   const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
-  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik }) : null;
+  /*
+    KAYNAK LİSTESİ + PDF (4. tur, 18.11.2026). PDF açılınca belge %85'in
+    altına inecekse sol araç şeride iner (lib/calisma-alani-yerlesimi.ts,
+    "aracDar"); şeritteki düğme (os-gezinme.tsx) aracı geri açar ve PDF
+    çekmece olur. Bu istek yalnızca o araç + PDF birlikteliği için geçerli:
+    araç ya da sağ panel değişince düşer (çizim sırasında, önceki anahtarla
+    karşılaştırarak; efektte sıfırlamak bir çizim gecikmeli kalırdı).
+  */
+  const [solGenis, setSolGenis] = useState<{ anahtar: string; istendi: boolean }>({ anahtar: "", istendi: false });
+  const solGenisAnahtari = `${solArac ?? ""}|${sag ?? ""}`;
+  if (solGenis.anahtar !== solGenisAnahtari) setSolGenis({ anahtar: solGenisAnahtari, istendi: false });
+  const solGenisIstendi = solGenis.anahtar === solGenisAnahtari && solGenis.istendi;
+  useEffect(() => {
+    const ac = () => setSolGenis({ anahtar: solGenisAnahtari, istendi: true });
+    window.addEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
+    return () => window.removeEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
+  }, [solGenisAnahtari]);
+  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik, solGenisIstendi }) : null;
+  const solAlanDar = karar?.kenar === "aracDar";
+  useEffect(() => {
+    const kok = document.documentElement;
+    if (solAlanDar) kok.setAttribute(SOL_ALAN_DAR_OZNITELIGI, "");
+    else kok.removeAttribute(SOL_ALAN_DAR_OZNITELIGI);
+  }, [solAlanDar]);
+  useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_DAR_OZNITELIGI), []);
   /*
     Gezinme yalnızca GEÇİCİ olarak raya iner (sağ panel açıkken belge
     okunabilirlik sınırının altına inecekse): tercih kaydedilmez, panel
@@ -814,6 +840,7 @@ export default function ManuscriptEditor({
   */
   /* Telefonda (≤760) çekmece yok: PDF tam ekran, asistan alttan yaprak (workspace.css). */
   const cekmeceVar = Boolean(karar && (ekran ?? 0) > 760 && (karar.sag === "cekmece" || karar.inceleme === "cekmece"));
+  const pdfCekmece = Boolean(cekmeceVar && sag === "pdf" && karar?.sag === "cekmece");
   useEffect(() => {
     const yerlesim = yerlesimRef.current;
     if (!yerlesim) return;
@@ -1193,6 +1220,42 @@ export default function ManuscriptEditor({
       },
     },
   });
+
+  /*
+    PDF paneli kapanınca odak BELGEYE, kullanıcının bıraktığı konuma döner
+    (4. tur, 18.11.2026). Eskiden odak kapatma düğmesinde kalıyordu (düğme
+    sökülünce sayfanın gövdesine düşüyordu): seçim korunuyordu ama yazmaya
+    devam etmek için belgeye yeniden tıklamak, yani konumu yeniden seçmek
+    gerekiyordu. Seçim değiştirilmez, belge kaydırılmaz.
+  */
+  const pdfKapat = useCallback(() => {
+    sagAc(null);
+    window.requestAnimationFrame(() => {
+      if (editor && !editor.isDestroyed) editor.commands.focus(null, { scrollIntoView: false });
+    });
+  }, [sagAc, editor]);
+  /*
+    PDF ÇEKMECESİ GEÇİCİDİR (4. tur, 18.11.2026): belgenin üstünü kapattığı
+    için Esc ile kapanır; eskiden yalnızca köşedeki çarpı kapatıyordu.
+    Açık bir pencere (dialog), atıf kartı ya da Esc'i kendisi işleyen bir
+    öğe (defaultPrevented) varsa dokunulmaz. Kapanınca yerleşim kendiliğinden
+    eski hâline döner (sol araç yeniden tam genişlikte).
+  */
+  useEffect(() => {
+    if (!pdfCekmece) return;
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key !== "Escape" || olay.defaultPrevented) return;
+      /*
+        Yalnızca AÇIK pencere sayılır: ortak pencere bileşeni (dialog.tsx)
+        kapalıyken de role="dialog" ile sayfada durur (inert); ilk sürüm
+        "[role=dialog]" arıyordu ve Esc çekmeceyi hiç kapatmıyordu (kabul S16).
+      */
+      if (document.querySelector("dialog[open], .drawer-root.open, .atif-karti")) return;
+      pdfKapat();
+    };
+    window.addEventListener("keydown", tus);
+    return () => window.removeEventListener("keydown", tus);
+  }, [pdfCekmece, pdfKapat]);
 
   /*
     Satır içi öneri (03.11.2026): otomatik mod tarayıcıda hatırlanır,
@@ -3876,7 +3939,7 @@ export default function ManuscriptEditor({
         projectId={projectId}
         acik={kaynakAcik}
         acilacak={acilacakPdf}
-        onKapat={() => sagAc(null)}
+        onKapat={pdfKapat}
         onCite={handleCite}
         onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
         onBagDegisti={() => setKartVerisi(null)}

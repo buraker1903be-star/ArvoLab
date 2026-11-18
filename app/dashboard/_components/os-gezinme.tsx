@@ -51,6 +51,7 @@ import { listeyeDonusIsaretle, useListeAdresi } from "./liste-donusu";
 import { grupAcikMi } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
 import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
+import { SOL_ALAN_GENISLET_OLAYI } from "@/lib/calisma-alani-yerlesimi";
 
 const CALISMA_IKONLARI: Record<CalismaIkon, LucideIcon> = {
   belge: FileText,
@@ -141,7 +142,9 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const solsuz = new URLSearchParams(sorgu.toString());
   solsuz.delete("sol");
   const solGeriAdresi = solsuz.toString() ? `${yol}?${solsuz.toString()}` : yol;
-  const solAracAdi = solArac ? calismaOgeleri.find((b) => b.key === solArac)?.label ?? "" : "";
+  const solAracOgesi = solArac ? calismaOgeleri.find((b) => b.key === solArac) : undefined;
+  const solAracAdi = solAracOgesi?.label ?? "";
+  const SolAracSimgesi = solAracOgesi ? CALISMA_IKONLARI[solAracOgesi.ikon] : PanelLeftOpen;
 
   /*
     Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
@@ -418,6 +421,22 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           hidden={!solArac}
           ref={solAlanRef}
         >
+          {/*
+            ŞERİT (4. tur, 18.11.2026): PDF açılınca belge %85'in altına inecekse
+            araç 64 px'e iner (lib/calisma-alani-yerlesimi.ts, "aracDar"); başlık
+            ve içerik CSS ile gizlenir, yalnızca bu düğme görünür. Basınca araç
+            geri açılır ve PDF geçici olarak belgenin üstünde çekmece olur.
+          */}
+          <button
+            type="button"
+            className="os-sol-genislet"
+            onClick={() => window.dispatchEvent(new CustomEvent(SOL_ALAN_GENISLET_OLAYI))}
+            aria-label={t({ tr: `${solAracAdi} alanını genişlet`, en: `Expand ${solAracAdi}` })}
+            title={t({ tr: `${solAracAdi} alanını genişlet`, en: `Expand ${solAracAdi}` })}
+          >
+            <SolAracSimgesi size={20} aria-hidden="true" />
+            <PanelLeftOpen size={16} aria-hidden="true" />
+          </button>
           <div className="os-sol-alan-bas">
             <Link href={solGeriAdresi} scroll={false} className="os-sol-geri">
               <ArrowLeft size={16} aria-hidden="true" />

@@ -17,7 +17,18 @@
     2. sol yuva gezinme gösteriyorsa gezinme raya iner,
     3. yetmezse sağ panel belgenin üstüne ÇEKMECE olur (belge tam genişliğe döner).
   Sol araç açıkken (bölümler, kaynaklar, makale arama) kullanıcı o aracı
-  bilerek açmıştır: araç daraltılmaz, yer gerekirse sağ panel çekmeceye geçer.
+  bilerek açmıştır: AI paneli için araç daraltılmaz, yer gerekirse panel
+  çekmeceye geçer.
+
+  KAYNAK LİSTESİ + BELGE + PDF (18.11.2026, 4. tur). PDF için sıra farklı:
+  1472 ve 1440 px'te 300 px'lik kaynak listesi açıkken en dar PDF (440)
+  bile belgeyi %69–%71'e indiriyordu ve PDF çekmeceye düşüyordu; belgeyle
+  PDF'i yan yana okumanın en çok gerektiği yerde çekmece belgenin üstünü
+  kapatıyordu. Artık önce araç ŞERİDE (KENAR_RAY, "aracDar") iner: belge ve
+  PDF yan yana kalır, şeritteki düğme aracı geri açar. Kullanıcı aracı
+  geri açarsa (solGenisIstendi) ya da şeritle de belge %85'in altına
+  inecekse (1280 px) PDF çekmeceye geçer: geçici bir inceleme görünümü,
+  kapatılınca yerleşim eski hâline döner.
   Kullanıcı ölçeği her zaman kendisi seçebilir (BELGE_OLCEK_*); seçtiği ölçek
   bu kararı değiştirmez, yalnızca kâğıdın büyüklüğünü.
 
@@ -61,6 +72,16 @@ export const SAYFA_PAYI = 64;
 
 export const MASAUSTU_EN_AZ = 1200;
 
+/*
+  Araç şeride indiğinde (kenar "aracDar") editör kök öğeye bu özniteliği
+  koyar; sol alan (os-gezinme.tsx) CSS ile 64 px'lik şeride iner. Şeritteki
+  düğme aracı geri açmak için bu olayı yayar; editör dinler ve
+  solGenisIstendi'yi açar. Sol alan editörün dışında (kabukta) çizildiği
+  için ikisi arasında prop yolu yok.
+*/
+export const SOL_ALAN_DAR_OZNITELIGI = "data-sol-alan-dar";
+export const SOL_ALAN_GENISLET_OLAYI = "arvolab:sol-alan-genislet";
+
 export function sagPanelGenisligiSinirla(panel: SagPanel, istenen: number): number {
   const s = SAG_PANEL_SINIRI[panel];
   const deger = Number.isFinite(istenen) && istenen > 0 ? istenen : s.varsayilan;
@@ -68,8 +89,8 @@ export function sagPanelGenisligiSinirla(panel: SagPanel, istenen: number): numb
 }
 
 export type YerlesimKarari = {
-  /** Sol yuva: tam gezinme, ray (yalnızca simge) ya da açık araç. */
-  kenar: "tam" | "ray" | "arac";
+  /** Sol yuva: tam gezinme, ray (yalnızca simge), açık araç ya da şeride inmiş araç (PDF yan yana kalsın diye). */
+  kenar: "tam" | "ray" | "arac" | "aracDar";
   /** Sağ panel: yok, belgenin yanında sütun ya da belgenin üstünde çekmece. */
   sag: "yok" | "sutun" | "cekmece";
   /** Kâğıdın otomatik ölçeği (Sığdır); 1 = doğal boy. Tablet ve telefonda her zaman 1 (belge akar). */
@@ -96,6 +117,8 @@ export function yerlesimKarari(girdi: {
   kenarDar: boolean;
   /** İnceleme paneli açık mı (kullanıcının tercihi). Verilmezse kapalı sayılır. */
   inceleme?: boolean;
+  /** Kullanıcı şeride inmiş aracı geri açtı mı: açtıysa araç daraltılmaz, PDF çekmeceye geçer. */
+  solGenisIstendi?: boolean;
 }): YerlesimKarari {
   const { ekran, solArac, sagPanel } = girdi;
   const incelemeIstendi = Boolean(girdi.inceleme) && !sagPanel;
@@ -138,6 +161,12 @@ export function yerlesimKarari(girdi: {
       ? ([
           ["ray", KENAR_RAY, istenenSag],
           ["ray", KENAR_RAY, enDar],
+        ] as [YerlesimKarari["kenar"], number, number][])
+      : []),
+    ...(solArac && sagPanel === "pdf" && !girdi.solGenisIstendi
+      ? ([
+          ["aracDar", KENAR_RAY, istenenSag],
+          ["aracDar", KENAR_RAY, enDar],
         ] as [YerlesimKarari["kenar"], number, number][])
       : []),
   ];

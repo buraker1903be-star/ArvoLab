@@ -880,6 +880,141 @@ try {
     return { ayrinti: `ölçek %${r.olcek}, pasajın başı görünür alanda, Pasaja odaklan var, panelin kapatma düğmesi ekranda` };
   });
 
+  /* ---------- S16 ---------- */
+  /*
+    Kaynak listesi + belge + PDF (4. tur). 1472 ve 1440'ta liste şeride iner,
+    PDF belgenin yanında sütundur ve belge ≥ %85; 1280'de liste açık kalır,
+    PDF geçici çekmecedir. Her genişlikte PDF açıkken belgeye tıklanır,
+    yazılır, kayıt veritabanında görülür; PDF kapatılınca seçim aynı yerde
+    kalır, odak belgeye döner ve yazmaya kaldığı yerden devam edilir.
+  */
+  await dene("S16", "kaynak listesi + belge + PDF: şerit/sütun ya da geçici çekmece; PDF açıkken imleç, yazma, kaydetme, kapatınca konum", async () => {
+    const icerik = (isaret) => psql(`select position(${q(isaret)} in content::text) > 0 from public.project_manuscripts where project_id='${ESKI}'`) === "t";
+    const kayitBekle = async (isaret) => { for (let i = 0; i < 30; i++) { if (icerik(isaret)) return true; await new Promise((r) => setTimeout(r, 500)); } return false; };
+    const yerlesim = (s) => s.evaluate(() => {
+      const kok = document.documentElement, y = document.querySelector(".manuscript-layout");
+      const sol = document.querySelector(".os-sol-alan")?.getBoundingClientRect();
+      const kagit = document.querySelector(".manuscript-editor-content")?.getBoundingClientRect();
+      const pdf = document.querySelector(".kaynak-pdf-paneli")?.getBoundingClientRect();
+      const ipucu = document.querySelector(".kaynak-pdf-cekmece-ipucu");
+      return {
+        serit: kok.hasAttribute("data-sol-alan-dar"), solEn: Math.round(sol?.width ?? 0),
+        cekmece: y.hasAttribute("data-sag-cekmece"), olcek: Number(getComputedStyle(document.querySelector(".manuscript-editor-content")).zoom),
+        yanyana: Boolean(kagit && pdf && kagit.right <= pdf.left + 1), ipucu: Boolean(ipucu && ipucu.offsetParent),
+      };
+    });
+    const durumOku = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; return { from: e.state.selection.from, odak: e.view.hasFocus(), kayma: Math.round(scrollY) }; });
+    const yazVeKaydet = async (s, isaret) => {
+      const k = await kelimeKonumu(s, "Çalışmanın amacı", 0);
+      beklenen(k, "paragraf bulunamadı");
+      await s.mouse.click(k.x - 2, k.y); await s.waitForTimeout(300);
+      await s.keyboard.type(`${isaret} `, { delay: 15 });
+      beklenen(await kayitBekle(isaret), `${isaret} kaydedilmedi`);
+      return durumOku(s);
+    };
+    const kapatSonrasi = async (s, once, isaret) => {
+      await s.waitForTimeout(800);
+      const sonra = await durumOku(s);
+      beklenen(sonra.from === once.from, `kapatınca seçim değişti: ${once.from} → ${sonra.from}`);
+      beklenen(sonra.odak, "kapatınca odak belgeye dönmedi");
+      beklenen(Math.abs(sonra.kayma - once.kayma) <= 4, `kapatınca belge kaydı: ${once.kayma} → ${sonra.kayma}`);
+      await s.keyboard.type("+", { delay: 15 });
+      beklenen(await kayitBekle(`${isaret} +Çalışmanın`), "kaldığı yerden yazılamadı");
+    };
+    const ozet = [];
+    for (const [g, y] of [[1472, 921], [1440, 900]]) {
+      const { c, s } = await oturum(A, { genislik: g, yukseklik: y });
+      await editorAc(s, "?sol=kaynaklar&sag=pdf");
+      await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
+      const l = await yerlesim(s);
+      beklenen(l.serit && l.solEn <= 66 && !l.cekmece && l.yanyana && l.olcek >= 0.85, `${g} yerleşim: ${JSON.stringify(l)}`);
+      await goruntu(s, `s16-${g}-serit`);
+      const isaret = `KABUL-S16-${g}`;
+      const once = await yazVeKaydet(s, isaret);
+      if (g === 1472) {
+        // Şeritten liste geri açılır → PDF geçici çekmece; Esc kapatır, liste tam genişlikte kalır.
+        await s.locator(".os-sol-genislet").click(); await s.waitForTimeout(900);
+        const ac = await yerlesim(s);
+        beklenen(!ac.serit && ac.solEn >= 290 && ac.cekmece && ac.ipucu, `şeritten genişletince: ${JSON.stringify(ac)}`);
+        await goruntu(s, "s16-1472-genis-cekmece");
+        await s.keyboard.press("Escape");
+        beklenen(await s.locator(".kaynak-pdf-paneli").count() === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "Esc çekmeceyi kapatmadı");
+        await kapatSonrasi(s, once, isaret);
+        const son = await yerlesim(s);
+        beklenen(!son.serit && son.solEn >= 290, `kapatınca liste: ${JSON.stringify(son)}`);
+        ozet.push(`1472 şerit ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; şeritten açınca çekmece, Esc kapatır`);
+      } else {
+        await s.locator('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]').click();
+        await kapatSonrasi(s, once, isaret);
+        ozet.push(`1440 şerit ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; kapat → konum ve odak korunur`);
+      }
+      await c.close();
+    }
+    {
+      const { c, s } = await oturum(A, { genislik: 1280, yukseklik: 800 });
+      await editorAc(s, "?sol=kaynaklar&sag=pdf");
+      await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
+      const l = await yerlesim(s);
+      beklenen(!l.serit && l.solEn >= 290 && l.cekmece && l.ipucu && l.olcek >= 0.85, `1280 yerleşim: ${JSON.stringify(l)}`);
+      await goruntu(s, "s16-1280-cekmece");
+      const isaret = "KABUL-S16-1280";
+      const once = await yazVeKaydet(s, isaret);
+      await s.keyboard.press("Escape");
+      await kapatSonrasi(s, once, isaret);
+      ozet.push(`1280 liste açık, PDF geçici çekmece (belge %${Math.round(l.olcek * 100)}); çekmece açıkken yazıldı, Esc → konum ve odak korunur`);
+      await c.close();
+    }
+    return { ayrinti: ozet.join("; ") };
+  });
+
+  /* ---------- S17 ---------- */
+  /*
+    Makale bul, KAYITLI (sentetik) dizin yanıtlarıyla. Yerel ortamın dış ağı
+    yok; sunucu scripts/yerel-yigin/kayitli-dizin-yanitlari.mjs ile
+    başlatıldıysa OpenAlex/Crossref aramaları kayitli-yanitlar/ altındaki
+    yanıtlara çevrilir. Bu GERÇEK DİZİN KABULÜ DEĞİLDİR: sonuç listesinin
+    yerleşimi, birleştirme ve "Listeme ekle" davranışı sınanır.
+  */
+  await dene("S17", "Makale bul (kayıtlı sentetik dizin yanıtları, gerçek dizin değil): sonuç listesi yerleşimi ve Listeme ekle", async () => {
+    const KAYIT = process.env.KAYITLI_DIZIN_KAYDI;
+    if (!KAYIT) return { durum: "UNVERIFIED", ayrinti: "KAYITLI_DIZIN_KAYDI verilmedi; sunucu kayıtlı yanıt düzeneğiyle başlatılmamış olabilir" };
+    const satir = () => (fs.existsSync(KAYIT) ? fs.readFileSync(KAYIT, "utf8").trim().split("\n").filter(Boolean).length : 0);
+    const { c, s } = await oturum(A, { genislik: 1472, yukseklik: 921 });
+    await editorAc(s, "?sol=arama");
+    const alan = s.locator(".os-sol-alan");
+    const once = satir();
+    await alan.locator('input[type="search"], input[type="text"]').first().fill("peer study groups loneliness");
+    await alan.getByRole("button", { name: /Dizinlerde ara/ }).click();
+    await alan.locator(".bulgu-satiri").first().waitFor({ timeout: 20000 }).catch(() => {});
+    if (satir() === once) { await c.close(); return { durum: "UNVERIFIED", ayrinti: "arama kayıtlı yanıtlara gitmedi (sunucu düzeneksiz başlatılmış)" }; }
+    beklenen(satir() - once === 2, `kayıtlı yanıt isteği ${satir() - once} (2 bekleniyor: OpenAlex + Crossref)`);
+    const l = await alan.evaluate((a) => {
+      const satirlar = Array.from(a.querySelectorAll(".bulgu-satiri"));
+      const r = a.getBoundingClientRect();
+      const tasan = satirlar.filter((x) => { const d = x.getBoundingClientRect(); return d.left < r.left - 1 || d.right > r.right + 1; }).length;
+      const dugmeler = satirlar.map((x) => x.querySelector(".bulgu-eylemler button, .bulgu-eylemler .status-pill")).filter(Boolean);
+      const gorunmeyen = dugmeler.filter((d) => { const b = d.getBoundingClientRect(); return b.width < 1 || b.left < r.left - 1 || b.right > r.right + 1; }).length;
+      return { sayi: satirlar.length, metin: a.innerText, tasan, gorunmeyen, yatay: a.querySelector(".os-sol-alan-yuva")?.scrollWidth > a.querySelector(".os-sol-alan-yuva")?.clientWidth + 1 };
+    });
+    beklenen(l.sayi === 4 && /4 kayıt/.test(l.metin), `sonuç sayısı: ${l.sayi}`);
+    beklenen(/Peer support and loneliness/.test(l.metin) && /Synthetic Education Council/.test(l.metin) && /Nakamura, K\., Ak, E\., Şahin, C\. vd\./.test(l.metin), "sonuç satırları beklenen içerikte değil");
+    beklenen(l.tasan === 0 && l.gorunmeyen === 0 && !l.yatay, `yerleşim taşması: ${JSON.stringify({ tasan: l.tasan, gorunmeyen: l.gorunmeyen, yatay: l.yatay })}`);
+    await goruntu(s, "s17-makale-bul-kayitli");
+    const hedef = await alan.locator("select").first().inputValue().catch(() => "");
+    beklenen(hedef === ESKI, `eklenecek çalışma bu çalışma değil: ${hedef}`);
+    const ilk = alan.locator(".bulgu-satiri", { hasText: "Peer support and loneliness" });
+    await ilk.getByRole("button", { name: /Listeme ekle/ }).click();
+    await ilk.getByText("Listenizde").waitFor({ timeout: 15000 });
+    const say = () => Number(psql(`select count(*) from public.literature_sources where owner_id='${A.id}' and project_id='${ESKI}' and title='Peer support and loneliness during online study: a two-wave survey'`));
+    beklenen(say() === 1, `eklenen kayıt sayısı ${say()}`);
+    // Yeniden arama: sunucu listedeki kaydı "Listenizde" işaretler; ikinci ekleme düğmesi yok.
+    await alan.getByRole("button", { name: /Dizinlerde ara/ }).click(); await s.waitForTimeout(2500);
+    beklenen(await alan.locator(".bulgu-satiri", { hasText: "Peer support and loneliness" }).getByRole("button", { name: /Listeme ekle/ }).count() === 0, "yeniden aramada eklenen kayıt yine eklenebilir görünüyor");
+    beklenen(say() === 1, "kayıt iki kez eklendi");
+    await c.close();
+    return { ayrinti: `SENTETİK kayıtlı yanıt (gerçek dizin değil): OpenAlex 3 + Crossref 2 → 4 satır (aynı DOI birleşti), taşma yok; Listeme ekle bu çalışmaya 1 kayıt yazdı, yeniden aramada "Listenizde"` };
+  });
+
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
   if (GORSEL) {
     // Görseller senaryoların bıraktığı eklemelerden arınmış, tohumdaki belgeyle alınır.

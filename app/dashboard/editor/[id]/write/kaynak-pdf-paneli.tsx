@@ -254,6 +254,8 @@ export default function KaynakPdfPaneli({
           <FileText size={16} aria-hidden="true" />
           <b>{t({ tr: "Kaynak PDF", en: "Source PDF" })}</b>
         </span>
+        {/* Yalnızca çekmecede görünür (workspace.css): PDF belgenin üstünde, geçici bir inceleme görünümü. */}
+        <small className="kaynak-pdf-cekmece-ipucu">{t({ tr: "Geçici görünüm · Esc ile kapatın", en: "Temporary view · Esc to close" })}</small>
         <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "Kaynak panelini kapat", en: "Close source panel" })}>
           <X size={16} aria-hidden="true" />
         </button>
