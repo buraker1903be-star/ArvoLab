@@ -1,0 +1,167 @@
+// AUTH A1 CANLI KABUL (18.11.2026) — test düzeneği, uygulama kodu DEĞİL.
+// lab.arvo-os.com + Production Auth, yalnızca sentetik hesaplar (Resend test alıcısı
+// delivered+…@resend.dev; gerçek kişiye posta gitmez). AI çağrısı yok.
+// Şifre, belirteç ve bağlantı çıktıya YAZILMAZ; durum dosyası yalnızca scratchpad'de.
+//   node canli-a1.mjs <durum-dizini> <faz> [bağlantı]
+//   fazlar: kayit <ad> · ilk <ad> <onay-bağlantısı> · kod-dogrula <ad> · api <ad> ·
+//           ayarlar <ad> · kurtarma-iste <ad> · kurtarma <ad> <bağlantı> · giris <ad>
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-a1/package.json");
+const { chromium } = require("playwright");
+const [DIZIN, FAZ, AD, BAGLANTI] = process.argv.slice(2);
+const SITE = "https://lab.arvo-os.com", AUTH = "https://zpfpocyajnxcketdjbxm.supabase.co/auth/v1";
+const PUB = fs.readFileSync(new URL("./anahtar.env", import.meta.url), "utf8").match(/SB_PUB=(\S+)/)[1];
+fs.mkdirSync(DIZIN, { recursive: true });
+const DURUM = `${DIZIN}/durum-${AD}.json`;
+const d = fs.existsSync(DURUM) ? JSON.parse(fs.readFileSync(DURUM, "utf8")) : {};
+const kaydet = () => fs.writeFileSync(DURUM, JSON.stringify(d), { mode: 0o600 });
+const sonuc = [];
+const yaz = (kimlik, ad, beklenen, gozlenen, gecti) => {
+  sonuc.push({ zaman: new Date().toISOString(), kimlik, ad, beklenen, gozlenen, sonuc: gecti ? "PASS" : "FAIL" });
+  console.log(`${gecti ? "PASS" : "FAIL"}  ${kimlik}  ${ad} | beklenen: ${beklenen} | gözlenen: ${gozlenen}`);
+};
+const auth = async (yol, { yontem = "POST", govde, belirtec } = {}) => {
+  const r = await fetch(AUTH + yol, { method: yontem, headers: { apikey: PUB, Authorization: `Bearer ${belirtec ?? PUB}`, "Content-Type": "application/json" }, body: govde ? JSON.stringify(govde) : undefined });
+  const j = await r.json().catch(() => ({}));
+  return { durum: r.status, kod: j.error_code ?? j.code ?? "", json: j };
+};
+const oturum = async (parola = d.parola) => (await auth("/token?grant_type=password", { govde: { email: d.adres, password: parola } }));
+const girer = async (parola) => (await oturum(parola)).durum === 200;
+const yenile = async (rt) => (await auth("/token?grant_type=refresh_token", { govde: { refresh_token: rt } })).durum;
+const yeniSifre = () => `Yy7!${crypto.randomBytes(9).toString("base64url")}`;
+
+const b = await chromium.launch();
+const c = await b.newContext({ baseURL: SITE, viewport: { width: 1440, height: 900 } });
+await c.addCookies([{ name: "arvolab_dil", value: "tr", url: SITE }]);
+const s = await c.newPage();
+const hatalar = [];
+s.on("pageerror", (e) => hatalar.push(String(e).slice(0, 200)));
+async function girisYap(parola = d.parola) {
+  await s.goto("/");
+  await s.fill('input[name="email"]', d.adres);
+  await s.fill('input[name="password"]', parola);
+  await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+}
+async function sozlesmeyiGec() {
+  // Kullanım sözleşmesi penceresi ilk girişte çıkar; bu kabulün konusu değil, kullanıcı gibi onaylanır.
+  const dugme = s.getByRole("button", { name: /Okudum ve onaylıyorum/ });
+  if (await dugme.count()) {
+    await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); }).catch(() => {});
+    await s.waitForTimeout(500);
+    await dugme.click().catch(() => {});
+    await s.waitForTimeout(1500);
+  }
+}
+async function baglantiyiAc(baglanti) {
+  await s.goto(baglanti);
+  await s.getByRole("button", { name: /Devam et/ }).click();
+  await s.waitForURL(/reset-password|dashboard/, { timeout: 60000 });
+}
+async function sifreFormu(parola) {
+  await s.fill('input[name="password"]', parola);
+  await s.fill('input[name="passwordConfirm"]', parola);
+  await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }).catch(() => null), s.locator('form.os5-kimlik-formu button[type="submit"]').click()]);
+}
+const govdeMetni = async () => (await s.locator("body").innerText()).replace(/\s+/g, " ");
+
+try {
+  if (FAZ === "kayit") {
+    d.ek = crypto.randomBytes(3).toString("hex");
+    d.adres = `delivered+arvolab-a1-${AD}-${d.ek}@resend.dev`;
+    kaydet();
+    await s.goto("/kayit");
+    await s.fill("#kayit-ad", "A1 Kontrol");
+    await s.fill("#kayit-eposta", d.adres);
+    await s.fill("#kayit-telefon", "0555 000 00 00").catch(() => {});
+    await s.getByRole("button", { name: /Kullanım Sözleşmesi/ }).first().click();
+    await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); });
+    await s.waitForTimeout(600);
+    await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).click();
+    await s.check('input[name="kvkk"]');
+    await s.locator('form button[type="submit"]').last().click();
+    await s.waitForTimeout(4000);
+    const m = await govdeMetni();
+    yaz("KAYIT", "kayıt formu → doğrulama e-postası", "doğrulama ekranı", m.slice(0, 120), /doğrula|e-posta|posta kutusu/i.test(m));
+    console.log("ADRES", d.adres);
+  } else if (FAZ === "ilk") {
+    await baglantiyiAc(BAGLANTI);
+    const yol = new URL(s.url());
+    const m = await govdeMetni();
+    yaz("ILK-SAYFA", "onay bağlantısı ilk şifre sayfasına iner, metin 8–64 der (yeni kod)", "/reset-password?ilk=1 + '8–64'", `${yol.pathname}${yol.search}, 8–64=${m.includes("8–64")}, 12–64=${m.includes("12–64")}`, yol.pathname === "/reset-password" && m.includes("8–64") && !m.includes("12–64"));
+    d.parola = yeniSifre(); kaydet();
+    await sifreFormu(d.parola);
+    const panel = new URL(s.url()).pathname.startsWith("/dashboard");
+    yaz("ILK-SIFRE", "ilk şifre mevcut şifresiz kaydedilir, panel açılır, şifreyle giriş", "panel + giriş 200", `panel=${panel}, giriş=${await girer(d.parola)}`, panel && (await girer(d.parola)));
+  } else if (FAZ === "kod-dogrula") {
+    await girisYap();
+    await sozlesmeyiGec();
+    await s.goto("/dashboard/settings");
+    // Sayfa iskeletle akıyor; metin gelmeden okumak yanlış FAIL veriyordu (ilk koşu).
+    await s.waitForFunction(() => /\d+–64 karakter/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
+    const m = await govdeMetni();
+    yaz("KOD-AYARLAR", "Ayarlar şifre bölümü 8–64 der (yeni kod)", "'8–64 karakter'", `8–64=${m.includes("8–64 karakter")}, 12–64=${m.includes("12–64")}`, m.includes("8–64 karakter") && !m.includes("12–64"));
+  } else if (FAZ === "api") {
+    const o1 = (await oturum()).json, o2 = (await oturum()).json;
+    let r = await auth("/user", { yontem: "PUT", belirtec: o1.access_token, govde: { password: yeniSifre() } });
+    yaz("API-1", "mevcut şifre olmadan PUT /user reddedilir", "400 current_password_required, eski şifre geçerli", `${r.durum} ${r.kod}, eski geçerli=${await girer(d.parola)}`, r.durum === 400 && r.kod === "current_password_required" && (await girer(d.parola)));
+    r = await auth("/user", { yontem: "PUT", belirtec: o1.access_token, govde: { password: yeniSifre(), current_password: "Yanlis-Yy7!q9" } });
+    yaz("API-2", "yanlış mevcut şifreyle PUT /user reddedilir", "400 current_password_invalid, eski şifre geçerli", `${r.durum} ${r.kod}, eski geçerli=${await girer(d.parola)}`, r.durum === 400 && r.kod === "current_password_invalid" && (await girer(d.parola)));
+    r = await auth("/user", { yontem: "PUT", belirtec: o1.access_token, govde: { password: "Yy7!abc" } });
+    yaz("API-3", "7 karakter reddedilir (en kısa 8 değişmedi)", "422 weak_password", `${r.durum} ${r.kod}`, r.durum === 422 && r.kod === "weak_password");
+    const o2kalir = await yenile(o2.refresh_token);
+    yaz("API-4", "reddedilen denemeler öteki oturumu kapatmaz", "yenileme 200", String(o2kalir), o2kalir === 200);
+  } else if (FAZ === "ayarlar") {
+    await girisYap();
+    await sozlesmeyiGec();
+    const oteki = (await oturum()).json; // giriş öteki oturumları kapattıktan SONRA açılan "başka cihaz"
+    const yeni = yeniSifre();
+    await s.goto("/dashboard/settings");
+    await s.getByRole("button", { name: /^(Değiştir|Change)$/ }).first().click();
+    await s.waitForSelector('form[data-sifre-formu="ayarlar"] input[name="currentPassword"]');
+    await s.fill('form[data-sifre-formu="ayarlar"] input[name="currentPassword"]', d.parola);
+    await s.fill('form[data-sifre-formu="ayarlar"] input[name="password"]', yeni);
+    await s.fill('form[data-sifre-formu="ayarlar"] input[name="passwordConfirm"]', yeni);
+    await s.locator('form[data-sifre-formu="ayarlar"] button[type="submit"]').click();
+    let degisti = false;
+    for (let i = 0; i < 20 && !degisti; i++) { await s.waitForTimeout(1000); degisti = await girer(yeni); }
+    const eski = await girer(d.parola);
+    if (degisti) { d.parola = yeni; kaydet(); }
+    const otekiDurum = await yenile(oteki.refresh_token);
+    const m = await govdeMetni();
+    yaz("AYARLAR", "Ayarlar: doğru mevcut şifreyle değişir (uygulama current_password gönderir)", "yeni giriş 200, eski geçersiz", `yeni=${degisti}, eski=${eski}, hata metni=${/güncellenemedi|Mevcut şifre/.test(m)}`, degisti && !eski);
+    yaz("AYARLAR-OTEKI", "şifre değişince başka cihaz oturumu kapanır", "yenileme 400", String(otekiDurum), otekiDurum === 400);
+  } else if (FAZ === "kurtarma-iste") {
+    await s.goto("/forgot-password");
+    await s.fill('input[name="email"]', d.adres);
+    await s.locator('form button[type="submit"]').last().click();
+    await s.waitForTimeout(4000);
+    const m = await govdeMetni();
+    yaz("KURTARMA-ISTE", "Şifremi unuttum → bağlantı istenir", "onay metni", m.slice(0, 120), /bağlantı|e-posta/i.test(m));
+  } else if (FAZ === "kurtarma") {
+    const oteki = (await oturum()).json;
+    await baglantiyiAc(BAGLANTI);
+    const yol = new URL(s.url()).pathname;
+    const yeni = yeniSifre();
+    await sifreFormu(yeni);
+    const panel = new URL(s.url()).pathname.startsWith("/dashboard");
+    const yeniGir = await girer(yeni), eski = await girer(d.parola);
+    if (yeniGir) { d.parola = yeni; kaydet(); }
+    const otekiDurum = await yenile(oteki.refresh_token);
+    yaz("KURTARMA", "kurtarma bağlantısı mevcut şifresiz yeni şifre koyar", "/reset-password → panel, yeni 200, eski geçersiz", `sayfa=${yol}, panel=${panel}, yeni=${yeniGir}, eski=${eski}`, yol === "/reset-password" && panel && yeniGir && !eski);
+    yaz("KURTARMA-OTEKI", "kurtarmadan sonra önceki oturum kapanır", "yenileme 400", String(otekiDurum), otekiDurum === 400);
+  } else if (FAZ === "giris") {
+    await girisYap();
+    await sozlesmeyiGec();
+    await s.goto("/dashboard/settings");
+    yaz("GIRIS", "son şifreyle tarayıcıdan yeniden giriş", "/dashboard/settings", new URL(s.url()).pathname, new URL(s.url()).pathname === "/dashboard/settings");
+  }
+} catch (h) {
+  await s.screenshot({ path: `${DIZIN}/hata-${FAZ}-${AD}.png` }).catch(() => {});
+  yaz(FAZ.toUpperCase(), "faz tamamlanamadı", "çökmeden biter", String(h.message).split("\n")[0].slice(0, 200), false);
+}
+yaz("SAYFA-HATASI", `${FAZ}: tarayıcı sayfa hatası`, "0", hatalar.join(" | ") || "0", hatalar.length === 0);
+fs.appendFileSync(`${DIZIN}/sonuclar.jsonl`, sonuc.map((x) => JSON.stringify({ hesap: AD, faz: FAZ, ...x })).join("\n") + "\n");
+await b.close();
+process.exit(sonuc.some((x) => x.sonuc === "FAIL") ? 1 : 0);
