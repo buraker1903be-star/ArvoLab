@@ -803,6 +803,38 @@ export default function ManuscriptEditor({
     },
     [],
   );
+  /*
+    ÇEKMECE BAŞLIĞI ÖRTMEZ (19.11.2026, kabul turu 2). Dar masaüstünde AI/PDF
+    ya da inceleme paneli çekmece olunca üst çubuğun hemen altından
+    başlıyordu ve editörün başlık satırını (çalışma adı, ölçek, Kontroller,
+    Dışa aktar) örtüyordu; incelemeye ya da dışa aktarmaya geçmek için önce
+    çekmeceyi kapatmak gerekiyordu. Çekmecenin üstü başlığın alt kenarına
+    hizalanır; sayfa kayıp başlık görünümden çıkınca çekmece üst çubuğa
+    kadar uzar.
+  */
+  /* Telefonda (≤760) çekmece yok: PDF tam ekran, asistan alttan yaprak (workspace.css). */
+  const cekmeceVar = Boolean(karar && (ekran ?? 0) > 760 && (karar.sag === "cekmece" || karar.inceleme === "cekmece"));
+  useEffect(() => {
+    const yerlesim = yerlesimRef.current;
+    if (!yerlesim) return;
+    if (!cekmeceVar) {
+      yerlesim.style.removeProperty("--cekmece-ust");
+      return;
+    }
+    const ayarla = () => {
+      const baslik = document.querySelector(".yazma-basligi");
+      const ustCubuk = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64;
+      const alt = baslik ? baslik.getBoundingClientRect().bottom : 0;
+      yerlesim.style.setProperty("--cekmece-ust", `${Math.round(Math.max(ustCubuk + 8, alt + 8))}px`);
+    };
+    ayarla();
+    window.addEventListener("scroll", ayarla, { passive: true });
+    window.addEventListener("resize", ayarla);
+    return () => {
+      window.removeEventListener("scroll", ayarla);
+      window.removeEventListener("resize", ayarla);
+    };
+  }, [cekmeceVar]);
   const [anaGenislik, setAnaGenislik] = useState(0);
   const otomatikOlcek = karar?.sabitKagit && anaGenislik ? Math.min(1, Math.floor(((anaGenislik - 2) / KAGIT_GENISLIGI) * 100) / 100) : 1;
   const belgeOlcegi = karar?.sabitKagit ? gecerliOlcek(olcekTercihi, otomatikOlcek) : 1;

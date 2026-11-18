@@ -342,6 +342,7 @@ export default function PdfGoruntuleyici({
           <label className="pdf-sayfa-girdi">
             <span className="sr-only">{t({ tr: "Sayfa", en: "Page" })}</span>
             <input
+              className="field-control"
               inputMode="numeric"
               value={sayfaGirdi}
               onChange={(e) => setSayfaGirdi(e.target.value.replace(/\D/g, "").slice(0, 5))}
@@ -395,7 +396,7 @@ export default function PdfGoruntuleyici({
           <label className="sr-only" htmlFor={`pdf-ara-${pdfId}`}>
             {t({ tr: "PDF içinde ara", en: "Search in PDF" })}
           </label>
-          <input id={`pdf-ara-${pdfId}`} type="search" value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
+          <input id={`pdf-ara-${pdfId}`} className="field-control" type="search" value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
           <button type="submit" className="yazim-ikon" disabled={!belge || araniyor} aria-label={t({ tr: "Ara", en: "Search" })}>
             {araniyor ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
           </button>

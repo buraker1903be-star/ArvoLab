@@ -273,7 +273,7 @@ export default function KaynakPdfPaneli({
         <>
           <label className="kaynak-pdf-secici">
             <span>{t({ tr: "Kaynak", en: "Source" })}</span>
-            <select value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
+            <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
               {liste.map((r) => (
                 <option key={r.id} value={r.id}>
                   {ozet(r.kunye, 110)}
@@ -380,7 +380,7 @@ export default function KaynakPdfPaneli({
                       <>
                         <label className="kaynak-sayfa">
                           <span>{t({ tr: "Basılı sayfa (isteğe bağlı)", en: "Printed page (optional)" })}</span>
-                          <input value={basiliSayfa} onChange={(e) => setBasiliSayfa(e.target.value.slice(0, 20))} inputMode="text" placeholder={t({ tr: "ör. 214", en: "e.g. 214" })} />
+                          <input className="field-control" value={basiliSayfa} onChange={(e) => setBasiliSayfa(e.target.value.slice(0, 20))} inputMode="text" placeholder={t({ tr: "ör. 214", en: "e.g. 214" })} />
                           <small>
                             {t({
                               tr: `PDF'in ${atif.pdfSayfa}. sayfası. Makalenin basılı sayfa numarası farklı olabilir; numarayı makalenin kendi sayfasından yazın.`,
@@ -437,6 +437,7 @@ export default function KaynakPdfPaneli({
                 </label>
                 <textarea
                   id="kaynak-pdf-soru"
+                  className="field-control"
                   rows={2}
                   value={soru}
                   onChange={(e) => setSoru(e.target.value.slice(0, 1000))}
@@ -545,7 +546,7 @@ function PdfBagSatiri({ projectId, pdf, onDegisti }: { projectId: string; pdf: K
         <div className="pdf-bag-sec">
           <label>
             <span className="sr-only">{t({ tr: "Bağlanacak kaynak", en: "Source to link" })}</span>
-            <select value={secilen} onChange={(e) => setSecilen(e.target.value)}>
+            <select className="field-control" value={secilen} onChange={(e) => setSecilen(e.target.value)}>
               <option value="">{t({ tr: "Kaynak seçin…", en: "Choose a source…" })}</option>
               {(kaynaklar ?? [])
                 .slice()

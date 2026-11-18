@@ -1396,7 +1396,8 @@
 */
 @media (max-width: 760px) {
   /* --yaprak-ust: araç çubuğunun alt kenarı (yazim-paneli.tsx); yoksa eski %30. */
-  .yazim-paneli { top: var(--yaprak-ust, 30dvh); right: 0; bottom: 0; left: 0; width: 100%; height: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  /* Yaprak da alt çubuğun üstünde biter (yukarıdaki PDF kuralıyla aynı gerekçe). */
+  .yazim-paneli { top: var(--yaprak-ust, 30dvh); right: 0; bottom: var(--dock-alani); left: 0; width: 100%; height: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 }
 
 /* ---------- Kaynakla sohbet (03.11.2026) ---------- */
@@ -1533,6 +1534,16 @@
 .pdf-arac-grup { display: inline-flex; align-items: center; gap: 4px; }
 .pdf-sayfa-girdi { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
 .pdf-sayfa-girdi input { width: 3.2em; min-height: 32px; text-align: center; }
+/*
+  PDF denetimleri ortak ArvoLAB girdisiyle (field-control; 19.11.2026, kabul
+  turu 2): kaynak seçici, sayfa kutusu ve arama eskiden tarayıcının
+  varsayılan denetimleriydi; koyu temada açık gri kutular olarak kalıyordu.
+  Burada yalnızca yoğunluk: panelin araç satırı sık, yükseklik 32 px.
+*/
+:is(.kaynak-pdf-secici select, .pdf-sayfa-girdi input, .pdf-ara input).field-control {
+  min-height: 32px; height: 32px; padding-inline: 10px; font-size: var(--os5-fs-meta);
+}
+.pdf-sayfa-girdi input.field-control { width: 3.6em; padding-inline: 4px; }
 .pdf-yuzde { min-width: 3.2em; text-align: center; font-size: var(--fs-sm); color: var(--muted); }
 .pdf-ara { display: inline-flex; flex: 1 1 200px; align-items: center; gap: 4px; min-width: 0; }
 .pdf-ara input { flex: 1 1 auto; min-width: 0; min-height: 32px; }
@@ -1585,14 +1596,20 @@
 
 @media (max-width: 760px) {
   .pdf-panel-ayirici { display: none; }
+  /*
+    Telefonda PDF tam ekran ama ALT ÇUBUĞUN ÜSTÜNDE biter (19.11.2026, kabul
+    turu 2): eskiden inset:0 ile alt çubuğu da örtüyordu; PDF açıkken
+    "Çalışmalar / Belge / Kaynaklar / Arvo AI / Çalışma" görünmüyordu ve
+    tek çıkış paneldeki kapatma düğmesiydi. --dock-alani alt çubuğun
+    yüksekliği + güvenli alan (tokens.css).
+  */
   .kaynak-pdf-paneli {
     position: fixed;
-    inset: 0;
+    inset: 0 0 var(--dock-alani) 0;
     z-index: var(--z-pencere);
-    height: 100dvh;
+    height: auto;
     border: 0;
     border-radius: 0;
-    padding-bottom: env(safe-area-inset-bottom);
   }
   .kaynak-pdf-alt { max-height: 50%; }
 }
@@ -1711,7 +1728,8 @@
   /* Çekmece: belgenin üstünde, sağdan; gölgeyle ayrışır. */
   .manuscript-layout[data-sag-cekmece] { grid-template-columns: minmax(0, 1fr); }
   .manuscript-layout[data-sag-cekmece] :is(.kaynak-pdf-paneli, .yazim-paneli) {
-    position: fixed; top: calc(var(--topbar-height) + 8px); right: 8px; bottom: 8px; left: auto;
+    /* --cekmece-ust: editör başlığının alt kenarı (manuscript-editor.tsx); başlık (Kontroller, Dışa aktar) örtülmesin. */
+    position: fixed; top: var(--cekmece-ust, calc(var(--topbar-height) + 8px)); right: 8px; bottom: 8px; left: auto;
     z-index: var(--z-panel);
     width: min(var(--sag-panel-genislik, 440px), calc(100vw - 16px - var(--os5-kenar-ray)));
     height: auto; border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
@@ -1728,7 +1746,7 @@
 @media (min-width: 1200px) {
   .manuscript-layout[data-inceleme-yer="cekmece"] { grid-template-columns: minmax(0, 1fr); }
   .manuscript-layout[data-inceleme-yer="cekmece"] > .manuscript-outline {
-    position: fixed; top: calc(var(--topbar-height) + 8px); right: 8px; bottom: 8px; left: auto;
+    position: fixed; top: var(--cekmece-ust, calc(var(--topbar-height) + 8px)); right: 8px; bottom: 8px; left: auto;
     z-index: var(--z-panel);
     width: min(340px, calc(100vw - 16px - var(--os5-kenar-ray)));
     max-height: none; padding: 12px;
