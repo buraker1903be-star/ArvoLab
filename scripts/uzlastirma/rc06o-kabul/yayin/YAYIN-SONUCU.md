@@ -48,5 +48,5 @@ Not: M.5 yalnızca kontrol anında şifresi hâlâ boş olanları sayar; arada "
 | Dokunmatik kaydırma (U5-dokunma), Preview çalışma anı | UNVERIFIED (yayın öncesi raporda) |
 | Mevcut 2 `employee` hesabı | dokunulmadı |
 | Uzak dal temizliği (32 aday dal) | silme izni engellendi; yayından bağımsız |
-| Vercel otomatik Production dağıtımı | `main` push'u dağıtım üretmedi; Git entegrasyonu ayarı incelenmeli |
+| Vercel otomatik Production dağıtımı | incelendi (`VERCEL-OTOMATIK-DAGITIM.md`): kök neden kanıtlanamadı, ayar değişmedi; doğrulama sonraki onaylı yayında |
 | Geçmiş kayıtlarında `statements` alanı | boş bırakıldı (CLI repair dosya SQL'ini yazar); sürüm karşılaştırması etkilenmez |
