@@ -12,7 +12,9 @@ Dal `tasarim/baglamli-calisma-alani`, taban `main` = `a076d9d` (18.11.2026).
 | `gorseller/` | Prototipin ekran görüntüleri. Masaüstü `NN-tema-dil.png` (10 ekran açık/TR; seçilenler koyu ve EN), telefon `tel-NN-tema-dil.png` (ekran 1, 2, 3, 5, 6, 7, 8). 2. turda eklenen durumlar: `05secim-*`, `05atif-*` (ekran 5, A ve B), `071440-*`, `071280-*` (ekran 7, iki genişlik) |
 | `once/` | Mevcut uygulama (a076d9d, temiz üretim derlemesi, gerçek depolamalı yerel yığın, sentetik içerik) |
 | `sonra/` | İlk teslimin görüntüleri (23e927c derlemesi); tarihsel, üzerine yazılmaz |
-| `sonra-903bd9a/` | Son hâl: 903bd9a, temiz üretim derlemesi `XRV2st2SilgSkE62Kuq3H`, aynı yerel yığın, sentetik içerik; `scripts/yerel-yigin/calisma-alani-kabul.mjs` üretir |
+| `sonra-903bd9a/` | 2. kabul turu: 903bd9a, temiz üretim derlemesi `XRV2st2SilgSkE62Kuq3H`; tarihsel |
+| `sonra-8525487/` | 3. kabul turu, son hâl: kabul betiğinin görselleri (8525487; uygulama kodu be40f94 ile aynı, temiz üretim derlemesi `Lr4ceYU3KXnrsryusC0Br`), aynı yerel yığın, sentetik içerik |
+| `karsilastirma-be40f94/` | Prototiple aynı boyut ve içerikte karşılaştırma: `NN.png` üstte prototip, altta uygulama; `uygulama/NN.png` prototip karesiyle birebir aynı ölçüde uygulama görüntüsü. `scripts/yerel-yigin/prototip-karsilastirma.mjs` üretir |
 
 Prototipte içerik sentetik ve davranışlar taklittir: arama sonuçları, PDF sayfası, AI cevabı, kayıtlı cevaplar,
 kelime sayıları ve atıf kartı gerçek veriye bağlı değildir. Prototip sunucuya istek göndermez. Her ekranın üstünde **Mevcut** (bugün çalışan),
@@ -42,16 +44,48 @@ kelime sayıları ve atıf kartı gerçek veriye bağlı değildir. Prototip sun
 Genel/dar gezinme 236 · bölüm ve kaynak listesi 300 · makale arama 372 · AI 396 · PDF 520 px.
 Talimattaki aralıkların içinde; gerçek içerikle uygulamada sınanacak.
 
-## Uygulama durumu (19.11.2026)
+## Uygulama durumu (18.11.2026, 3. kabul turu)
 
 Beş commit, onaylanan sırayla: 1 kimlik/tipografi/gezinme · 2 yeni çalışma + belge dili (K1-A) ·
 3 sol araştırma alanı, tek sağ panel, belge ölçeği, durum koruma · 4 kaynak–PDF bağı (K2-A), atıf kartı (K3-A),
-pasaj vurgusu · 5 klavye, dokunma, telefon. Kabul: `node scripts/yerel-yigin/calisma-alani-kabul.mjs <adres>`,
-sonuç `scripts/yerel-yigin/sonuclar/calisma-alani-kabul.json`.
+pasaj vurgusu · 5 klavye, dokunma, telefon. Ardından iki kabul turu: inceleme paneli yerleşimi ve dışa aktarma
+(2. tur); gezinme gruplaması, Kaynakça ve Kılavuz ve biçim araçları, Kayıtlı AI cevapları, PDF denetimleri,
+çekmece erişimi (3. tur). Kabul: `node scripts/yerel-yigin/calisma-alani-kabul.mjs <adres> [görsel-dizini]`.
 
 Kabul sonuçları commit adıyla ayrı dosyalarda (`scripts/yerel-yigin/sonuclar/`); her dosya git HEAD, BUILD_ID ve
-uygulama kodunun temiz olup olmadığını taşır. `calisma-alani-kabul.json` ilk teslimin (23e927c) sonucudur, yeni
-HEAD'in kanıtı değildir. Son tam koşu: `calisma-alani-kabul-903bd9a.json` (13 PASS).
+uygulama kodunun temiz olup olmadığını taşır. Eski dosyalar yerinde: `calisma-alani-kabul.json` (23e927c, ilk
+teslim), `-903bd9a.json` (13 PASS), `-be40f94.json` (16 PASS, 1 FAIL: S8, yazdırma sayfasının sayfalara bölünme
+yarışı; senaryo düzeltildi, uygulama değişmedi). Son tam koşu: `calisma-alani-kabul-8525487.json`.
+
+**3. turda yapılanlar**
+
+- Gezinme prototipin gruplamasında: Yaz (Belge, Bölümler) · Araştır (Kaynaklar, Makale bul, Arvo AI) · Kontrol et
+  (Kaynakça, Kılavuz ve biçim, Özet ve teslim). İkincil araçlar (Kanıt matrisi, Makale çalışma alanı, Etik kurul,
+  Analiz, Belge kontrolü) masaüstünde kapalı başlayan "Diğer araçlar" grubunda; telefonun "Çalışma" sayfasında
+  hepsi açık. Hiçbir işlev ve rol yetkisi kaldırılmadı; öğeler aynı listeden (`lib/os/uygulamalar.ts`).
+- Üst başlık çalışmanın içinde "<açık araç> · <çalışmanın adı>" yazar (ör. "Belge · Uzaktan Öğrenmede…").
+- Kalıcı "Kılavuz yok / Kurumu seç" şeridi editörden kalktı. İşlevleri sol alandaki **Kılavuz ve biçim** aracında:
+  kılavuz varsa adı/stil/sürüm ve "Kuralları gör"; yoksa "Kılavuzumu yükle" ve "Kurumu seç"; biçim özeti, sayfa
+  düzenini kılavuza göre ayarlama, yapı uyarıları, kontrol. **Kaynakça** aracı: atıf stili, kaynakça bölümüne git,
+  atıf–kaynakça uyumu, atıf yapılmamış kaynaklar, kontrol. İkisi de çalışma menüsünde doğrudan; "Özet ve teslim"
+  yalnızca teslim durumunu gösterir.
+- **Kayıtlı AI cevapları** (Arvo AI panelinde "Kayıtlı" sekmesi), aşağıda.
+- PDF denetimleri (kaynak seçici, sayfa kutusu, PDF içinde arama, Kaynağa sor) ortak `field-control` görünümünde;
+  koyu temada varsayılan açık gri zemin kalmadı. Telefonda PDF ve AI paneli alt çubuğun üstünde biter.
+- Çekmece (AI/PDF) editör başlığının ALTINDAN başlar; Kontroller, Dışa aktar ve kapatma düğmesi her zaman
+  tıklanabilir.
+- Telefonda "Dayanağa git" düzeltmesi: panel alıntı eklenince kapanıyor, kart paneli yeniden açınca görüntüleyici
+  isteği bağlanırken elde bulduğu için uygulanmış sayıp PDF'i sığdırılmış 1. sayfada, vurgusuz açıyordu (masaüstünde
+  de panel kapalıyken aynısı). Artık pasaj okunur ölçekte (%160) açılır, pasajın başı görünür alana kaydırılır;
+  kaydırma yalnızca PDF alanında yapılır (eskiden `scrollIntoView` paneli de kaydırıp kapatma düğmesini ekrandan
+  çıkarıyordu). Pasaj yoksa sığdırma ve yakınlaştırma çalışır.
+
+**Kabul senaryoları** (S1–S11 önceki turlardan, S12–S15 bu turda):
+S12 Kayıtlı AI (yerel model taklidiyle: üretim +1 kayıt/+1 model isteği; yeniden açma, sekme ve iki ekleme
+denemesi +0; başka kullanıcının, başka çalışmanın ve başka yeteneğin kaydı görünmez; silinmiş kaynağa atıflı cevap
+eklenmez) · S13 gezinme grupları, Diğer araçlar, kalıcı şerit yok, üst başlık, iki araç, telefon Çalışma sayfası ·
+S14 koyu tema denetimleri, 1280 çekmece başlığın altında, 1472 AI açılışında kayma yok, telefon alt çubuk ve ölçek ·
+S15 telefonda pasaj odağı (%160, pasajın başı görünür, "Pasaja odaklan", kapatma düğmesi ekranda).
 
 ### Migration → şema önbelleği → kod sırası
 
@@ -74,43 +108,48 @@ Kaybolan: kullanıcıların seçtiği belge dilleri (çalışmalar arayüz dili 
 bağları (eşleşme künye/DOI tahminine döner). PDF'ler, kaynaklar ve belgeler silinmez. İki dosya yerel veritabanında
 bir işlem içinde çalıştırılıp geri sarıldı: sütunlar ve tetikleyici kalktı, 20 PDF satırı yerinde kaldı.
 
-### Kayıtlı AI cevapları: neden eksik, tamamlamak için ne gerekir
+### Kayıtlı AI cevapları (3. turda tamamlandı)
 
-Prototipte "Kayıtlı" sekmesi vardı ve onaylı kapsamdaydı. Bu dalda yapılmadı; kapsam dışı sayılmıyor. İlk teslimde
-önce yerleşim, K1–K3 ve kabul işleri yapıldı; bu sekme atlandı ve PR'da yalnızca "prototipten fark" diye geçti. Onu
-kendiliğinden kapsamdan düşmüş gibi yazmak yanlıştı. Engel bir karar ya da şema değişikliği değil. Bugün durum:
+Önceki turda yapılmamıştı; kapsam dışı sayılmamıştı. Migration gerekmedi:
 
-- Yazım asistanının sohbeti panelin belleğinde (`yazim-paneli.tsx`, `useState`); panel kapanınca ya da sayfa
-  yenilenince kaybolur.
-- Her çalışma sunucuda zaten `ai_assistant_runs`'a yazılıyor (`lib/ai/kayit.ts`): `capability`, `status`, `output`
-  (modelin ham cevabı), `context` (istemin tamamı), `findings`, `project_id`, `rating`. Okuma RLS'i: kullanıcı kendi
-  satırını görür; kurum gözetim rolleri `gozetim_kapsami` ile.
+- Okuma `app/actions/ai-yazim-kayitlari.ts` → `kayitliYazimCevaplari`: oturumdaki kullanıcının, bu çalışmaya ait,
+  `capability = 'yazim'`, `status = 'completed'` satırları, en yenisi başta, 20'şerli. Sorgu `user_id` ile açıkça
+  daraltılır: gözetim rollerinin RLS'teki okuma hakkı bu "benim geçmişim" görünümünde kullanılmaz.
+- Geçmişi açmak model çağırmaz, hak tüketmez, satır yazmaz (`asistanKapisi`/`asistanHakkiVar` çağrılmaz; saatlik
+  hak bu tablodaki satırlardan sayıldığı için okumak hakkı etkilemez). Abonelik kapısı yok (`lib/access.ts`
+  okumalar listesi): aboneliği biten öğrenci kendi geçmişini görebilmeli.
+- Gösterim kaydedilen ham çıktının yazım asistanının kendi çözümleyicisiyle okunmasıdır (`lib/ai/kayitli-cevaplar.ts`);
+  okunamayan satır listeden düşer. Yeni kayıtlarda istek ve görev `findings`'e yazılıyor; eski kayıtlarda istek
+  gösterilmez.
+- Belgeye ekleme kullanıcının "İmlece ekle" düğmesidir ve eklemeden önce sunucuda güncel kaynak denetimi yeniden
+  çalışır (`kayitliCevabiDenetle`, üretimdeki `yazimDenetle`, BUGÜNKÜ Literatür kütüphanesiyle). Kaynağı sonradan
+  silinmiş atıf varsa metin eklenmez ve nedeni kartta yazar. Eklenen metin asistan izi taşır.
+- Kapsam yalnızca yazım asistanı (`yazim`). Kaynakla sohbet (`kaynak`) cevaplarının biçimi farklı (alıntılı bulgu)
+  ve belgeye ekleme yolu PDF panelinde; o kayıtlar bu sekmede listelenmiyor.
 
-Tamamlamak için (aynı dalda, migration GEREKMEZ):
+**Prototipten kalan farklar** (karşılaştırma görüntüleri `karsilastirma-be40f94/`; bilerek ya da henüz yapılmadı):
 
-1. Sunucu işlemi: oturumdaki kullanıcının, bu çalışmaya ait, `capability in ('yazim','kaynak')` ve
-   `status = 'completed'` satırlarını tarihe göre sıralı ve sayfalı okur. Gözetim rolünün okuma hakkı kayıtlı
-   sekmede kullanılmaz: sorgu `user_id = auth.uid()` ile açıkça daraltılır.
-2. Gösterim: `output` yazım asistanının kendi çözümleyicisiyle okunur. Kullanıcının sorusu ayrı bir sütunda değil,
-   `context`'in içinde; eski kayıtlarda soru gösterilmez, yenilerinde `findings`'e soru ve görev yazılır
-   (jsonb, şema değişmez).
-3. Ekleme: kayıtlı cevap belgeye yine yalnızca kullanıcının düğmesiyle girer, asistan izi (`lib/tiptap-asistan-izi.ts`)
-   taşır ve ekleme anında atıf denetimi GÜNCEL Literatür kütüphanesine karşı yeniden çalışır. Cevap kaydedildiği
-   gün geçerli olan bir atıf, kaynak sonradan silindiyse düşer. Gerçek AI çağrısı gerekmez.
-4. Kabul: yerel model taklidiyle (`scripts/yerel-yigin/model-taklidi.mjs`) üretilmiş kayıtlarla listeleme, sayfa
-   yenilemeden sonra görünme, başka kullanıcının ve başka çalışmanın kaydının görünmemesi, silinmiş kaynağa atıflı
-   cevabın eklenememesi; birim testi çözümleyici ve atıf yeniden denetimi için.
-
-Tahmini iş: bir sunucu işlemi, panelde bir sekme, iki test dosyası ve kabul senaryosu.
-
-**Prototipten kalan farklar** (bilerek ya da henüz yapılmadı):
-
-- Kayıtlı AI cevapları sekmesi yok (yukarıda: neden ve gereken iş).
-- İlerleme çubuğu/kelime hedefi yok: uygulamada kullanıcının girdiği bir hedef alanı bulunmuyor, uydurulmadı.
+- İlerleme çubuğu/kelime hedefi yok: uygulamada kullanıcının girdiği bir hedef alanı bulunmuyor, uydurulmadı (05).
+- Başlık numaraları ve kâğıt yazı tipi: prototip "1. GİRİŞ" ve serif gövde gösteriyor; uygulamada numara ve yazı
+  tipi kılavuzdan gelir, kılavuzsuz çalışmada numarasız ve sans (05, 07, 08).
+- Seçim işlemleri prototipte belgenin sağında dikey bir kutu; uygulamada seçimin hemen altında yatay şerit (05secim).
+- Yeni çalışma penceresi ana sayfadan açılınca Çalışmalarım'ın üstünde açılır; prototipte ana sayfanın üstünde (03).
+- 1472'de kaynak listesi + PDF birlikte açıkken PDF sütun değil çekmece: belge %85'in altına sıkıştırılmaz kuralı
+  (prototipte belge %86'ya küçülüp üç sütun). 1440/1280'de de çekmece (07, 071440, 071280).
+- AI paneli açıkken 1472'de genel kenar çubuğu raya iner; panel başlığı "Yazım asistanı", sekme "Kayıtlı"
+  (prototipte "Arvo AI", "Kayıtlı cevaplar") (08).
+- Makale bul bu ortamda sonuç gösteremiyor: yerel yığının dış dizinlere (OpenAlex, Crossref) ağ erişimi yok,
+  ekranda "Dizinlere şu anda ulaşılamıyor" yazıyor; prototipteki sonuç listesi taklit (06, tel-06).
+- Telefonda üst satır prototipteki "‹ Çalışmalarım · Belge" değil, uygulamanın genel üst çubuğu; alt çubuk
+  Çalışmalar · Belge · Kaynaklar · Arvo AI · Çalışma (prototipte Belge · Araştır · AI · Çalışma) (tel-*).
+- Telefonda metin kutusu odaktayken alt çubuk klavyeye yer açmak için aşağı kayar; odak bırakılınca döner.
+- Editöre tıklanınca kâğıdın çevresinde klavye odak halkası çizilir (base.css genel `:focus-visible` kuralı;
+  bu turdan önce de böyleydi, prototipte yok).
 - Doğrulanmış pasaj yalnızca oturum boyunca tutulur (K3-ek onaylı değil); yenilemeden sonra kartta yalnızca "PDF'i aç".
 - Atıf kartı dipnotlu stillerde açılmaz; numaralı atıf belgenin kaynakça sırası ve başlığıyla eşlenir.
 - Dar ekranda kart kâğıdın sağına sığmazsa satırın altına/üstüne iner.
-- Kaynakça ve kılavuz/biçim ayrı gezinme öğesi değil; "Özet ve teslim" altında.
-- İnceleme paneli artık yerleşim kararında (19.11.2026): sağ panelle aynı yuvayı paylaşır, AI/PDF açıkken gizlenir;
-  yalnız açıkken belgeyi %85'in altına sıkıştırmaz (önce ray, sonra çekmece). Dar masaüstünde AI/PDF çekmecesi
-  başlık satırını (Kontroller, Dışa aktar) örter; incelemeye geçmek için çekmece kapatılır.
+- İnceleme paneli sağ panelle aynı yuvayı paylaşır, AI/PDF açıkken gizlenir; yalnız açıkken belgeyi %85'in altına
+  sıkıştırmaz (önce ray, sonra çekmece). Çekmece 3. turdan beri editör başlığının altından başlar (eskiden Kontroller
+  ve Dışa aktar'ı örtüyordu); incelemeye geçmek için çekmece kapatılır.
+- Prototipin koyu tema ve İngilizce kareleri karşılaştırmaya alınmadı (açık/TR karşılaştırıldı); koyu tema PDF
+  denetimleri S14'te ölçülüyor.
