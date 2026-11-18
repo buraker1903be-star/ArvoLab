@@ -1,0 +1,22 @@
+[
+  {
+    "ad": "giris",
+    "durum": "PASS",
+    "gozlenen": "/dashboard"
+  },
+  {
+    "ad": "cikis",
+    "durum": "PASS",
+    "gozlenen": "/"
+  },
+  {
+    "ad": "yeniden-giris",
+    "durum": "PASS",
+    "gozlenen": "giriş + belge açık"
+  },
+  {
+    "ad": "sayfa-hatasi",
+    "durum": "PASS",
+    "gozlenen": "0"
+  }
+]

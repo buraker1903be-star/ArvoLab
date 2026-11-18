@@ -1,0 +1,141 @@
+// CANLI YAYIN KONTROLÜ (18.11.2026) — test düzeneği, uygulama kodu DEĞİL.
+// lab.arvo-os.com üzerinde yeni bir TEST hesabıyla: kayıt → e-posta onayı → ilk şifre → çalışma →
+// editör kaydı → Kaynaklar → Word dışa aktarma → çıkış → yeniden giriş. AI çağrısı yapılmaz.
+// E-posta adresi Resend'in test alıcısı (delivered+…@resend.dev): kimseye gerçek posta gitmez.
+// Faz 1: node canli.mjs kayit <cikti>          → adresi yazar
+// Faz 2: node canli.mjs devam <cikti> <onay-bağlantısı>
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire("/home/user/arvolab-rc06o-aday/package.json");
+const { chromium } = require("playwright");
+const [FAZ, OUT, BAGLANTI] = process.argv.slice(2);
+const URL0 = "https://lab.arvo-os.com";
+fs.mkdirSync(OUT, { recursive: true });
+const DURUM = `${OUT}/durum.json`;
+const durum = fs.existsSync(DURUM) ? JSON.parse(fs.readFileSync(DURUM, "utf8")) : {};
+const b = await chromium.launch();
+const c = await b.newContext({ baseURL: URL0, acceptDownloads: true, viewport: { width: 1440, height: 900 } });
+await c.addCookies([{ name: "arvolab_dil", value: "tr", url: URL0 }]);
+const s = await c.newPage();
+const hata = [];
+s.on("pageerror", (e) => hata.push(String(e).slice(0, 200)));
+const sonuc = [];
+const adim = async (ad, fn) => {
+  try { const r = await fn(); sonuc.push({ ad, durum: "PASS", gozlenen: r ?? "" }); console.log("PASS", ad, r ?? ""); }
+  catch (h) { await s.screenshot({ path: `${OUT}/hata-${ad}.png` }).catch(() => {}); sonuc.push({ ad, durum: "FAIL", gozlenen: String(h.message).split("\n")[0], sayfa: (await s.locator("body").innerText().catch(() => "")).replace(/\s+/g, " ").slice(0, 300) }); console.log("FAIL", ad, String(h.message).split("\n")[0]); throw h; }
+};
+async function CIKIS_VE_GIRIS() {
+    await adim("cikis", async () => {
+      await s.goto("/dashboard");
+      await s.locator("nav.os-gezinme .os-kullanici > summary").click();
+      await s.locator("nav.os-gezinme .os-kullanici-cikis button[type=submit]").click();
+      await s.waitForURL((u) => !/dashboard/.test(u.pathname), { timeout: 30000 });
+      return new URL(s.url()).pathname;
+    });
+    await adim("yeniden-giris", async () => {
+      await s.goto("/");
+      await s.fill('input[name="email"]', durum.adres);
+      await s.fill('input[name="password"]', durum.parola);
+      await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+      await s.goto(`/dashboard/editor/${durum.proje}/write`, { timeout: 120000 });
+      await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 120000 });
+      const metin = await s.locator(".ProseMirror").first().innerText();
+      if (!metin.includes(`kontrol cümlesi ${durum.ek}`)) throw new Error("yeniden girişte metin yok");
+      return "giriş + belge açık";
+    });
+}
+try {
+  if (FAZ === "kayit") {
+    durum.ek = crypto.randomBytes(3).toString("hex");
+    durum.adres = `delivered+arvolab-yayin-${durum.ek}@resend.dev`;
+    durum.parola = `Yy!${crypto.randomBytes(12).toString("base64url")}`;
+    fs.writeFileSync(DURUM, JSON.stringify(durum));
+    await adim("kayit", async () => {
+      await s.goto("/kayit");
+      await s.fill("#kayit-ad", "Yayin Kontrol");
+      await s.fill("#kayit-eposta", durum.adres);
+      await s.fill("#kayit-telefon", "0555 000 00 00").catch(() => {});
+      await s.getByRole("button", { name: /Kullanım Sözleşmesi/ }).first().click();
+      await s.locator(".sozlesme-onay-metin").evaluate((e) => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event("scroll")); });
+      await s.waitForTimeout(600);
+      await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).click();
+      await s.check('input[name="kvkk"]');
+      await s.locator('form button[type="submit"]').last().click();
+      await s.waitForTimeout(4000);
+      return (await s.locator("main, body").first().innerText()).replace(/\s+/g, " ").slice(0, 200);
+    });
+    console.log("ADRES", durum.adres);
+  } else if (FAZ === "son") {
+    await adim("giris", async () => {
+      await s.goto("/");
+      await s.fill('input[name="email"]', durum.adres);
+      await s.fill('input[name="password"]', durum.parola);
+      await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+      return new URL(s.url()).pathname;
+    });
+    await CIKIS_VE_GIRIS();
+  } else {
+    await adim("eposta-onayi", async () => {
+      await s.goto(BAGLANTI);
+      await s.getByRole("button", { name: /Devam et/ }).click();
+      await s.waitForURL(/reset-password|dashboard/, { timeout: 60000 });
+      return new URL(s.url()).pathname + new URL(s.url()).search;
+    });
+    await adim("ilk-sifre", async () => {
+      if (!/reset-password/.test(s.url())) throw new Error(`ilk şifre sayfasına gidilmedi: ${s.url()}`);
+      await s.fill('input[name="password"]', durum.parola);
+      await s.fill('input[name="passwordConfirm"]', durum.parola);
+      await s.getByRole("button", { name: /Şifreyi kaydet/ }).click();
+      await s.waitForURL(/dashboard/, { timeout: 60000 });
+      return new URL(s.url()).pathname;
+    });
+    await adim("calisma", async () => {
+      await s.goto("/dashboard/editor?yeni=1");
+      await s.getByRole("button", { name: /^Tez/ }).first().click().catch(() => {});
+      await s.fill('input[name="title"]', `Yayın kontrol ${durum.ek}`);
+      await s.getByRole("button", { name: /Çalışmayı oluştur/ }).click();
+      await s.getByText(/Kılavuzu sonra eklerim, yazmaya başla/).click({ timeout: 60000 }).catch(() => {});
+      await s.waitForURL(/dashboard\/editor\/[0-9a-f-]{36}/, { timeout: 60000 });
+      durum.proje = s.url().match(/editor\/([0-9a-f-]{36})/)[1];
+      fs.writeFileSync(DURUM, JSON.stringify(durum));
+      return durum.proje;
+    });
+    await adim("editor-kayit", async () => {
+      await s.goto(`/dashboard/editor/${durum.proje}/write`, { timeout: 120000 });
+      const ed = s.locator(".ProseMirror").first();
+      await ed.waitFor({ state: "visible", timeout: 120000 });
+      await ed.click();
+      await s.keyboard.type(`Canlı yayın kontrol cümlesi ${durum.ek}.`, { delay: 15 });
+      await s.waitForFunction(() => /Kaydedildi/.test(document.body.innerText), null, { timeout: 60000 });
+      await s.reload();
+      await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 120000 });
+      const metin = await s.locator(".ProseMirror").first().innerText();
+      if (!metin.includes(`kontrol cümlesi ${durum.ek}`)) throw new Error("yenilemeden sonra metin yok");
+      return "yazıldı, kaydedildi, yenilemede geri geldi";
+    });
+    await adim("kaynaklar", async () => {
+      await s.goto(`/dashboard/literature?calisma=${durum.proje}`);
+      await s.waitForLoadState("networkidle");
+      const baslik = await s.locator("h1").first().innerText();
+      const kaynakca = await s.getByRole("link", { name: /^Kaynakça/ }).count();
+      return `başlık "${baslik.trim()}" · Kaynakça sekmesi ${kaynakca}`;
+    });
+    await adim("disa-aktar-word", async () => {
+      await s.goto(`/dashboard/editor/${durum.proje}/write`, { timeout: 120000 });
+      await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 120000 });
+      await s.getByRole("button", { name: /Dışa aktar|Word, PDF ya da LaTeX/ }).first().click();
+      const [indirme] = await Promise.all([s.waitForEvent("download", { timeout: 90000 }), s.getByRole("button", { name: /Word \(\.docx\)/ }).click()]);
+      const hedef = `${OUT}/cikti.docx`;
+      await indirme.saveAs(hedef);
+      const duz = execFileSync("unzip", ["-p", hedef, "word/document.xml"], { encoding: "utf8", maxBuffer: 1 << 26 }).replace(/<[^>]+>/g, "");
+      if (!duz.includes(`kontrol cümlesi ${durum.ek}`)) throw new Error("Word çıktısında metin yok");
+      return `${(fs.statSync(hedef).size / 1024).toFixed(1)} KB, metin var`;
+    });
+    await CIKIS_VE_GIRIS();
+  }
+} catch { /* sonuç yazılıyor */ }
+sonuc.push({ ad: "sayfa-hatasi", durum: hata.length ? "FAIL" : "PASS", gozlenen: hata.join(" | ") || "0" });
+fs.writeFileSync(`${OUT}/sonuc-${FAZ}.json`, JSON.stringify(sonuc, null, 2));
+await b.close();

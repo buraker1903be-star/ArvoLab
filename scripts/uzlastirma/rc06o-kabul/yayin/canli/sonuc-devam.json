@@ -1,0 +1,43 @@
+[
+  {
+    "ad": "eposta-onayi",
+    "durum": "PASS",
+    "gozlenen": "/reset-password?ilk=1"
+  },
+  {
+    "ad": "ilk-sifre",
+    "durum": "PASS",
+    "gozlenen": "/dashboard"
+  },
+  {
+    "ad": "calisma",
+    "durum": "PASS",
+    "gozlenen": "3281d48f-2107-435b-ac8f-4518eb477851"
+  },
+  {
+    "ad": "editor-kayit",
+    "durum": "PASS",
+    "gozlenen": "yazıldı, kaydedildi, yenilemede geri geldi"
+  },
+  {
+    "ad": "kaynaklar",
+    "durum": "PASS",
+    "gozlenen": "başlık \"Kaynaklar\" · Kaynakça sekmesi 1"
+  },
+  {
+    "ad": "disa-aktar-word",
+    "durum": "PASS",
+    "gozlenen": "9.6 KB, metin var"
+  },
+  {
+    "ad": "cikis",
+    "durum": "FAIL",
+    "gozlenen": "locator.click: Timeout 30000ms exceeded.",
+    "sayfa": "İçeriğe atla Ana Sayfa Ara veya komut çalıştır Ctrl K TR İyi günler, Yayin Bu hafta henüz yazmadınız. Çalışmanıza devam edin Yeni çalışma Yayın kontrol 832748 Tez · az önce düzenlendi Yazmaya devam et Son kaynaklar Kaynakları aç Henüz kaynak eklemediniz. DOI yapıştırarak, dosya yükleyerek ya da aray"
+  },
+  {
+    "ad": "sayfa-hatasi",
+    "durum": "PASS",
+    "gozlenen": "0"
+  }
+]

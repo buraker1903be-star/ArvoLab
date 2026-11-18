@@ -1,0 +1,20 @@
+import sys,json
+Y="/tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad/yayin"
+adim=sys.argv[1]; toplam=int(sys.argv[2]); ilgili=sys.argv[3].replace("\\n","\n").strip().split("\n")
+import glob
+f=glob.glob(f"{Y}/yerel/{adim}*.txt")[0]
+names={l.split("|")[1] for l in open(Y+"/yerel/deltalar.txt") if not l.startswith("==")}
+yer=sorted(l.rstrip("\n") for l in open(f) if l.split("|")[1] in names)
+yt=sum(1 for _ in open(f))
+ISTISNA={"public.metin_surum_damgasi()","public.eposta_onayinda_sifreyi_temizle()","public.eposta_onayinda_profili_kur()"}
+# Kabul edilen istisna: yalnızca bu üç tetikleyici fonksiyonunda fonksiyon_yetki Production "-" (336d…) ↔ yerel "service_role" (c56e…)
+def esle(x):
+    k,n,m=x.split("|")
+    if k=="fonksiyon_yetki" and n in ISTISNA and m=="336d5ebc5436534e61d16e63ddfca327": return f"{k}|{n}|c56ec2e104f2c93fd656087be1e991a0"
+    return x
+ist=[x for x in ilgili if x and esle(x)!=x]
+ur=sorted(esle(x) for x in ilgili if x)
+print("istisna uygulanan satır:", ist)
+print("adım",adim,"| toplam uretim",toplam,"beklenen",yt+52,"->", "EŞİT" if toplam==yt+52 else "FARKLI")
+print("ilgili nesneler:", "EŞİT" if yer==ur else "FARKLI")
+for x in sorted(set(yer)^set(ur)): print("  fark:", ("yerel " if x in yer else "uretim ")+x)
