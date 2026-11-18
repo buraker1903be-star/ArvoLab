@@ -109,7 +109,7 @@ export default async function KaynaklarPage({
   const ekleMenusuAcik = ekle === "1" || typeof gelenDoi === "string";
 
   return (
-    <main className="dashboard-page gb gb-tek-ekran">
+    <main className="dashboard-page gb gb-tek-ekran kaynaklar-sayfasi">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       <section className="projects-header">

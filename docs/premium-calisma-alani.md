@@ -85,3 +85,21 @@ hata bu PR'ındır.
 | Kenar çubuğunda "Yardım"ı açmak "Araçlar"ı kapatıyor | — (gruplar yeni) | Açık/kapalı seçimi tek bir grup için tutuluyordu | Seçim grup başına |
 | Personel telefonda yazım ekranından Kanıt matrisi / Etik kurula ulaşamıyor | tabanda yazım ekranında sekmeler vardı | Telefonda yazım ekranı sekmeleri gizliyor; geri düğmesinin götürdüğü personel özetinde sekme yoktu | Sekmeler personel özetinde de |
 | Kaynakça görüntüsü kaynak listesini gösteriyor | — | Görüntü betiği `/dashboard/citations`'ı açıyordu, o da Kaynaklar sekmesine yönleniyordu | Betik Kaynakça sekmesini açar, sekme etkin ve içerik görünür değilse durur; yönlendirme ve özet adımı da sekmeye gider |
+
+## Üçüncü tur: telefon Kaynaklar, İngilizce ve erişilebilirlik (18.11.2026)
+
+Tasarım yönü korundu; yalnızca ölçülen sorunlar düzeltildi.
+
+| Bulgu | Ölçüm | Düzeltme |
+|---|---|---|
+| Telefonda Kaynaklar'ın üst alanı listeyi aşağı itiyor | 390×664'te ilk kaynak 528 px'teydi | Aralıklar daraldı, özet tam satır, iki düğme yan yana, süzgeçler tek satırda yatay kayar: 413 px |
+| İlk denemede arama kutusu 120 px'e kırpıldı | Seçilen sayfa sınıfı (`kaynak-sayfa`) PDF panelindeki bir etiketle çakıştı | Sınıf `kaynaklar-sayfasi`; birim testi çakışmayı yakalar |
+| Ölçü listesinde `dl` içinde `span` ve form (axe: definition-list, ciddi) | Çalışmalarım ve çalışma özeti, tabandan geliyor | Açıklama satırı ve teslim tarihi formu `dd`; görünüm aynı. Personel kartı ve Ekip sayfasındaki aynı yapı da |
+| Editör menüleri `role="menu"` ama öğe rolü ve ok tuşu yok (axe: aria-required-children, kritik) | Kontroller menüsü açıkken; aynı bileşen bütün araç menülerinde | Açılır panel kalıbı: düğme `aria-expanded`/`aria-controls`, panel adlı grup; Tab ve Esc aynı |
+
+Tarama: axe-core 4.10.2 (WCAG 2.0/2.1 A-AA, 2.2 AA), 11 ekran/durum ×
+TR/EN × açık/koyu × masaüstü/telefon = 88 sayfa. Düzeltmeden sonra 0
+ihlal. İngilizce: görünür metinde Türkçe harf ve Türkçe arayüz sözcüğü
+taraması; çıkanların hepsi kullanıcı verisi (çalışma/kaynak adları,
+yazarlar) ve bilerek Türkçe kalan "Turkish abstract (Özet)". Sözlük
+denetiminin kör olmadığı aynı sayfanın Türkçesinde sınandı (28 eşleşme).

@@ -261,19 +261,19 @@ export default async function PersonelCalismaKarti({
             {(yazim?.words ?? 0).toLocaleString(YEREL[dil])}
             <small>{t({ tr: "kelime", en: "words" })}</small>
           </dd>
-          <span title={ilerleme?.ipucu}>
+          <dd className="tez-olcu-not" title={ilerleme?.ipucu}>
             {yazim
               ? t({
                   tr: `${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)} düzenlendi`,
                   en: `Edited ${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)}`,
                 })
               : t({ tr: "Henüz yazılmadı", en: "Not written yet" })}
-          </span>
+          </dd>
         </div>
         <div className="tez-olcu" data-tone={ilerleme && ilerleme.yuzde >= 100 ? "success" : undefined}>
           <dt>{t({ tr: "İlerleme", en: "Progress" })}</dt>
           <dd>{ilerleme ? t({ tr: `%${ilerleme.yuzde}`, en: `${ilerleme.yuzde}%` }) : "—"}</dd>
-          <span title={ilerleme?.ipucu}>{ilerleme ? ilerleme.etiket : t({ tr: "Hedef yok — kılavuz bağlı değil", en: "No target — no guideline linked" })}</span>
+          <dd className="tez-olcu-not" title={ilerleme?.ipucu}>{ilerleme ? ilerleme.etiket : t({ tr: "Hedef yok — kılavuz bağlı değil", en: "No target — no guideline linked" })}</dd>
         </div>
         <div className="tez-olcu" data-tone={due?.tone}>
           <dt>{t({ tr: "Teslim", en: "Due" })}</dt>
@@ -283,12 +283,12 @@ export default async function PersonelCalismaKarti({
                 {Math.abs(due.days)}
                 <small>{due.days < 0 ? t({ tr: "gün gecikti", en: "days overdue" }) : t({ tr: "gün", en: "days" })}</small>
               </dd>
-              <span>{calisma.due_date ? tarih(calisma.due_date) : due.label}</span>
+              <dd className="tez-olcu-not">{calisma.due_date ? tarih(calisma.due_date) : due.label}</dd>
             </>
           ) : (
             <>
               <dd>—</dd>
-              <span>{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</span>
+              <dd className="tez-olcu-not">{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</dd>
             </>
           )}
         </div>
@@ -299,7 +299,7 @@ export default async function PersonelCalismaKarti({
               {hazirlik.done}
               <small>/ {hazirlik.total}</small>
             </dd>
-            <span>{t({ tr: "öğrencinin teslim kontrolü", en: "student's submission check" })}</span>
+            <dd className="tez-olcu-not">{t({ tr: "öğrencinin teslim kontrolü", en: "student's submission check" })}</dd>
           </div>
         ) : null}
       </dl>

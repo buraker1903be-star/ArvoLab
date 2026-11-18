@@ -366,23 +366,23 @@ export default async function TeamPage({
                     <dd className="ekip-olcu-metin">
                       {secili.organization_id ? kurumAdi.get(secili.organization_id) ?? t({ tr: "Bilinmeyen kurum", en: "Unknown institution" }) : "—"}
                     </dd>
-                    <span>{secili.organization_id ? t({ tr: "Bağlı", en: "Linked" }) : t({ tr: "Kuruma bağlı değil", en: "Not linked to an institution" })}</span>
+                    <dd className="tez-olcu-not">{secili.organization_id ? t({ tr: "Bağlı", en: "Linked" }) : t({ tr: "Kuruma bağlı değil", en: "Not linked to an institution" })}</dd>
                   </div>
                   <div className="tez-olcu">
                     <dt>{t({ tr: "Kayıt", en: "Joined" })}</dt>
                     <dd className="ekip-olcu-metin">{tarih(secili.created_at)}</dd>
-                    <span>{secili.pendingInvite ? t({ tr: "Davetle eklendi", en: "Added by invitation" }) : t({ tr: "Hesap açıldı", en: "Account created" })}</span>
+                    <dd className="tez-olcu-not">{secili.pendingInvite ? t({ tr: "Davetle eklendi", en: "Added by invitation" }) : t({ tr: "Hesap açıldı", en: "Account created" })}</dd>
                   </div>
                   <div className="tez-olcu">
                     <dt>{t({ tr: "Son giriş", en: "Last sign-in" })}</dt>
                     <dd className="ekip-olcu-metin">{secili.lastSignInAt ? tarih(secili.lastSignInAt) : "—"}</dd>
-                    <span>
+                    <dd className="tez-olcu-not">
                       {secili.lastSignInAt
                         ? tarihSaat(secili.lastSignInAt)
                         : directoryAvailable
                           ? t({ tr: "Hiç giriş yapmadı", en: "Never signed in" })
                           : t({ tr: "Dizin kapalı (sunucu anahtarı yok)", en: "Directory unavailable (no server key)" })}
-                    </span>
+                    </dd>
                   </div>
                 </dl>
 

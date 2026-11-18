@@ -190,6 +190,17 @@
 .tez-olcu dd { margin: 0; color: var(--ink); font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .tez-olcu dd small { margin-left: 4px; color: var(--muted); font-size: var(--fs-base); font-weight: 500; letter-spacing: 0; }
 .tez-olcu span { color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+/*
+  Ölçünün açıklama satırı dd'dir (18.11.2026). Eskiden <dl> içindeki
+  <div>'de <span> (ve teslim tarihi formu) duruyordu; dl yalnızca dt/dd
+  taşıyabildiği için ekran okuyucu listeyi bozuk okuyordu (axe:
+  definition-list). Görünüm span'la aynı; büyük sayı stilini (".tez-olcu
+  dd" ve medya sorgularındaki boyları) almaması için özgüllük yüksek.
+*/
+.tez-olcumler .tez-olcu > dd.tez-olcu-not {
+  margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 400;
+  line-height: var(--lh-metin); letter-spacing: 0; font-variant-numeric: normal;
+}
 .tez-olcu[data-tone="danger"] dd { color: var(--danger); }
 .tez-olcu[data-tone="warning"] dd { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 .tez-olcu[data-tone="success"] dd { color: var(--success); }
@@ -1408,3 +1419,29 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 */
 .kaynak-tek .kaynak-tek-kart { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .kaynak-tek .kaynak-tek-bas { padding-bottom: 4px; }
+
+/*
+  TELEFONDA KAYNAKLAR ÜST ALANI (18.11.2026). 390x664'te ilk kaynak
+  528 px'te başlıyordu: sayfa aralığı 16 px, sekmelerin altında 20 px
+  boşluk, özet satırı iki düğmeyi alt alta itiyor (özet metni yarım
+  genişlikte iki satıra kırılıyordu), süzgeçler iki satır. Tasarım aynı;
+  yalnızca aralıklar daraldı, özet metni tam satıra, iki düğme yan yana,
+  süzgeçler tek satırda yatay kayar (hepsi erişilebilir, dokunma hedefi
+  44 px kalır).
+*/
+@media (max-width: 760px) {
+  .kaynaklar-sayfasi { gap: 8px; }
+  .kaynaklar-sayfasi > .projects-header { margin-bottom: 0; }
+  .kaynaklar-sayfasi .kaynak-sekmeleri { margin-bottom: 4px; }
+  .kaynaklar-sayfasi .kaynak-tek-bas { flex-wrap: wrap; gap: 8px; padding-bottom: 0; }
+  .kaynaklar-sayfasi .kaynak-tek-bas > div:first-child { flex: 1 1 100%; }
+  .kaynaklar-sayfasi .kaynak-tek-bas .pencere-dugmeler { flex-wrap: nowrap; }
+  /* Izgara sütunu kaba sabit: tek satır süzgeçler sütunu genişletip arama kutusunu kırpıyordu. */
+  .kaynaklar-sayfasi .kaynak-suzgec { grid-template-columns: minmax(0, 1fr); }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster {
+    flex-wrap: nowrap; margin-inline: -16px; padding: 0 16px 2px;
+    overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+  }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster::-webkit-scrollbar { display: none; }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster > * { flex: none; }
+}

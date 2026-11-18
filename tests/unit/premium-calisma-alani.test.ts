@@ -102,3 +102,45 @@ describe("ikinci tur: yeni kullanıcı ve çalışma özeti", () => {
     assert.equal(ana.match(/projects-primary-button/g)?.length, 1);
   });
 });
+
+describe("telefonda Kaynaklar üst alanı (18.11.2026)", () => {
+  const gb = oku("app/styles/genel-bakis.css");
+  const telefon = gb.slice(gb.indexOf("TELEFONDA KAYNAKLAR ÜST ALANI"));
+  test("sayfa sınıfı başka bir yerde kullanılmıyor", () => {
+    // İlk denemede "kaynak-sayfa" adı PDF panelindeki etiketle çakıştı ve
+    // `.kaynak-sayfa input { max-width: 10em }` arama kutusunu 120 px'e kırptı.
+    const sayfa = oku("app/dashboard/literature/page.tsx");
+    assert.match(sayfa, /className="dashboard-page gb gb-tek-ekran kaynaklar-sayfasi"/);
+    for (const dosya of ["app/styles/workspace.css", "app/styles/components.css", "app/styles/os-shell.css"]) {
+      assert.doesNotMatch(oku(dosya), /\.kaynaklar-sayfasi\b/, dosya);
+    }
+  });
+  test("özet tam satır, iki düğme yan yana, süzgeçler tek satır ve kayar", () => {
+    assert.match(telefon, /@media \(max-width: 760px\)/);
+    assert.match(telefon, /\.kaynaklar-sayfasi \.kaynak-tek-bas > div:first-child \{ flex: 1 1 100%; \}/);
+    assert.match(telefon, /\.kaynaklar-sayfasi \.kaynak-tek-bas \.pencere-dugmeler \{ flex-wrap: nowrap; \}/);
+    assert.match(telefon, /flex-wrap: nowrap; margin-inline: -16px;[^}]*overflow-x: auto;/);
+    assert.match(telefon, /\.kaynaklar-sayfasi \.kaynak-suzgec \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  });
+});
+
+describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
+  test("araç menüsü açılır paneldir: role=menu yok, panel adlı bir grup", () => {
+    // Eskiden role="menu" vardı ama öğelerin menuitem rolü ve ok tuşu gezinmesi yoktu.
+    const menu = oku("app/dashboard/editor/[id]/write/arac-menusu.tsx");
+    assert.doesNotMatch(menu, /\n\s+role="menu"/);
+    assert.doesNotMatch(menu, /\n\s+aria-haspopup="menu"/);
+    assert.match(menu, /role="group"\s+aria-label=\{etiket\}/);
+    assert.match(menu, /aria-expanded=\{acik\}\s+aria-controls=\{kimlik\}/);
+  });
+  test("ölçü listesinde dl yalnızca dt/dd taşır (span ve form dd içinde)", () => {
+    for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx", "app/dashboard/editor/personel-calisma-karti.tsx", "app/dashboard/team/page.tsx"]) {
+      const s = oku(dosya);
+      const dl = s.slice(s.indexOf('<dl className="tez-olcumler calisma-olcumler">'), s.indexOf("</dl>", s.indexOf('<dl className="tez-olcumler')));
+      // dd ve small içindeki span'lar dışında doğrudan span kalmamalı: hepsi tez-olcu-not oldu.
+      assert.doesNotMatch(dl, /\n\s*<span/, dosya);
+      assert.doesNotMatch(dl, /\n\s*<TeslimTarihiFormu/, dosya);
+    }
+    assert.match(oku("app/styles/genel-bakis.css"), /\.tez-olcumler \.tez-olcu > dd\.tez-olcu-not \{/);
+  });
+});
