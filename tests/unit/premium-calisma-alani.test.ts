@@ -177,3 +177,21 @@ describe("PDF: Dayanağa git panel kapalıyken de uygulanır, kaydırma PDF alan
     assert.match(goruntuleyici, /function pasajaKaydir\(alan: HTMLElement \| null, parca: Element \| null\)/);
   });
 });
+
+/*
+  18.11.2026 (son kabul): odak modundan Esc ile çıkış hiç çalışmıyordu.
+  Denetim "[role=dialog]" arıyordu; ortak pencere bileşeni kapalıyken de
+  sayfada role="dialog" ile durduğu için (inert) koşul her zaman doğruydu.
+  Tarayıcıda yeniden üretildi (18 kapalı pencere, 0 açık); kabul S18 da sınar.
+*/
+describe("Esc: açık pencere denetimi kapalı pencereleri saymaz", () => {
+  const kod = oku("app/dashboard/editor/[id]/write/manuscript-editor.tsx").replace(/\/\*[\s\S]*?\*\//g, "");
+  test("hiçbir querySelector '[role=dialog]' aramaz", () => {
+    assert.doesNotMatch(kod, /querySelector(All)?\([^)]*\[role=dialog\]/);
+  });
+  test("odak modu ve PDF çekmecesi aynı açık-pencere seçicisini kullanır", () => {
+    assert.match(kod, /const ACIK_PENCERE = "dialog\[open\], \.drawer-root\.open";/);
+    assert.match(kod, /!document\.querySelector\(ACIK_PENCERE\)\) setOdak\(false\)/);
+    assert.match(kod, /document\.querySelector\(`\$\{ACIK_PENCERE\}, \.atif-karti`\)/);
+  });
+});

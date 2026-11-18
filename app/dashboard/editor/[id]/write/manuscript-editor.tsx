@@ -208,6 +208,14 @@ import {
   kapalı pencerenin sunucuda çizilecek bir hâli yok). Davranış aynı:
   bileşenler eskisi gibi her zaman yerinde, `open` ile açılıyor.
 */
+/*
+  AÇIK PENCERE (Esc'i kendisi kullanan) = açık <dialog> ya da açık ortak
+  pencere (dialog.tsx, .drawer-root.open). Ortak pencere KAPALIYKEN de
+  sayfada role="dialog" ile durur (inert); "[role=dialog]" aramak her zaman
+  bir şey bulur. Eskiden odak modu ve PDF çekmecesi böyle arıyordu ve Esc
+  ikisinde de hiç çalışmıyordu (18.11.2026, tarayıcıda: 18 kapalı pencere).
+*/
+const ACIK_PENCERE = "dialog[open], .drawer-root.open";
 const FindReplaceBar = dynamic(() => import("./find-replace-bar"), { ssr: false });
 const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
@@ -1250,7 +1258,7 @@ export default function ManuscriptEditor({
         kapalıyken de role="dialog" ile sayfada durur (inert); ilk sürüm
         "[role=dialog]" arıyordu ve Esc çekmeceyi hiç kapatmıyordu (kabul S16).
       */
-      if (document.querySelector("dialog[open], .drawer-root.open, .atif-karti")) return;
+      if (document.querySelector(`${ACIK_PENCERE}, .atif-karti`)) return;
       pdfKapat();
     };
     window.addEventListener("keydown", tus);
@@ -1278,7 +1286,7 @@ export default function ManuscriptEditor({
     if (!odak) return;
     const tus = (e: KeyboardEvent) => {
       // Açık bir pencere ya da öneri Esc'i kendisi kullanıyor; yalnızca editör boştayken çık.
-      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("dialog[open], [role=dialog]")) setOdak(false);
+      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector(ACIK_PENCERE)) setOdak(false);
     };
     window.addEventListener("keydown", tus);
     return () => window.removeEventListener("keydown", tus);

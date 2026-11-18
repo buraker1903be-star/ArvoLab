@@ -1019,6 +1019,93 @@ try {
     return { ayrinti: `SENTETİK kayıtlı yanıt (gerçek dizin değil): OpenAlex 3 + Crossref 2 → 4 satır (aynı DOI birleşti), taşma yok, en uzun satır ${l.enUzun}px; Listeme ekle bu çalışmaya 1 kayıt yazdı, yeniden aramada "Listenizde"` };
   });
 
+  /* ---------- S18 ---------- */
+  /*
+    Odak modunda Esc (son kabul, 18.11.2026). Denetim "[role=dialog]"
+    arıyordu; ortak pencere kapalıyken de sayfada role="dialog" ile durduğu
+    için Esc odak modundan hiç çıkarmıyordu. Burada: imleç belgedeyken ve
+    gövdedeyken Esc çıkarır; açık bir pencere (Kısayollar) varken ilk Esc
+    yalnızca pencereyi kapatır, odak modu sürer.
+  */
+  await dene("S18", "odak modu: Esc çıkarır; açık pencere varken önce pencere kapanır", async () => {
+    const { c, s } = await oturum(A, { genislik: 1440, yukseklik: 900 });
+    await editorAc(s);
+    const odakMi = () => s.evaluate(() => document.querySelector(".manuscript-layout").hasAttribute("data-odak"));
+    const menu = async () => { await s.getByRole("button", { name: /^Bul, odak modu/ }).first().click(); await s.waitForTimeout(200); };
+    const ac = async () => { await menu(); await s.getByRole("button", { name: /^Odak modu/ }).first().click(); await s.waitForTimeout(400); beklenen(await odakMi(), "odak modu açılmadı"); };
+    const kapali = await s.evaluate(() => document.querySelectorAll("[role=dialog]").length);
+    await ac();
+    await s.locator(".ProseMirror p").first().click(); await s.keyboard.press("Escape"); await s.waitForTimeout(400);
+    beklenen(!(await odakMi()), `imleç belgedeyken Esc odak modundan çıkarmadı (sayfada ${kapali} kapalı pencere)`);
+    await ac();
+    await s.evaluate(() => document.activeElement?.blur()); await s.keyboard.press("Escape"); await s.waitForTimeout(400);
+    beklenen(!(await odakMi()), "gövdedeyken Esc odak modundan çıkarmadı");
+    await ac();
+    await menu(); await s.getByRole("button", { name: /^Klavye kısayolları/ }).first().click();
+    await s.locator(".drawer-root.open").waitFor({ timeout: 5000 });
+    await s.keyboard.press("Escape"); await s.waitForTimeout(500);
+    beklenen((await s.locator(".drawer-root.open").count()) === 0, "Esc Kısayollar penceresini kapatmadı");
+    beklenen(await odakMi(), "açık pencere varken Esc odak modundan da çıkardı");
+    await s.keyboard.press("Escape"); await s.waitForTimeout(400);
+    beklenen(!(await odakMi()), "pencere kapandıktan sonra Esc odak modundan çıkarmadı");
+    await c.close();
+    return { ayrinti: `sayfada ${kapali} kapalı pencere varken: belgede Esc çıkar, gövdede Esc çıkar; Kısayollar açıkken ilk Esc yalnızca pencereyi kapatır, ikinci Esc çıkar` };
+  });
+
+  /* ---------- S19 ---------- */
+  /*
+    Kaynak listesi + belge + PDF, ara genişlikler (son kabul). Aynı sayfada
+    imleç belgedeyken pencere 1560'tan 1200'e ve geri boyutlandırılır; her
+    genişlikte: yatay taşma yok; PDF sütunsa belge ≥ %85 ve PDF belgeyle
+    çakışmıyor; çekmeceyse ipucu ve kapatma düğmesi görünür; Kontroller
+    tıklanabilir; imleç ve odak korunur. Sonda kaldığı yerden yazılır.
+  */
+  await dene("S19", "kaynak listesi + belge + PDF: ara genişliklerde taşma yok, %85 ya da çekmece, odak ve imleç korunur", async () => {
+    const { c, s } = await oturum(A, { genislik: 1472, yukseklik: 900 });
+    await editorAc(s, "?sol=kaynaklar&sag=pdf");
+    await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
+    const k = await kelimeKonumu(s, "Çalışmanın amacı", 0);
+    await s.mouse.click(k.x - 2, k.y); await s.waitForTimeout(300);
+    const bas = await s.evaluate(() => document.querySelector(".ProseMirror").editor.state.selection.from);
+    const satirlar = [];
+    for (const g of [1560, 1500, 1472, 1440, 1400, 1360, 1320, 1280, 1240, 1200, 1280, 1440, 1472]) {
+      await s.setViewportSize({ width: g, height: 900 }); await s.waitForTimeout(900);
+      const r = await s.evaluate(() => {
+        const y = document.querySelector(".manuscript-layout");
+        const kagit = document.querySelector(".manuscript-editor-content").getBoundingClientRect();
+        const pdf = document.querySelector(".kaynak-pdf-paneli")?.getBoundingClientRect();
+        const kapat = document.querySelector('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]')?.getBoundingClientRect();
+        const ipucu = document.querySelector(".kaynak-pdf-cekmece-ipucu");
+        const kontrol = document.querySelector('button[aria-label^="Kontroller"]');
+        const kr = kontrol?.getBoundingClientRect();
+        const tiklanir = Boolean(kr && kontrol.contains(document.elementFromPoint(kr.left + kr.width / 2, kr.top + kr.height / 2)));
+        const e = document.querySelector(".ProseMirror").editor;
+        return {
+          tasma: document.documentElement.scrollWidth > innerWidth + 1,
+          cekmece: y.hasAttribute("data-sag-cekmece"), serit: document.documentElement.hasAttribute("data-sol-alan-dar"),
+          olcek: Number(getComputedStyle(document.querySelector(".manuscript-editor-content")).zoom),
+          cakisma: Boolean(pdf && !y.hasAttribute("data-sag-cekmece") && kagit.right > pdf.left + 1),
+          kapatGorunur: Boolean(kapat && kapat.top >= 0 && kapat.bottom <= innerHeight && kapat.right <= innerWidth),
+          ipucu: Boolean(ipucu && ipucu.offsetParent), kontroller: tiklanir,
+          from: e.state.selection.from, odak: e.view.hasFocus(),
+        };
+      });
+      satirlar.push(`${g}:${r.serit ? "şerit" : "liste"}/${r.cekmece ? "çekmece" : "sütun"}/%${Math.round(r.olcek * 100)}`);
+      beklenen(!r.tasma, `${g}: yatay taşma`);
+      beklenen(r.cekmece || (r.olcek >= 0.85 && !r.cakisma), `${g}: PDF sütunken belge %${Math.round(r.olcek * 100)} ya da çakışma`);
+      beklenen(!r.cekmece || r.ipucu, `${g}: çekmecede ipucu yok`);
+      beklenen(r.kapatGorunur, `${g}: PDF kapatma düğmesi görünür alanda değil`);
+      beklenen(r.kontroller, `${g}: Kontroller tıklanamıyor (örtülüyor)`);
+      beklenen(r.from === bas && r.odak, `${g}: imleç/odak kayboldu (${bas} → ${r.from}, odak ${r.odak})`);
+    }
+    await s.keyboard.type("S19 ", { delay: 15 });
+    const yazildi = await s.evaluate(() => document.querySelector(".ProseMirror").textContent.includes("S19 Çalışmanın amacı"));
+    beklenen(yazildi, "boyutlandırmalardan sonra kaldığı yerden yazılamadı");
+    await goruntu(s, "s19-1472-son");
+    await c.close();
+    return { ayrinti: satirlar.join(" · ") + "; taşma yok, imleç ve odak korundu, kaldığı yerden yazıldı" };
+  });
+
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
   if (GORSEL) {
     // Görseller senaryoların bıraktığı eklemelerden arınmış, tohumdaki belgeyle alınır.
