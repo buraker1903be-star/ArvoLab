@@ -218,6 +218,13 @@ import {
   ikisinde de hiç çalışmıyordu (18.11.2026, tarayıcıda: 18 kapalı pencere).
 */
 const ACIK_PENCERE = "dialog[open], .drawer-root.open";
+/*
+  Esc başladığında (yakalama aşamasında) bir pencere ya da atıf kartı açık
+  mıydı? Pencere kendi Esc'iyle document'ta kapanır ve React güncellemesi
+  window dinleyicisinden ÖNCE işlenir: kabarcık aşamasında pencere artık
+  kapalı görünür ve aynı Esc odak modundan da çıkarıyordu (kabul S18).
+*/
+const sahipliEsc = new WeakSet<Event>();
 const FindReplaceBar = dynamic(() => import("./find-replace-bar"), { ssr: false });
 const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
@@ -1258,14 +1265,21 @@ export default function ManuscriptEditor({
     ilk sürüm "[role=dialog]" arıyordu ve kapalı pencereleri de sayıyordu.
   */
   const escDurumu = useCallback(
-    (olay: KeyboardEvent): EscDurumu => ({
-      belgeden: olay.target instanceof Element && Boolean(olay.target.closest(".ProseMirror")),
-      yakalama: olay.eventPhase === Event.CAPTURING_PHASE,
-      islenmis: olay.defaultPrevented,
-      acikPencere: Boolean(document.querySelector(ACIK_PENCERE)),
-      atifKarti: Boolean(document.querySelector(".atif-karti")),
-      oneri: Boolean(editor && !editor.isDestroyed && etkinOneri(editor.state)),
-    }),
+    (olay: KeyboardEvent): EscDurumu => {
+      const yakalama = olay.eventPhase === Event.CAPTURING_PHASE;
+      const acikPencere = Boolean(document.querySelector(ACIK_PENCERE));
+      const atifKarti = Boolean(document.querySelector(".atif-karti"));
+      if (yakalama && (acikPencere || atifKarti)) sahipliEsc.add(olay);
+      const sahipli = sahipliEsc.has(olay);
+      return {
+        belgeden: olay.target instanceof Element && Boolean(olay.target.closest(".ProseMirror")),
+        yakalama,
+        islenmis: olay.defaultPrevented,
+        acikPencere: acikPencere || sahipli,
+        atifKarti,
+        oneri: Boolean(editor && !editor.isDestroyed && etkinOneri(editor.state)),
+      };
+    },
     [editor],
   );
   useEffect(() => {
