@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   ArrowLeft,
   ChartNoAxesCombined,
@@ -264,6 +264,27 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const dahaUygulamalari = dahaFazlasi(uygulamalar);
   const dahaEtkin = dahaUygulamalari.some((u) => u.key === etkin?.key);
 
+  /*
+    Esc araç alanını kapatır. React'in onKeyDown'ı DEĞİL, yerel dinleyici:
+    araçların içeriği editörden PORTAL ile geliyor ve React olayları portalda
+    DOM'a göre değil React ağacına göre kabarır — onKeyDown ile yazılan ilk
+    sürümde odak araç içeriğindeyken Esc bu bölüme hiç ulaşmıyordu (kabul S2,
+    üretim derlemesi). Yalnızca alanın kendi başlığındaki "Geri" bağlantısında
+    çalışıyordu.
+  */
+  const solAlanRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const alan = solAlanRef.current;
+    if (!alan || !solArac) return;
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key !== "Escape" || olay.defaultPrevented) return;
+      olay.preventDefault();
+      router.push(solGeriAdresi, { scroll: false });
+    };
+    alan.addEventListener("keydown", tus);
+    return () => alan.removeEventListener("keydown", tus);
+  }, [solArac, solGeriAdresi, router]);
+
   return (
     <>
       <nav id="os-ana-gezinme" className="os-gezinme" data-sol={solArac ?? undefined} aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
@@ -363,12 +384,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           data-acik={solArac ?? undefined}
           aria-label={solAracAdi || undefined}
           hidden={!solArac}
-          onKeyDown={(olay) => {
-            if (olay.key === "Escape" && solArac && !olay.defaultPrevented) {
-              olay.preventDefault();
-              router.push(solGeriAdresi, { scroll: false });
-            }
-          }}
+          ref={solAlanRef}
         >
           <div className="os-sol-alan-bas">
             <Link href={solGeriAdresi} scroll={false} className="os-sol-geri">
