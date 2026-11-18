@@ -1,8 +1,5 @@
-import { calismaAdresi } from "@/lib/calisma-karti";
 import { etikKaydiOku } from "@/lib/etik/oku";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
@@ -12,7 +9,7 @@ import { detectFormatLoss } from "@/lib/format-loss";
 import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
 import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
-import CalismaSekmeleri from "../calisma-sekmeleri";
+import { CalismaBaglamiYayinla } from "../../../_components/calisma-baglami";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
 
@@ -119,35 +116,16 @@ export default async function WriteManuscriptPage({
               adı ise artık "Kılavuz ve kaynakça kontrolü". */}
         </div>
         {/*
-          Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
-          Literatür, kaynakça, belge ve analiz adımlarına oradan
-          geçiliyor; listeye dönmek kullanıcıyı
-          bağlamdan çıkarıp aynı çalışmayı yeniden bulmaya zorluyordu.
-          Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
-          ekran olmamalı.
+          Geri düğmesi kalktı (19.11.2026): "Çalışmalarıma dön" çalışma
+          gezinmesinin başında (os-gezinme.tsx), listeye süzgeci ve konumuyla
+          döner. Eskiden burada bir "Çalışmalarım" düğmesi çalışmanın özetine
+          gidiyordu; aynı ekranda iki ayrı "geri" vardı.
         */}
-        {/* Teslim kontrolü, Word, PDF ve kılavuz kontrolü düğmeleri editörden
-            buraya, "Çalışmalarım" düğmesinin sağına yerleşir (manuscript-editor.tsx). */}
-        <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
-          {/* Telefonda yalnızca simge (Phase 3): adı aria-label taşıyor, yazı gizlenince ekran okuyucu adı kaybetmesin. */}
-          <Link href={calismaAdresi(id)} className="projects-filter-button" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
-            <ArrowLeft size={17} aria-hidden="true" />
-            <span className="yazma-etiket">{t({ tr: "Çalışmalarım", en: "My works" })}</span>
-          </Link>
-        </div>
+        <div className="cluster yazma-eylemleri" id="yazma-eylemleri" />
       </section>
 
-      {/*
-        Çalışmanın bölümleri (Phase 5.1c): tablette ve masaüstü kenar çubuğu
-        DAR iken çalışma bölümlerine buradan geçilir. Açık masaüstünde gizli
-        (os-shell.css): aynı bölümler kenar çubuğunun alt menüsünde. Odak
-        modunda başlıkla birlikte çekilir (workspace.css). Eskiden yazım
-        ekranında yalnızca "Çalışmalarım" geri düğmesi vardı; tablette Kanıt,
-        Etik ve Makale'ye doğrudan geçiş yoktu.
-      */}
-      {/* Çalışmayı kenar çubuğuna da bu bileşen bildirir (CalismaBaglamiYayinla);
-          5.1d-4'e kadar sayfa aynı bildirimi ayrıca bir kez daha yapıyordu. */}
-      <CalismaSekmeleri calisma={project} aktif="yazim" />
+      {/* Çalışmayı gezinmeye bildirir: başlık ve tür çalışma menüsünde görünür (os-gezinme.tsx). */}
+      <CalismaBaglamiYayinla id={project.id} baslik={project.title ?? ""} tur={project.project_type} />
 
       {kilavuzOkunamadi ? (
         /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin

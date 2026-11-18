@@ -47,8 +47,8 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     assert.match(editor, /aria-label=\{t\(\{ tr: "Kılavuzumu yükle", en: "Upload my guideline" \}\)\}/);
     assert.match(calisma, /\.kilavuz-satiri \.kilavuz-kisa \{ display: inline; \}/);
   });
-  test("telefonda sekmeler yalnızca yazım ekranında gizli; araç çubuğu dar ekranda sarar", () => {
-    assert.match(calisma, /\.dashboard-page:has\(\.manuscript-layout\) > \.calisma-sekmeleri \{ display: none; \}/);
+  test("araç çubuğu dar ekranda sarar", () => {
+    // 19.11.2026: çalışma sekme satırı kalktı (gezinme iki düzeyli); onu gizleyen kural da gereksiz.
     assert.match(calisma, /@media \(min-width: 761px\) and \(max-width: 1439px\) \{\s*\.manuscript-araclar \{ flex-wrap: wrap;/);
   });
 });

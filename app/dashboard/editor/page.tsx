@@ -29,7 +29,7 @@ import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
 import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
-import CalismaSekmeleri from "./[id]/calisma-sekmeleri";
+import { ListeKonumunuSakla } from "../_components/liste-donusu";
 import DanismanaGonder from "../_components/danismana-gonder";
 
 export async function generateMetadata() {
@@ -419,7 +419,7 @@ export default async function ProjectsPage({
             kenar çubuğunun çalışma alt menüsündeydi; gezinme artık editörde de
             sabit, bölümler her çalışma sayfasında aynı sekme sırasında.
           */}
-          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
+          <ListeKonumunuSakla />
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
@@ -530,7 +530,7 @@ export default async function ProjectsPage({
             (gezinme-temizlik-kabul, system_admin).
           */
           <>
-          {secili ? <CalismaSekmeleri calisma={secili} aktif="merkez" /> : null}
+          <ListeKonumunuSakla />
           <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalar", en: "Works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">

@@ -1032,7 +1032,7 @@
   font-weight: 800;
   letter-spacing: .02em;
 }
-.comment-item[data-mine="true"] .comment-avatar { background: var(--primary); color: var(--on-brand); }
+.comment-item[data-mine="true"] .comment-avatar { background: var(--primary); color: var(--on-primary); }
 .comment-resolved { display: inline-flex; align-items: center; gap: 3px; color: var(--success); font-weight: 700; }
 /* Sekme açıkken gelen yorum kısa süre vurgulanır (manuscript-comments.tsx). */
 .comment-item[data-new="true"] {
@@ -1614,7 +1614,6 @@
   .yazma-basligi .yazma-eylemleri { width: auto; flex: none; gap: 4px; }
   .yazma-basligi .yazma-eylemleri > :last-child { margin-left: 0; }
   .yazma-eylemleri .yazma-etiket-kisa { display: none; }
-  .dashboard-page:has(.manuscript-layout) > .calisma-sekmeleri { display: none; }
   .manuscript-ust { min-height: 0; padding-block: 2px; }
   .kilavuz-satiri a { min-height: 44px; }
 }

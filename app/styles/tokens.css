@@ -84,6 +84,31 @@
   --murekkep-500: #5f6576;
   --murekkep-400: #80848f;
 
+  /* ---- Palet: SAKİN (açık tema yüzeyleri, 19.11.2026) ----
+     Bağlamlı çalışma alanı tasarımı (onaylı 2. tur, tasarim/baglamli-
+     calisma-alani): "sakin beyaz / açık gri". Fildişi ölçeği yukarıda
+     duruyor ama açık temanın anlamsal katmanı artık buradan okuyor;
+     sıcak zemin kâğıt ile uygulama arasındaki ayrımı bulanıklaştırıyor,
+     belge alanı "sararmış" görünüyordu. Değerler prototipten birebir. */
+  --sakin-0: #ffffff;
+  --sakin-25: #fbfcfd;
+  --sakin-50: #f6f7f9;
+  --sakin-100: #f1f3f6;
+  --sakin-150: #e9edf2;
+  --sakin-200: #e2e6ec;
+  --sakin-300: #d3d9e2;
+  --sakin-yazi-900: #141b2b;
+  --sakin-yazi-700: #3c4557;
+  --sakin-yazi-500: #5d6677;
+  --sakin-yazi-400: #7c8495;
+  /* Ölçülü lacivert vurgu: logonun lacivertinden (#002045) bir ton açık;
+     düğme ve seçili öğe "ağır" durmasın. Koyu temada açık lacivert. */
+  --vurgu-500: #1f3d6e;
+  --vurgu-600: #183257;
+  --vurgu-koyu-300: #6f8fc6;
+  --vurgu-koyu-200: #87a3d3;
+  --vurgu-koyu-yazi: #0c1424;
+
   /* ---- Palet: SOFT MIDNIGHT (koyu tema, Phase 4.3) ----
      "Ağır siyah değil; derin, modern, akademik". Eski koyu zemin
      #000d1f neredeyse siyahtı. Kart zeminden BİR TON açık (950 → 800),
@@ -104,11 +129,12 @@
      Hiyerarşi: zemin < ikincil yüzey < kart < yükseltilmiş (menü,
      açılır pencere, modal). Çökük yüzey giriş kutusu ve iz alanı.
      Kâğıt (--kagit) AYRI: belge sayfası her temada saf beyaz. */
-  --bg: var(--fildisi-100);
-  --surface: var(--fildisi-25);
-  --surface-2: var(--fildisi-50);
-  --surface-sunken: var(--fildisi-150);
-  --surface-raised: var(--fildisi-0);
+  /* 19.11.2026: fildişiden sakin ölçeğe (yukarıdaki palet notu). */
+  --bg: var(--sakin-50);
+  --surface: var(--sakin-0);
+  --surface-2: var(--sakin-25);
+  --surface-sunken: var(--sakin-100);
+  --surface-raised: var(--sakin-0);
   --kagit: var(--n-0);
   --overlay: #04101f75;
 
@@ -116,19 +142,21 @@
      Ölçüldü (Phase 4.3, fildişi zemin/kart/ikincil/çökük): ink 14,7–17,0;
      ink-soft 8,9–10,3; muted 5,0–5,8 (AA). dim yalnızca simge ve süs
      yazısı: 3,2–3,7 (≥3:1, metin dışı öğe eşiği). */
-  --ink: var(--murekkep-900);
-  --ink-soft: var(--murekkep-700);
-  --muted: var(--murekkep-500);
-  --dim: var(--murekkep-400);
+  /* Sakin zeminde ölçüldü: ink 16,9; ink-soft 9,6; muted 5,6 (en koyu
+     yüzey #f1f3f6'da 5,2, AA); dim 3,6 (yalnızca simge, ≥3:1). */
+  --ink: var(--sakin-yazi-900);
+  --ink-soft: var(--sakin-yazi-700);
+  --muted: var(--sakin-yazi-500);
+  --dim: var(--sakin-yazi-400);
   --on-brand: var(--n-0);
 
   /* ---- Anlamsal: çizgiler (çok hafif sıcak gri) ---- */
-  --line: var(--fildisi-300);
-  --line-soft: var(--fildisi-200);
+  --line: var(--sakin-300);
+  --line-soft: var(--sakin-200);
 
   /* ---- Anlamsal: marka ---- */
-  --primary: var(--brand-800);
-  --primary-strong: var(--brand-950);
+  --primary: var(--vurgu-500);
+  --primary-strong: var(--brand-800);
   /* ESKİ ADLAR (Phase 4.2, 04.11.2026). --accent* eskiden YEŞİLDİ ve hem
      etkileşim hem başarı anlamında kullanılıyordu (301 yer). 4.2'de her
      kullanım işlevine göre --primary-* (lacivert) ya da --secondary-*
@@ -170,7 +198,7 @@
      kicker etiketleri ve logo. Uyarı/hata/bilgi tonları (--warning,
      --danger, --info) değişmedi.
      ============================================================ */
-  --primary-hover: var(--brand-700);
+  --primary-hover: var(--vurgu-600);
   --primary-soft: var(--brand-50);
   /* Lacivert yazı: bağlantı, seçili menü öğesinin metni. Zeminde AA. */
   --primary-ink: var(--brand-700);
@@ -201,7 +229,7 @@
   --info: #2f5f9e;
   --info-soft: #e8eff8;
   --neutral: var(--murekkep-600);
-  --neutral-soft: var(--fildisi-200);
+  --neutral-soft: var(--sakin-150);
 
   /* ---- Kenar çubuğu (her iki temada koyu) ---- */
   --sidebar-from: #03264d;
@@ -284,7 +312,14 @@
      ve proje başlıkları, seçilmiş içerik kartı başlıkları. Gövde, form,
      tablo, menü ve düğmeler --font-body'de kalır; belge editörü kendi
      biçim sistemini kullanır. Yazı yüklenemezse Georgia: aynı karakterde. */
-  --font-display: var(--font-newsreader, "Newsreader"), Georgia, "Times New Roman", serif;
+  /*
+    19.11.2026 (bağlamlı çalışma alanı, onaylı tasarım): başlıklar da
+    Inter, 600. Newsreader serif sayfa ve çalışma başlıklarında
+    akademik bir "portal" havası veriyordu ve 28/500 başlık 14 px
+    arayüzle iki ayrı aile gibi duruyordu. Değişken adı korunuyor:
+    başlık rolündeki sınıflar onu okumaya devam ediyor.
+  */
+  --font-display: var(--font-body);
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   --fs-micro: 11px;
   --fs-sm: 12px;
@@ -305,22 +340,22 @@
      Ölçek bilerek DAR: serif gövdesi Inter'den küçük göründüğü için
      boyutlar eski başlıklarla aynı aralıkta kaldı, ağırlık 700'den 500'e
      indi. Ağır ve büyük bir "üniversite portalı" başlığı istenmiyor. */
-  --fs-display: clamp(28px, 2.4vw, 34px);
-  --fs-sayfa: clamp(24px, 2vw, 30px);
+  --fs-display: clamp(26px, 2.2vw, 28px);
+  --fs-sayfa: clamp(24px, 1.8vw, 26px);
   --fs-sayfa-telefon: 26px;
-  --fs-calisma: clamp(20px, 1.6vw, 24px);
-  --fs-calisma-sik: clamp(17px, 1.25vw, 19px);
+  --fs-calisma: clamp(18px, 1.4vw, 22px);
+  --fs-calisma-sik: clamp(15px, 1.1vw, 16px);
   --fs-tanitim: clamp(32px, 3.4vw, 48px);
   /* Ağırlık ölçeği: yeni kod buradan alır (eski 650/750 değerleri 4.5'te). */
   --fw-normal: 400;
   --fw-orta: 500;
   --fw-yari: 600;
   --fw-kalin: 700;
-  --fw-display: var(--fw-orta);
+  --fw-display: var(--fw-yari);
   /* Serif başlıkta Inter'deki -0,025em sıkıştırma harfleri birbirine
      yapıştırıyordu (özellikle büyük harfli Türkçe tez adlarında İ, Ş, Ğ). */
   --lh-display: 1.15;
-  --ls-display: -.01em;
+  --ls-display: -.015em;
 
   /* ---- Satır ritmi ----
      Gövde metni ÜÇ ayrı değerle yazılıyordu (1,5 / 1,55 / 1,6): aynı
@@ -405,7 +440,7 @@
   --muted-foreground: var(--muted);
   --border: var(--line);
   --surface-muted: var(--surface-sunken);
-  --primary-foreground: var(--on-brand);
+  --primary-foreground: var(--on-primary);
   --brand-navy: var(--brand-800);
   --brand-green: var(--accent-500);
   --radius-sm: var(--r-sm);
@@ -455,13 +490,15 @@ html[data-theme="dark"] {
   --line: var(--gece-600);
   --line-soft: var(--gece-700);
 
-  --primary: var(--brand-500);
+  /* 19.11.2026: koyu temada vurgu açık lacivert, üstündeki yazı koyu (onaylı tasarım). */
+  --primary: var(--vurgu-koyu-300);
   --primary-strong: var(--brand-700);
+  --on-primary: var(--vurgu-koyu-yazi);
   /* Eski --accent* adları :root'ta birincile eşli; koyu değerleri oradan gelir. */
   --focus: color-mix(in srgb, var(--brand-300) 65%, transparent);
 
   /* Anlamsal katman, koyu (Phase 4.1; açıklama :root'ta). */
-  --primary-hover: var(--brand-400);
+  --primary-hover: var(--vurgu-koyu-200);
   --primary-soft: color-mix(in srgb, var(--brand-300) 16%, transparent);
   --primary-ink: var(--brand-200);
   /* Koyu: brand-300 %65 → kartta 3,33, zeminde 3,44 (≥3:1). */

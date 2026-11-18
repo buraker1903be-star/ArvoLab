@@ -1,23 +1,70 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ChevronDown, Ellipsis, LifeBuoy, PanelLeftClose, PanelLeftOpen, Wrench, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ChartNoAxesCombined,
+  ChevronDown,
+  ClipboardList,
+  Ellipsis,
+  FileCheck2,
+  FileText,
+  Library,
+  LifeBuoy,
+  ListTree,
+  Newspaper,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Scale,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Wrench,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import {
   ALT_CUBUK,
+  adrestekiCalisma,
   anaUygulamalar,
   aracUygulamalari,
+  calismaBaglantilari,
+  calismaGrupAdi,
   dahaFazlasi,
+  etkinBaglanti,
   etkinUygulama,
   yardimUygulamalari,
+  type BaglamBaglantisi,
+  type CalismaGrubu,
+  type CalismaIkon,
   type OsUygulama,
 } from "@/lib/os/uygulamalar";
+import { useCalismaBaglami } from "./calisma-baglami";
+import { listeyeDonusIsaretle, useListeAdresi } from "./liste-donusu";
 import { grupAcikMi } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
 import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
+
+const CALISMA_IKONLARI: Record<CalismaIkon, LucideIcon> = {
+  belge: FileText,
+  bolumler: ListTree,
+  kaynaklar: Library,
+  arama: Search,
+  ai: Sparkles,
+  kanit: Scale,
+  ozet: ClipboardList,
+  etik: ShieldCheck,
+  makale: Newspaper,
+  analiz: ChartNoAxesCombined,
+  kontrol: FileCheck2,
+};
+const CALISMA_GRUPLARI: CalismaGrubu[] = ["yaz", "arastir", "kontrol"];
+/** Telefonda çalışmanın içindeyken alt çubuk: belge, kaynaklar, Arvo AI; geri kalanı "Çalışma" sayfasında. */
+const CALISMA_ALT_CUBUK = ["yazim", "kaynaklar", "ai"];
 
 /*
   UYARLANIR GEZİNME (Phase 3, 04.11.2026; Signature OS 5 / Phase 3,
@@ -30,12 +77,15 @@ import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_compo
     grubu ve hesap menüsü (premium çalışma alanı, 17.11.2026; onaylı
     tasarım). Personel araçları hesap menüsünde kalır.
 
-    EDİTÖR AÇILINCA GEZİNME DEĞİŞMEZ (17.11.2026, kurum sahibinin şartı).
-    Eskiden bir çalışmanın içindeyken "Çalışmalarım"ın altında o
-    çalışmanın bölümleri (Özet, Yazım, Kanıt, Etik, araçlar) açılıyordu:
-    editöre girmek kenar çubuğunun boyunu ve içeriğini değiştiriyordu.
-    Bölümler artık her ekran boyunda sayfadaki çalışma sekmelerinde
-    (calisma-sekmeleri.tsx).
+    İKİ DÜZEY (19.11.2026, bağlamlı çalışma alanı; onaylı 2. tur
+    tasarımı). Bir çalışmanın içinde (adres: /dashboard/editor/<id>/… ya
+    da ?calisma=<id>) aynı yuva ÇALIŞMA gezinmesini gösterir: "Çalışmalarıma
+    dön", çalışmanın adı, Yaz / Araştır / Kontrol et. 17.11.2026'daki
+    "editör açılınca gezinme değişmez" kuralı bu tasarımla kalktı: genel
+    menü, sayfa içindeki sekme satırı ve ayrı bir "Çalışmalarım" düğmesi
+    editörde üç gezinme katmanı oluşturuyordu. Yazım ekranının sol
+    araçları (bölümler, kaynaklar, makale arama) bu yuvanın içinde,
+    #sol-alan-yuva'da açılır (manuscript-editor.tsx portal ile yerleşir).
   - tablet (761–1199): 64 px koyu ray, yalnızca simge. Ad, fareyle ya da
     klavyeyle üzerine gelince yanında belirir; ekran okuyucu her zaman
     okur. Çalışma bölümleri sayfanın kendi sekmelerinde kalır.
@@ -57,6 +107,22 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const yardim = yardimUygulamalari(uygulamalar);
   const ayarlar = uygulamalar.find((u) => u.key === "ayarlar");
   const cubukta = new Set<string>(ALT_CUBUK);
+
+  /*
+    Çalışma düzeyi ADRESTEN (lib/os/uygulamalar.ts: adrestekiCalisma).
+    Başlık ve tür sayfanın yayınladığı bağlamdan gelir; o henüz gelmediyse
+    başlık yerinde boş bir satır kalır, menü yine çalışma menüsüdür
+    (makale türüne özgü "Makale" öğesi bağlam gelince eklenir).
+  */
+  const sorgu = useSearchParams();
+  const calismaId = adrestekiCalisma(yol, sorgu);
+  const yayin = useCalismaBaglami();
+  const listeAdresi = useListeAdresi();
+  const calisma = calismaId
+    ? { id: calismaId, baslik: yayin?.id === calismaId ? yayin.baslik : "", tur: yayin?.id === calismaId ? yayin.tur : "" }
+    : null;
+  const calismaOgeleri = calisma ? calismaBaglantilari(calisma, t) : [];
+  const calismaEtkin = calisma ? etkinBaglanti(calismaOgeleri, yol, sorgu) : null;
 
   /*
     Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
@@ -135,6 +201,51 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     );
   };
 
+  const calismaOgesi = (b: BaglamBaglantisi, telefon = false) => {
+    const Ikon = CALISMA_IKONLARI[b.ikon];
+    const acik = calismaEtkin?.key === b.key;
+    return (
+      <li key={b.key} data-alt-cubuk={telefon || undefined}>
+        <Link
+          href={b.href}
+          className={acik ? "os-gezinme-oge is-active" : "os-gezinme-oge"}
+          aria-current={acik ? "page" : undefined}
+          title={b.label}
+          scroll={!b.href.includes("?sol=") && !b.href.includes("?sag=")}
+        >
+          <Ikon size={20} aria-hidden="true" />
+          <span className="os-gezinme-ad">{b.label}</span>
+          <span className="os-gezinme-kisa" aria-hidden="true">
+            {b.key === "yazim" ? t({ tr: "Belge", en: "Document" }) : b.key === "arama" ? t({ tr: "Ara", en: "Search" }) : b.label}
+          </span>
+        </Link>
+      </li>
+    );
+  };
+  const geriBaglantisi = (
+    <Link href={listeAdresi} className="os-gezinme-oge os-calisma-geri" title={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })} onClick={listeyeDonusIsaretle}>
+      <ArrowLeft size={20} aria-hidden="true" />
+      <span className="os-gezinme-ad">{t({ tr: "Çalışmalarıma dön", en: "Back to my works" })}</span>
+      <span className="os-gezinme-kisa" aria-hidden="true">
+        {t({ tr: "Çalışmalar", en: "Works" })}
+      </span>
+    </Link>
+  );
+  const calismaGruplari = (sinif: string) =>
+    CALISMA_GRUPLARI.map((grup) => {
+      const uyeler = calismaOgeleri.filter((b) => b.grup === grup);
+      if (!uyeler.length) return null;
+      const ad = calismaGrupAdi(grup, t);
+      return (
+        <div className={sinif} key={grup}>
+          <h2 className="os-calisma-grup-ad">{ad}</h2>
+          <ul className="os-gezinme-liste" aria-label={ad}>
+            {uyeler.map((b) => calismaOgesi(b))}
+          </ul>
+        </div>
+      );
+    });
+
   const dahaUygulamalari = dahaFazlasi(uygulamalar);
   const dahaEtkin = dahaUygulamalari.some((u) => u.key === etkin?.key);
 
@@ -143,7 +254,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
       <nav id="os-ana-gezinme" className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
         <div className="os-gezinme-bas">
           <Link href="/dashboard" className="os-gezinme-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
-            <ArvoLabLogosu zemin="koyu" alt="" />
+            <ArvoLabLogosu alt="" />
           </Link>
           {/*
             Daraltma düğmesi yalnızca masaüstünde görünür (os-shell.css): tablet
@@ -163,15 +274,45 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           </button>
         </div>
 
-        <div className="os-gezinme-govde">
-          <ul className="os-gezinme-liste os-gezinme-ana">{ana.map(oge)}</ul>
-          {grup("araclar", t({ tr: "Araçlar", en: "Tools" }), <Wrench size={20} aria-hidden="true" />, araclar)}
-        </div>
+        {calisma ? (
+          <>
+            {/*
+              ÇALIŞMA DÜZEYİ. Telefonda alt çubuk: Çalışmalar (geri), Belge,
+              Kaynaklar, Arvo AI ve "Çalışma" (bu çalışmanın bütün bölümleri,
+              aşağıdaki pencere). Masaüstü ve tablette gruplar.
+            */}
+            <div className="os-gezinme-govde os-calisma-govde">
+              <div className="os-calisma-ust">
+                {geriBaglantisi}
+                <div className="os-calisma-kimlik">
+                  <span className="os-calisma-etiket">{t({ tr: "Çalışma", en: "Work" })}</span>
+                  <strong className="os-calisma-ad" title={calisma.baslik || undefined}>
+                    {calisma.baslik || "\u00a0"}
+                  </strong>
+                </div>
+              </div>
+              {calismaGruplari("os-calisma-grup")}
+            </div>
+            {/* Yazım ekranının sol araçları buraya yerleşir (manuscript-editor.tsx, createPortal). */}
+            <div id="sol-alan-yuva" className="os-sol-alan-yuva" />
+            <ul className="os-gezinme-liste os-calisma-telefon">
+              <li data-alt-cubuk="">{geriBaglantisi}</li>
+              {calismaOgeleri.filter((b) => CALISMA_ALT_CUBUK.includes(b.key)).map((b) => calismaOgesi(b, true))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <div className="os-gezinme-govde">
+              <ul className="os-gezinme-liste os-gezinme-ana">{ana.map(oge)}</ul>
+              {grup("araclar", t({ tr: "Araçlar", en: "Tools" }), <Wrench size={20} aria-hidden="true" />, araclar)}
+            </div>
 
-        <div className="os-gezinme-alt-bolge">
-          {ayarlar ? <ul className="os-gezinme-liste os-gezinme-ayar">{oge(ayarlar)}</ul> : null}
-          {grup("yardim", t({ tr: "Yardım", en: "Help" }), <LifeBuoy size={20} aria-hidden="true" />, yardim)}
-        </div>
+            <div className="os-gezinme-alt-bolge">
+              {ayarlar ? <ul className="os-gezinme-liste os-gezinme-ayar">{oge(ayarlar)}</ul> : null}
+              {grup("yardim", t({ tr: "Yardım", en: "Help" }), <LifeBuoy size={20} aria-hidden="true" />, yardim)}
+            </div>
+          </>
+        )}
 
         <ul className="os-gezinme-liste os-gezinme-son">
           <li className="os-gezinme-daha-li">
@@ -179,13 +320,13 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               type="button"
               className={dahaEtkin ? "os-gezinme-oge os-gezinme-daha is-active" : "os-gezinme-oge os-gezinme-daha"}
               aria-haspopup="dialog"
-              title={t({ tr: "Daha fazla", en: "More" })}
+              title={calisma ? t({ tr: "Çalışmanın bütün bölümleri", en: "All sections of this work" }) : t({ tr: "Daha fazla", en: "More" })}
               onClick={() => pencere.current?.showModal()}
             >
               <Ellipsis size={20} aria-hidden="true" />
-              <span className="os-gezinme-ad">{t({ tr: "Daha fazla", en: "More" })}</span>
+              <span className="os-gezinme-ad">{calisma ? t({ tr: "Çalışma", en: "Work" }) : t({ tr: "Daha fazla", en: "More" })}</span>
               <span className="os-gezinme-kisa" aria-hidden="true">
-                {t({ tr: "Daha fazla", en: "More" })}
+                {calisma ? t({ tr: "Çalışma", en: "Work" }) : t({ tr: "Daha fazla", en: "More" })}
               </span>
             </button>
           </li>
@@ -205,11 +346,19 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
         }}
       >
         <header className="os-daha-bas">
-          <h2>{t({ tr: "Bütün bölümler", en: "All sections" })}</h2>
+          <h2>{calisma ? t({ tr: "Bu çalışma", en: "This work" }) : t({ tr: "Bütün bölümler", en: "All sections" })}</h2>
           <button type="button" className="os-icon-btn" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={() => pencere.current?.close()}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>
+        {calisma ? (
+          /* Çalışmanın içinde: önce bu çalışmanın bölümleri (gruplarıyla), sonra genel bölümler. */
+          <div className="os-daha-calisma" onClick={(olay) => (olay.target as HTMLElement).closest("a") && pencere.current?.close()}>
+            {calisma.baslik ? <p className="os-daha-calisma-ad">{calisma.baslik}</p> : null}
+            {calismaGruplari("os-daha-grup")}
+            <h2 className="os-calisma-grup-ad">{t({ tr: "Genel", en: "General" })}</h2>
+          </div>
+        ) : null}
         <ul className="os-daha-liste">
           {dahaUygulamalari.map((u) => (
             <li key={u.key}>

@@ -106,7 +106,7 @@
   .os-gezinme .os-gezinme-oge:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
   /* Etkin sayfa: açık zemin, beyaz yazı, solda açık mavi çizgi. Renk tek başına taşımasın diye kalınlık da değişir. */
   .os-gezinme .os-gezinme-oge.is-active {
-    background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); font-weight: 600;
+    background: var(--os5-kenar-etkin); color: var(--primary-ink); font-weight: 600;
     box-shadow: inset 3px 0 0 var(--os5-kenar-isaret);
   }
   .os-gezinme .os-gezinme-oge:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
@@ -235,7 +235,7 @@
     border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi);
   }
   .os-gezinme .os-gezinme-oge:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
-  .os-gezinme .os-gezinme-oge.is-active { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); box-shadow: inset 3px 0 0 var(--os5-kenar-isaret); }
+  .os-gezinme .os-gezinme-oge.is-active { background: var(--os5-kenar-etkin); color: var(--primary-ink); box-shadow: inset 3px 0 0 var(--os5-kenar-isaret); }
   .os-gezinme .os-gezinme-oge:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
   /*
     Ad, rayın sağında küçük bir etiket olarak belirir (üzerine gelince ve
@@ -411,9 +411,77 @@
   font: inherit; text-align: left; cursor: pointer;
 }
 .os-palette-item.is-active { background: var(--primary-soft); }
-.os-palette-item.is-active .os-palette-icon { background: var(--primary); color: var(--on-brand); }
+.os-palette-item.is-active .os-palette-icon { background: var(--primary); color: var(--on-primary); }
 .os-palette-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--ink-soft); }
 .os-palette-label { flex: 1; }
 .os-palette-item small { font-size: var(--fs-micro); color: var(--muted); }
 .os-palette-empty { padding: 24px 8px; text-align: center; color: var(--muted); }
 .os-palette-foot { display: flex; gap: 16px; padding: 8px 16px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: var(--fs-micro); color: var(--muted); }
+
+/* ============================================================
+   ÇALIŞMA DÜZEYİ (19.11.2026, bağlamlı çalışma alanı; onaylı tasarım).
+   Aynı yuva, çalışmanın içindeyken: "Çalışmalarıma dön", çalışma adı,
+   Yaz / Araştır / Kontrol et. Sol araçlar (#sol-alan-yuva) açıkken
+   yuva göreve göre genişler (aşağıda, html[data-sol-alan]).
+   ============================================================ */
+/* Telefon dışında çalışma alt çubuğu çizilmez; telefonda gruplar çizilmez. */
+.os-calisma-telefon { display: none; }
+.os-sol-alan-yuva:empty { display: none; }
+.os-calisma-ust { display: flex; flex-direction: column; gap: var(--s-2); }
+.os-calisma-kimlik { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--s-1) var(--os5-gezinme-ic) 0; }
+.os-calisma-etiket { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.os-calisma-ad {
+  display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  color: var(--ink); font-size: var(--fs-md); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;
+}
+.os-calisma-grup { display: flex; flex-direction: column; gap: 2px; }
+.os-calisma-grup-ad {
+  margin: 0; padding: 0 var(--os5-gezinme-ic) var(--s-1);
+  color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+}
+.os-calisma-geri { color: var(--muted); }
+
+@media (max-width: 760px) {
+  .os-calisma-govde, .os-sol-alan-yuva { display: none; }
+  .os-calisma-telefon { display: contents; }
+  .os-calisma-telefon > li { flex: 1 1 0; min-width: 0; display: flex; }
+}
+
+/* Masaüstü (açık): gruplar arasında nefes payı; ad iki satıra kadar. */
+@media (min-width: 1200px) {
+  .os-calisma-govde { gap: var(--s-4); }
+  .os-calisma-ust { padding-bottom: var(--s-3); border-bottom: 1px solid var(--os5-kenar-cizgi); }
+  .os-calisma-geri.os-gezinme-oge { min-height: var(--os5-gezinme-alt); color: var(--muted); font-size: var(--os5-fs-meta); }
+}
+
+/*
+  RAY (tablet ve dar masaüstü): yalnızca simgeler. Grup adları ve
+  çalışma adı gizlenir; on bir öğe tek sütunda durur ve kısa ekranda
+  ray KAYAR. Ad etiketi rayın yanında açılmaz (kaydırılan kap etiketi
+  kırpardı): adı title ve ekran okuyucu taşır.
+*/
+@media (min-width: 761px) and (max-width: 1199px) {
+  .os-calisma-govde { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .os-calisma-govde .os-gezinme-liste { align-items: center; }
+  .os-calisma-kimlik, .os-calisma-grup-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .os-calisma-grup + .os-calisma-grup { padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+  .os-calisma-govde .os-gezinme-oge .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 1; padding: 0; }
+}
+@media (min-width: 1200px) {
+  html[data-gezinme="dar"] .os-calisma-govde { overflow-y: auto; scrollbar-width: none; }
+  html[data-gezinme="dar"] .os-calisma-kimlik,
+  html[data-gezinme="dar"] .os-calisma-grup-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-gezinme="dar"] .os-calisma-ust { padding: 0; border: 0; }
+  html[data-gezinme="dar"] .os-calisma-grup + .os-calisma-grup { padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+  html[data-gezinme="dar"] .os-calisma-govde .os-gezinme-oge .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 1; padding: 0; }
+}
+
+/* "Çalışma" penceresi (telefonda alt sayfa): çalışmanın grupları, sonra genel bölümler; tamamı tek kaydırma. */
+.os-daha:has(.os-daha-calisma)[open] { overflow-y: auto; overscroll-behavior: contain; }
+.os-daha:has(.os-daha-calisma) .os-daha-liste { flex: none; overflow: visible; }
+.os-daha-calisma { display: flex; flex-direction: column; gap: var(--s-3); padding: 0 var(--s-3) var(--s-2); }
+.os-daha-calisma-ad { margin: 0; padding: 0 var(--s-3); color: var(--ink); font-size: var(--fs-md); font-weight: 600; }
+.os-daha-grup { display: flex; flex-direction: column; gap: 2px; }
+/* Telefon kuralı (.os-gezinme-liste satır yönü) alt çubuk içindir; pencerede liste dikey. */
+.os-daha-grup .os-gezinme-liste { flex-direction: column; }
+.os-daha-grup .os-gezinme-oge { min-height: 48px; }

@@ -44,10 +44,10 @@ describe("kullanılmayan gezinme kodu kalktı", () => {
     }
   });
 
-  test("write sayfası çalışmayı kenar çubuğuna bir kez bildirir (sekmeler bileşeni üzerinden)", () => {
+  test("write sayfası çalışmayı kenar çubuğuna bir kez bildirir", () => {
+    // 19.11.2026: sekme bileşeni kalktı; sayfa bağlamı doğrudan yayınlar.
     const sayfa = yorumsuz(kaynak("app/dashboard/editor/[id]/write/page.tsx"));
-    assert.doesNotMatch(sayfa, /<CalismaBaglamiYayinla/);
-    assert.match(sayfa, /<CalismaSekmeleri calisma=\{project\} aktif="yazim" \/>/);
-    assert.match(kaynak("app/dashboard/editor/[id]/calisma-sekmeleri.tsx"), /<CalismaBaglamiYayinla /);
+    assert.equal(sayfa.match(/<CalismaBaglamiYayinla /g)?.length, 1);
+    assert.equal(fs.existsSync(path.join(process.cwd(), "app/dashboard/editor/[id]/calisma-sekmeleri.tsx")), false);
   });
 });

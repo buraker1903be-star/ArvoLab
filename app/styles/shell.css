@@ -9,7 +9,7 @@
 .skip-link {
   position: fixed; top: 8px; left: 8px; z-index: var(--z-toast);
   padding: 10px 16px; border-radius: var(--r-sm);
-  background: var(--primary); color: var(--on-brand);
+  background: var(--primary); color: var(--on-primary);
   font-size: var(--fs-body); font-weight: 600; text-decoration: none;
   box-shadow: var(--shadow-md);
   transform: translateY(-160%);
