@@ -189,9 +189,14 @@ describe("Esc: açık pencere denetimi kapalı pencereleri saymaz", () => {
   test("hiçbir querySelector '[role=dialog]' aramaz", () => {
     assert.doesNotMatch(kod, /querySelector(All)?\([^)]*\[role=dialog\]/);
   });
-  test("odak modu ve PDF çekmecesi aynı açık-pencere seçicisini kullanır", () => {
+  test("odak modu ve PDF çekmecesi aynı Esc kararını (escIsle) ve açık-pencere seçicisini kullanır", () => {
     assert.match(kod, /const ACIK_PENCERE = "dialog\[open\], \.drawer-root\.open";/);
-    assert.match(kod, /!document\.querySelector\(ACIK_PENCERE\)\) setOdak\(false\)/);
-    assert.match(kod, /document\.querySelector\(`\$\{ACIK_PENCERE\}, \.atif-karti`\)/);
+    assert.match(kod, /acikPencere: Boolean\(document\.querySelector\(ACIK_PENCERE\)\)/);
+    assert.match(kod, /escIsle\(escDurumu\(olay\)\)\) pdfKapat\(\)/);
+    assert.match(kod, /escIsle\(escDurumu\(e\)\)\) setOdak\(false\)/);
+  });
+  test("belgeden gelen Esc için yakalama aşamasında da dinlenir (ProseMirror Esc'i her zaman işler)", () => {
+    assert.equal((kod.match(/window\.addEventListener\("keydown", tus, true\);/g) ?? []).length >= 2, true);
+    assert.match(kod, /yakalama: olay\.eventPhase === Event\.CAPTURING_PHASE/);
   });
 });

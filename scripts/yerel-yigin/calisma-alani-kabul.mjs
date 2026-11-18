@@ -959,7 +959,9 @@ try {
       await goruntu(s, "s16-1280-cekmece");
       const isaret = "KABUL-S16-1280";
       const once = await yazVeKaydet(s, isaret);
-      await s.keyboard.press("Escape");
+      // İmleç belgedeyken Esc: ProseMirror Esc'i her zaman işlenmiş sayar; çekmece yine de kapanmalı.
+      await s.keyboard.press("Escape"); await s.waitForTimeout(500);
+      beklenen((await s.locator(".kaynak-pdf-paneli").count()) === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "1280: imleç belgedeyken Esc çekmeceyi kapatmadı");
       await kapatSonrasi(s, once, isaret);
       ozet.push(`1280 liste açık, PDF geçici çekmece (belge %${Math.round(l.olcek * 100)}); çekmece açıkken yazıldı, Esc → konum ve odak korunur`);
       await c.close();

@@ -127,6 +127,8 @@ import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
+import { etkinOneri } from "@/lib/tiptap-satir-ici-oneri";
+import { escIsle, type EscDurumu } from "@/lib/editor-esc";
 import AracMenusu from "./arac-menusu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
@@ -1249,21 +1251,35 @@ export default function ManuscriptEditor({
     öğe (defaultPrevented) varsa dokunulmaz. Kapanınca yerleşim kendiliğinden
     eski hâline döner (sol araç yeniden tam genişlikte).
   */
+  /*
+    Esc kararı lib/editor-esc.ts'te (escIsle): imleç belgedeyken ProseMirror
+    Esc'i her zaman işlenmiş sayar, bu yüzden belgeden gelen Esc yakalama
+    aşamasında değerlendirilir. Yalnızca AÇIK pencere sayılır (ACIK_PENCERE);
+    ilk sürüm "[role=dialog]" arıyordu ve kapalı pencereleri de sayıyordu.
+  */
+  const escDurumu = useCallback(
+    (olay: KeyboardEvent): EscDurumu => ({
+      belgeden: olay.target instanceof Element && Boolean(olay.target.closest(".ProseMirror")),
+      yakalama: olay.eventPhase === Event.CAPTURING_PHASE,
+      islenmis: olay.defaultPrevented,
+      acikPencere: Boolean(document.querySelector(ACIK_PENCERE)),
+      atifKarti: Boolean(document.querySelector(".atif-karti")),
+      oneri: Boolean(editor && !editor.isDestroyed && etkinOneri(editor.state)),
+    }),
+    [editor],
+  );
   useEffect(() => {
     if (!pdfCekmece) return;
     const tus = (olay: KeyboardEvent) => {
-      if (olay.key !== "Escape" || olay.defaultPrevented) return;
-      /*
-        Yalnızca AÇIK pencere sayılır: ortak pencere bileşeni (dialog.tsx)
-        kapalıyken de role="dialog" ile sayfada durur (inert); ilk sürüm
-        "[role=dialog]" arıyordu ve Esc çekmeceyi hiç kapatmıyordu (kabul S16).
-      */
-      if (document.querySelector(`${ACIK_PENCERE}, .atif-karti`)) return;
-      pdfKapat();
+      if (olay.key === "Escape" && escIsle(escDurumu(olay))) pdfKapat();
     };
+    window.addEventListener("keydown", tus, true);
     window.addEventListener("keydown", tus);
-    return () => window.removeEventListener("keydown", tus);
-  }, [pdfCekmece, pdfKapat]);
+    return () => {
+      window.removeEventListener("keydown", tus, true);
+      window.removeEventListener("keydown", tus);
+    };
+  }, [pdfCekmece, pdfKapat, escDurumu]);
 
   /*
     Satır içi öneri (03.11.2026): otomatik mod tarayıcıda hatırlanır,
@@ -1284,13 +1300,17 @@ export default function ManuscriptEditor({
   const [odak, setOdak] = useState(false);
   useEffect(() => {
     if (!odak) return;
+    // Açık pencere, atıf kartı ve satır içi öneri Esc'i kendisi kullanır (escIsle). PDF çekmecesi açıksa önce o kapanır.
     const tus = (e: KeyboardEvent) => {
-      // Açık bir pencere ya da öneri Esc'i kendisi kullanıyor; yalnızca editör boştayken çık.
-      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector(ACIK_PENCERE)) setOdak(false);
+      if (e.key === "Escape" && !pdfCekmece && escIsle(escDurumu(e))) setOdak(false);
     };
+    window.addEventListener("keydown", tus, true);
     window.addEventListener("keydown", tus);
-    return () => window.removeEventListener("keydown", tus);
-  }, [odak]);
+    return () => {
+      window.removeEventListener("keydown", tus, true);
+      window.removeEventListener("keydown", tus);
+    };
+  }, [odak, pdfCekmece, escDurumu]);
   const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
   useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
