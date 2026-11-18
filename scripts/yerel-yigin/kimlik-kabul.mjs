@@ -5,12 +5,14 @@
 //
 // Kullanım:
 //   scripts/yerel-yigin/kur.sh && node scripts/yerel-yigin/gecit.mjs &
-//   (next dev yığına bağlı, bkz. README) && node scripts/yerel-yigin/kimlik-kabul.mjs http://localhost:3124
+//   (uygulama yığına bağlı, bkz. README) && KIMLIK_DERLEME=uretim|gelistirme node scripts/yerel-yigin/kimlik-kabul.mjs http://localhost:3124
+//   KIMLIK_UYGULAMA_DIZINI: sınanan uygulamanın deposu (varsayılan: bu betiğin deposu).
 // Çıkış: 0 hepsi PASS, 1 en az bir FAIL, 2 ön koşul yok.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import path from "node:path";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -19,6 +21,30 @@ const UYGULAMA = process.argv[2] ?? "http://localhost:3124";
 const GECIT = "http://127.0.0.1:54401";
 const SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
 const CIKTI = process.env.KIMLIK_CIKTI ?? new URL("./sonuclar/", import.meta.url).pathname;
+
+/*
+  SINANAN DERLEME AÇIKÇA SABİTLENİR (18.11.2026, Auth A1; studyo-kabul'daki
+  RC06e düzeninin aynısı). K8a/K9 hesap silme işleminin kimliğini derlemenin
+  işlem bildiriminden okur ve kimlik DERLEMEYE özgüdür (aynı kaynakla iki
+  temiz derleme farklı kimlik üretir). Eskiden bildirim betiğin koşturulduğu
+  dizinden (`.next/dev/…` ya da `.next/…`, hangisi varsa) okunuyordu: taban
+  derlemesi başka bir dizinden sınandığında yeni HEAD'in kimliği gönderildi,
+  sunucu tanımadı ve K8a "eylem bulundu=false", K9 "sınanamadı" yazdı — kod
+  değil düzenek düşüyordu. Artık kip zorunlu, bildirim uygulamanın dizininden
+  okunur ve üretimde BUILD_ID sunucunun HTML'inde geçmek zorunda.
+*/
+const DERLEME = process.env.KIMLIK_DERLEME;
+if (DERLEME !== "uretim" && DERLEME !== "gelistirme") {
+  console.error('ÖN KOŞUL: KIMLIK_DERLEME "uretim" (next build + next start) ya da "gelistirme" (next dev) olmalı');
+  process.exit(2);
+}
+const UYGULAMA_DIZINI = path.resolve(process.env.KIMLIK_UYGULAMA_DIZINI ?? new URL("../../", import.meta.url).pathname);
+const BILDIRIM_YOLU = path.join(UYGULAMA_DIZINI, DERLEME === "uretim" ? ".next/server/server-reference-manifest.json" : ".next/dev/server/server-reference-manifest.json");
+if (!fs.existsSync(BILDIRIM_YOLU)) {
+  console.error(`ÖN KOŞUL: işlem bildirimi yok: ${BILDIRIM_YOLU}`);
+  process.exit(2);
+}
+const BUILD_ID = DERLEME === "uretim" ? fs.readFileSync(path.join(UYGULAMA_DIZINI, ".next/BUILD_ID"), "utf8").trim() : null;
 
 if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(UYGULAMA)) {
   console.error("ÖN KOŞUL: uygulama adresi yalnızca localhost olabilir");
@@ -63,6 +89,17 @@ for (const [ad, adres] of [["gecit", `${GECIT}/auth/v1/health`], ["uygulama", `$
     process.exit(2);
   }
 }
+if (BUILD_ID && !(await fetch(`${UYGULAMA}/`).then((r) => r.text())).includes(BUILD_ID)) {
+  console.error(`ÖN KOŞUL: sunucu ${UYGULAMA_DIZINI} derlemesini (${BUILD_ID}) çalıştırmıyor — next start bu dizinden mi?`);
+  process.exit(2);
+}
+const DERLEME_KAYDI = {
+  derleme: DERLEME,
+  uygulamaDizini: UYGULAMA_DIZINI,
+  gitHead: execFileSync("git", ["-C", UYGULAMA_DIZINI, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  buildId: BUILD_ID,
+  gotrue: (await fetch(`${GECIT}/auth/v1/health`).then((r) => r.json())).version,
+};
 
 const sonuclar = [];
 const kayit = (kimlik, ad, beklenen, gozlenen, gecti) => {
@@ -320,22 +357,22 @@ try {
     const s = await b.newPage();
     await girisYap(s, adres, parola);
     await s.goto("/dashboard/settings");
-    // İşlem kimliği derlemenin işlem haritasından (next dev: .next/dev/server, next build: .next/server).
-    const harita = [".next/dev/server/server-reference-manifest.json", ".next/server/server-reference-manifest.json"].find((y) => fs.existsSync(y));
-    const dugumler = harita ? JSON.parse(fs.readFileSync(harita, "utf8")).node : {};
+    // İşlem kimliği SINANAN derlemenin bildiriminden (yukarıda sabitlendi).
+    const dugumler = JSON.parse(fs.readFileSync(BILDIRIM_YOLU, "utf8")).node;
     const adaylar = Object.entries(dugumler)
       .filter(([, v]) => v.exportedName === "hesapSilmeTalebi" && String(v.filename).endsWith("app/actions/hesap.ts"))
       .map(([k]) => k);
     // Kontrol: şifreli kullanıcı aynı yoldan (sayfadan bağımsız POST) silme talebi açabiliyor mu? Saldırı yolunun gerçek olduğunu kanıtlar.
+    const durumlar = [];
     for (const aday of adaylar) {
       const cerez = (await b.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
-      await eylemiBaskaYoldanCagir(aday, adres, cerez);
+      durumlar.push((await eylemiBaskaYoldanCagir(aday, adres, cerez)).status);
       if (profilSilmeTalebi(id)) {
         silmeEylemi = aday;
         break;
       }
     }
-    kayit("K8a", "Kontrol: hesap silme işlemi panel dışı bir yoldan (Next-Action, /reset-password) çağrılabiliyor — saldırı yolu gerçek", "şifreli kullanıcıda silme talebi yazılır", `eylem bulundu=${Boolean(silmeEylemi)}`, Boolean(silmeEylemi));
+    kayit("K8a", "Kontrol: hesap silme işlemi panel dışı bir yoldan (Next-Action, /reset-password) çağrılabiliyor — saldırı yolu gerçek", "şifreli kullanıcıda silme talebi yazılır", `eylem bulundu=${Boolean(silmeEylemi)}, aday=${adaylar.length}, http=${durumlar.join(",")}`, Boolean(silmeEylemi));
     await b.close();
   });
   await senaryo("K8–K10 davetli", async () => {
@@ -498,5 +535,6 @@ try {
 const fail = sonuclar.filter((s) => s.sonuc !== "PASS").length;
 console.log(`\n${sonuclar.length - fail}/${sonuclar.length} PASS`);
 fs.mkdirSync(CIKTI, { recursive: true });
-fs.writeFileSync(`${CIKTI}/kimlik-kabul.json`, `${JSON.stringify(sonuclar.map((s) => ({ ...s, gozlenen: s.gozlenen.replaceAll(ek, "<ek>") })), null, 2)}\n`);
+// Hangi derlemenin sınandığı sonuçla birlikte yazılır (Auth A1): kayıt, kanıt olarak tek başına okunabilsin.
+fs.writeFileSync(`${CIKTI}/kimlik-kabul.json`, `${JSON.stringify({ ...DERLEME_KAYDI, sonuclar: sonuclar.map((s) => ({ ...s, gozlenen: s.gozlenen.replaceAll(ek, "<ek>") })) }, null, 2)}\n`);
 process.exit(fail ? 1 : 0);
