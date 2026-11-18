@@ -9,7 +9,7 @@ type Toast = ToastDetail & { id: number };
 
 /*
   iOS benzeri cam bildirim: masaüstünde üstten, mobilde sekme çubuğunun
-  hemen üstünden kayarak gelir. Başarı 3.8 sn, hata 8 sn görünür.
+  hemen üstünden kayarak gelir. Başarı 3.8 sn, bilgi 6 sn, hata 8 sn görünür.
 
   Bildirimler YIĞINDA durur. Eskiden tek bir bildirim tutuluyordu ve yenisi
   öncekini eziyordu: literatür sayfasında art arda iki kaynağı "Okundu"
@@ -22,6 +22,8 @@ type Toast = ToastDetail & { id: number };
 */
 
 const EN_FAZLA = 3;
+/* Bilgi notu okunacak kadar kalır; hata kadar uzun değil, çünkü bir şey bozulmadı. */
+const SURE: Record<ToastDetail["kind"], number> = { success: 3800, info: 6000, error: 8000 };
 
 export default function Toaster() {
   const t = useCeviri();
@@ -45,7 +47,7 @@ export default function Toaster() {
       setToasts((onceki) => [...onceki, { kind, text, id }].slice(-EN_FAZLA));
       timers.current.set(
         id,
-        window.setTimeout(() => kaldir(id), kind === "success" ? 3800 : 8000),
+        window.setTimeout(() => kaldir(id), SURE[kind]),
       );
     };
 
@@ -71,24 +73,31 @@ export default function Toaster() {
     <div className="toast-yigini">
       {toasts.map((toast) => {
         const success = toast.kind === "success";
+        const info = toast.kind === "info";
+        // Yalnızca hata acil uyarıdır; başarı ve bilgi kibar duyurulur.
+        const acil = toast.kind === "error";
         return (
           <div
             key={toast.id}
-            className={success ? "toast is-success" : "toast"}
-            role={success ? "status" : "alert"}
-            aria-live={success ? "polite" : "assertive"}
+            className={success ? "toast is-success" : info ? "toast is-info" : "toast"}
+            role={acil ? "alert" : "status"}
+            aria-live={acil ? "assertive" : "polite"}
           >
             <span className="toast-icon" aria-hidden="true">
               {success ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m5 12.5 4.5 4.5L19 7.5" />
                 </svg>
+              ) : info ? (
+                "i"
               ) : (
                 "!"
               )}
             </span>
             <div className="toast-body">
-              <strong>{success ? toast.text : t({ tr: "İşlem tamamlanamadı", en: "Action failed" })}</strong>
+              <strong>
+                {success ? toast.text : info ? t({ tr: "Bilgi", en: "Note" }) : t({ tr: "İşlem tamamlanamadı", en: "Action failed" })}
+              </strong>
               <span>{success ? t({ tr: "İşlem başarıyla tamamlandı.", en: "Completed successfully." }) : toast.text}</span>
             </div>
             <button className="toast-close" type="button" onClick={() => kapat(toast.id)} aria-label={t({ tr: "Bildirimi kapat", en: "Dismiss notification" })}>

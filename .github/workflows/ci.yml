@@ -37,6 +37,8 @@ jobs:
         run: npm run check:rakamlar
       - name: Birim testleri
         run: npm run test:unit
+      - name: DOI fail-closed runtime testleri
+        run: npm run test:doi-runtime
       - name: Editör testleri
         run: npm run test:editor
       - name: Veritabanı testleri

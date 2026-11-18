@@ -156,9 +156,15 @@ export function birimEtiketi(anahtar: BirimAnahtari, dil: Dil = "tr"): string {
 */
 export function birimYolu(anahtar: BirimAnahtari, calismaId: string): string {
   if (anahtar === "yazim") return `/dashboard/editor/${calismaId}/write`;
-  const yollar: Record<Exclude<BirimAnahtari, "yazim">, string> = {
+  /*
+    Kaynakça, Kaynaklar sayfasının ikinci sekmesi (17.11.2026). Eskiden
+    /dashboard/citations'a gidiyordu; o adres Kaynaklar sekmesine
+    yönleniyor, kaynakça adımına tıklayan öğrenci kaynak listesine
+    düşüyordu.
+  */
+  if (anahtar === "kaynakca") return `/dashboard/literature?calisma=${calismaId}&sekme=kaynakca`;
+  const yollar: Record<Exclude<BirimAnahtari, "yazim" | "kaynakca">, string> = {
     literatur: "/dashboard/literature",
-    kaynakca: "/dashboard/citations",
     belge: "/dashboard/documents",
     analiz: "/dashboard/analysis",
   };

@@ -64,6 +64,7 @@ export default function YazimPaneli({
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
   const listeRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -190,6 +191,80 @@ export default function YazimPaneli({
     void asistanPuanla(kayitId, "faydasiz", "panelde beğenilmedi").catch(() => undefined);
   };
 
+  /*
+    ALTTAN AÇILAN YAPRAK ARAÇ ÇUBUĞUNU ÖRTMEZ (17.11.2026, RELEASE CLOSURE 05).
+    1180 px ve altında panel alttan açılan bir yaprak; eskiden yüksekliği
+    sabit %70'ti ve sayfa en üstteyken araç çubuğu (1024 px'te 255–313, 390
+    px'te 279–337) yaprağın altında kalıyordu (studyo-kabul.mjs U3). Yaprağın
+    üst kenarı açılışta ve yeniden boyutlanınca araç çubuğunun altına
+    hizalanır; yaprak yine de ekranın en az %40'ını kaplar, en çok %70'ini.
+    Belge kaydırılınca araç çubuğu üste yapışır, yaprağın üstünde kalır.
+  */
+  useEffect(() => {
+    if (!acik) return;
+    /*
+      Son yazılan değer tutulur: kaydırma her karede bir olay üretir ve değer çoğu
+      zaman aynıdır; aynı değeri yeniden yazmak her seferinde stil geçersizleştirir.
+    */
+    let son: string | null = null;
+    const hizala = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      if (!window.matchMedia("(max-width: 1180px)").matches) {
+        if (son !== "") panel.style.removeProperty("--yaprak-ust");
+        son = "";
+        return;
+      }
+      const cubuk = document.querySelector(".manuscript-araclar")?.getBoundingClientRect();
+      const yuk = window.innerHeight;
+      const ust = cubuk ? Math.min(Math.max(cubuk.bottom + 8, yuk * 0.3), yuk * 0.6) : yuk * 0.3;
+      const deger = `${Math.round(ust)}px`;
+      if (deger === son) return;
+      son = deger;
+      panel.style.setProperty("--yaprak-ust", deger);
+    };
+    /*
+      Kaydırmada ve araç çubuğunun boyu değişince de yeniden ölçülür (RC06,
+      17.11.2026). Eskiden yalnızca açılışta ve "resize"da ölçülüyordu: belge
+      aşağı kaydırılmışken açılan yaprak, üste yapışmış araç çubuğuna göre
+      (ekranın %30'u) yerleşiyor, sayfa yukarı dönünce araç çubuğu eski yerine
+      (390 px'te 279–337) iniyor ve yaprağın altında kalıyordu — bütün düğmeler
+      erişilemez (studyo-kabul.mjs U3'ün aralıklı düşmesi; tıklama sayfayı
+      kaydırdığında oluyordu).
+
+      Kaydırmada ölçüm OLAYIN İÇİNDE yapılır, rAF'a ertelenmez (RC06d,
+      17.11.2026). Eskiden kaydırma da rAF'a erteleniyordu: tarayıcı kaydırma
+      olayını karenin başında, rAF geri çağrılarından ÖNCE dağıtıyor; ertelenen
+      hizalama aynı karenin rAF sırasının sonuna düşüyor ve o aralıkta yaprak
+      eski konumunda kalıyordu (denetimli deney: kaydırmadan sonraki ilk rAF'ta
+      40/40 örtük, karenin çiziminden sonra 0/40). Tarayıcı her kaydırılan öğe
+      için kare başına en çok bir olay dağıtır; olay başına tek ölçüm yapılır,
+      değer değişmediyse stil yazılmaz.
+      Boyut değişiklikleri (resize, ResizeObserver) kare başına bir ölçümle
+      rAF'ta kalır: onlar bir karede birden çok kez gelebilir.
+    */
+    let kare = 0;
+    const planla = () => {
+      if (kare) return;
+      kare = window.requestAnimationFrame(() => {
+        kare = 0;
+        hizala();
+      });
+    };
+    hizala();
+    window.addEventListener("resize", planla);
+    window.addEventListener("scroll", hizala, { passive: true, capture: true });
+    const cubuk = document.querySelector(".manuscript-araclar");
+    const gozlem = cubuk && typeof ResizeObserver !== "undefined" ? new ResizeObserver(planla) : null;
+    if (cubuk) gozlem?.observe(cubuk);
+    return () => {
+      window.removeEventListener("resize", planla);
+      window.removeEventListener("scroll", hizala, { capture: true });
+      gozlem?.disconnect();
+      if (kare) window.cancelAnimationFrame(kare);
+    };
+  }, [acik]);
+
   if (!acik) return null;
   const hizli: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
@@ -241,7 +316,7 @@ export default function YazimPaneli({
   ];
 
   return (
-    <aside className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
+    <aside ref={panelRef} className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
       <header className="yazim-paneli-bas">
         <span>
           <Sparkles size={16} aria-hidden="true" />

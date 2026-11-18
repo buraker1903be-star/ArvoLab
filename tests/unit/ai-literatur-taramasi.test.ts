@@ -62,17 +62,23 @@ describe("yanıt çözümleme", () => {
   test("arama dizeleri ve bulgular birlikte okunur", () => {
     const ham =
       '{"aramalar":["(\\"blended learning\\" OR \\"harmanlanmış öğrenme\\") AND self-efficacy"],' +
-      '"bulgular":[{"tur":"oneri","baslik":"Yöntem çeşitliliği","aciklama":"Listede nitel çalışma görünmüyor."}]}';
+      '"bulgular":[{"kod":"yontem_cesitliligi","tur":"oneri"}]}';
     const sonuc = taramaCozumle(ham);
     assert.equal(sonuc.aramalar.length, 1);
     assert.match(sonuc.aramalar[0], /blended learning/);
-    assert.equal(sonuc.bulgular[0].baslik, "Yöntem çeşitliliği");
+    // Başlık modelden değil şablondan (lib/ai/literatur-bulgu.ts).
+    assert.equal(sonuc.bulgular[0].baslik, "Yöntem çeşitliliği az");
   });
 
   test("arama listesi yoksa bulgular yine okunur", () => {
-    const sonuc = taramaCozumle('{"bulgular":[{"tur":"bilgi","baslik":"A","aciklama":"B"}]}');
+    const sonuc = taramaCozumle('{"bulgular":[{"kod":"tarama_plani","tur":"bilgi"}]}');
     assert.deepEqual(sonuc.aramalar, []);
     assert.equal(sonuc.bulgular.length, 1);
+  });
+
+  test("eski biçim (serbest başlık/açıklama, kod yok) bulgu üretmez", () => {
+    const sonuc = taramaCozumle('{"bulgular":[{"tur":"bilgi","baslik":"A","aciklama":"B"}]}');
+    assert.deepEqual(sonuc.bulgular, []);
   });
 });
 

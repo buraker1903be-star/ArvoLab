@@ -527,8 +527,8 @@
 .manuscript-layout[data-odak] .manuscript-outline { display: none; }
 .manuscript-layout:not([data-inceleme]) .manuscript-main,
 .manuscript-layout[data-odak] .manuscript-main { width: 100%; max-width: 980px; margin-inline: auto; }
-/* Odak modu: sayfa başlığı da çekilir, yalnızca araç çubuğu ve metin kalır. */
-.dashboard-page:has(.manuscript-layout[data-odak]) > .projects-header { display: none; }
+/* Odak modu: sayfa başlığı ve çalışma sekmeleri de çekilir, yalnızca araç çubuğu ve metin kalır. */
+.dashboard-page:has(.manuscript-layout[data-odak]) > :is(.projects-header, .calisma-sekmeleri) { display: none; }
 
 /*
   Araç çubuğu: tek satır, gruplar ince çizgiyle ayrık, sayfa kayarken
@@ -1353,8 +1353,29 @@
 .yazim-hizli-dugme:disabled { opacity: .6; cursor: default; }
 .yazim-girdi { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px 14px; }
 .yazim-girdi textarea { flex: 1 1 auto; min-width: 0; resize: none; }
-@media (max-width: 760px) {
-  .yazim-paneli { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 70dvh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+/*
+  ASİSTAN ARAÇ ÇUBUĞUNU ÖRTMEZ (17.11.2026, RELEASE CLOSURE 05). Panel
+  sabit (fixed) ve sağda 400 px; 16.11.2026'ya kadar yerleşim ona yer
+  açmıyordu: 1440 px'te araç çubuğunun sağındaki sekiz düğme (PDF, öneri,
+  kaynak bul, kaydet durumu…) ve metnin sağ kenarı panelin altında
+  kalıyordu (studyo-kabul.mjs ölçtü). Masaüstünde yerleşim panelin
+  genişliği kadar sağdan daralır, inceleme sütunu PDF panelinde olduğu gibi
+  gizlenir. 32 px: yerleşimin kendi sağ boşluğu (kabukta ölçüldü); 12 px
+  panelle aradaki boşluk. 1180 px ve altında yan yana yer yok: panel alttan
+  açılan yaprak olur (telefondaki gibi), araç çubuğu üstte erişilebilir kalır.
+*/
+@media (min-width: 1181px) {
+  .manuscript-layout[data-asistan]:not([data-odak]) {
+    grid-template-columns: minmax(0, 1fr);
+    margin-right: calc(400px + 16px + 12px - 32px);
+  }
+  .manuscript-layout[data-asistan] .manuscript-outline { display: none; }
+  /* Daralan çubukta etiketler simgeye iner (1180 px altındaki gibi); kalan düğmeler çubukta yatay kayar. */
+  .manuscript-layout[data-asistan] .arac-grup-asistan .arac-metin { display: none; }
+}
+@media (max-width: 1180px) {
+  /* --yaprak-ust: araç çubuğunun alt kenarı (yazim-paneli.tsx); yoksa eski %30. */
+  .yazim-paneli { top: var(--yaprak-ust, 30dvh); right: 0; bottom: 0; left: 0; width: 100%; height: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 }
 
 /* ---------- Kaynakla sohbet (03.11.2026) ---------- */
@@ -1444,4 +1465,206 @@
     -webkit-mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
     mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
   }
+}
+
+/* ---------- Yazım Stüdyosu: editörün yanında kaynak PDF'i (16.11.2026) ----------
+   Masaüstünde (1181 px ve üstü) PDF paneli yerleşimin sağ sütunu olur:
+   editör | ayırıcı | PDF. İnceleme paneli bu sırada gizlenir (iki sağ sütun
+   editörü okunmaz kılardı); kapanınca geri gelir. Genişlik ayırıcıyla
+   ayarlanır (--pdf-panel-genislik, pdf-panel-ayirici.tsx; sınırlar
+   lib/pdf-goruntu.ts). 1180 px ve altında tek odak: panel tam ekran açılır,
+   "kapat" ile yazdığı yere döner; yatay taşma yok. */
+.manuscript-layout[data-pdf]:not([data-odak]) {
+  grid-template-columns: minmax(0, 1fr) 10px var(--pdf-panel-genislik, 520px);
+  gap: 0 8px;
+}
+.manuscript-layout[data-pdf] .manuscript-outline { display: none; }
+.pdf-panel-ayirici {
+  align-self: stretch;
+  position: sticky;
+  top: 72px;
+  height: calc(100dvh - 88px);
+  width: 10px;
+  border-radius: var(--r-sm);
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+}
+.pdf-panel-ayirici::after { content: ""; display: block; width: 2px; height: 100%; margin-inline: auto; border-radius: 2px; background: var(--line-soft); }
+.pdf-panel-ayirici:hover::after,
+.pdf-panel-ayirici:focus-visible::after { background: var(--primary); }
+.pdf-panel-ayirici:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+.kaynak-pdf-paneli {
+  position: sticky;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 88px);
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+.kaynak-pdf-secici { display: grid; gap: 4px; padding: 10px 14px 0; font-size: var(--fs-sm); color: var(--muted); }
+.kaynak-pdf-secici select { width: 100%; min-width: 0; }
+
+.pdf-goruntuleyici { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 220px; }
+.pdf-arac { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); }
+.pdf-arac-grup { display: inline-flex; align-items: center; gap: 4px; }
+.pdf-sayfa-girdi { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
+.pdf-sayfa-girdi input { width: 3.2em; min-height: 32px; text-align: center; }
+.pdf-yuzde { min-width: 3.2em; text-align: center; font-size: var(--fs-sm); color: var(--muted); }
+.pdf-ara { display: inline-flex; flex: 1 1 200px; align-items: center; gap: 4px; min-width: 0; }
+.pdf-ara input { flex: 1 1 auto; min-width: 0; min-height: 32px; }
+.pdf-ara-sonuc { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+.pdf-sayfa-alani { position: relative; flex: 1 1 auto; overflow: auto; padding: 12px; background: var(--surface-2); }
+.pdf-sayfa { position: relative; margin-inline: auto; background: var(--surface); box-shadow: var(--shadow-lg); }
+.pdf-sayfa > canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pdf-durum { display: flex; align-items: center; gap: 8px; margin: 0; padding: 14px; color: var(--muted); font-size: var(--fs-base); }
+
+/* pdf.js metin katmanı (pdfjs-dist web/pdf_viewer.css'ten yalnızca gereken kurallar; renkler token). */
+.pdf-sayfa .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial; transform-origin: 0 0; forced-color-adjust: none; text-size-adjust: none; z-index: var(--z-taban); }
+.pdf-sayfa .textLayer :is(span, br) { position: absolute; color: transparent; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.pdf-sayfa .textLayer span.markedContent { top: 0; height: 0; }
+.pdf-sayfa .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; cursor: default; user-select: none; }
+.pdf-sayfa .textLayer ::selection { background: var(--primary-soft); }
+.pdf-sayfa .textLayer br::selection { background: transparent; }
+.pdf-sayfa .textLayer span.pdf-esles { background: var(--warning-soft); border-radius: 2px; }
+
+.kaynak-pdf-alt { display: grid; gap: 10px; max-height: 45%; overflow: auto; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
+.kaynak-ipucu, .kaynak-secim small { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
+.kaynak-secim { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); }
+.kaynak-secim-metin { margin: 0; font-size: var(--fs-base); line-height: 1.5; color: var(--ink-soft); }
+.kaynak-etiket { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: var(--r-sm); background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 650; }
+.kaynak-secim-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
+.kaynak-atif { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.kaynak-atif p { margin: 0; font-size: var(--fs-sm); line-height: 1.5; }
+.kaynak-dogrulandi { display: flex; align-items: center; gap: 6px; color: var(--success); font-weight: 600; }
+.kaynak-eslesme[data-tur="belirsiz"], .kaynak-eslesme[data-tur="yok"] { color: var(--warning); }
+.kaynak-secilen { font-weight: 650; color: var(--ink); }
+.kaynak-alinti-onizleme { margin: 0; padding: 6px 10px; border-left: 3px solid var(--primary-soft); color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.5; max-height: 9em; overflow: auto; }
+.kaynak-adaylar { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.kaynak-aday, .kaynak-onay { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: var(--fs-sm); color: var(--ink-soft); cursor: pointer; }
+.kaynak-aday input, .kaynak-onay input { margin: 2px 0 0; }
+.kaynak-sayfa { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
+.kaynak-sayfa input { max-width: 10em; min-height: 32px; }
+.kaynak-hata { color: var(--danger); }
+.kaynak-analiz { display: grid; gap: 8px; }
+.kaynak-analiz-liste { display: grid; gap: 10px; }
+.kaynak-analiz-oge { display: grid; gap: 6px; }
+.kaynak-soru { margin: 0; justify-self: end; max-width: 90%; padding: 6px 10px; border-radius: var(--r-md); background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-sm); }
+.kaynak-cevap { margin: 0; font-size: var(--fs-base); line-height: 1.55; color: var(--ink); white-space: pre-wrap; }
+.kaynak-alintilar { display: grid; gap: 4px; margin: 0; padding-left: 16px; font-size: var(--fs-sm); color: var(--ink-soft); }
+.kaynak-kunye { color: var(--muted); font-size: var(--fs-micro); }
+.kaynak-pdf-paneli .yazim-girdi { padding: 0; }
+.kaynak-pdf-paneli .spin { animation: kaynak-don .9s linear infinite; }
+@keyframes kaynak-don { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .kaynak-pdf-paneli .spin { animation: none; } }
+
+@media (max-width: 1180px) {
+  .manuscript-layout[data-pdf]:not([data-odak]) { grid-template-columns: minmax(0, 1fr); }
+  .pdf-panel-ayirici { display: none; }
+  .kaynak-pdf-paneli {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-pencere);
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .kaynak-pdf-alt { max-height: 50%; }
+}
+
+/* ============================================================
+   PREMIUM ÇALIŞMA ALANI — YAZIM STÜDYOSU (17.11.2026, onaylı tasarım)
+
+   Kompakt kılavuz bilgisi: eskiden "Bu çalışmaya bağlı kılavuz yok"
+   iki satır açıklama + iki büyük düğmeyle ~150 px'lik bir kutuydu ve
+   telefonda belge metnini ilk ekranın altına itiyordu. Şimdi tek satır;
+   bağlantılar yine klavyeyle ulaşılır, dokunma hedefi 44 px (telefonda).
+   ============================================================ */
+.kilavuz-satiri {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+  margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2); color: var(--muted); font-size: var(--os5-fs-meta);
+}
+.kilavuz-satiri > svg { flex: none; color: var(--ink-soft); }
+.kilavuz-satiri a {
+  display: inline-flex; align-items: center; min-height: 28px;
+  color: var(--primary-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; border-radius: var(--os5-kontrol-r);
+}
+.kilavuz-satiri a:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+
+/*
+  TELEFON (390×664): belge metni ilk ekranda görünmeli (onaylı tasarım).
+  Eskiden başlık, eylemler, sekmeler, araç çubuğu, kayıt şeridi ve kılavuz
+  kutusu alt alta ~560 px tutuyor, metin ilk ekranın altında kalıyordu.
+  Şimdi: başlık ve eylemler TEK satır (eylemler yalnızca simge, adları
+  aria-label'da), çalışma sekmeleri bu ekranda gizli (geri düğmesi
+  çalışma özetine götürür, sekmeler orada), kayıt şeridi ince.
+  Editörün işlevleri, belge biçimi ve dışa aktarma değişmez.
+*/
+@media (max-width: 760px) {
+  .yazma-basligi { flex-wrap: nowrap; align-items: center; gap: var(--s-2); margin-bottom: 8px; }
+  .yazma-basligi > div:first-child { flex: 1 1 0; min-width: 0; }
+  .yazma-basligi h1 { font-size: var(--os5-fs-govde); font-family: var(--os5-font-govde); font-weight: 600; }
+  .yazma-basligi .yazma-eylemleri { width: auto; flex: none; gap: 4px; }
+  .yazma-basligi .yazma-eylemleri > :last-child { margin-left: 0; }
+  .yazma-eylemleri .yazma-etiket-kisa { display: none; }
+  .dashboard-page:has(.manuscript-layout) > .calisma-sekmeleri { display: none; }
+  .manuscript-ust { min-height: 0; padding-block: 2px; }
+  .kilavuz-satiri a { min-height: 44px; }
+}
+
+/*
+  İNCE ARAÇ ÇUBUĞU (premium çalışma alanı, 17.11.2026). 1440 px'te çubuk
+  1457 px'lik içeriği 1134 px'e sığdıramıyor, sağdaki "Kontroller" ve
+  "Atıf" kaydırmadan görünmüyordu. Orta genişlikte (≤1640, açık kenar
+  çubuğuyla 1440 dahil): yazı seçicileri daralır; "Paragraf" ve "Ekle"
+  menüleri yalnızca simge olur (adları düğmenin aria-label'ında ve
+  title'ında — arac-menusu.tsx); grup araları sıkılaşır. Görünür adla
+  kalanlar: Asistan ve Kontroller. Hiçbir düğme kaldırılmadı.
+*/
+@media (min-width: 761px) and (max-width: 1640px) {
+  .arac-grup-yazi .toolbar-select { max-width: 104px; }
+  .arac-grup-yazi .toolbar-select + .toolbar-select { max-width: 64px; }
+  .manuscript-araclar .arac-grup:not(.arac-grup-asistan):not(.arac-grup-son) .arac-menu-dugme .arac-metin,
+  .manuscript-araclar .arac-grup:not(.arac-grup-asistan):not(.arac-grup-son) .arac-menu-dugme .arac-menu-ok { display: none; }
+  .arac-grup { padding: 0 4px; }
+}
+/*
+  Daha dar ekranda (tablet, 1280 px masaüstü) içerik tek satıra sığmıyor:
+  çubuk iki satıra sarar, hiçbir düğme kaydırmanın arkasında kalmaz.
+  Telefonda (≤760) yana kayan tek satır kararı yerinde (yukarıda).
+*/
+@media (min-width: 761px) and (max-width: 1439px) {
+  .manuscript-araclar { flex-wrap: wrap; row-gap: 4px; overflow-x: visible; }
+  .arac-grup + .arac-grup { border-left-color: transparent; }
+}
+
+/*
+  SADE ÜST BÖLÜM VE TELEFON (ikinci tur, 17.11.2026).
+  Kayıt durumu başlığın yanında (manuscript-editor.tsx portalı). Telefonda
+  yalnızca durum noktası kalır; metni ekran okuyucuya ve title'a açık
+  (font-size 0 erişilebilirlik ağacından düşürmez). Hata ve çakışma her
+  ekranda yazıyla görünür: kullanıcı onları kaçırmamalı.
+  Kılavuz satırı telefonda kısa yazımla tek satır; belgenin üstündeki
+  ekran boşluğu 40 → 16 px (yalnızca ekranda; yazdırma/PDF/Word düzeni
+  print.css ve dışa aktarma kodunda, değişmedi).
+*/
+.yazma-kayit { min-height: var(--os5-kontrol-h); }
+.kilavuz-kisa { display: none; }
+/* Dokunmatikte kılavuz bağlantıları 44 px hedef (kabul.mjs: tablette 28 px'ti). */
+@media (max-width: 1199px), (pointer: coarse) {
+  .kilavuz-satiri a { min-height: 44px; min-width: 44px; justify-content: center; }
+}
+@media (max-width: 760px) {
+  .yazma-eylemleri .yazma-kayit:not([data-state="error"]):not([data-state="conflict"]) { gap: 0; padding: 0; font-size: 0; justify-content: center; }
+  .kilavuz-satiri { flex-wrap: nowrap; padding-block: 4px; white-space: nowrap; }
+  .kilavuz-satiri .kilavuz-uzun { display: none; }
+  .kilavuz-satiri .kilavuz-kisa { display: inline; }
+  .manuscript-editor-content { padding-top: 16px; }
 }

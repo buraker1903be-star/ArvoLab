@@ -26,6 +26,8 @@ const SURE: Record<OnbellekKaydi["status"], number> = {
   possible_match: 30 * GUN,
   not_found: 7 * GUN,
   insufficient_data: 0,
+  // Geçici erişim sorunu saklanmaz (lib/academic-reference-verification.ts).
+  ulasilamadi: 0,
 };
 
 type Satir = {

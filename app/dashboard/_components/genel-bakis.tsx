@@ -184,7 +184,13 @@ export function ListeSatiri({
   kelime; eksi gün (silme, taşıma) çubuğun altında kendi rengiyle.
   Üstte öğrencinin asıl sorusunun cevabı: "bu hafta ne kadar yazdım".
 */
-export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string }) {
+/*
+  `href` verilmezse kartın altında bağlantı çizilmez (Signature OS 5 /
+  Phase 4): ana sayfada "Yazmaya devam et" çalışma panelinin TEK birincil
+  eylemi; kartın dibinde aynı adı taşıyan ikinci bir bağlantı onu
+  sulandırıyordu.
+*/
+export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href?: string }) {
   const yazildi = ritim.gunler.some((g) => g.net !== 0);
   const t = await ceviri();
   const dil = await aktifDil();
@@ -235,9 +241,11 @@ export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: str
           })}
         </p>
       )}
-      <Link className="gb-kart-baglanti" href={href}>
-        {t({ tr: "Yazmaya devam et", en: "Continue writing" })} <ChevronRight size={14} aria-hidden="true" />
-      </Link>
+      {href ? (
+        <Link className="gb-kart-baglanti" href={href}>
+          {t({ tr: "Yazmaya devam et", en: "Continue writing" })} <ChevronRight size={14} aria-hidden="true" />
+        </Link>
+      ) : null}
     </article>
   );
 }

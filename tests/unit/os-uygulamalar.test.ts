@@ -13,6 +13,7 @@ import {
   ANA_SAYFA,
   aramaAnahtari,
   osSayfalari,
+  komutHedefleri,
   docktakiler,
   etkinBolum,
   etkinUygulama,
@@ -134,7 +135,9 @@ describe("Ctrl+K araması", () => {
   });
 
   test("başlatıcıya ayrılmış uygulamalar da aranabiliyor", () => {
-    const sayfalar = osSayfalari(uygulamalar);
+    // Palet uygulamaları komutHedefleri'nden alıyor (osSayfalari artık
+    // yalnızca gerçek alt bölümleri döndürüyor, 14.11.2026).
+    const sayfalar = komutHedefleri(uygulamalar);
     assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
     // Yönlenen eski adresler (sekmeli dönemin bölümleri) aramada çıkmıyor:
     // Destek ve Kaynaklar uygulamanın kendisiyle aranıyor.
@@ -164,14 +167,14 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     // kaldırıldı: kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
     assert.equal(uygulamalar.some((u) => u.href === "/dashboard/guidelines"), false);
     const personelSayfalari = ["/dashboard/associate-professorship"];
-    const ogrenci = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
+    const ogrenci = komutHedefleri(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
     // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
-    const rolsuz = osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
+    const rolsuz = komutHedefleri(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
     for (const href of personelSayfalari) {
       assert.ok(!ogrenci.includes(href), href);
       assert.ok(!rolsuz.includes(href), href);
       for (const rol of ["employee", "academic_manager", "controller", "expert", "system_admin", "founder"]) {
-        assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
+        assert.ok(komutHedefleri(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
       }
     }
   });
@@ -189,21 +192,25 @@ test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
 });
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
-import { ALT_CUBUK, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
+import { ALT_CUBUK, anaUygulamalar, aracUygulamalari, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, personelAraclari, yardimUygulamalari } from "@/lib/os/uygulamalar";
 import { ekranSinifi } from "@/lib/os/kirilimlar";
 
-test("gezinme grupları: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
+test("gezinme yerleri: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
+  // Phase 5.1d-3: ana gezinme + hesap menüsü; 17.11.2026: + Araçlar ve Yardım grupları.
   const hepsi = labUygulamalari();
-  const { ana, diger, ayarlar } = gezinmeGruplari(hepsi);
-  const yerlesen = [...ana, ...diger, ...(ayarlar ? [ayarlar] : [])].map((u) => u.key).sort();
+  const yerlesen = [...anaUygulamalar(hepsi), ...aracUygulamalari(hepsi), ...yardimUygulamalari(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key).sort();
   assert.deepEqual(yerlesen, hepsi.map((u) => u.key).sort());
 });
 
-test("telefonda alt çubuk + Daha fazla bütün uygulamaları kapsar", () => {
+test("telefonda alt çubuk + Daha fazla, personel araçları dışında bütün uygulamaları kapsar", () => {
+  // Personel araçları telefonda da hesap menüsünde (5.1d-3); hesap sayfaları Daha fazla'da KALIR.
   const hepsi = labUygulamalari();
   const cubuk = hepsi.filter((u) => (ALT_CUBUK as readonly string[]).includes(u.key));
   assert.equal(cubuk.length, ALT_CUBUK.length, "alt çubuktaki her anahtar listede olmalı");
-  assert.equal(cubuk.length + dahaFazlasi(hepsi).length, hepsi.length);
+  assert.equal(cubuk.length + dahaFazlasi(hepsi).length + personelAraclari(hepsi).length, hepsi.length);
+  const daha = dahaFazlasi(hepsi).map((u) => u.key);
+  for (const k of ["analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"]) assert.ok(daha.includes(k), k);
+  for (const k of ["docentlik", "asistan", "ekip"]) assert.ok(!daha.includes(k), k);
 });
 
 test("ekran sınıfı kırılımları", () => {

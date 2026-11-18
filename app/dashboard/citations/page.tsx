@@ -7,11 +7,13 @@ export async function generateMetadata() {
 }
 
 /*
-  Kaynakça doğrulama artık Kaynaklar sayfasının sağ kartı ve onun
-  penceresi (literature/page.tsx, 26.10.2026). Eski bağlantılar
-  (çalışma özeti adımları, yer imleri) çalışmasıyla oraya gider.
+  Kaynakça doğrulama Kaynaklar sayfasında (literature/page.tsx,
+  26.10.2026). 17.11.2026'dan beri orada ayrı bir sekme: eski bağlantılar
+  (yer imleri) çalışmasıyla Kaynakça sekmesine gider. Eskiden Kaynaklar
+  sekmesine düşüyordu; kaynakça sağ kartta yan yana durduğu için fark
+  etmiyordu.
 */
 export default async function CitationsPage({ searchParams }: { searchParams: Promise<{ calisma?: string }> }) {
   const { calisma } = await searchParams;
-  redirect(calisma ? `/dashboard/literature?calisma=${encodeURIComponent(calisma)}` : "/dashboard/literature");
+  redirect(calisma ? `/dashboard/literature?calisma=${encodeURIComponent(calisma)}&sekme=kaynakca` : "/dashboard/literature");
 }

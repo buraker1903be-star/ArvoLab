@@ -1,5 +1,6 @@
 "use server";
 
+import { ilkSifreEngeli } from "@/lib/auth-guards";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +27,8 @@ async function bireyselKullanici() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) return null;
+  // İlk şifre kapısı (lib/auth-guards.ts): şifresini belirlemeyen oturum ödeme başlatamaz.
+  if (await ilkSifreEngeli(supabase, user.id)) return null;
   const profile = await getCurrentProfile();
   return { id: user.id, email: user.email, fullName: profile?.full_name ?? null, kurumlu: Boolean(profile?.organization_id) };
 }

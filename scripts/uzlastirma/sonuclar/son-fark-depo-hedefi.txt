@@ -1,0 +1,136 @@
+DEPO  tablo_yetki|academic_projects@service_role
+PROVA tablo_yetki|academic_projects@service_role
+DEPO  tablo_yetki|academic_score_entries@service_role
+PROVA tablo_yetki|academic_score_entries@service_role
+DEPO  tablo_yetki|academic_unit_import_staging@service_role
+PROVA tablo_yetki|academic_unit_import_staging@service_role
+DEPO  indeks|academic_units.academic_units_active_lookup_idx
+PROVA indeks|academic_units.academic_units_root_unique
+DEPO  indeks|academic_units.academic_units_university_parent_idx
+DEPO  tablo_yetki|academic_units@authenticated
+PROVA tablo_yetki|academic_units@authenticated
+DEPO  tablo_yetki|ai_assistant_runs@authenticated
+PROVA tablo_yetki|ai_assistant_runs@authenticated
+DEPO  tablo_yetki|ai_bireysel_kredi_hareketleri@service_role
+PROVA tablo_yetki|ai_bireysel_kredi_hareketleri@service_role
+DEPO  tablo_yetki|ai_bireysel_kredi_hesabi@service_role
+PROVA tablo_yetki|ai_bireysel_kredi_hesabi@service_role
+DEPO  tablo_yetki|ai_feedback_requests@authenticated
+PROVA tablo_yetki|ai_feedback_requests@authenticated
+DEPO  tablo_yetki|ai_kredi_hareketleri@service_role
+PROVA tablo_yetki|ai_kredi_hareketleri@service_role
+DEPO  tablo_yetki|ai_kredi_hesabi@service_role
+PROVA tablo_yetki|ai_kredi_hesabi@service_role
+DEPO  tablo_yetki|analiz_sonuclari@service_role
+PROVA tablo_yetki|analiz_sonuclari@service_role
+DEPO  tablo_yetki|app_support_requests@authenticated
+PROVA tablo_yetki|app_support_requests@authenticated
+DEPO  tablo_yetki|app_support_requests@service_role
+PROVA tablo_yetki|app_support_requests@service_role
+DEPO  tablo_yetki|bridge_health@service_role
+PROVA tablo_yetki|bridge_health@service_role
+DEPO  tablo_yetki|citation_checks@authenticated
+PROVA tablo_yetki|citation_checks@authenticated
+DEPO  tablo_yetki|citation_checks@service_role
+PROVA tablo_yetki|citation_checks@service_role
+DEPO  tablo_yetki|consultancy_requests@service_role
+PROVA tablo_yetki|consultancy_requests@service_role
+DEPO  tablo_yetki|destek_mesajlari@service_role
+PROVA tablo_yetki|destek_mesajlari@service_role
+DEPO  tablo_yetki|docentlik_hedefleri@service_role
+PROVA tablo_yetki|docentlik_hedefleri@service_role
+DEPO  tablo_yetki|docentlik_profili@service_role
+PROVA tablo_yetki|docentlik_profili@service_role
+DEPO  tablo_yetki|document_uploads@authenticated
+PROVA tablo_yetki|document_uploads@authenticated
+DEPO  tablo_yetki|document_uploads@service_role
+PROVA tablo_yetki|document_uploads@service_role
+DEPO  tablo_yetki|literature_sources@service_role
+PROVA tablo_yetki|literature_sources@service_role
+DEPO  tablo_yetki|manuscript_comments@service_role
+PROVA tablo_yetki|manuscript_comments@service_role
+DEPO  tablo_yetki|manuscript_share_links@service_role
+PROVA tablo_yetki|manuscript_share_links@service_role
+DEPO  tablo_yetki|notifications@service_role
+PROVA tablo_yetki|notifications@service_role
+DEPO  tablo_yetki|organizations@authenticated
+PROVA tablo_yetki|organizations@authenticated
+DEPO  tablo_yetki|organizations@service_role
+PROVA tablo_yetki|organizations@service_role
+DEPO  tablo_yetki|originality_checks@authenticated
+PROVA tablo_yetki|originality_checks@authenticated
+DEPO  tablo_yetki|originality_checks@service_role
+PROVA tablo_yetki|originality_checks@service_role
+DEPO  tablo_yetki|profiles@authenticated
+PROVA tablo_yetki|profiles@authenticated
+DEPO  tablo_yetki|profiles@service_role
+PROVA tablo_yetki|profiles@service_role
+DEPO  tablo_yetki|project_manuscript_versions@authenticated
+PROVA tablo_yetki|project_manuscript_versions@authenticated
+DEPO  tablo_yetki|project_manuscript_versions@service_role
+PROVA tablo_yetki|project_manuscript_versions@service_role
+DEPO  tablo_yetki|project_manuscripts@authenticated
+PROVA tablo_yetki|project_manuscripts@authenticated
+DEPO  tablo_yetki|project_manuscripts@service_role
+PROVA tablo_yetki|project_manuscripts@service_role
+DEPO  fonksiyon_yetki|public.ai_bireysel_aylik_hak()
+PROVA fonksiyon_yetki|public.ai_bireysel_aylik_hak()
+DEPO  fonksiyon_yetki|public.ai_bireysel_hesabini_hazirla(p_user_id uuid)
+PROVA fonksiyon_yetki|public.ai_bireysel_hesabini_hazirla(p_user_id uuid)
+DEPO  fonksiyon_yetki|public.ai_bireysel_kredi_hareketlerim()
+PROVA fonksiyon_yetki|public.ai_bireysel_kredi_hareketlerim()
+DEPO  fonksiyon_yetki|public.ai_bireysel_mi(p_user_id uuid)
+PROVA fonksiyon_yetki|public.ai_bireysel_mi(p_user_id uuid)
+DEPO  fonksiyon_yetki|public.ai_kredi_durumum()
+PROVA fonksiyon_yetki|public.ai_kredi_durumum()
+DEPO  fonksiyon_yetki|public.ai_kredi_dus()
+PROVA fonksiyon_yetki|public.ai_kredi_dus()
+DEPO  fonksiyon_yetki|public.ai_kredi_hesabini_hazirla(p_organization_id uuid)
+PROVA fonksiyon_yetki|public.ai_kredi_hesabini_hazirla(p_organization_id uuid)
+DEPO  fonksiyon_yetki|public.ai_kurum_kredi_hareketleri(p_organization_id uuid)
+PROVA fonksiyon_yetki|public.ai_kurum_kredi_hareketleri(p_organization_id uuid)
+DEPO  fonksiyon_yetki|public.arvoos_uye_adini_isle()
+PROVA fonksiyon_yetki|public.arvoos_uye_adini_isle()
+DEPO  fonksiyon_yetki|public.arvoos_uyeligimi_bagla()
+PROVA fonksiyon_yetki|public.arvoos_uyeligimi_bagla()
+DEPO  fonksiyon_yetki|public.arvoos_uyeligimi_bagla_kurum()
+PROVA fonksiyon_yetki|public.arvoos_uyeligimi_bagla_kurum()
+DEPO  fonksiyon_yetki|public.arvoos_uyeligini_bagla(p_user_id uuid, p_email text)
+PROVA fonksiyon_yetki|public.arvoos_uyeligini_bagla(p_user_id uuid, p_email text)
+DEPO  fonksiyon_yetki|public.asistan_model_ozetleri()
+PROVA fonksiyon_yetki|public.asistan_model_ozetleri()
+DEPO  fonksiyon_yetki|public.destek_mesaji_hazirla()
+PROVA fonksiyon_yetki|public.destek_mesaji_hazirla()
+DEPO  fonksiyon_yetki|public.destek_talebini_yeniden_ac()
+PROVA fonksiyon_yetki|public.destek_talebini_yeniden_ac()
+DEPO  fonksiyon_yetki|public.guard_academic_project_update()
+PROVA fonksiyon_yetki|public.guard_academic_project_update()
+DEPO  fonksiyon_yetki|public.guard_kanit_hukmu()
+PROVA fonksiyon_yetki|public.guard_kanit_hukmu()
+DEPO  fonksiyon_yetki|public.guard_profile_lifecycle()
+PROVA fonksiyon_yetki|public.guard_profile_lifecycle()
+DEPO  fonksiyon_yetki|public.guard_subscription()
+PROVA fonksiyon_yetki|public.guard_subscription()
+DEPO  fonksiyon_yetki|public.guard_support_request_update()
+PROVA fonksiyon_yetki|public.guard_support_request_update()
+DEPO  fonksiyon_yetki|public.notify_guideline_ready()
+PROVA fonksiyon_yetki|public.notify_guideline_ready()
+DEPO  politika|public.organizations:Members can view their own organization
+PROVA politika|public.organizations:Members can view their own organization
+DEPO  fonksiyon_yetki|public.product_feedback_kurumu()
+PROVA fonksiyon_yetki|public.product_feedback_kurumu()
+DEPO  fonksiyon_yetki|public.set_thesis_guideline_ready()
+PROVA fonksiyon_yetki|public.set_thesis_guideline_ready()
+DEPO  fonksiyon_yetki|public.sozlesme_onayi_degismez()
+PROVA fonksiyon_yetki|public.sozlesme_onayi_degismez()
+DEPO  politika|public.universities:Authenticated users can view universities
+DEPO  tablo_yetki|scoring_criteria@service_role
+PROVA tablo_yetki|scoring_criteria@service_role
+DEPO  tablo_yetki|uak_tablolari@service_role
+PROVA tablo_yetki|uak_tablolari@service_role
+DEPO  tablo_yetki|universities@authenticated
+PROVA tablo_yetki|universities@authenticated
+DEPO  tablo_yetki|universities@service_role
+PROVA tablo_yetki|universities@service_role
+DEPO  tablo_yetki|yazim_kontrolleri@service_role
+PROVA tablo_yetki|yazim_kontrolleri@service_role

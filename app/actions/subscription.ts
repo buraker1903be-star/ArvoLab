@@ -1,5 +1,6 @@
 "use server";
 
+import { ilkSifreEngeli } from "@/lib/auth-guards";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { denemeAsistanHakkim } from "@/lib/ai/erisim";
@@ -16,6 +17,8 @@ export async function payArvolabSubscription(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) redirect("/?error=session-missing");
+  // İlk şifre kapısı (lib/auth-guards.ts): şifresini belirlemeyen oturum ödeme başlatamaz.
+  if (await ilkSifreEngeli(supabase, user.id)) redirect("/reset-password?ilk=1");
 
   const profile = await getCurrentProfile();
   if (profile?.organization_id) {
@@ -45,6 +48,8 @@ export async function krediSatinAl(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) redirect("/?error=session-missing");
+  // İlk şifre kapısı (lib/auth-guards.ts): şifresini belirlemeyen oturum ödeme başlatamaz.
+  if (await ilkSifreEngeli(supabase, user.id)) redirect("/reset-password?ilk=1");
 
   const profile = await getCurrentProfile();
   // Kurumun kredisini kurum yöneticisi alır (kurumKrediSatinAl).

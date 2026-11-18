@@ -45,6 +45,13 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
       margin_top_cm: 2.5, margin_bottom_cm: 2.5, margin_left_cm: 3, margin_right_cm: 2.5,
     },
   ],
+  /* Sürüm geri yükleme akışı önizlemede sınanabilsin (P52a1, otomatik-kayit-kabul.mjs): tek bir otomatik sürüm. */
+  project_manuscript_versions: [
+    {
+      id: "00000000-0000-4000-8000-0000000000c1", project_id: PROJE, created_at: gunOnce(1), word_count: 6172, kind: "auto", label: null,
+      created_by: KULLANICI, content: tez, plain_text: "", settings: {},
+    },
+  ],
   literature_sources: [
     { id: "l1", project_id: PROJE, owner_id: KULLANICI, title: "Türkiye'de Phillips eğrisinin istikrarı", authors: "Önder, A. Ö.", year: "2009", status: "used", source_type: "article", created_at: gunOnce(10) },
     { id: "l2", project_id: PROJE, owner_id: KULLANICI, title: "Inflation and unemployment in emerging markets", authors: "Smith, J., & Brown, K.", year: "2019", status: "read", source_type: "article", created_at: gunOnce(8) },

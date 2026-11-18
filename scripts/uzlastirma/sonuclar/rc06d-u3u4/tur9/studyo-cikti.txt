@@ -1,0 +1,186 @@
+tohum: proje 853ec495-c359-475f-b0f1-4a4e384729e2 · pdf d5d061e6-b92e-4c45-87e3-62cc44e72052/0b42ab42-703a-4a3a-bcb2-3cf8e2f0f85c/fa3c67ee-7167-46dd-8ccd-bf1fddc3bc39 · kütüphane e8cc964b-05c5-4944-bee3-503880bd5fa8/2b6b3215-a803-483c-a89f-56dd03b8d025/a2636687-b4a4-4780-8cd3-8770af93459d
+PASS  G1  Oturumsuz PDF isteği reddedilir
+      beklenen: 401, gövde PDF değil
+      gözlenen: 401 Unaut
+PASS  G2  Başka kullanıcının PDF'i reddedilir (B → A'nın PDF'i)
+      beklenen: 404 (var/yok ayırt edilmez), bayt yok
+      gözlenen: 404 9 bayt
+PASS  G2b  Geçersiz kimlik
+      beklenen: 404
+      gözlenen: 404
+PASS  G2c  B depodan A'nın dosyasını doğrudan indiremez
+      beklenen: 4xx
+      gözlenen: 400
+PASS  G2d  Kova herkese açık değil (public adres)
+      beklenen: 4xx
+      gözlenen: 400
+PASS  G3  Sahibi PDF'i alır; önbelleğe girmez
+      beklenen: 200 %PDF- · Cache-Control private, no-store
+      gözlenen: 200 %PDF- · private, no-store · application/pdf
+PASS  M1  Masaüstü: editör ve gerçek PDF sayfası yan yana
+      beklenen: editör solda ≥420px, panel sağda ≥360px, kanvas çizildi
+      gözlenen: editör x=273 w=588 · panel x=888 w=520 · kanvas 495×641
+PASS  M1b  Sayfa sayısı gösterilir
+      beklenen: / 3
+      gözlenen: / 3
+PASS  M1c  Masaüstünde yatay taşma yok
+      beklenen: 0
+      gözlenen: 0
+PASS  M2  Sayfa gezinme (sonraki, numara yaz, önceki)
+      beklenen: 2 → 3 → 2, metin katmanı sayfayla değişir
+      gözlenen: 2 → 3 → 2
+PASS  M3  Yakınlaştırma; metin katmanı kanvasla hizalı kalır
+      beklenen: kanvas büyür, yüzde artar, katman/kanvas farkı ≤2px
+      gözlenen: 81%→106% · 495→648px · fark 0.0px
+PASS  M3b  Genişliğe sığdır
+      beklenen: kanvas eni ≤ alan eni
+      gözlenen: 495 ≤ 518
+PASS  M4  PDF içinde arama
+      beklenen: 3. sayfaya gider ve eşleşmeyi vurgular
+      gözlenen: sayfa 3 · 1 sayfada
+PASS  M4b  Bulunamayan arama
+      beklenen: 'bulunamadı' bildirilir, sayfa değişmez
+      gözlenen: Bulunamadı
+PASS  M5  Panel genişliği sınırlar içinde ayarlanır (klavye + sürükleme)
+      beklenen: ←×4 büyütür; Home ≤960 ve editör ≥420; End =360; sürükleme büyütür; tercih saklanır
+      gözlenen: 520→616 · Home 690 (editör 420) · End 360 · sürükle 528 · saklanan 528
+PASS  M6  AI paneliyle çakışma yok (biri açılınca öteki kapanır)
+      beklenen: asistan açılınca PDF gizli; PDF açılınca asistan gizli; seçili kaynak korunur
+      gözlenen: asistan açıkken PDF görünür=false, asistan=true · PDF açıkken asistan=false · seçili aynı
+PASS  S1  Görsel seçim sunucuda kaynak metne karşı doğrulanır (iki satır)
+      beklenen: '1. sayfasında doğrulandı'; kanonik metin iki cümleyi içerir
+      gözlenen: tarayıcı seçimi "Remote learning increased reported isolation among first-yea"… · panel: Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without 
+PASS  S2  DOI ile kesin eşleşme (büyük harf/https farkı normalleşir)
+      beklenen: eşleşen kaynağın başlığı, aday listesi yok
+      gözlenen: Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without weekly live sessions.” Kaynak DOI ile Li
+PASS  S3a  Kesin eşleşmede ekleme düğmesi etkin
+      beklenen: etkin
+      gözlenen: true
+PASS  S3  Doğrulanmış alıntı + atıf kullanıcının düğmesiyle imlece eklenir
+      beklenen: “…isolation among first-year students…” ve (Kaya, 2021, s. 203) benzeri atıf; PDF sayfası (1) atıfta yok
+      gözlenen: “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without weekly live sessions.” (Kaya, 2021, s. 203)Giris paragrafi. Kaynakça Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synt
+PASS  S4  Otomatik kayıt bütünlüğü (yeniden yükleme + veritabanı)
+      beklenen: veritabanındaki düz metin ve yeniden açılan editör alıntıyı ve atfı içerir
+      gözlenen: db: “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without  · editör: “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without 
+PASS  S5  Uydurma alıntı (PDF'te yok) sunucuda reddedilir
+      beklenen: {hata}, metin yok
+      gözlenen: {"hata":"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir; tek sütundan daha kısa bir pasaj seçin."}
+PASS  S5b  Doğru cümle yanlış sayfa numarasıyla reddedilir
+      beklenen: {hata}
+      gözlenen: {"hata":"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir; tek sütundan daha kısa bir pasaj seçin."}
+PASS  S5c  Çok kısa seçim reddedilir
+      beklenen: {hata}
+      gözlenen: {"hata":"Seçim çok kısa; en az birkaç kelimelik bir pasaj seçin."}
+PASS  S5d  Var olmayan sayfa reddedilir
+      beklenen: {hata}
+      gözlenen: {"hata":"Seçilen sayfa PDF'te bulunamadı."}
+PASS  S5e  Boşluk farkı olan gerçek alıntı kabul edilir, sunucunun metni döner
+      beklenen: metin = Remote learning increased reported isolation among first-year students.
+      gözlenen: {"sayfa":1,"metin":"Remote learning increased reported isolation among first-year students.","sonrakiSayfaya":false}
+PASS  S5g  Sayfa sonundan sonraki sayfaya taşan seçim kabul edilir ve işaretlenir
+      beklenen: sayfa 1, sonrakiSayfaya true
+      gözlenen: {"sayfa":1,"metin":"We surveyed 412 students across three faculties in autumn 2020. Method Participants completed","sonrakiSayfaya":true}
+PASS  S5f  Uydurma seçimle asistan çağrısı modele gitmeden reddedilir
+      beklenen: secimReddi; modele istek yok; yeni asistan kaydı yok
+      gözlenen: {"hata":"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 42→42 · kayıt 0→0
+PASS  S6  Başka kullanıcı A'nın PDF'inden seçim doğrulatamaz / listeyi göremez
+      beklenen: iki çağrıda {hata}; liste boş
+      gözlenen: {"hata":"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin."} · {"hata":"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin."} · liste {"satirlar":[]}
+PASS  S7  Belirsiz eşleşme kullanıcıya bildirilir; açık seçim + onay olmadan ekleme yok
+      beklenen: ≥2 aday, düğme başta kapalı, yalnızca seçimle kapalı, onayla açık
+      gözlenen: aday 2 · başta kapalı true · yalnız seçim false · onayla true · Alıntı PDF'in 1. sayfasında doğrulandı. “Students who joined peer study groups reported lower isolation scores.” Kaynak 
+PASS  S8  Kütüphanede karşılığı olmayan PDF'e atıf eklenmez
+      beklenen: eşleşme yok mesajı; ekleme düğmesi yok ya da kapalı
+      gözlenen: Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students.” Bu PDF'in kaynağı Literatür kütüphanenizde bul · düğme yok
+PASS  S9  Seçili pasaj Arvo AI ile analiz edilir (aynı kapı, istem, doğrulama, kayıt); editöre kendiliğinden girmez
+      beklenen: cevap + 'PDF s. 1' alıntısı; istemde seçili pasaj ve yalnızca s.1–2; asistan kaydı +1; editör değişmez
+      gözlenen: Bu pasajın ana iddiasını, dayandığı kanıtı ve sınırlılığını açıkla. Pasaj, uzaktan öğrenmenin birinci sınıf öğrencilerinde bildirilen yalnızlığı artır · istem sayfaları 1,2 · pasaj istemde true · modele istek 42→43 · kayıt 0→1 · editör değişmedi true
+PASS  S9a  Çalışma ai_assistant_runs'a 'kaynak' yeteneğiyle yazılır
+      beklenen: kaynak
+      gözlenen: kaynak · completed
+PASS  S9b  Cevaptaki alıntının 'PDF s. N' bağlantısı PDF'te o sayfayı açar
+      beklenen: 3 → 1
+      gözlenen: 3 → 1 (girdi sayısı 1)
+PASS  S9c  Modelin uydurma alıntısı düşer; cevap gösterilmez
+      beklenen: hata mesajı, 'eliminated isolation' görünmez
+      gözlenen: UYDUR: bu pasaj ne diyor? Asistanın gösterdiği alıntı kaynakta birebir bulunamadığı için cevap gösterilmedi. Soruyu farklı sorup tekrar deneyin.
+PASS  D1  PDF/Yazdır çıktısı alıntıyı ve atfı içerir; iz/öneri sızmaz
+      beklenen: “…first-year students…” + Kaya
+      gözlenen: Editöre dön Yazdır / PDF olarak kaydet Yazdırma penceresinde hedef olarak “PDF olarak kaydet”i seçin. “Remote learning increased reported isolation among first-year students. The effect was strongest 
+PASS  D2  Word çıktısı alıntıyı ve atfı içerir
+      beklenen: document.xml: first-year students + Kaya
+      gözlenen: 9.7 KB · ning increased reported isolation among first-year students. The effect was strongest in programmes without we
+PASS  P1  Büyük PDF (300 sayfa): yalnızca görünen sayfa çizilir; açılış ve gidiş makul
+      beklenen: / 300, tek kanvas, açılış < 15 sn, 250. sayfaya gidiş < 5 sn
+      gözlenen: 1259 KB · / 300 · açılış 1175 ms · gidiş 56 ms · kanvas 1 · JS yığını 64.8→64.8 MB
+PASS  P1b  Büyük PDF'te arama (300 sayfa metni)
+      beklenen: 299. sayfaya gider
+      gözlenen: sayfa 299 · 657 ms
+PASS  G4  20 MB üstü PDF depoya yüklenemez
+      beklenen: 4xx
+      gözlenen: 400
+PASS  R1  PDF işlem sınırı: saatte 12 yeni PDF, sonraki reddedilir
+      beklenen: 12 kabul, 13. 'sınıra ulaştınız'
+      gözlenen: 12/12 kabul · fazla: {"hata":"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimler etkilenmez; yeni b · sayaç 13
+PASS  R1b  Sınır dolduktan sonra önbellekteki PDF'te seçim çalışır, sayaç artmaz
+      beklenen: metin döner, sayaç sabit
+      gözlenen: {"sayfa":1,"metin":"Remote learning increased reported isolation among first-yea · sayaç 13→13
+PASS  R1c  Sınır dolunca kaynak sohbeti modele gitmez; asistan hakkı ve kaydı oluşmaz
+      beklenen: sınır hatası; model isteği yok; ai-asistan sayacı 0; kayıt 0
+      gözlenen: {"hata":"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimle · model 44→44 · ai-asistan 0 · kayıt 0
+PASS  R2  Sayaç çalışmazsa pahalı işlem yapılmaz (arızada kapalı), anlaşılır hata
+      beklenen: 'sayaca ulaşılamıyor… işlenmedi'
+      gözlenen: {"hata":"PDF işleme sayacına şu anda ulaşılamıyor; güvenlik için PDF işlenmedi. Biraz sonra tekrar deneyin."}
+PASS  R3  19 MB / 300 sayfa: 10 eşzamanlı seçim tek çözümlemeye iner; önbellekten sıcak yanıt hızlı
+      beklenen: 10/10 doğrulanır; sayaç +1; sıcak < 1000 ms
+      gözlenen: 19.0 MB · eşzamanlı 10/10 · süre en az 4121 / en çok 4733 ms · sayaç 0→1 · sıcak 214 ms (doğrulandı)
+PASS  R3b  Önbellek kullanıcılar arasında sızmaz (A, C'nin önbellekteki PDF'ini okuyamaz)
+      beklenen: iki çağrıda {hata}, metin yok
+      gözlenen: {"hata":"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin."} · {"hata":"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin."}
+PASS  R3c  19 MB PDF tarayıcıda açılır; tek sayfa çizilir
+      beklenen: açılış < 20 sn, 280. sayfa < 5 sn, tek kanvas
+      gözlenen: açılış 4775 ms · gidiş 55 ms · kanvas 1
+PASS  U1  PDF paneli yeniden açılınca son sayfa ve yakınlaştırma korunur
+      beklenen: sayfa 3, 132%
+      gözlenen: sayfa 3, 132%
+PASS  U1b  PDF değişince önceki PDF'in konumu yeni belgeye taşınmaz; geri dönünce korunur
+      beklenen: öteki: 1 ve ≠ 132%; geri: 3, 132%
+      gözlenen: öteki: 1, 82% · geri: 3, 132%
+PASS  U2-1440  Asistan açıkken araç çubuğu ve metin örtülmez (1440 px)
+      beklenen: tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0
+      gözlenen: 24 düğme, erişilemeyen [] · editör 738 px (sağ 1011 < panel 1024) · taşma 0
+PASS  U2-1280  Asistan açıkken araç çubuğu ve metin örtülmez (1280 px)
+      beklenen: tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0
+      gözlenen: 24 düğme, erişilemeyen [] · editör 578 px (sağ 851 < panel 864) · taşma 0
+PASS  U2-1200  Asistan açıkken araç çubuğu ve metin örtülmez (1200 px)
+      beklenen: tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0
+      gözlenen: 24 düğme, erişilemeyen [] · editör 498 px (sağ 771 < panel 784) · taşma 0
+FAIL  U3-1024  1024 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: 24 düğme, erişilemeyen [Geri al (Ctrl+Z) ← div.yazim-bos-bas @97,314 y0] · panel üst 371 eni 1024 · taşma 0
+PASS  U3-telefon  390 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok
+      beklenen: erişilemeyen 0, panel tam genişlik, taşma 0
+      gözlenen: 24 düğme, erişilemeyen [] · panel üst 345 eni 390 · taşma 0
+PASS  T1  Telefon: tek odak tam ekran PDF, yatay taşma yok, erişilemeyen denetim yok
+      beklenen: panel 390 genişlikte, sayfa/panel taşması 0, ekran dışında denetim yok
+      gözlenen: panel 0,0,390,664 · sayfa taşma 0 · panel taşma 0 · ekran dışı []
+PASS  T1b  Telefon: sayfa değişir, panel kapanır, editöre dönülür
+      beklenen: panel kapalı, editör görünür
+      gözlenen: kapandı true · editör true
+PASS  K0  Sayfa hatası (pageerror) yok
+      beklenen: 0
+      gözlenen: 0
+PASS  U4-1440  1440 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px
+      gözlenen: açılışta kaydırma 420 px · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 738 · küçültme: 0/24 erişilemez, taşma 0, editör 618 · geri büyütme: 0/24 erişilemez, taşma 0, editör 738 · kapat/aç: 0/24 erişilemez, taşma 0, editör 738
+PASS  U4-1280  1280 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px
+      gözlenen: açılışta kaydırma 115 px · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0, editör 578 · küçültme: 0/24 erişilemez, taşma 0, editör 1030 · geri büyütme: 0/24 erişilemez, taşma 0, editör 578 · kapat/aç: 0/24 erişilemez, taşma 0, editör 578
+PASS  U4-1024  1024 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0
+      gözlenen: açılışta kaydırma 137 px · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0 · küçültme: 0/24 erişilemez, taşma 0 · geri büyütme: 0/24 erişilemez, taşma 0 · kapat/aç: 0/24 erişilemez, taşma 0
+PASS  U4-telefon  390 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir
+      beklenen: her adımda erişilemeyen 0, taşma 0
+      gözlenen: açılışta kaydırma 420 px · kaydırılmış açılış → yukarı: 0/24 erişilemez, taşma 0 · küçültme: 0/24 erişilemez, taşma 0 · geri büyütme: 0/24 erişilemez, taşma 0 · kapat/aç: 0/24 erişilemez, taşma 0
+
+PASS 60 · FAIL 1 · UNVERIFIED 0

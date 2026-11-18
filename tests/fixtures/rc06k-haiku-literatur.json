@@ -1,0 +1,45 @@
+{
+  "_aciklama": "RC06k gerçek sağlayıcı kabulü, H1 (Haiku literatür) çıktısı — sentetik çalışma, kişisel veri yok. Üçüncü bulgu doğrulanmamış yazar önerisi taşıyor (Peplau & Perlman, Weiss vb.) ve kullanıcıya sunulmuştu.",
+  "model": "claude-haiku-4-5-20251001",
+  "baglam": "### Çalışma\nBaşlık: Zincir kabul tezi c5fda8\nTür: Tez\nAtıf stili: APA 7\n\n### Araştırma sorusu\nUzaktan öğrenim birinci sınıf üniversite öğrencilerinde yalnızlık ve sosyal izolasyonu nasıl etkiler?\n\n### Toplanan kaynaklar\n[1] Remote learning and student wellbeing (Kaya, A. · 2021 · Journal of Synthetic Studies · article)",
+  "bulgular": [
+    {
+      "tur": "uyari",
+      "baslik": "Çok sınırlı kaynak tabanı",
+      "aciklama": "Şu ana kadar yalnızca bir kaynak toplanmıştır. Araştırma sorusu üç farklı alan (uzaktan öğrenme, yalnızlık/sosyal izolasyon, birinci sınıf öğrenciler) içeriyor; her alan için sistematik tarama gereklidir. Özellikle 2020-2024 döneminde (COVID-19 sonrası) bu konularda yoğun yayın olmuştur."
+    },
+    {
+      "tur": "uyari",
+      "baslik": "Yöntem ve ölçek kaynakları eksik",
+      "aciklama": "Yalnızlık ve sosyal izolasyonu ölçen geçerli ölçeklerin (UCLA Loneliness Scale, Social Connectedness Scale vb.) orijinal makaleleri ve Türkçe uyarlamalarının kaynakçaya eklenmesi gerekir. Ayrıca nitel ve nicel araştırma yöntemlerine ilişkin metodolojik kaynaklar bulunmamaktadır."
+    },
+    {
+      "tur": "uyari",
+      "baslik": "Teorik çerçeve kaynakları belirsiz",
+      "aciklama": "Yalnızlık ve sosyal izolasyon kavramlarının teorik temellerini açıklayan kaynaklar (Peplau & Perlman, Weiss vb.) ve uzaktan öğrenme ortamlarında sosyal etkileşim kuramları eksiktir. Bu kaynaklar çalışmanın kavramsal altyapısını güçlendirecektir."
+    },
+    {
+      "tur": "oneri",
+      "baslik": "Türkçe gri literatür taraması",
+      "aciklama": "YÖK Tez ve TR Dizin veri tabanlarında Türkiye'de yapılmış benzer tezler ve makaleler aranmalıdır. Özellikle 2020-2021 döneminde acil uzaktan geçişin etkilerini inceleyen çalışmalar değerli bağlam sağlayacaktır."
+    },
+    {
+      "tur": "oneri",
+      "baslik": "Yıl dağılımı ve güncellik",
+      "aciklama": "Mevcut kaynak 2021'den; araştırma sorusu COVID-19 sonrası dönemle ilişkili görünüyor. 2020-2024 arasında yayınlanan kaynaklar ağırlıklı olmalı, ancak teorik temel için 2010 sonrası klasik çalışmalar da dahil edilmelidir."
+    },
+    {
+      "tur": "bilgi",
+      "baslik": "Disiplinler arası tarama önerisi",
+      "aciklama": "Psikoloji, eğitim, sosyal çalışma ve halk sağlığı disiplinlerinden kaynaklar arayın. Web of Science ve Scopus'ta disiplin filtreleri kullanarak sonuçları daraltabilirsiniz."
+    }
+  ],
+  "aramalar": [
+    "\"uzaktan öğrenme\" AND (\"yalnızlık\" OR \"sosyal izolasyon\") AND \"üniversite öğrencileri\"",
+    "\"distance learning\" AND (\"loneliness\" OR \"social isolation\") AND \"first-year students\"",
+    "\"online learning\" AND (\"psychological wellbeing\" OR \"mental health\") AND (\"university\" OR \"higher education\")",
+    "\"uzaktan eğitim\" AND \"sosyal bağlantı*\" AND (\"birinci sınıf\" OR \"yeni öğrenci*\")",
+    "\"remote education\" AND (\"peer interaction\" OR \"social connectedness\") AND \"student engagement\"",
+    "\"çevrimiçi öğrenme\" AND \"duygusal destek\" AND \"üniversite\" site:tez.yok.gov.tr OR site:trdizin.gov.tr"
+  ]
+}

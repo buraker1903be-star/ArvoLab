@@ -12,17 +12,18 @@ import { gorunumSec } from "@/app/actions/onizleme";
 import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
+import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
+import { UstDilSecici } from "@/app/_components/dil-secici";
+import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import HeaderTitle from "./_components/header-title";
 import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
-import OsSaat from "./_components/os-saat";
 import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
@@ -31,6 +32,9 @@ import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { kurumSec } from "@/app/actions/kurum-secimi";
 import { getOrganizations } from "@/app/actions/team";
 import { ADMIN_ROLES } from "@/lib/project-labels";
+
+/* Menüye uygulamanın yalnızca bağlantı için gereken alanları gider (roller, yollar gitmez). */
+const menuBaglantisi = ({ key, label, href, ikon }: OsUygulama) => ({ key, label, href, ikon });
 
 function initialsOf(name: string) {
   const letters = name
@@ -86,6 +90,24 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const icEkip = Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
   const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
   const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
+  // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
+  const hesapMenusu = {
+    ad: userName,
+    rol: roleLabel,
+    basHarf: initials,
+    cikis: logout,
+    gorunum: onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined,
+    kurumlar: icEkip && kurumlar.length > 1 ? kurumlar : undefined,
+    seciliKurumId: kurum?.id ?? null,
+    /*
+      Hesap menüsünün bağlantıları gezinmeyle AYNI süzülmüş listeden
+      (uygulamalar): menü ile kenar çubuğu ayrı ayrı rol kararı verip
+      birbirinden sapmasın. Menüde görünmemek erişim yasağı değildir; her
+      sayfa kendi sunucu kapısını uygular.
+    */
+    hesapBaglantilari: hesapUygulamalari(uygulamalar).map(menuBaglantisi),
+    personelAraclari: personelAraclari(uygulamalar).map(menuBaglantisi),
+  };
 
   return (
     <div className="dashboard-shell os-root">
@@ -98,22 +120,22 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       {sozlesmeGerekli ? <SozlesmeOnayi olay="giris" cikis={logout} /> : null}
 
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
+        {/*
+          ÜST ÇUBUK (Signature OS 5 / Phase 3, 12.11.2026): sayfa adı, arama
+          (Ctrl+K), bildirim ve tema. Logo ve hesap menüsü masaüstünde kenar
+          çubuğuna taşındı; tarih-saat göstergesi kaldırıldı (kurum sahibinin
+          "üst çubuk sadeleşsin" kararı; saat işletim sisteminde zaten var).
+          Tablet ve telefonda logo ve hesap menüsü burada kalır.
+        */}
         <header className="dashboard-header">
           <HeaderTitle />
           <OsAramaDugmesi />
           <div className="dashboard-header-actions">
-            <OsSaat />
             <NotificationBell />
             <ThemeToggle />
-            <KullaniciMenusu
-              ad={userName}
-              rol={roleLabel}
-              basHarf={initials}
-              cikis={logout}
-              gorunum={onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined}
-              kurumlar={icEkip && kurumlar.length > 1 ? kurumlar : undefined}
-              seciliKurumId={kurum?.id ?? null}
-            />
+            {/* Dil seçici üst çubukta (onaylı tasarım); İngilizce yayında değilken çizilmez. */}
+            {INGILIZCE_YAYINDA ? <UstDilSecici /> : null}
+            <KullaniciMenusu {...hesapMenusu} yerlesim="ust" />
           </div>
         </header>
 
@@ -187,7 +209,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       {sozlesmeGerekli ? null : (
         <>
           <Suspense>
-            <OsGezinme uygulamalar={uygulamalar} />
+            <OsGezinme uygulamalar={uygulamalar} hesap={<KullaniciMenusu {...hesapMenusu} yerlesim="kenar" />} />
           </Suspense>
           {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
           <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />

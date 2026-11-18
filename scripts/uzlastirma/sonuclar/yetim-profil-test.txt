@@ -1,0 +1,10 @@
+# Yetim profil silme yolu — yerel yığın, Production yetkileri taklit (17.11.2026)
+# Betik: scratchpad yetim-test.sh (auth kaydı FK kaskadı olmadan silinerek yetim profil üretildi; cron rotası çağrıldı)
+service_role profiles DELETE: f
+ESKİ kod, Production yetkisi | yanıt: {"aday":1,"silinen":1,"ertelenen":0} | profil kaldı mı: 1
+YENİ kod, Production yetkisi | yanıt: {"aday":1,"silinen":0,"ertelenen":1,"yetimSilinemedi":1} | profil kaldı mı: 1
+-- önerilen en küçük yetki uygulandı (yalnızca yerel): grant delete on public.profiles to service_role
+ESKİ kod, + DELETE yetkisi | yanıt: {"aday":1,"silinen":1,"ertelenen":0} | profil kaldı mı: 0
+YENİ kod, + DELETE yetkisi | yanıt: {"aday":1,"silinen":1,"ertelenen":0,"yetimSilinemedi":0} | profil kaldı mı: 0
+-- yetki geri alındı: f
+# Sunucu günlüğü (yeni kod): [hesap-silme] yetim profil silinemedi, ertelendi <id> 42501 permission denied for table profiles

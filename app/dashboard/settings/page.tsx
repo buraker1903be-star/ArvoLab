@@ -19,6 +19,7 @@ import { updateMyProfile } from "@/app/actions/profile";
 import DilSecici from "@/app/_components/dil-secici";
 import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
+import { EN_KISA_SIFRE, EN_UZUN_SIFRE } from "@/lib/kimlik-kurallari";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
@@ -212,8 +213,8 @@ export default async function SettingsPage() {
                 <b>{t({ tr: "Şifre", en: "Password" })}</b>
                 <small>
                   {t({
-                    tr: "En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.",
-                    en: "At least 8 characters. After changing it, you can sign out other devices below.",
+                    tr: `${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} karakter. Değiştirmek için mevcut şifreniz gerekir; değişince diğer cihazlardaki oturumlar kapatılır.`,
+                    en: `${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} characters. Changing it requires your current password; other devices are signed out afterwards.`,
                   })}
                 </small>
               </span>
@@ -222,7 +223,7 @@ export default async function SettingsPage() {
                 triggerClassName="projects-filter-button button-compact"
                 kicker={t({ tr: "Güvenlik", en: "Security" })}
                 title={t({ tr: "Şifrenizi değiştirin", en: "Change your password" })}
-                description={t({ tr: "Yeni şifreniz en az 8 karakter olmalı.", en: "Your new password must be at least 8 characters." })}
+                description={t({ tr: `Önce mevcut şifrenizi girin. Yeni şifreniz ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} karakter olmalı.`, en: `Enter your current password first. Your new password must be ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} characters.` })}
               >
                 <PasswordForm action={changePassword} variant="panel" submitLabel={t({ tr: "Şifreyi güncelle", en: "Update password" })} />
               </PanelDrawer>
@@ -234,8 +235,8 @@ export default async function SettingsPage() {
                 <b>{t({ tr: "Diğer cihazlar", en: "Other devices" })}</b>
                 <small>
                   {t({
-                    tr: "Hesabınız aynı anda tek cihazda açık kalır: başka bir cihazdan giriş yapılınca öncekiler kendiliğinden kapanır. Bu düğme aynı işi şimdi yapar — şifrenizi değiştirdiyseniz kullanın.",
-                    en: "Your account stays signed in on one device at a time: signing in elsewhere signs out the others automatically. This button does the same right now — use it if you changed your password.",
+                    tr: "Hesabınız aynı anda tek cihazda açık kalır: başka bir cihazdan giriş yapılınca ya da şifre değişince öncekiler kendiliğinden kapanır. Bu düğme aynı işi şimdi yapar.",
+                    en: "Your account stays signed in on one device at a time: signing in elsewhere or changing your password signs out the others automatically. This button does the same right now.",
                   })}
                 </small>
               </span>

@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
-import { YEREL, type Metin } from "@/lib/dil";
+import { YEREL } from "@/lib/dil";
 import Link from "next/link";
-import { BookOpen, LayoutList, PenLine, Plus } from "lucide-react";
+import { BookOpen, FileText, LayoutList, PenLine, Plus } from "lucide-react";
+import { DugmeBaglanti } from "@/app/_components/ui/dugme";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
@@ -15,8 +16,6 @@ import { kuyrukAdresi } from "@/lib/destek-kuyrugu";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
-import AbonelikOzetKarti from "./_components/abonelik-ozet-karti";
-import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
@@ -24,7 +23,6 @@ import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { etikKaydiOku, etikKayitlariOku } from "@/lib/etik/oku";
 import { etikTehlikesi } from "@/lib/etik/durum";
-import EtikKurulPenceresi from "./editor/[id]/etik/etik-penceresi";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
@@ -33,33 +31,10 @@ import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { hareketSerisi, ilkAd, selamlama, simdi } from "@/lib/genel-bakis";
 import { yazimRitmi } from "@/lib/yazim-ritmi";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
-import { writingPace } from "@/lib/writing-pace";
-import { makaleBolumleri } from "@/lib/makale/bolumler";
-import { headingMatchesSection } from "@/lib/section-match";
 import { trGunAnahtari } from "@/lib/tr-time";
-import { takvimiGetir } from "@/app/actions/tez-takvimi";
-import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
 import { calismaAdresi } from "@/lib/calisma-karti";
-import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
-import DanismanaGonder from "./_components/danismana-gonder";
-import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
+import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, SeriKarti } from "./_components/genel-bakis";
 import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
-
-/* Son eklenenler kartlarının satır sayısı: kart uzamasın, tek bakışta okunsun. */
-const SON_EKLENEN_SATIR = 4;
-type KaynakDurumu = "to_review" | "read" | "used";
-// Kaynaklar sayfasındaki etiketlerle aynı (kaynak-listesi.tsx); öğrenci iki yerde iki ad görmesin.
-const KAYNAK_DURUMU: Record<KaynakDurumu, { ad: Metin; ton: string }> = {
-  to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
-  read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
-  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
-};
-type BelgeDurumu = "processing" | "analyzed" | "failed";
-const BELGE_DURUMU: Record<BelgeDurumu, { ad: Metin; ton: string }> = {
-  processing: { ad: { tr: "İşleniyor", en: "Processing" }, ton: "neutral" },
-  analyzed: { ad: { tr: "Denetlendi", en: "Checked" }, ton: "success" },
-  failed: { ad: { tr: "Okunamadı", en: "Failed" }, ton: "danger" },
-};
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -71,7 +46,6 @@ export async function generateMetadata() {
   tek sayfa, yatay ve dikey kayma yok). Bölümlerim kartı en fazla bu kadar
   satır çizer; fazlası alt başlıkta söylenir, tam liste editörde.
 */
-const BOLUM_SATIRI = 5;
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 export default async function DashboardPage() {
@@ -172,7 +146,6 @@ export default async function DashboardPage() {
     personel: isStaff,
   });
   const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
-  const bireysel = ogrenciGorunumu && gorunum.bireysel;
   const gozetim = isStaff && isOversightRole(profile?.role);
   const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
   const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
@@ -213,11 +186,7 @@ export default async function DashboardPage() {
     [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }],
     sahipYaniti,
     [hareketYaniti, yorumYaniti],
-    [ritimYaniti, { count: iddiaSayisi }, { count: dogrudanSayisi }],
-    takvim,
-    { data: krediSatiri, error: krediHatasi },
-    { data: sonBaglanti },
-    [{ data: sonKaynaklar }, { data: sonBelgeler }],
+    ritimYaniti,
   ] = await Promise.all([
     /*
       calismaKilavuzu kullanılıyor, loadAppliedGuidelines DEĞİL: ikincisi
@@ -294,61 +263,14 @@ export default async function DashboardPage() {
         : Promise.resolve({ data: [], error: null }),
     ]),
     /*
-      ÖĞRENCİNİN TEZ KARTI İÇİN: yazım ritmi (public.yazim_ritmi) ve kanıt
-      matrisinin iki sayısı. Personelde istenmiyor.
+      Öğrencinin haftalık yazım ritmi (public.yazim_ritmi): selamlamanın alt
+      satırı. Personelde istenmiyor. 17.11.2026'ya kadar burada kanıt
+      matrisinin iki sayısı, tez takvimi, asistan kredisi ve son danışman
+      bağlantısı da okunuyordu; o kartlar ana sayfadan çalışma özetine,
+      editöre ve hesap menüsüne geçti (premium çalışma alanı), sorguları
+      kalktı — okunup gösterilmeyen veri her açılışta boşuna maliyetti.
     */
-    ogrenciGorunumu
-      ? Promise.all([
-          supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }),
-          supabase.from("kanit_kayitlari").select("id", { count: "exact", head: true }).eq("project_id", resume!.id),
-          supabase
-            .from("kanit_kayitlari")
-            .select("id", { count: "exact", head: true })
-            .eq("project_id", resume!.id)
-            .eq("destek_duzeyi", "dogrudan"),
-        ])
-      : Promise.resolve([{ data: null, error: null }, { count: 0 }, { count: 0 }] as const),
-    /* TEZ TAKVİMİ (28.10.2026). Okunamazsa satır çizilmiyor; "plan yok" demek yanlış olurdu. */
-    ogrenciGorunumu ? takvimiGetir(resume!.id) : Promise.resolve(null),
-    /* Asistan kredisi. Okunamazsa kart sayı göstermiyor; ana sayfa düşmüyor. */
-    ogrenciGorunumu ? supabase.rpc("ai_kredi_durumum").maybeSingle() : Promise.resolve({ data: null, error: null }),
-    /*
-      BİREYSEL ABONENİN DANIŞMANI SİSTEMDE DEĞİL: "Danışmanıma gönder" ve son
-      gönderilen bağlantının durumu (açıldı mı, kaç kez).
-    */
-    bireysel
-      ? supabase
-          .from("manuscript_share_links")
-          .select("created_at, last_viewed_at, view_count, expires_at")
-          .eq("project_id", resume!.id)
-          .is("revoked_at", null)
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    /*
-      SON EKLENENLER (Phase 3): tezin son dört kaynağı ve son dört belge
-      kontrolü. Aynı Promise.all'da: ana sayfaya tur eklemiyor (Phase 2'de
-      21'den 12'ye indirildi). Okuma RLS'ten geçer; okunamazsa kart boş
-      görünmüyor, "okunamadı" yazıyor (aşağıda).
-    */
-    ogrenciGorunumu
-      ? Promise.all([
-          supabase
-            .from("literature_sources")
-            .select("id, title, year, status, created_at")
-            .eq("project_id", resume!.id)
-            .order("created_at", { ascending: false })
-            .limit(SON_EKLENEN_SATIR),
-          supabase
-            .from("document_uploads")
-            .select("id, file_name, status, created_at")
-            .eq("project_id", resume!.id)
-            .order("created_at", { ascending: false })
-            .limit(SON_EKLENEN_SATIR),
-        ])
-      : Promise.resolve([{ data: null }, { data: null }] as const),
+    ogrenciGorunumu ? supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }) : Promise.resolve({ data: null, error: null }),
   ]);
   const resumeReadiness =
     resume && resumeManuscript
@@ -466,66 +388,13 @@ export default async function DashboardPage() {
   // İkisi de pencerede açılıyor (öğrenci ve personel, 02.11.2026).
   const yeniCalismaHref = "/dashboard/editor?yeni=1";
   if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
-  /*
-    TEZ TAKVİMİ (28.10.2026): sıradaki kilometre taşı tez kartında.
-    Okunamazsa satır çizilmiyor; "plan yok" demek yanlış olurdu.
-  */
-  const bugunGun = trGunAnahtari();
-  const siradakiKilometre = takvim ? siradakiTas(takvim, bugunGun) : null;
-  const takvimSayilari = takvim ? takvimOzeti(takvim, bugunGun) : null;
 
-  /*
-    BİREYSEL ABONENİN DANIŞMANI SİSTEMDE DEĞİL. Danışmanın ArvoLab'da yorum
-    yazabilmesi kurumun abone olmasına bağlı; kurumu olmayan öğrencide
-    "Danışman yorumları" kartı hep boş kalırdı. Orada "Danışmanıma gönder"
-    duruyor ve son gönderilen bağlantının durumu (açıldı mı, kaç kez)
-    gösteriliyor — öğrencinin "hocam baktı mı?" sorusu.
-  */
-
-  /*
-    Asistan kredisi (tez kartının yanındaki Abonelik ve kredi kartı).
-    Okunamazsa kart sayı göstermiyor; ana sayfa düşmüyor.
-  */
-  if (krediHatasi) console.error("[ana sayfa] kredi durumu okunamadı:", krediHatasi.message);
-  const kredi = krediOzeti((krediSatiri as KrediSatiri | null) ?? null);
   if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();
   const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn, 14, dil);
   const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.words ?? null, dil);
-  /*
-    Hedef kelime ve günlük tempo kılavuzun sayfa sınırından
-    (lib/writing-pace.ts). Kılavuz yoksa hedef de yok; uydurma bir
-    "%40 tamamlandı" göstermek yerine yalnızca yazılan sayı yazılıyor.
-  */
-  const tempo =
-    resume && resumeGuideline
-      ? writingPace({
-          words: resumeStats?.words ?? 0,
-          minPages: resumeGuideline.minPages,
-          maxPages: resumeGuideline.maxPages,
-          dueDate: resume.due_date,
-          status: resume.status,
-          settings: {
-            fontSizePt: resumeGuideline.settings.fontSizePt,
-            lineSpacing: resumeGuideline.settings.lineSpacing,
-            margins: resumeStats?.margins ?? resumeGuideline.settings.margins,
-            pageSize: resumeStats?.pageSize,
-          },
-        }, dil)
-      : null;
-  const yazilanYuzde = tempo ? Math.min(100, Math.round(((resumeStats?.words ?? 0) / Math.max(1, tempo.targetWords)) * 100)) : null;
 
-  /*
-    BÖLÜMLERİM: müsveddenin üst düzey başlıkları ve sözcük sayıları;
-    kılavuzun zorunlu tuttuğu ama metinde başlığı olmayan bölümler
-    "henüz yok" diye listenin sonunda. Öğrencinin "hangi bölümüm bitti"
-    sorusu.
-  */
-  const metinBolumleri = makaleBolumleri(resumeManuscript?.content).filter((b) => b.baslik);
-  const eksikZorunlu = (resumeGuideline?.requiredSections ?? []).filter(
-    (bolum) => !metinBolumleri.some((b) => headingMatchesSection(b.baslik, bolum)),
-  );
   const okunamayanlar = [
     projelerOkunamadi ? t({ tr: "çalışmalar", en: "works" }) : "",
     hareketYaniti.error ? t({ tr: "çalışma hareketi", en: "work activity" }) : "",
@@ -575,28 +444,40 @@ export default async function DashboardPage() {
 
   const ad = ilkAd(displayName);
 
-  const sonGonderim = sonBaglanti
-    ? {
-        olusturuldu: sonBaglanti.created_at as string,
-        sonAcilis: (sonBaglanti.last_viewed_at as string | null) ?? null,
-        acilmaSayisi: Number(sonBaglanti.view_count ?? 0),
-        bitis: sonBaglanti.expires_at as string,
-      }
-    : null;
-  const sonGonderimMetni = sonGonderim
-    ? sonGonderim.acilmaSayisi
-      ? t({
-          tr: `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`,
-          en: `Your advisor opened it ${sonGonderim.acilmaSayisi} time${sonGonderim.acilmaSayisi === 1 ? "" : "s"} · last ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`,
-        })
-      : t({
-          tr: `Bağlantı ${once(sonGonderim.olusturuldu, simdiAn)} gönderildi · henüz açılmadı`,
-          en: `Link sent ${once(sonGonderim.olusturuldu, simdiAn)} · not opened yet`,
-        })
-    : null;
+  /*
+    Ana sayfa (Signature OS 5 / Phase 4): "Teslim için kalanlar". Liste
+    readinessGaps ve tutarsızlıklardan DOĞRUDAN kuruluyor ("Şimdi"deki
+    madde readinessGaps'ten zaten çıkarılmış). İlk sürüm 6 satırla kesilmiş
+    siradakiler'den türetiyordu: başlık 9 madde derken liste 5 satır
+    gösteriyor, kalan maddelere ulaşmanın yolu yoktu (bağımsız inceleme).
+    Fazlası "ilk N" notu ve teslim kontrolüne giden bağlantıyla söyleniyor.
+  */
+  // Tutarsızlıklar (en çok 2) BAŞTA: taşan kısım yalnızca teslim kontrol
+  // listesindeki maddelerden oluşsun, "Bütün teslim kontrolü" bağlantısı
+  // gizlenenlerin hepsini açabilsin. Eskiden tutarsızlıklar sondaydı ve
+  // ilk kesilenler onlar oluyordu; o bağlantı onları göstermiyordu.
+
+
+  /*
+    Son kaynaklar (premium çalışma alanı): öğrencinin en son eklediği dört
+    kaynak, bütün çalışmalarından. Sayı ÇIKARILMIYOR, yalnızca liste
+    çiziliyor; limit bir gösterim sınırı (check:rakamlar'ın aradığı
+    sınırlı-sorgudan-sayı kalıbı değil).
+  */
+  const { data: sonKaynakSatirlari, error: sonKaynakHatasi } =
+    ogrenciGorunumu && resume
+      ? await supabase
+          .from("literature_sources")
+          .select("id, title, authors, year")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4)
+      : { data: null, error: null };
+  const sonKaynaklar = (sonKaynakSatirlari ?? []) as { id: string; title: string; authors: string | null; year: string | null }[];
+  const sonrakiCalismalar = resume ? activeProjects.filter((p) => p.id !== resume.id).slice(0, 3) : [];
 
   return (
-    <main className="dashboard-page gb gb-ana-sayfa">
+    <main className={ogrenciGorunumu || yeniKullanici ? "dashboard-page gb gb-ana-sayfa os5-ana" : "dashboard-page gb gb-ana-sayfa"}>
       {/*
         TEK EKRAN KURALI ANA SAYFADA KALDIRILDI (Phase 3, 04.11.2026).
         Eskiden sayfa görünüm yüksekliğine kilitleniyordu (gb-tek-ekran):
@@ -619,13 +500,9 @@ export default async function DashboardPage() {
       <header className="gb-selam">
         <div>
           <h1>{ad ? `${selamlama(simdiAn, dil, saatDilimi)}, ${ad}` : selamlama(simdiAn, dil, saatDilimi)}</h1>
-          <p>
-            {yeniKullanici
-              ? t({
-                  tr: "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır.",
-                  en: "Your workspace is ready. Once you create your first work, your guideline, sources and checks will gather here.",
-                })
-              : isStaff
+          {/* Yeni kullanıcıda açıklama tek: aşağıdaki bölümde (ikinci tur). */}
+          {yeniKullanici ? null : <p>
+            {isStaff
                 ? /* Personel: kurumun özeti — sayaçların ilk üçü, cümle olarak. */
                   sayaclar.length
                   ? sayaclar
@@ -634,23 +511,21 @@ export default async function DashboardPage() {
                       .join(" · ")
                   : t({ tr: "Çalışmalar, teslim tarihleri ve gelen yorumlar burada.", en: "Works, due dates and incoming comments are here." })
               : ogrenciGorunumu
-                ? [
-                    resumeDue
-                      ? t({ tr: `Teslim: ${resumeDue.label.toLocaleLowerCase("tr")}`, en: `Due: ${resumeDue.label.toLocaleLowerCase("en")}` })
-                      : "",
-                    ritim.buHafta > 0
-                      ? t({ tr: `bu hafta ${sayi(ritim.buHafta)} kelime yazdınız`, en: `you wrote ${sayi(ritim.buHafta)} words this week` })
-                      : t({ tr: "bu hafta henüz yazmadınız", en: "you haven't written this week yet" }),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
+                ? /*
+                    Signature OS 5 / Phase 4: teslim günü ve kelime artık çalışma
+                    panelinin ölçülerinde. Bu satır onları ikinci kez yazıyordu;
+                    yalnızca haftanın ritmi kaldı (panelde yok).
+                  */
+                  ritim.buHafta > 0
+                  ? t({ tr: `Bu hafta ${sayi(ritim.buHafta)} kelime yazdınız.`, en: `You wrote ${sayi(ritim.buHafta)} words this week.` })
+                  : t({ tr: "Bu hafta henüz yazmadınız.", en: "You haven't written this week yet." })
                 : resume
                 ? t({
                     tr: `Kaldığınız yer: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} kelime, ${once(resumeStats.updatedAt)} düzenlendi` : ""}`,
                     en: `Where you left off: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} words, edited ${once(resumeStats.updatedAt)}` : ""}`,
                   })
                 : t({ tr: "Çalışmalarınız, teslim tarihleriniz ve gelen yorumlar burada.", en: "Your works, due dates and incoming comments are here." })}
-          </p>
+          </p>}
         </div>
         <div className="gb-selam-eylemler">
           {isStaff ? (
@@ -709,33 +584,31 @@ export default async function DashboardPage() {
       {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
 
       {yeniKullanici ? (
-        <article className="gb-kart gb-baslangic">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}</h2>
-              <p>
-                {t({
-                  tr: "Tez yazım kılavuzunuzu bir kez ekleyin; sayfa düzeni, zorunlu bölümler ve atıf sistemi editöre uygulanır.",
-                  en: "Add your thesis writing guideline once; page layout, required sections and the citation system are applied to the editor.",
-                })}
-              </p>
-            </div>
-          </header>
-          {/*
-            Adımlar BAĞLANTI DEĞİL, bilerek. Hiç çalışması olmayan birini
-            literatür ya da denetim ekranına göndermek, onu bir boş ekrana
-            daha götürmek olurdu; tek yol ileri gidiyor.
-          */}
-          {/*
-            Eskiden 1. adım "üniversitenizi seçtiğinizde kurumunuzun onaylı
-            kılavuzu bağlanır, kurallar kendiliğinden uygulanır" diyordu.
-            26.10.2026'dan beri yeni çalışmaya kılavuz ada göre BAĞLANMIYOR:
-            üniversite serbest metin, kuralları öğrencinin eklediği kılavuz
-            veriyor ve öğrenci onaylıyor (app/actions/calisma-kilavuzu.ts).
-            Yurt dışındaki öğrenci listede olmayan üniversitesini arayıp
-            bulamayınca ürünün ona göre olmadığını sanıyordu.
-          */}
-          <ol className="baslangic-adimlari">
+        /*
+          YENİ KULLANICI (ikinci tur, 17.11.2026): kısa başlık, tek açıklama,
+          tek belirgin "İlk çalışmayı oluştur". Üç adımlı rehber "Nasıl
+          başlarım?" altında isteğe bağlı açılıyor. Eskiden selamlamanın altında
+          iki cümle, ardından başlıklı bir kartta üç uzun adım ve iki düğme
+          vardı; ilk ekranın tamamı okunacak metindi.
+        */
+        <section className="pw-bolum pw-baslangic" aria-labelledby="pw-baslangic-baslik">
+          <h2 id="pw-baslangic-baslik">{t({ tr: "İlk çalışmanızı oluşturun", en: "Create your first work" })}</h2>
+          <p>
+            {t({
+              tr: "Tezinizi, makalenizi ya da projenizi açın; kılavuzunuzu ve kaynaklarınızı sonra da ekleyebilirsiniz.",
+              en: "Open your thesis, article or project; you can add your guideline and sources later.",
+            })}
+          </p>
+          <div className="pw-baslangic-eylem">
+            {/* Boş hesabın tek birincil eylemi. */}
+            <DugmeBaglanti href={yeniCalismaHref} tur="birincil">
+              <Plus size={16} aria-hidden="true" />
+              {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
+            </DugmeBaglanti>
+          </div>
+          <details className="pw-rehber">
+            <summary>{t({ tr: "Nasıl başlarım? Üç adım", en: "How do I start? Three steps" })}</summary>
+            <ol className="baslangic-adimlari">
             <li>
               <strong>{t({ tr: "Çalışmanızı açın, kılavuzunuzu ekleyin.", en: "Create your work and add your guideline." })}</strong>{" "}
               {t({
@@ -758,440 +631,132 @@ export default async function DashboardPage() {
               })}
             </li>
           </ol>
-          {/* Düğmeler yan yana ve içerik genişliğinde (Phase 3): kart boyu uzanan iki şerit düğme form gibi duruyordu. */}
-          <div className="gb-baslangic-eylemler">
-            <Link href={yeniCalismaHref} className="projects-primary-button">
-              <Plus size={16} aria-hidden="true" />
-              {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
-            </Link>
-            {/* Yeni kullanıcı için Kullanım Kılavuzu (30.10.2026): üç adımın ötesini merak eden buradan okur. */}
-            <Link href={KILAVUZ_ADRESI} className="projects-filter-button">
+            <Link href={KILAVUZ_ADRESI} className="pw-bolum-baglanti">
               <BookOpen size={15} aria-hidden="true" />
               {t({ tr: "Kullanım Kılavuzu'nu okuyun", en: "Read the User Guide" })}
             </Link>
-          </div>
-        </article>
+          </details>
+        </section>
       ) : ogrenciGorunumu && resume ? (
         <>
           {/*
-            ÖĞRENCİNİN ANA SAYFASI (26.10.2026, kurum sahibinin isteği:
-            "her zaman bir öğrenci gözüyle düşün; her öğrenci bir çalışma
-            yapacak").
+            ÖĞRENCİNİN ANA SAYFASI — PREMIUM ÇALIŞMA ALANI (17.11.2026, kurum
+            sahibinin onaylı tasarımı). Tek soru: "kaldığım yere nasıl dönerim?"
+            Tek birincil eylem "Yazmaya devam et"; altında son kaynaklar sade
+            bir liste.
 
-            Öğrenci bir panoya değil tezine bakıyor. Sayfanın ilk sorusu
-            "tezim ne durumda": teslime kaç gün, hedefin ne kadarı yazıldı,
-            teslime ne kadar hazır. İkincisi "şimdi ne yapmalıyım" — tek bir
-            adım. Sonra dört kart: bölümlerim, yazım ritmim, danışmanımın
-            yorumları, kaynaklarım ve kanıtlarım. Çok çalışmalı liste
-            görünümü personelde kalıyor; öğrencide "Çalışmalarım" ve
-            "Teslim tarihleri" tek satıra inen bilgiyi altı satırlık
-            kartlara yayıyordu.
+            Eskiden (Signature OS 5 / Phase 4) burada çalışma paneli, üç ölçü
+            (teslime kalan, yazılan, teslim hazırlığı), "Şimdi" ve takvim
+            satırları, "Teslim için kalanlar", araç ızgarası, "Bölümlerim",
+            "Kaynaklar ve kanıt", danışman yorumları, haftalık ritim, danışmana
+            gönder ve abonelik kartı aynı ekrandaydı; ana eylem kalabalığın
+            içinde kayboluyordu. Hiçbiri kaldırılmadı: ölçüler, teslim
+            kontrolü, takvim, kılavuz, literatür, kaynakça, kanıt, etik ve
+            analiz çalışma özetinde (Çalışmalarım → çalışma); yazım asistanı,
+            danışmana gönderme (Dışa aktar) ve yorumlar Yazım Stüdyosu'nda;
+            abonelik ve kredi hesap menüsünde. Yerlerin tablosu PR açıklamasında.
           */}
-          {/*
-            Tez kartı ve yanında Abonelik ve kredi kartı tek sırada (kurum
-            sahibinin isteği): tez kartı daralıyor, öğrenci asistan hakkını
-            ve abonelik durumunu ana sayfada görüyor.
-          */}
-          <div className="tez-ust-sira">
-          <article className="gb-kart tez-kart">
-            <div className="tez-kart-ust">
-              <div>
-                <small>
+          <section className="pw-bolum" aria-labelledby="pw-devam-baslik">
+            <header className="pw-bolum-bas">
+              <h2 id="pw-devam-baslik">{t({ tr: "Çalışmanıza devam edin", en: "Continue your work" })}</h2>
+              <Link href={yeniCalismaHref} className="pw-bolum-baglanti">
+                {t({ tr: "Yeni çalışma", en: "New work" })}
+              </Link>
+            </header>
+            <article className="pw-devam">
+              <span className="pw-devam-simge" aria-hidden="true">
+                <FileText size={20} />
+              </span>
+              <div className="pw-devam-metin">
+                <h3 title={resume.title}>
+                  <Link href={calismaAdresi(resume.id)}>{resume.title}</Link>
+                </h3>
+                <p>
                   {t(projectTypeLabel(resume.project_type))}
-                  {resume.university ? ` · ${resume.university}` : ""}
-                </small>
-                <h2 title={resume.title}>{resume.title}</h2>
-                <div className="tez-kart-rozetler">
-                  <span className="status-pill" data-tone={statusTone(resume.status)}>
-                    {t(statusLabel(resume.status))}
-                  </span>
-                  {resumeStats ? (
-                    <span className="chip">
-                      {t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(resumeStats.updatedAt, simdiAn)}` })}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="tez-kart-eylemler">
-                <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
-                  <PenLine size={16} aria-hidden="true" />
-                  {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
-                </Link>
-                <Link href={calismaAdresi(resume.id)} className="projects-filter-button">
-                  {t({ tr: "Çalışma özeti", en: "Work overview" })}
-                </Link>
-              </div>
-            </div>
-
-            <dl className="tez-olcumler">
-              <div className="tez-olcu" data-tone={resumeDue?.tone}>
-                <dt>{t({ tr: "Teslime kalan", en: "Until due" })}</dt>
-                <dd>
-                  {resumeDue ? (resumeDue.days >= 0 ? resumeDue.days : -resumeDue.days) : "—"}
-                  {resumeDue ? (
-                    <small>
-                      {resumeDue.days >= 0 ? t({ tr: "gün", en: "days" }) : t({ tr: "gün gecikti", en: "days overdue" })}
-                    </small>
-                  ) : null}
-                </dd>
-                {/* Tarih yoksa burada seçilip kaydediliyor (28.10.2026); eskiden ayarlar sayfasına gönderiyordu. */}
-                {resume.due_date ? <span>{tarih(resume.due_date)}</span> : <TeslimTarihiFormu projectId={resume.id} bugun={bugunGun} />}
-              </div>
-              <div className="tez-olcu">
-                <dt>{t({ tr: "Yazılan", en: "Written" })}</dt>
-                <dd>
-                  {sayi(resumeStats?.words ?? 0)}
-                  <small>{t({ tr: "kelime", en: "words" })}</small>
-                </dd>
-                <span>
-                  {tempo
-                    ? t({
-                        tr: `Kılavuz hedefi ~${sayi(tempo.targetWords)} kelime · %${yazilanYuzde}`,
-                        en: `Guideline target ~${sayi(tempo.targetWords)} words · ${yazilanYuzde}%`,
-                      })
-                    : t({ tr: "Kılavuzda sayfa sınırı yok; hedef hesaplanmadı", en: "The guideline sets no page limit; no target calculated" })}
-                </span>
-              </div>
-              <div className="tez-olcu" data-tone={resumeReadiness && readinessGaps.length === 0 ? "success" : undefined}>
-                <dt>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</dt>
-                <dd>
-                  {resumeReadiness ? `${resumeReadiness.done}/${resumeReadiness.total}` : "—"}
-                  {resumeReadiness ? <small>{t({ tr: "madde", en: "items" })}</small> : null}
-                </dd>
-                <span>
-                  {resumeReadiness
-                    ? readinessGaps.length === 0
-                      ? t({ tr: "Teslime hazır görünüyor", en: "Looks ready to submit" })
-                      : t({
-                          tr: `${readinessGaps.length} madde bakılmayı bekliyor`,
-                          en: `${readinessGaps.length} item${readinessGaps.length === 1 ? "" : "s"} need${readinessGaps.length === 1 ? "s" : ""} attention`,
-                        })
-                    : t({ tr: "Yazmaya başlayınca hesaplanır", en: "Calculated once you start writing" })}
-                </span>
-              </div>
-            </dl>
-
-            {yazilanYuzde !== null ? (
-              <div className="tez-cubuk" role="progressbar" aria-valuenow={yazilanYuzde} aria-valuemin={0} aria-valuemax={100} aria-label={t({ tr: "Kılavuz hedefine göre yazılan", en: "Written against the guideline target" })}>
-                {/* Genişlik veriye bağlı: satır içi değer yalnızca bu. */}
-                <i style={{ "--w": `${yazilanYuzde}%` } as React.CSSProperties} />
-              </div>
-            ) : null}
-            {tempo ? (
-              <p className="tez-tempo tone-text" data-tone={tempo.tone}>
-                {tempo.detail}
-              </p>
-            ) : null}
-            {takvim ? (
-              siradakiKilometre ? (
-                <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
-                  <span>{t({ tr: "Sıradaki kilometre taşı", en: "Next milestone" })}</span>
-                  <b>{siradakiKilometre.tas.baslik}</b>
-                  <small>
-                    {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
-                    {takvimSayilari
-                      ? t({
-                          tr: ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
-                          en: ` · schedule ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
-                        })
-                      : ""}
-                  </small>
-                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    {t({ tr: "Takvim", en: "Schedule" })}
-                  </Link>
+                  {resumeStats ? ` · ${t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(resumeStats.updatedAt, simdiAn)}` })}` : ""}
                 </p>
-              ) : resume.due_date && !takvim.length ? (
-                <p className="takvim-sirada">
-                  <span>{t({ tr: "Tez takvimi", en: "Thesis schedule" })}</span>
-                  <b>{t({ tr: "Teslime kadar bölüm bölüm hedef tarih koyun", en: "Set target dates chapter by chapter until submission" })}</b>
-                  <small>
-                    {t({
-                      tr: "Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.",
-                      en: "A draft schedule is suggested from your due date; you can change every date.",
-                    })}
-                  </small>
-                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    {t({ tr: "Takvim kur", en: "Set up schedule" })}
-                  </Link>
-                </p>
-              ) : null
-            ) : null}
+              </div>
+              {/* Sayfanın TEK birincil eylemi. */}
+              <DugmeBaglanti href={`/dashboard/editor/${resume.id}/write`} tur="birincil">
+                <PenLine size={16} aria-hidden="true" />
+                {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
+              </DugmeBaglanti>
+            </article>
             {/*
-              Sıradaki TEK iş, tez kartının içinde: ayrı bir şerit olarak
-              tek ekran kuralında 70 piksel yiyordu ve "tezim" ile "şimdi
-              ne yapmalıyım" zaten aynı sorunun iki yarısı. Kararın kendisi
-              lib/siradaki-is.ts'te ve sınanıyor.
+              Çok çalışmalı öğrenci: son düzenlenenin ardından en fazla üç
+              çalışma daha, sade satır olarak. Tamamı Çalışmalarım'da.
             */}
-            {sirada ? (
-              <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-                <span className="sirada-etiket">{sirada.bitti ? t({ tr: "Durum", en: "Status" }) : t({ tr: "Şimdi", en: "Now" })}</span>
-                <div className="sirada-govde">
-                  <b>{sirada.baslik}</b>
-                  <span>{sirada.aciklama}</span>
-                </div>
-                {/* İkincil düğme: ekranın tek ana eylemi "Yazmaya devam et" (Phase 3); iki koyu düğme hangisinin asıl olduğunu söylemiyordu. */}
-                <Link href={sirada.href} className="projects-filter-button button-compact">
-                  {sirada.eylem}
-                </Link>
-              </div>
-            ) : null}
-          </article>
-          <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} calismaId={resume.id} />
-          </div>
-
-          <ListeIzgarasi etiket={t({ tr: "Tezim", en: "My thesis" })}>
-            <ListeKarti
-              baslik={t({ tr: "Bölümlerim", en: "My sections" })}
-              alt={[
-                eksikZorunlu.length
-                  ? t({
-                      tr: `${eksikZorunlu.length} zorunlu bölümün başlığı yok`,
-                      en: `${eksikZorunlu.length} required section${eksikZorunlu.length === 1 ? " has" : "s have"} no heading`,
-                    })
-                  : t({ tr: "Müsveddenin bölümleri", en: "Sections of the manuscript" }),
-                metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI
-                  ? t({ tr: `ilk ${BOLUM_SATIRI} gösteriliyor`, en: `showing first ${BOLUM_SATIRI}` })
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              bos={t({
-                tr: "Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir.",
-                en: "No section headings yet. Create sections with headings in the editor; the sections your guideline requires are tracked here.",
-              })}
-              sayi={metinBolumleri.length + eksikZorunlu.length}
-              href={`/dashboard/editor/${resume.id}/write`}
-              hrefEtiket={t({ tr: "Editörde aç", en: "Open in editor" })}
-            >
-              {metinBolumleri.slice(0, BOLUM_SATIRI).map((bolum, sira) => (
-                <ListeSatiri
-                  key={`${sira}-${bolum.baslik}`}
-                  href={`/dashboard/editor/${resume.id}/write`}
-                  baslik={bolum.baslik}
-                  sag={<span className="gb-sayi">{t({ tr: `${sayi(bolum.sozcuk)} kelime`, en: `${sayi(bolum.sozcuk)} words` })}</span>}
-                />
-              ))}
-              {eksikZorunlu.slice(0, Math.max(0, BOLUM_SATIRI - metinBolumleri.length)).map((bolum) => (
-                <ListeSatiri
-                  key={`eksik-${bolum}`}
-                  href={`/dashboard/editor/${resume.id}/write?teslim=sections`}
-                  baslik={bolum}
-                  alt={t({ tr: "Kılavuzunuz istiyor", en: "Required by your guideline" })}
-                  sag={
-                    <span className="status-pill" data-tone="warning">
-                      {t({ tr: "Henüz yok", en: "Not yet" })}
-                    </span>
-                  }
-                />
-              ))}
-            </ListeKarti>
-
-            <RitimKarti ritim={ritim} href={`/dashboard/editor/${resume.id}/write`} />
-
-            {bireysel ? (
-              <DanismanaGonder
-                projectId={resume.id}
-                baslik={resume.title}
-                sonGonderim={sonGonderim}
-                sonGonderimMetni={sonGonderimMetni}
-              />
-            ) : (
-            <ListeKarti
-              baslik={t({ tr: "Danışman yorumları", en: "Advisor comments" })}
-              alt={t({ tr: "Çözülmemiş yorumlar", en: "Unresolved comments" })}
-              bos={t({
-                tr: "Bekleyen yorum yok. Danışmanınız metninize yorum yazınca burada görünür.",
-                en: "No pending comments. When your advisor comments on your text, it shows up here.",
-              })}
-              sayi={yorumlar.length}
-            >
-              {yorumlar.map((yorum) => (
-                <ListeSatiri
-                  key={yorum.id}
-                  href={`/dashboard/editor/${yorum.project_id}/write`}
-                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || t({ tr: "Yorum", en: "Comment" })}
-                  alt={yorum.body}
-                  onizleme
-                  zaman={once(yorum.created_at, simdiAn)}
-                />
-              ))}
-            </ListeKarti>
-            )}
-
-            <ListeKarti
-              baslik={t({ tr: "Kaynaklar ve kanıt", en: "Sources and evidence" })}
-              alt={t({ tr: "Tezinizin dayanakları", en: "What your thesis rests on" })}
-              bos=""
-              sayi={4}
-            >
-              <ListeSatiri
-                href={`/dashboard/literature?calisma=${resume.id}`}
-                baslik={t({ tr: "Literatür", en: "Literature" })}
-                alt={
-                  resumeKaynakSayisi
-                    ? t({
-                        tr: `${resumeOkunan ?? 0} okundu · ${resumeKullanilan ?? 0} metinde kullanıldı`,
-                        en: `${resumeOkunan ?? 0} read · ${resumeKullanilan ?? 0} used in text`,
-                      })
-                    : t({ tr: "Henüz kaynak eklenmedi", en: "No sources added yet" })
-                }
-                sag={
-                  <span className="gb-sayi">
-                    {t({
-                      tr: `${sayi(resumeKaynakSayisi ?? 0)} kaynak`,
-                      en: `${sayi(resumeKaynakSayisi ?? 0)} source${resumeKaynakSayisi === 1 ? "" : "s"}`,
-                    })}
-                  </span>
-                }
-              />
-              <ListeSatiri
-                href={`/dashboard/citations?calisma=${resume.id}`}
-                baslik={t({ tr: "Kaynakça denetimi", en: "Reference list check" })}
-                alt={
-                  resumeDenetim
-                    ? t({ tr: `Son denetim ${once(resumeDenetim.created_at, simdiAn)}`, en: `Last checked ${once(resumeDenetim.created_at, simdiAn)}` })
-                    : t({ tr: "Henüz denetlenmedi", en: "Not checked yet" })
-                }
-                sag={
-                  resumeDenetim?.compliance_score != null ? (
-                    <span className="status-pill" data-tone={Number(resumeDenetim.compliance_score) >= 80 ? "success" : "warning"}>
-                      {t({
-                        tr: `%${Math.round(Number(resumeDenetim.compliance_score))}`,
-                        en: `${Math.round(Number(resumeDenetim.compliance_score))}%`,
-                      })}
-                    </span>
-                  ) : undefined
-                }
-              />
-              <ListeSatiri
-                href={`/dashboard/editor/${resume.id}/kanit`}
-                baslik={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
-                alt={
-                  iddiaSayisi
-                    ? t({
-                        tr: `${dogrudanSayisi ?? 0} iddia doğrudan destekleniyor`,
-                        en: `${dogrudanSayisi ?? 0} claim${dogrudanSayisi === 1 ? "" : "s"} directly supported`,
-                      })
-                    : t({ tr: "İddialarınızı kaynaklarına bağlayın", en: "Link your claims to their sources" })
-                }
-                sag={
-                  <span className="gb-sayi">
-                    {t({ tr: `${sayi(iddiaSayisi ?? 0)} iddia`, en: `${sayi(iddiaSayisi ?? 0)} claim${iddiaSayisi === 1 ? "" : "s"}` })}
-                  </span>
-                }
-              />
-              {/* Etik kurul (02.11.2026): öteki birimler gibi pencere açar (etik-penceresi.tsx). */}
-              <li>
-                <EtikKurulPenceresi projectId={resume.id} satir />
-              </li>
-              <ListeSatiri
-                href={`/dashboard/documents?calisma=${resume.id}`}
-                baslik={t({ tr: "Belge kontrolü", en: "Document check" })}
-                alt={
-                  resumeBelgeSayisi
-                    ? t({ tr: "Kılavuz uyumu ve orijinallik ön-kontrolü", en: "Guideline compliance and originality pre-check" })
-                    : t({ tr: "Tam belgenizi yükleyip denetletin", en: "Upload your full document to have it checked" })
-                }
-                sag={
-                  <span className="gb-sayi">
-                    {t({
-                      tr: `${sayi(resumeBelgeSayisi ?? 0)} belge`,
-                      en: `${sayi(resumeBelgeSayisi ?? 0)} document${resumeBelgeSayisi === 1 ? "" : "s"}`,
-                    })}
-                  </span>
-                }
-              />
-            </ListeKarti>
-          </ListeIzgarasi>
-
-          {/*
-            SON EKLENENLER VE HIZLI EYLEMLER (Phase 3). Kaynaklar ve kanıt
-            kartı SAYILARI veriyor; öğrencinin "en son ne eklemiştim"
-            sorusunun cevabı yoktu. Hızlı eylemler Ctrl+K'daki eylemlerin
-            aynısı: komut paletini bilmeyen de bir tıkla ulaşsın.
-          */}
-          <ListeIzgarasi etiket={t({ tr: "Son eklenenler", en: "Recently added" })}>
-            <ListeKarti
-              baslik={t({ tr: "Son kaynaklar", en: "Recent sources" })}
-              alt={t({ tr: "Bu çalışmaya en son eklenenler", en: "Most recently added to this work" })}
-              bos={
-                sonKaynaklar
-                  ? t({ tr: "Henüz kaynak yok. DOI yapıştırarak ilk kaynağınızı ekleyin.", en: "No sources yet. Paste a DOI to add your first source." })
-                  : t({ tr: "Kaynaklar okunamadı; sayfayı yenileyin.", en: "Couldn't load sources; refresh the page." })
-              }
-              sayi={sonKaynaklar?.length ?? 0}
-              href={`/dashboard/literature?calisma=${resume.id}`}
-              hrefEtiket={t({ tr: "Bütün kaynaklar", en: "All sources" })}
-            >
-              {(sonKaynaklar ?? []).map((k) => (
-                <ListeSatiri
-                  key={k.id}
-                  href={`/dashboard/literature?calisma=${resume.id}`}
-                  baslik={k.title}
-                  alt={k.year ? String(k.year) : undefined}
-                  sag={
-                    <span className="status-pill" data-tone={KAYNAK_DURUMU[k.status as KaynakDurumu]?.ton}>
-                      {t(KAYNAK_DURUMU[k.status as KaynakDurumu]?.ad ?? { tr: "—", en: "—" })}
-                    </span>
-                  }
-                />
-              ))}
-            </ListeKarti>
-
-            <ListeKarti
-              baslik={t({ tr: "Son belge kontrolleri", en: "Recent document checks" })}
-              alt={t({ tr: "Yüklediğiniz dosyalar", en: "Files you uploaded" })}
-              bos={
-                sonBelgeler
-                  ? t({ tr: "Henüz belge kontrolü yok. Word ya da PDF dosyanızı yükleyip kaynakçasını denetletebilirsiniz.", en: "No document checks yet. Upload your Word or PDF file to check its references." })
-                  : t({ tr: "Belgeler okunamadı; sayfayı yenileyin.", en: "Couldn't load documents; refresh the page." })
-              }
-              sayi={sonBelgeler?.length ?? 0}
-              href={`/dashboard/documents?calisma=${resume.id}`}
-              hrefEtiket={t({ tr: "Belge Kontrol", en: "Document Check" })}
-            >
-              {(sonBelgeler ?? []).map((b) => (
-                <ListeSatiri
-                  key={b.id}
-                  href={`/dashboard/documents?calisma=${resume.id}`}
-                  baslik={b.file_name}
-                  sag={
-                    <span className="status-pill" data-tone={BELGE_DURUMU[b.status as BelgeDurumu]?.ton}>
-                      {t(BELGE_DURUMU[b.status as BelgeDurumu]?.ad ?? { tr: "—", en: "—" })}
-                    </span>
-                  }
-                  zaman={once(b.created_at, simdiAn)}
-                />
-              ))}
-            </ListeKarti>
-
-            <ListeKarti
-              baslik={t({ tr: "Hızlı eylemler", en: "Quick actions" })}
-              alt={t({ tr: "Ctrl+K ile de açılır", en: "Also available with Ctrl+K" })}
-              bos=""
-              sayi={4}
-            >
-              <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}&ekle=1`} baslik={t({ tr: "DOI ile kaynak ekle", en: "Add a source by DOI" })} />
-              <ListeSatiri href={`/dashboard/editor/${resume.id}/write?asistan=1`} baslik={t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" })} />
-              <ListeSatiri href="/dashboard/analysis" baslik={t({ tr: "Veri analizi", en: "Data analysis" })} />
-              <ListeSatiri href={`/dashboard/documents?calisma=${resume.id}`} baslik={t({ tr: "Belge kontrolü", en: "Document check" })} />
-            </ListeKarti>
-          </ListeIzgarasi>
-
-          {/* Birden çok çalışması olan öğrenci için: odak tek tezde, diğerleri bir tık uzakta. */}
-          {activeProjects.length > 1 ? (
-            <nav className="diger-calismalar" aria-label={t({ tr: "Diğer çalışmalarınız", en: "Your other works" })}>
-              <span>{t({ tr: "Diğer çalışmalarınız:", en: "Your other works:" })}</span>
-              {activeProjects
-                .filter((p) => p.id !== resume.id)
-                .slice(0, 5)
-                .map((p) => (
-                  <Link key={p.id} href={`/dashboard/editor/${p.id}`} className="chip">
-                    {p.title}
+            {sonrakiCalismalar.length ? (
+              <>
+                <ul className="pw-liste" aria-label={t({ tr: "Diğer çalışmalarınız", en: "Your other works" })}>
+                  {sonrakiCalismalar.map((p) => (
+                    <li key={p.id}>
+                      <Link href={calismaAdresi(p.id)} className="pw-satir">
+                        <FileText size={18} aria-hidden="true" className="pw-satir-simge" />
+                        <span className="pw-satir-metin">
+                          <b>{p.title}</b>
+                          <small>
+                            {t(projectTypeLabel(p.project_type))}
+                            {writing.get(p.id) ? ` · ${t({ tr: `${once(writing.get(p.id)!.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(writing.get(p.id)!.updatedAt, simdiAn)}` })}` : ""}
+                          </small>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {activeProjects.length > sonrakiCalismalar.length + 1 ? (
+                  <Link href="/dashboard/editor" className="pw-bolum-baglanti pw-bolum-alt">
+                    {t({ tr: `Bütün çalışmalar (${sayi(activeProjects.length)})`, en: `All works (${sayi(activeProjects.length)})` })}
                   </Link>
+                ) : null}
+              </>
+            ) : null}
+          </section>
+
+          <section className="pw-bolum" aria-labelledby="pw-kaynak-baslik">
+            <header className="pw-bolum-bas">
+              <h2 id="pw-kaynak-baslik">{t({ tr: "Son kaynaklar", en: "Recent sources" })}</h2>
+              <Link href={`/dashboard/literature?calisma=${encodeURIComponent(resume.id)}`} className="pw-bolum-baglanti">
+                {t({ tr: "Kaynakları aç", en: "View library" })}
+              </Link>
+            </header>
+            {sonKaynakHatasi ? (
+              /* Okunamayan liste "kaynak yok" diye çizilmez: kullanıcı kaynaklarını silinmiş sanırdı. */
+              <p className="alert" data-tone="warning" role="alert">
+                {t({ tr: "Son kaynaklar şu anda okunamadı. Kaynaklarınız yerinde — sayfayı yenileyin.", en: "Recent sources could not be loaded right now. Your sources are safe — refresh the page." })}
+              </p>
+            ) : sonKaynaklar.length ? (
+              <ul className="pw-liste">
+                {sonKaynaklar.map((k) => (
+                  <li key={k.id}>
+                    <Link href={`/dashboard/literature?calisma=${encodeURIComponent(resume.id)}`} className="pw-satir">
+                      <FileText size={18} aria-hidden="true" className="pw-satir-simge" />
+                      <span className="pw-satir-metin">
+                        <b>{k.title}</b>
+                        <small>
+                          {[k.authors, k.year ? `(${k.year})` : null].filter(Boolean).join(" ")}
+                        </small>
+                      </span>
+                    </Link>
+                  </li>
                 ))}
-            </nav>
-          ) : null}
+              </ul>
+            ) : (
+              <div className="pw-bos">
+                <p>{t({ tr: "Henüz kaynak eklemediniz. DOI yapıştırarak, dosya yükleyerek ya da arayarak ekleyebilirsiniz.", en: "You haven't added any sources yet. Add them by pasting a DOI, uploading a file or searching." })}</p>
+                <DugmeBaglanti href={`/dashboard/literature?calisma=${encodeURIComponent(resume.id)}`} tur="ikincil" boyut="sik">
+                  <Plus size={15} aria-hidden="true" />
+                  {t({ tr: "Kaynak ekle", en: "Add source" })}
+                </DugmeBaglanti>
+              </div>
+            )}
+          </section>
+
+          <p className="pw-not">
+            {t({ tr: "Teslim durumu, takvim, kılavuz ve kontroller ", en: "Submission status, schedule, guideline and checks are in the " })}
+            <Link href={calismaAdresi(resume.id)}>{t({ tr: "çalışma özetinde", en: "work overview" })}</Link>
+            {t({ tr: ".", en: "." })}
+          </p>
         </>
       ) : (
         <>

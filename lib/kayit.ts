@@ -7,7 +7,6 @@ import type { Metin } from "./dil";
   kullanıcı sebebini anlamadan geri dönerdi.
 */
 
-export const EN_KISA_SIFRE = 8;
 const EN_UZUN_AD = 120;
 const EN_UZUN_EPOSTA = 254;
 
@@ -26,6 +25,17 @@ const EPOSTA = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/;
   Türkiye numarası 10 ya da 11, uluslararası E.164 en çok 15. Ülke kodu
   ZORUNLU değil — yurt dışındaki öğrenciye Türkiye biçimini dayatmamak için.
 */
+/*
+  Kayıt formundaki <input pattern> deseni. Tarayıcı deseni `v` bayrağıyla
+  derliyor (HTML standardı, Chrome 112+/Firefox 116+); o kipte karakter
+  sınıfındaki çıplak "(", ")" ve "-" GEÇERSİZ. Eskiden desen
+  "\+?[\d\s().\-]{10,20}" idi: tarayıcı derleyemiyor, konsola hata
+  yazıp deseni yok sayıyordu — yani istemci tarafında hiç denetim yoktu.
+  Kaçışlı hâli hem `u` hem `v` kipinde geçerli (testi kayit.test.ts).
+  Asıl denetim yine sunucuda, telefonuTemizle'de: desen yalnızca erken uyarı.
+*/
+export const TELEFON_DESENI = String.raw`\+?[\d\s\(\)\.\-]{10,20}`;
+
 export function telefonuTemizle(ham: unknown): string | null {
   const metin = String(ham ?? "").trim();
   if (!/^\+?[\d\s().-]+$/.test(metin)) return null;
@@ -35,10 +45,9 @@ export function telefonuTemizle(ham: unknown): string | null {
   return arti + rakamlar;
 }
 
-export type KayitGirdisi = { email: string; sifre: string; adSoyad: string; kvkk: boolean };
+export type KayitGirdisi = { email: string; adSoyad: string; kvkk: boolean };
 export type KayitDegeri = {
   email: string;
-  sifre: string;
   adSoyad: string;
   telefon: string;
   /** Duyuru ve kampanya iletisi izni (isteğe bağlı; ticari elektronik ileti onayı). */
@@ -48,8 +57,6 @@ export type KayitSonucu = { hata: Metin } | { deger: KayitDegeri };
 
 export function kayitGirdisiniDenetle(ham: {
   email?: unknown;
-  sifre?: unknown;
-  sifreTekrar?: unknown;
   adSoyad?: unknown;
   telefon?: unknown;
   kvkk?: unknown;
@@ -66,22 +73,21 @@ export function kayitGirdisiniDenetle(ham: {
     kuralı uygulamıyor). Türkçe küçültme yalnızca insan metninde doğru.
   */
   const email = String(ham.email ?? "").trim().toLowerCase().slice(0, EN_UZUN_EPOSTA);
-  const sifre = String(ham.sifre ?? "");
   const adSoyad = String(ham.adSoyad ?? "").trim().replace(/\s+/g, " ").slice(0, EN_UZUN_AD);
 
   if (!adSoyad || adSoyad.length < 2) return { hata: { tr: "Ad ve soyadınızı yazın.", en: "Enter your full name." } };
   if (!email || !EPOSTA.test(email)) return { hata: { tr: "Geçerli bir e-posta adresi yazın.", en: "Enter a valid email address." } };
   const telefon = telefonuTemizle(ham.telefon);
   if (!telefon) return { hata: { tr: "Geçerli bir telefon numarası yazın (10–15 rakam).", en: "Enter a valid phone number (10–15 digits)." } };
-  if (sifre.length < EN_KISA_SIFRE) return { hata: { tr: `Şifre en az ${EN_KISA_SIFRE} karakter olmalı.`, en: `Password must be at least ${EN_KISA_SIFRE} characters.` } };
   /*
-    Şifre ile e-posta aynı olamaz. Karmaşıklık kuralı (büyük harf, rakam,
-    simge) KOYMUYORUZ: kullanıcıyı "Parola1!" gibi tahmin edilebilir
-    kalıplara itiyor ve uzunluktan daha az koruyor.
+    ŞİFRE KAYITTA ALINMIYOR (G1, 06.11.2026). Kayıtta alınan şifre, adresin
+    sahibi olmayan biri tarafından da konabiliyordu: başkasının adresiyle
+    açılan onaysız hesap, gerçek sahip e-postasını doğrulayınca o şifreyle
+    açılıyordu. Şifre artık doğrulama bağlantısından SONRA, adresin sahibi
+    olduğu kanıtlanmış oturumda belirleniyor (/reset-password?ilk=1);
+    veritabanı da onay anında öncesinden kalan şifreyi siliyor (migration
+    20261106184046).
   */
-  if (sifre.toLowerCase() === email) return { hata: { tr: "Şifreniz e-posta adresinizle aynı olamaz.", en: "Your password cannot be the same as your email address." } };
-  /* Tekrar alanı tarayıcıda da denetleniyor; sunucu yine bakar — form JavaScript'siz de gönderilebilir. */
-  if (String(ham.sifreTekrar ?? "") !== sifre) return { hata: { tr: "Şifreler birbiriyle aynı değil.", en: "The passwords don't match." } };
   /*
     Sözleşme onayı iki koşul: kutu işaretli VE metin sonuna kadar okundu.
     Kutu yalnızca okuma bitince işaretlenebiliyor (app/_components/kayit-formu);
@@ -91,5 +97,5 @@ export function kayitGirdisiniDenetle(ham: {
   if (!ham.sozlesme || !ham.sozlesmeOkundu) return { hata: { tr: "Devam etmek için Kullanım Sözleşmesi'ni okuyup onaylayın.", en: "Please read and accept the Terms of Use to continue." } };
   if (!ham.kvkk) return { hata: { tr: "Devam etmek için aydınlatma metnini onaylayın.", en: "Please accept the privacy notice to continue." } };
 
-  return { deger: { email, sifre, adSoyad, telefon, iletisimIzni: Boolean(ham.iletisimIzni) } };
+  return { deger: { email, adSoyad, telefon, iletisimIzni: Boolean(ham.iletisimIzni) } };
 }

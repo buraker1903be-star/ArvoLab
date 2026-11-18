@@ -11,6 +11,7 @@
     "build": "node scripts/check-css-tokens.mjs && node scripts/check-migrations.mjs && next build",
     "start": "next start",
     "test:unit": "node --import ./tests/register.mjs --test 'tests/unit/*.test.ts'",
+    "test:doi-runtime": "node --import ./tests/register.mjs --test tests/unit/doi-fail-closed-runtime.test.mjs tests/unit/doi-sayac-arizasi-runtime.test.mjs",
     "test:db": "node --test 'tests/db/*.test.mjs'",
     "lint": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js .",
     "check:css": "node scripts/check-css-tokens.mjs",
@@ -25,7 +26,8 @@
     "academic-directory:refresh": "npm run academic-directory:crawl && npm run academic-directory:diff && npm run academic-directory:sync-sql",
     "check:rakamlar": "node scripts/check-rakamlar.mjs",
     "test:editor": "node --import ./tests/register.mjs --test 'tests/editor/*.test.ts'",
-    "onizleme": "ARVOLAB_ONIZLEME=1 next dev -p 3123"
+    "onizleme": "ARVOLAB_ONIZLEME=1 next dev -p 3123",
+    "envanter:depo": "node --import ./tests/register.mjs scripts/depo-envanteri.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
@@ -54,6 +56,7 @@
     "next": "^16.4.6",
     "pagedjs": "^0.4.3",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "5.4.296",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tesseract.js": "^7.0.0",

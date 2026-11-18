@@ -20,7 +20,7 @@
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import { ceviriciKur, type Cevirici, type Dil } from "@/lib/dil";
-import { STAFF_ROLES } from "@/lib/project-labels";
+import { ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
@@ -44,7 +44,26 @@ export type OsUygulama = {
   yalnizBaslatici?: boolean;
   /** Menüde görünmesi için gereken roller (navigation.ts ile aynı kural). */
   roller?: readonly string[];
+  /**
+   * Hesap menüsündeki yeri (Phase 5.1d-2, 14.11.2026). Yoksa uygulama ana
+   * gezinmenin bir öğesidir. "hesap": kullanıcının kendi hesabıyla ilgili
+   * sayfa (ayarlar, abonelik, kılavuz). "yonetim": rolle sınırlı personel
+   * araçları — menüdeki adı "Personel Araçları". Görünürlüğü bu alan
+   * DEĞİL `roller` belirler: yonetim yalnızca nerede çizileceğini söyler.
+   */
+  yer?: OsYer;
 };
+
+/*
+  PREMIUM ÇALIŞMA ALANI (17.11.2026, kurum sahibinin onaylı tasarımı): ana
+  gezinmede yalnızca üç öğe kalır (Ana Sayfa, Çalışmalarım, Kaynaklar).
+  "arac": ileri araçlar (Analiz Merkezi, Belge Kontrol) kenar çubuğunda
+  açık adlı "Araçlar" grubunda; "yardim": Kullanım Kılavuzu ve Destek
+  kenar çubuğunun altındaki "Yardım" grubunda. Eskiden altısı da ana
+  listedeydi; öğrenci ilk açılışta hangisinin günlük iş olduğunu
+  ayıramıyordu. Hiçbiri kaldırılmadı: yalnızca yeri değişti.
+*/
+export type OsYer = "hesap" | "yonetim" | "arac" | "yardim";
 
 export const ANA_SAYFA = "/dashboard";
 
@@ -101,8 +120,8 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
         sahibi "iki sekme çıkmasın, tek sayfa" dedi.
       */
     },
-    { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
-    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
+    { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"], yer: "arac" },
+    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"], yer: "arac" },
     /*
       Kılavuz kataloğu ve doçentlik dock'tan çıktı: öğrencinin kılavuzu
       çalışma merkezinde zaten görünüyor, katalog çoğunlukla personelin
@@ -119,7 +138,7 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       isteği: "öğrencilerin görmesine gerek yok"). Doçent adayı akademisyen
       ayrı bir kitle; öğrencinin başlatıcısında yer kaplamamalı.
     */
-    { key: "docentlik", label: t({ tr: "Doçentlik Puanı", en: "Associate Professorship Score" }), kisa: t({ tr: "Doçentlik", en: "Assoc. Prof." }), href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES },
+    { key: "docentlik", label: t({ tr: "Doçentlik Puanı", en: "Associate Professorship Score" }), kisa: t({ tr: "Doçentlik", en: "Assoc. Prof." }), href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES, yer: "yonetim" },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
       olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de
@@ -131,21 +150,22 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       href: "/dashboard/expert-requests",
       ikon: "destek",
       yollar: ["/dashboard/expert-requests", "/dashboard/support"],
+      yer: "yardim",
       /* Bölüm yok: uzman ve uygulama desteği aynı sayfanın iki kartı
          (Kaynaklar'la aynı karar, 26.10.2026). */
     },
-    { key: "ayarlar", label: t({ tr: "Ayarlar", en: "Settings" }), href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
+    { key: "ayarlar", label: t({ tr: "Ayarlar", en: "Settings" }), href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"], yer: "hesap" },
     /*
       Kullanım Kılavuzu (30.10.2026): dock'ta yer kaplamıyor (yeni başlayan
       birkaç kez açar); başlatıcıda, Ctrl+K'da ve kullanıcı menüsünde.
     */
-    { key: "yardim", label: t({ tr: "Kullanım Kılavuzu", en: "User Guide" }), kisa: t({ tr: "Kılavuz", en: "Guide" }), href: "/dashboard/yardim", ikon: "kilavuz", yollar: ["/dashboard/yardim"], yalnizBaslatici: true },
+    { key: "yardim", label: t({ tr: "Kullanım Kılavuzu", en: "User Guide" }), kisa: t({ tr: "Kılavuz", en: "Guide" }), href: "/dashboard/yardim", ikon: "kilavuz", yollar: ["/dashboard/yardim"], yalnizBaslatici: true, yer: "yardim" },
     /*
       Abonelik ve kredi (26.10.2026): bireysel abone aboneliğini ve asistan
       kredisini buradan yönetiyor. Dock'ta yer kaplamıyor (ayda bir açılan
       sayfa); başlatıcıda, Ctrl+K'da, Ayarlar'da ve kullanıcı menüsünde.
     */
-    { key: "abonelik", label: t({ tr: "Abonelik ve Kredi", en: "Subscription and Credits" }), href: "/dashboard/abonelik", ikon: "abonelik", yollar: ["/dashboard/abonelik"], yalnizBaslatici: true },
+    { key: "abonelik", label: t({ tr: "Abonelik ve Kredi", en: "Subscription and Credits" }), href: "/dashboard/abonelik", ikon: "abonelik", yollar: ["/dashboard/abonelik"], yalnizBaslatici: true, yer: "hesap" },
     /*
       ROLE BAĞLI UYGULAMALAR dock'ta yer kaplamıyor: iç ekibin günde
       bir kez açtığı sayfalar, öğrencinin her gün gördüğü simgelerin
@@ -156,8 +176,8 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       liste "controller"ı atlamıştı, yani Kontrolör yetkisi olduğu
       sayfayı başlatıcıda göremiyordu (AGENTS.md'deki kural).
     */
-    { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI },
-    { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
+    { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI, yer: "yonetim" },
+    { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ADMIN_ROLES, yer: "yonetim" },
     /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
   ];
 }
@@ -235,19 +255,63 @@ export function aramaAnahtari(metin: string): string {
 
 export type OsSayfa = { label: string; href: string; uygulama: string };
 
-/** Ctrl+K'da aranabilen sayfalar: uygulamaların bölümleri + yalnızca başlatıcıdakiler. */
+/**
+ * Uygulamaların gerçek alt bölümleri (bölüm şeridi ve Ctrl+K'nın "Sayfalar"
+ * grubu). Uygulamanın kendisi burada YOK: o zaten "Uygulamalar"da.
+ *
+ * Eskiden (14.11.2026'ya kadar) "yalnızca başlatıcıda" duran uygulamalar da
+ * buraya eklenirdi; palet ise bütün uygulamaları ayrıca listelediği için
+ * Doçentlik Puanı, Kullanım Kılavuzu, Abonelik ve Kredi, Asistan Kayıtları
+ * ve Ekip Yönetimi Ctrl+K'da İKİ kez çıkıyordu. Ekleme, dock'un uygulamaları
+ * gösterip başlatıcının göstermediği dönemden kalmaydı; palet bütün
+ * uygulamaları listelemeye başlayınca gereksizleşti.
+ */
 export function osSayfalari(uygulamalar: OsUygulama[]): OsSayfa[] {
-  const sayfalar: OsSayfa[] = uygulamalar.flatMap((u) =>
-    (u.bolumler ?? []).map((b) => ({ label: b.label, href: b.href, uygulama: u.key }))
-  );
-  /*
-    Dock'ta yer kaplamayan uygulamalar (asistan kayıtları, ekip, ölçüm)
-    burada bulunabilmeli: başlatıcıyı açıp aramak yerine adını yazmak
-    bu sayfaların tek hızlı yolu.
-  */
-  for (const u of uygulamalar) if (u.yalnizBaslatici) sayfalar.push({ label: u.label, href: u.href, uygulama: u.key });
-  return sayfalar;
+  return uygulamalar.flatMap((u) => (u.bolumler ?? []).map((b) => ({ label: b.label, href: b.href, uygulama: u.key })));
 }
+
+export type OsKomutHedefi = { key: string; label: string; href: string; ikon: OsIkon; grup: "uygulama" | "sayfa"; uygulama: string };
+
+/**
+ * Ctrl+K'nın gezinme hedefleri: önce uygulamalar, sonra bölümleri. Her
+ * adres EN FAZLA bir kez — bir bölümün adresi uygulamanınkiyle aynıysa
+ * (ilk bölüm çoğunlukla öyle) uygulama kalır. Liste çağırana rolle
+ * süzülmüş gelir (gorunenUygulamalar); burada rol kararı verilmez.
+ * Hızlı işlemler (yeni çalışma, DOI, analiz başlat) burada değil: aynı
+ * adrese gitseler de başka bir işi anlatıyorlar, palet onları ayrıca ekler.
+ */
+export function komutHedefleri(uygulamalar: OsUygulama[]): OsKomutHedefi[] {
+  const gorulen = new Set<string>();
+  const hedefler: OsKomutHedefi[] = [];
+  const ekle = (h: OsKomutHedefi) => {
+    if (gorulen.has(h.href)) return;
+    gorulen.add(h.href);
+    hedefler.push(h);
+  };
+  for (const u of uygulamalar) ekle({ key: `app:${u.key}`, label: u.label, href: u.href, ikon: u.ikon, grup: "uygulama", uygulama: u.key });
+  const ikonu = new Map(uygulamalar.map((u) => [u.key, u.ikon]));
+  for (const s of osSayfalari(uygulamalar)) ekle({ key: `sayfa:${s.href}`, label: s.label, href: s.href, ikon: ikonu.get(s.uygulama) ?? "apps", grup: "sayfa", uygulama: s.uygulama });
+  return hedefler;
+}
+
+/*
+  HESAP MENÜSÜ SEÇİCİLERİ (Phase 5.1d-2, 14.11.2026). Hesap menüsü
+  (kullanici-menusu.tsx) 5.1d-3'ten beri bağlantılarını bunlardan okuyor;
+  eskiden elle yazılıydı. İkisi de rolle SÜZÜLMÜŞ listeyi alır ve kendi rol
+  kararını vermez: görünürlük tek yerde (gorunenUygulamalar), yoksa menü
+  ile palet ayrı ayrı karar verip birbirinden sapardı. Sıra uygulama
+  listesindeki sıradır.
+*/
+
+/** Kullanıcının kendi hesabıyla ilgili sayfalar: Ayarlar, Abonelik ve Kredi. (Kullanım Kılavuzu 17.11.2026'dan beri Yardım grubunda.) */
+export const hesapUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "hesap");
+
+/** "Personel Araçları": yalnızca rolü yetenlere görünen araçlar (öğrencide boş). */
+export const personelAraclari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "yonetim");
+/** Kenar çubuğundaki "Araçlar" grubu: Analiz Merkezi, Belge Kontrol. */
+export const aracUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "arac");
+/** Kenar çubuğunun altındaki "Yardım" grubu: Destek, Kullanım Kılavuzu. */
+export const yardimUygulamalari = (gorunen: OsUygulama[]) => gorunen.filter((u) => u.yer === "yardim");
 
 /*
   ═══ UYARLANIR GEZİNME (Phase 3, 04.11.2026) ═══
@@ -261,24 +325,35 @@ export function osSayfalari(uygulamalar: OsUygulama[]): OsSayfa[] {
 */
 
 /** Telefondaki alt çubukta kalıcı duran uygulamalar (geri kalanı "Daha fazla"da). */
-export const ALT_CUBUK = ["home", "tez", "kaynaklar", "analiz"] as const;
+/* 17.11.2026: üç ana öğe (onaylı tasarım). Analiz Merkezi "Daha fazla"ya geçti; eskiden dördüncü sıradaydı. */
+export const ALT_CUBUK = ["home", "tez", "kaynaklar"] as const;
 
-/** Gezinmenin altında, ana listeden ayrı duranlar: ayarlar ve başlatıcıya ayrılmış uygulamalar. */
-export function gezinmeGruplari(uygulamalar: OsUygulama[]) {
-  const ana = uygulamalar.filter((u) => !u.yalnizBaslatici && u.key !== "ayarlar");
-  const diger = uygulamalar.filter((u) => u.yalnizBaslatici);
-  const ayarlar = uygulamalar.find((u) => u.key === "ayarlar") ?? null;
-  return { ana, diger, ayarlar };
-}
+/*
+  ANA GEZİNME (Phase 5.1d-3, 14.11.2026, kurum sahibinin kararı). Kenar
+  çubuğunda ve tablet rayında yalnızca akademik uygulamalar durur; hesap
+  sayfaları (`yer: "hesap"`) ve personel araçları (`yer: "yonetim"`) hesap
+  menüsünde. Eskiden kenar çubuğunun altında bir "Diğer" grubu (Doçentlik,
+  Kılavuz, Abonelik, Asistan Kayıtları, Ekip) ve ayrı bir Ayarlar bağlantısı
+  vardı; aynı sayfalar hesap menüsünde ve Ctrl+K'da da duruyordu.
+*/
+export const anaUygulamalar = (uygulamalar: OsUygulama[]) => uygulamalar.filter((u) => !u.yer && !u.yalnizBaslatici);
 
-/** Telefonda alt çubukta olmayan her şey "Daha fazla" sayfasında (ayarlar dahil). */
+/**
+ * "Daha fazla" (telefon, tablet ve dar masaüstü): alt çubukta olmayan
+ * uygulamalar. Ayarlar, Kılavuz ve Abonelik burada da KALIR (telefonda
+ * kenar çubuğu yok, hesap menüsü tek yol olmasın). Personel araçları
+ * yalnızca hesap menüsünde (5.1d-3); eskiden burada da listeleniyordu.
+ */
 export function dahaFazlasi(uygulamalar: OsUygulama[]): OsUygulama[] {
   const cubukta = new Set<string>(ALT_CUBUK);
-  return uygulamalar.filter((u) => !cubukta.has(u.key));
+  return uygulamalar.filter((u) => !cubukta.has(u.key) && u.yer !== "yonetim");
 }
 
 export type CalismaBaglami = { id: string; baslik: string; tur: string };
 export type BaglamBaglantisi = { key: string; label: string; href: string; grup: "calisma" | "arac" };
+
+/** Çalışmanın kendi bölümleri; sayfadaki sekmeler ve kenar çubuğu alt menüsü aynı anahtarları kullanır. */
+export type CalismaBolumu = "merkez" | "yazim" | "kanit" | "etik" | "makale";
 
 /*
   ÇALIŞMANIN İÇİNDEYKEN GEZİNME. Çalışmanın kendi bölümleri (Özet,
@@ -302,6 +377,16 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
     { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "arac" },
     { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), href: `/dashboard/documents?calisma=${id}`, grup: "arac" },
   ];
+}
+
+/**
+ * Yalnızca çalışmanın kendi bölümleri (araçlar hariç), sırasıyla. Sayfadaki
+ * sekmeler (calisma-sekmeleri.tsx) bunu okur; 5.1d-4'e kadar sekmeler aynı
+ * listeyi kendi içinde ayrıca yazıyordu ve bir bölüm eklenince iki yer
+ * birden güncellenmeliydi.
+ */
+export function calismaBolumleri(calisma: CalismaBaglami, t: Cevirici = ceviriciKur("tr")): (BaglamBaglantisi & { key: CalismaBolumu })[] {
+  return calismaBaglantilari(calisma, t).filter((b): b is BaglamBaglantisi & { key: CalismaBolumu } => b.grup === "calisma");
 }
 
 /**

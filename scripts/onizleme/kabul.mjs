@@ -1,5 +1,6 @@
 /*
-  PHASE 3 TARAYICI KABUL TESTİ (04.11.2026).
+  PHASE 3 TARAYICI KABUL TESTİ (04.11.2026; Signature OS 5 / Phase 3
+  kabuk senaryoları 12.11.2026'da eklendi: "os5 kabuk: …").
 
   Yerel önizlemede (npm run onizleme, sahte Supabase) gezinmenin üç
   biçimini, Ctrl+K komut merkezini ve DOI akışını gerçek tarayıcıda
@@ -68,13 +69,22 @@ const tarayici = await chromium.launch();
     bekle(await nav.getByText("Kaynaklar", { exact: true }).first().isVisible(), "Kaynaklar adı görünmüyor");
     bekle(!(await sayfa.locator(".os-gezinme-daha").isVisible()), "masaüstünde 'Daha fazla' görünmemeli");
   });
-  await senaryo("masaüstü: çalışmanın içinde bağlam bölümü ve tek etkin bağlantı", async () => {
-    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
-    const baglam = sayfa.locator(".os-gezinme-baglam");
-    bekle(await baglam.isVisible(), "çalışma bağlamı görünmüyor");
-    const etkin = baglam.locator('[aria-current="page"]');
-    bekle((await etkin.count()) === 1, `bağlamda ${await etkin.count()} etkin bağlantı var`);
-    bekle(!(await sayfa.locator(".calisma-sekmeleri").first().isVisible().catch(() => false)), "sayfa içi sekmeler masaüstünde gizlenmeli");
+  /*
+    17.11.2026 (premium çalışma alanı): çalışmanın bölümleri kenar
+    çubuğundan sayfadaki sekmelere taşındı; kenar çubuğu editörde
+    DEĞİŞMEZ. Eskiden bu senaryo kenar çubuğunda bağlam bölümü arıyordu.
+    Korunan davranış aynı: çalışmanın içinde tek etkin bölüm işareti.
+  */
+  await senaryo("masaüstü: çalışmanın içinde sayfa sekmeleri, tek etkin sekme; kenar çubuğu değişmez", async () => {
+    await git(sayfa, "/dashboard");
+    const genel = await sayfa.locator("nav.os-gezinme").innerText();
+    await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
+    const sekmeler = sayfa.locator("nav.calisma-sekmeleri").first();
+    bekle(await sekmeler.isVisible(), "çalışma sekmeleri görünmüyor");
+    const etkin = sekmeler.locator('[aria-current="page"]');
+    bekle((await etkin.count()) === 1, `sekmelerde ${await etkin.count()} etkin bağlantı var`);
+    bekle(!(await sayfa.locator(".os-gezinme-baglam").count()), "kenar çubuğunda çalışma bağlamı olmamalı");
+    bekle((await sayfa.locator("nav.os-gezinme").innerText()) === genel, "editörde kenar çubuğunun öğeleri değişti");
   });
   await senaryo("masaüstü: genel sayfada çalışma bağlamı gizli", async () => {
     await git(sayfa, "/dashboard/analysis");
@@ -122,8 +132,32 @@ const tarayici = await chromium.launch();
     await sayfa.waitForTimeout(300);
     bekle(!(await sayfa.locator(".os-palette-input input").isVisible()), "Esc paleti kapatmadı");
   });
-  await senaryo("DOI kutusu: DOI olmayan metinde ipucu, Ekle kapalı", async () => {
+  /*
+    17.11.2026: DOI kutusu her zaman açık değil; "Kaynak ekle → DOI ile
+    ekle" (?ekle=1) ya da adresteki DOI açar. Menüden açılış ayrı
+    senaryoda; kutunun kendi davranışı değişmedi.
+  */
+  await senaryo("Kaynak ekle: menü klavyeyle açılır, DOI ile ekle kutuyu açar; varsayılanda kutu kapalı", async () => {
     await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
+    bekle(!(await sayfa.locator(".doi-kutusu input").count()), "DOI kutusu varsayılanda açık olmamalı");
+    const ozet = sayfa.locator("details.kaynak-ekle > summary");
+    await ozet.focus();
+    await sayfa.keyboard.press("Enter");
+    const menu = sayfa.locator("details.kaynak-ekle[open]");
+    bekle(await menu.isVisible(), "Enter menüyü açmadı");
+    for (const ad of [/DOI/, /içe aktar|import/i, /Dizinlerde ara|Search indexes/i]) {
+      bekle((await menu.getByText(ad).count()) > 0, `menüde yok: ${ad}`);
+    }
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForTimeout(150);
+    bekle(!(await sayfa.locator("details.kaynak-ekle[open]").count()), "Esc menüyü kapatmadı");
+    await ozet.click();
+    await menu.getByRole("link", { name: /DOI/ }).click();
+    await sayfa.waitForURL(/ekle=1/, { timeout: 30000 });
+    await sayfa.locator(".doi-kutusu input").waitFor({ state: "visible", timeout: 30000 });
+  });
+  await senaryo("DOI kutusu: DOI olmayan metinde ipucu, Ekle kapalı", async () => {
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}&ekle=1`);
     const kutu = sayfa.locator(".doi-kutusu input");
     await kutu.fill("enflasyon işsizlik");
     bekle(await sayfa.locator(".doi-kutusu button[type=submit]").first().isDisabled(), "DOI değilken Ekle açık");
@@ -140,17 +174,161 @@ const tarayici = await chromium.launch();
     });
     bekle(halka === "var", `odak halkası ${halka}`);
   });
+
+  /* ---- Signature OS 5 / Phase 3: kabuk ---- */
+  await senaryo("os5 kabuk: kenar çubuğu 240 px koyu lacivert, logo üstte, içerik sağında", async () => {
+    await git(sayfa, "/dashboard");
+    const olcu = await sayfa.evaluate(() => {
+      const nav = document.querySelector("nav.os-gezinme");
+      const r = nav.getBoundingClientRect();
+      const logo = nav.querySelector(".os-gezinme-logo img");
+      const ust = document.querySelector(".dashboard-header").getBoundingClientRect();
+      return { w: Math.round(r.width), h: Math.round(r.height), zemin: getComputedStyle(nav).backgroundColor, logo: logo?.getAttribute("src") ?? "", logoY: logo ? Math.round(logo.getBoundingClientRect().top) : -1, ustX: Math.round(ust.left) };
+    });
+    bekle(olcu.w === 240 && olcu.h === 900, `kenar çubuğu ${olcu.w}×${olcu.h}`);
+    bekle(/rgb\(0, 23, 51\)|rgb\(0, 13, 31\)/.test(olcu.zemin), `zemin lacivert değil: ${olcu.zemin}`);
+    bekle(/arvolab-logo-koyu/.test(olcu.logo) && olcu.logoY < 64, `logo: ${olcu.logo} @${olcu.logoY}`);
+    bekle(olcu.ustX === 240, `üst çubuk kenar çubuğunun sağında başlamıyor (${olcu.ustX})`);
+  });
+  await senaryo("os5 kabuk: gezinmede tek etkin işaret (aria-current) ve doğru sayfa", async () => {
+    for (const [yol, ad] of [["/dashboard", "Ana Sayfa"], ["/dashboard/literature", "Kaynaklar"], [`/dashboard/editor/${TEZ}/write`, "Çalışmalarım"], ["/dashboard/analysis", "Analiz"], [`/dashboard/literature?calisma=${TEZ}`, "Kaynaklar"]]) {
+      await git(sayfa, yol);
+      const etkin = sayfa.locator('nav.os-gezinme [aria-current="page"]');
+      bekle((await etkin.count()) === 1, `${yol}: ${await etkin.count()} etkin işaret`);
+      bekle((await etkin.innerText()).includes(ad), `${yol}: etkin "${await etkin.innerText()}"`);
+    }
+  });
+  /*
+    17.11.2026: "Çalışmalarım" alt menüsü kalktı; aynı aç/kapa davranışı
+    artık "Araçlar" grubunda (Analiz Merkezi, Belge Kontrol). Grubun bir
+    sayfasındayken açık başlar.
+  */
+  await senaryo("os5 kabuk: Araçlar grubu fare ve klavyeyle açılır/kapanır; araç sayfaları oradan açılır", async () => {
+    await git(sayfa, "/dashboard/analysis");
+    const dugme = sayfa.locator("nav.os-gezinme .os-gezinme-takim-bas", { hasText: "Araçlar" });
+    const menu = sayfa.locator("#os-gezinme-takim-araclar");
+    bekle((await dugme.getAttribute("aria-expanded")) === "true" && (await menu.isVisible()), "grubun sayfasındayken Araçlar açık başlamalı");
+    for (const ad of ["Analiz Merkezi", "Belge Kontrol"]) bekle(await menu.getByRole("link", { name: ad }).isVisible(), `Araçlar'da yok: ${ad}`);
+    await dugme.click();
+    bekle((await dugme.getAttribute("aria-expanded")) === "false" && !(await menu.isVisible()), "tıklayınca kapanmadı");
+    await dugme.focus();
+    await sayfa.keyboard.press("Enter");
+    bekle((await dugme.getAttribute("aria-expanded")) === "true" && (await menu.isVisible()), "Enter açmadı");
+    await sayfa.keyboard.press("Space");
+    bekle((await dugme.getAttribute("aria-expanded")) === "false", "Space kapatmadı");
+    await sayfa.keyboard.press("Space");
+    await menu.getByRole("link", { name: "Belge Kontrol" }).focus();
+    await sayfa.keyboard.press("Enter");
+    await sayfa.waitForURL(/\/dashboard\/documents/, { timeout: 60000 });
+  });
+  /*
+    Phase 5.1d-3 (14.11.2026): kenar çubuğunun "Diğer" grubu ve bağımsız
+    Ayarlar bağlantısı kalktı; o sayfalar hesap menüsünde. Eskiden bu
+    senaryo Diğer'in açılıp tercihinin hatırlandığını sınıyordu.
+  */
+  /*
+    17.11.2026: Ayarlar kenar çubuğunun altına döndü (hesap menüsünde de
+    duruyor); Kullanım Kılavuzu ve Destek "Yardım" grubunda. Diğer grubu
+    yok (Phase 5.1d-3 kararı korunuyor).
+  */
+  await senaryo("os5 kabuk: Diğer grubu yok; Ayarlar altta, Kılavuz/Destek Yardım'da; hesap sayfaları hesap menüsünde", async () => {
+    await git(sayfa, "/dashboard");
+    bekle(!(await sayfa.locator(".os-gezinme-grup, #os-gezinme-diger").count()), "Diğer grubu hâlâ var");
+    bekle(await sayfa.locator("nav.os-gezinme .os-gezinme-alt-bolge a[href='/dashboard/settings']").isVisible(), "kenar çubuğunun altında Ayarlar yok");
+    const yardim = sayfa.locator("nav.os-gezinme .os-gezinme-takim-bas", { hasText: "Yardım" });
+    if ((await yardim.getAttribute("aria-expanded")) === "false") await yardim.click();
+    for (const ad of ["Kullanım Kılavuzu", "Destek"]) bekle(await sayfa.locator("#os-gezinme-takim-yardim").getByRole("link", { name: ad }).isVisible(), `Yardım'da yok: ${ad}`);
+    await sayfa.locator("nav.os-gezinme .os-kullanici > summary").click();
+    const menu = sayfa.locator("nav.os-gezinme .os-kullanici-menu");
+    for (const ad of ["Ayarlar", "Abonelik ve Kredi", "Destek"]) bekle(await menu.getByRole("link", { name: ad }).isVisible(), `hesap menüsünde yok: ${ad}`);
+    await sayfa.keyboard.press("Escape");
+  });
+  await senaryo("os5 kabuk: hesap menüsü kenar çubuğunun dibinde, yukarı açılır; üst çubukta yok", async () => {
+    await git(sayfa, "/dashboard");
+    bekle(!(await sayfa.locator(".dashboard-header .os-kullanici").isVisible()), "masaüstünde üst çubukta hesap menüsü görünmemeli");
+    const ozet = sayfa.locator("nav.os-gezinme .os-kullanici > summary");
+    bekle(await ozet.isVisible(), "kenar çubuğunda hesap satırı yok");
+    await ozet.click();
+    const menu = sayfa.locator("nav.os-gezinme .os-kullanici-menu");
+    const [m, o] = [await menu.boundingBox(), await ozet.boundingBox()];
+    bekle(m && o && m.y + m.height <= o.y, `menü yukarı açılmadı: ${JSON.stringify({ m, o })}`);
+    bekle(await menu.getByRole("button", { name: /Çıkış yap/ }).isVisible(), "çıkış düğmesi yok");
+    bekle(m.y >= 0, "menü ekranın üstünden taşıyor");
+  });
+  await senaryo("os5 kabuk: öğrenci rolünde personel sayfaları gezinmede yok", async () => {
+    await git(sayfa, "/dashboard");
+    const metin = await sayfa.locator("nav.os-gezinme").innerText();
+    for (const ad of ["Ekip Yönetimi", "Asistan Kayıtları", "Doçentlik Puanı"]) bekle(!metin.includes(ad), `öğrencide "${ad}" görünüyor`);
+  });
+  await senaryo("os5 kabuk: editörden Ana Sayfa'ya ve geri; gezinme editörde kaybolmaz", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 30000 });
+    bekle(await sayfa.locator("nav.os-gezinme").isVisible(), "editörde ana gezinme yok");
+    bekle((await sayfa.locator("nav").count()) >= 1 && (await sayfa.locator("nav.os-gezinme").count()) === 1, "ikinci bir ana gezinme var");
+    await sayfa.locator("nav.os-gezinme").getByRole("link", { name: "Ana Sayfa", exact: true }).click();
+    await sayfa.waitForURL((u) => u.pathname === "/dashboard", { timeout: 60000 });
+    await sayfa.locator("nav.os-gezinme").getByRole("link", { name: "Çalışmalarım", exact: true }).click();
+    await sayfa.waitForURL((u) => u.pathname === "/dashboard/editor", { timeout: 60000 });
+  });
+  await senaryo("os5 kabuk: editörde yazıp kenar çubuğundan çıkınca değişiklik korunur", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    const editor = sayfa.locator(".ProseMirror").first();
+    await editor.waitFor({ state: "visible", timeout: 30000 });
+    let kayit = 0;
+    // Kayıt bir sunucu eylemi; istek, adres zaten yeni sayfaya geçmişken gidebiliyor (next-action başlığıyla tanınır).
+    sayfa.on("request", (r) => { if (r.method() === "POST" && r.headers()["next-action"]) kayit++; });
+    await sayfa.waitForTimeout(1500);
+    await editor.locator("p").nth(3).click();
+    await sayfa.keyboard.press("End");
+    await sayfa.keyboard.type(" os5-deneme");
+    bekle(await editor.evaluate((e) => e.textContent.includes("os5-deneme")), "metin editöre yazılmadı");
+    kayit = 0;
+    await sayfa.locator("nav.os-gezinme").getByRole("link", { name: "Ana Sayfa", exact: true }).click();
+    await sayfa.waitForURL((u) => u.pathname === "/dashboard", { timeout: 60000 });
+    await sayfa.waitForTimeout(500);
+    const taslak = await sayfa.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith("arvolab:manuscript-draft:")));
+    bekle(kayit > 0 || taslak, "ayrılırken kayıt isteği gitmedi ve taslak saklanmadı");
+    await sayfa.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("arvolab:manuscript-draft:")).forEach((k) => localStorage.removeItem(k)));
+  });
+  await senaryo("os5 kabuk: yatay taşma yok (masaüstü)", async () => {
+    for (const yol of ["/dashboard", `/dashboard/editor/${TEZ}/write`, "/dashboard/literature"]) {
+      await git(sayfa, yol);
+      const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+      bekle(tasma <= 1, `${yol}: ${tasma}px taşıyor`);
+    }
+  });
   await sayfa.close();
 }
 
 // ---- TABLET (820×1180): dar ray, sayfa sekmeleri ----
 {
   const sayfa = await tarayici.newPage({ viewport: { width: 820, height: 1180 } });
-  await senaryo("tablet: ray solda dar, kısa adlar yazılı", async () => {
+  /*
+    Signature OS 5 / Phase 3 (12.11.2026): ray 64 px ve yalnızca simge.
+    Eskiden 88 px ve simgenin altında kısa ad yazılıydı. Ad artık üzerine
+    gelince ya da klavye odağında yanında beliriyor; erişilebilir ad her
+    zaman bağlantının içinde.
+  */
+  await senaryo("tablet: ray solda 64 px, her bağlantının adı var, ad üzerine gelince belirir", async () => {
     await git(sayfa, "/dashboard");
     const kutu = await sayfa.locator("nav.os-gezinme").boundingBox();
-    bekle(kutu && kutu.x === 0 && kutu.width <= 100 && kutu.height > 600, `ray beklenen yerde değil: ${JSON.stringify(kutu)}`);
-    bekle(await sayfa.locator(".os-gezinme-kisa").first().isVisible(), "kısa ad görünmüyor");
+    bekle(kutu && kutu.x === 0 && kutu.width <= 72 && kutu.height > 600, `ray beklenen yerde değil: ${JSON.stringify(kutu)}`);
+    const adsiz = await sayfa.locator("nav.os-gezinme a:visible, nav.os-gezinme button:visible").evaluateAll((els) =>
+      els.filter((el) => !(el.textContent ?? "").trim() && !el.getAttribute("aria-label")).length,
+    );
+    bekle(adsiz === 0, `${adsiz} bağlantının adı yok`);
+    const ilk = sayfa.locator("nav.os-gezinme .os-gezinme-ana a").nth(1);
+    const ad = ilk.locator(".os-gezinme-ad");
+    bekle((await ad.evaluate((el) => getComputedStyle(el).opacity)) === "0", "ad baştan görünür olmamalı");
+    await ilk.hover();
+    await sayfa.waitForTimeout(250);
+    bekle((await ad.evaluate((el) => getComputedStyle(el).opacity)) === "1", "ad üzerine gelince belirmedi");
+    await sayfa.mouse.move(600, 500);
+    await ilk.focus();
+    await sayfa.keyboard.press("Shift+Tab");
+    await sayfa.keyboard.press("Tab");
+    await sayfa.waitForTimeout(250);
+    bekle((await ad.evaluate((el) => getComputedStyle(el).opacity)) === "1", "ad klavye odağında belirmedi");
   });
   await senaryo("tablet: çalışmada sayfa sekmeleri görünür, bağlam rayda yok", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
@@ -169,12 +347,13 @@ const tarayici = await chromium.launch();
 // ---- TELEFON (390×844): alt çubuk, Daha fazla, taşma ----
 {
   const sayfa = await tarayici.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  await senaryo("telefon: altta dört uygulama + Daha fazla", async () => {
+  // 17.11.2026: alt çubukta üç uygulama (Ana Sayfa, Çalışmalarım, Kaynaklar) + Daha fazla.
+  await senaryo("telefon: altta üç uygulama + Daha fazla", async () => {
     await git(sayfa, "/dashboard");
     const kutu = await sayfa.locator("nav.os-gezinme").boundingBox();
     bekle(kutu && kutu.y + kutu.height >= 840 && kutu.height <= 100, `alt çubuk beklenen yerde değil: ${JSON.stringify(kutu)}`);
     const gorunen = await sayfa.locator("nav.os-gezinme a:visible, nav.os-gezinme button:visible").count();
-    bekle(gorunen === 5, `alt çubukta ${gorunen} öğe var (5 beklenir)`);
+    bekle(gorunen === 4, `alt çubukta ${gorunen} öğe var (4 beklenir)`);
   });
   await senaryo("telefon: Daha fazla penceresi açılır, Esc kapatır", async () => {
     await git(sayfa, "/dashboard");
@@ -182,6 +361,12 @@ const tarayici = await chromium.launch();
     const pencere = sayfa.locator("dialog.os-daha");
     bekle(await pencere.isVisible(), "pencere açılmadı");
     bekle((await pencere.locator("a").count()) >= 3, "pencerede bölüm yok");
+    // Kenar çubuğundaki gruplardan taşınan sayfalar telefonda buradan açılır.
+    for (const ad of ["Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"]) {
+      // Açılış geçişi bitmeden isVisible false dönebiliyor; görünmesi beklenir.
+      const ok = await pencere.getByRole("link", { name: ad, exact: true }).waitFor({ state: "visible", timeout: 3000 }).then(() => true, () => false);
+      bekle(ok, `Daha fazla'da yok: ${ad}`);
+    }
     await sayfa.keyboard.press("Escape");
     await sayfa.waitForTimeout(200);
     bekle(!(await pencere.isVisible()), "Esc pencereyi kapatmadı");
@@ -302,7 +487,8 @@ const tarayici = await chromium.launch();
     bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit h1")), "belge başlığına Newsreader sızmış");
     bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit p")), "belge paragrafına Newsreader sızmış");
     await git(sayfa, "/dashboard");
-    bekle(!/newsreader/i.test(await aile(".gb-kart-bas h2")), "kart başlığına Newsreader uygulanmış");
+    // 17.11.2026: Ana Sayfa kartları bölümlere döndü; bölüm başlığı aynı kuralı taşır.
+    bekle(!/newsreader/i.test(await aile(".pw-bolum-bas h2")), "bölüm başlığına Newsreader uygulanmış");
     await ctx.close();
   });
 

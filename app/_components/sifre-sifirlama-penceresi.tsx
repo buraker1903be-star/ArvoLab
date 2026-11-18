@@ -1,10 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
-import { ArrowRight, LoaderCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { sifreSifirlamaIste, type SifirlamaDurumu } from "@/app/actions/auth";
+import { Bildirim } from "@/app/_components/ui/bildirim";
+import { Dugme } from "@/app/_components/ui/dugme";
+import { Girdi } from "@/app/_components/ui/girdi";
+import GonderDugmesi from "@/app/_components/kimlik/gonder-dugmesi";
 import { useCeviri } from "./dil-saglayici";
 
 /*
@@ -16,27 +19,17 @@ import { useCeviri } from "./dil-saglayici";
   tıklanırsa sayfa açılır; e-postalardaki "şifremi unuttum" bağlantıları da
   o sayfaya gidiyor. Girişte yazılmış e-posta pencereye taşınır — aynı
   adresi ikinci kez yazdırmamak için.
-*/
-function GonderDugmesi() {
-  const t = useCeviri();
-  const { pending } = useFormStatus();
-  return (
-    <button className="login-button" type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? (
-        <>
-          <LoaderCircle size={18} className="giris-donen" aria-hidden="true" />
-          {t({ tr: "Gönderiliyor…", en: "Sending…" })}
-        </>
-      ) : (
-        <>
-          {t({ tr: "Sıfırlama bağlantısı gönder", en: "Send reset link" })}
-          <ArrowRight size={18} aria-hidden="true" />
-        </>
-      )}
-    </button>
-  );
-}
 
+  Signature OS 5 / Phase 2: yalnızca görünüş (os5 pencere, Girdi, Bildirim).
+  Eylem (sifreSifirlamaIste), durumlar ve "kayıtlıysa" cümlesi aynı: yanıt
+  hesabın varlığını sızdırmamak için her adreste aynı.
+
+  Alanda autoFocus YOK (12.11.2026). Eskiden vardı ve odak, pencere
+  "beni kim açtı"yı kaydetmeden ÖNCE alana geçiyordu: Dialog açanı değil
+  alanı kaydediyor, kapanınca odak sökülmüş alana dönemeyip sayfanın
+  başına düşüyordu (Esc'ten sonra klavye kullanıcısı yerini kaybediyordu).
+  İlk alanı Dialog zaten kendisi odaklıyor.
+*/
 const BASLANGIC: SifirlamaDurumu = { durum: "bos" };
 
 export default function SifreSifirlamaPenceresi() {
@@ -50,6 +43,7 @@ export default function SifreSifirlamaPenceresi() {
     <>
       <a
         href="/forgot-password"
+        className="os5-kimlik-baglanti"
         onClick={(e) => {
           e.preventDefault();
           const girisAlani = document.getElementById("email");
@@ -61,6 +55,7 @@ export default function SifreSifirlamaPenceresi() {
         {t({ tr: "Şifremi unuttum", en: "Forgot password" })}
       </a>
       <Dialog
+        gorunum="os5"
         open={acik}
         onClose={() => setAcik(false)}
         kicker={t({ tr: "Şifre sıfırlama", en: "Password reset" })}
@@ -87,40 +82,43 @@ function SifirlamaFormu({ eposta, kapat }: { eposta: string; kapat: () => void }
 
   if (durum.durum === "gonderildi") {
     return (
-      <div className="stack">
-        <p className="alert" data-tone="success" role="status">
+      <div className="os5-kimlik-formu">
+        <Bildirim ton="basari" rol="status">
           {t({
             tr: "Bu adres kayıtlıysa birkaç dakika içinde bir sıfırlama bağlantısı gelecek. Bağlantıyı bu cihazda ve aynı tarayıcıda açın; spam klasörünü de kontrol edin.",
             en: "If this address is registered, a reset link will arrive within a few minutes. Open it on this device in the same browser, and check your spam folder.",
           })}
-        </p>
-        <button id="sifirlama-tamam" type="button" className="login-button" onClick={kapat}>
+        </Bildirim>
+        <Dugme id="sifirlama-tamam" tamGenislik onClick={kapat}>
           {t({ tr: "Tamam", en: "OK" })}
-        </button>
+        </Dugme>
       </div>
     );
   }
 
   return (
-    <form className="login-form" action={eylem}>
+    <form className="os5-kimlik-formu" action={eylem}>
       {durum.durum === "eksik" ? (
-        <p className="alert" role="alert">
+        <Bildirim ton="hata" rol="alert">
           {t({ tr: "E-posta adresi zorunludur.", en: "Email address is required." })}
-        </p>
+        </Bildirim>
       ) : null}
-      <label htmlFor="sifirlama-eposta">{t({ tr: "E-posta adresi", en: "Email address" })}</label>
-      <input
+      <Girdi
         id="sifirlama-eposta"
         name="email"
         type="email"
+        etiket={t({ tr: "E-posta adresi", en: "Email address" })}
         autoComplete="email"
         inputMode="email"
         defaultValue={eposta}
         placeholder={t({ tr: "ornek@universite.edu.tr", en: "name@university.edu" })}
         required
-        autoFocus
       />
-      <GonderDugmesi />
+      <GonderDugmesi
+        metin={t({ tr: "Sıfırlama bağlantısı gönder", en: "Send reset link" })}
+        bekleyen={t({ tr: "Gönderiliyor…", en: "Sending…" })}
+        sonEk={<ArrowRight size={18} aria-hidden="true" />}
+      />
     </form>
   );
 }

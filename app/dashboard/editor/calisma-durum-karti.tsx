@@ -176,9 +176,9 @@ export default async function CalismaDurumKarti({
             {(kelime ?? 0).toLocaleString(YEREL[dil])}
             <small>{t({ tr: "kelime", en: "words" })}</small>
           </dd>
-          <span title={ilerleme?.ipucu}>{ilerleme
+          <dd className="tez-olcu-not" title={ilerleme?.ipucu}>{ilerleme
               ? t({ tr: `%${ilerleme.yuzde} ${ilerleme.etiket}`, en: `${ilerleme.yuzde}% ${ilerleme.etiket}` })
-              : t({ tr: "Hedef yok — kılavuz bağlanınca hesaplanır", en: "No target — calculated once a guideline is linked" })}</span>
+              : t({ tr: "Hedef yok — kılavuz bağlanınca hesaplanır", en: "No target — calculated once a guideline is linked" })}</dd>
         </div>
         <div className="tez-olcu" data-tone={due?.tone}>
           <dt>{t({ tr: "Teslim", en: "Due" })}</dt>
@@ -188,16 +188,16 @@ export default async function CalismaDurumKarti({
                 {Math.abs(due.days)}
                 <small>{due.days < 0 ? t({ tr: "gün gecikti", en: "days overdue" }) : t({ tr: "gün", en: "days" })}</small>
               </dd>
-              <span>{calisma.due_date ? tarih(calisma.due_date) : due.label}</span>
+              <dd className="tez-olcu-not">{calisma.due_date ? tarih(calisma.due_date) : due.label}</dd>
             </>
           ) : (
             <>
               <dd>—</dd>
               {duzenleyebilir && !calisma.due_date ? (
                 /* Tarih yoksa kart ne kadar vakit kaldığını söyleyemiyor; burada seçilip kaydediliyor (28.10.2026). */
-                <TeslimTarihiFormu projectId={calisma.id} bugun={bugun} />
+                <dd className="tez-olcu-not"><TeslimTarihiFormu projectId={calisma.id} bugun={bugun} /></dd>
               ) : (
-                <span>{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</span>
+                <dd className="tez-olcu-not">{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</dd>
               )}
             </>
           )}
@@ -207,13 +207,13 @@ export default async function CalismaDurumKarti({
           <dd>
             {hazirlik ? `${hazirlik.done}/${hazirlik.total}` : "—"}
           </dd>
-          <span>
+          <dd className="tez-olcu-not">
             {hazirlik
               ? hazirlik.done === hazirlik.total
                 ? t({ tr: "Otomatik denetimler temiz", en: "Automatic checks are clean" })
                 : t({ tr: "madde hazır", en: "items ready" })
               : t({ tr: "Müsvedde henüz boş", en: "Manuscript is still empty" })}
-          </span>
+          </dd>
         </div>
       </dl>
 
@@ -238,7 +238,8 @@ export default async function CalismaDurumKarti({
         </div>
         {/* İş bittiyse düğme bu kartın kendisine gidiyordu; çizilmiyor. */}
         {sirada.bitti ? null : (
-          <Link href={sirada.href} className="projects-primary-button button-compact">
+          /* İkincil (ikinci tur, 17.11.2026): kartın tek birincil eylemi "Yazmaya devam et". Eskiden "Şimdi" satırı ve kılavuz düğmesi de birincildi; üç koyu düğme yan yana hangisinin asıl iş olduğunu söylemiyordu. */
+          <Link href={sirada.href} className="projects-filter-button button-compact">
             {sirada.eylem}
           </Link>
         )}
@@ -342,7 +343,7 @@ export default async function CalismaDurumKarti({
             calisma={calisma}
             uygulanan={uygulanan}
             kilavuzOkunamadi={kilavuzOkunamadi}
-            triggerClassName={uygulanan ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
+            triggerClassName="projects-filter-button button-compact"
             kisa
             /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
             acikBasla={kilavuzAc}

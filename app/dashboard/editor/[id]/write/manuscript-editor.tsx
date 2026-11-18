@@ -76,6 +76,8 @@ import {
   TableCellsMerge,
   TableCellsSplit,
   Sparkles,
+  FileText,
+  Info,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -133,6 +135,24 @@ import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSay
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
+import {
+  autosaveDelay,
+  draftDelay,
+  eskiSurumHatasiMi,
+  kayitKarari,
+  kayitSonucuKarari,
+  kurtarilabilirTaslaklar,
+  sonrakiTeklif,
+  yazarkenKayitZamani,
+  taslakAnahtari,
+  taslakAnahtariMi,
+  tekUcusluCalistirici,
+  tekrarGecikmesi,
+  teklifiYokSay,
+  type KayitDurumu,
+  type SunucuSonucu,
+  type YerelTaslak,
+} from "@/lib/otomatik-kayit";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
 import {
@@ -176,6 +196,9 @@ const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
 const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
 const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr: false });
 const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
+/* Yazım Stüdyosu (16.11.2026): editörün yanında kaynak PDF'i, pasaj seçimi, Arvo AI analizi ve doğrulanmış atıf. */
+const KaynakPdfPaneli = dynamic(() => import("./kaynak-pdf-paneli"), { ssr: false });
+const PdfPanelAyirici = dynamic(() => import("./pdf-panel-ayirici"), { ssr: false });
 const OlcumPaneli = dynamic(() => import("./olcum-paneli"), { ssr: false });
 
 // Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
@@ -322,44 +345,43 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
-const AUTOSAVE_DELAY_MS = 1500;
-// Büyük belgelerde (190 sayfalık tez ≈ 0,9 MB) her 1,5 sn'de tüm metni göndermek ve tarayıcı
-// taslağına yazmak bağlantıyı ve cihazı yorar; aralık belgenin boyutuna göre açılır.
-const LARGE_DOC_BYTES = 300_000;
-const autosaveDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 4000 : AUTOSAVE_DELAY_MS);
-const draftDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 3000 : 500);
-const RETRY_DELAY_MS = 10000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif"];
 
-type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
+/* Kayıt kararları ve zamanlaması saf modülde (lib/otomatik-kayit.ts, testli). */
+type SaveState = KayitDurumu;
 
-interface LocalDraft {
-  content: TiptapDoc;
-  baseUpdatedAt: string | null;
-  writtenAt: string;
-}
+type LocalDraft = YerelTaslak<TiptapDoc>;
+type TeklifTaslagi = { anahtar: string; taslak: LocalDraft };
 
 // Kaydedilemeyen değişiklikler (bağlantı kopması, oturum bitmesi, sekme
 // kapanması) bu tarayıcıda saklanır ve sayfa yeniden açılınca önerilir.
 /*
-  Anahtar KULLANICIYA da bağlı (29.10.2026). Eskiden yalnızca çalışmaya
-  bağlıydı ve çıkışta silinmiyordu: ortak bir bilgisayarda aynı çalışmaya
-  erişen danışman ya da uzman, öğrencinin kaydedilmemiş taslağını "sizin
-  kaydedilmemiş değişiklikleriniz" diye görüyor, geri yükleyip öğrencinin
-  sunucudaki metninin üzerine yazabiliyordu. Eski biçimdeki anahtar bir
-  geçiş dönemi okunuyor: içindeki metin kaybolmasın.
+  Anahtar KULLANICIYA (29.10.2026) ve SEKMEYE (P52a1, 15.11.2026) bağlı;
+  biçimler ve eşleşme kuralı lib/otomatik-kayit.ts'te. Eskiden aynı
+  çalışmanın iki sekmesi tek anahtara yazıyordu: son yazan, öteki sekmenin
+  kaydedilememiş metnini siliyordu. Artık her sayfa yüklemesi kendi
+  anahtarına yazar; açılışta bu kullanıcının bu çalışmaya ait bütün
+  taslakları taranır ve en yenisi önerilir (kapanan sekmenin taslağı da
+  bulunur — kurtarma deneyimi aynı). Eski biçimdeki anahtarlar okunmaya
+  devam eder: içlerindeki metin kaybolmasın.
 */
-const draftKey = (projectId: string, kullaniciId: string | null) =>
-  kullaniciId ? `arvolab:manuscript-draft:${projectId}:${kullaniciId}` : `arvolab:manuscript-draft:${projectId}`;
-const eskiDraftKey = (projectId: string) => `arvolab:manuscript-draft:${projectId}`;
+function taslakAnahtarlari(projectId: string, kullaniciId: string | null): string[] {
+  const anahtarlar: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const anahtar = window.localStorage.key(i);
+    if (anahtar && taslakAnahtariMi(anahtar, projectId, kullaniciId)) anahtarlar.push(anahtar);
+  }
+  return anahtarlar;
+}
 
-function readDraft(projectId: string, kullaniciId: string | null): LocalDraft | null {
+/* Bu kullanıcının bu çalışmaya ait kurtarılabilir taslakları, en yeniden eskiye (lib/otomatik-kayit). */
+function readDrafts(projectId: string, kullaniciId: string | null): TeklifTaslagi[] {
   try {
-    const raw = window.localStorage.getItem(draftKey(projectId, kullaniciId)) ?? window.localStorage.getItem(eskiDraftKey(projectId));
-    return raw ? (JSON.parse(raw) as LocalDraft) : null;
+    const kayitlar = taslakAnahtarlari(projectId, kullaniciId).map((anahtar) => ({ anahtar, ham: window.localStorage.getItem(anahtar) }));
+    return kurtarilabilirTaslaklar<TiptapDoc>(kayitlar, projectId, kullaniciId);
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -371,21 +393,35 @@ function readDraft(projectId: string, kullaniciId: string | null): LocalDraft | 
   olduğunda kullanıcıya metninin güvende olduğu söyleniyor, o da sekmeyi
   kapatıyordu. Bir tez bölümünün kaybolması için bu yeterli.
 */
-function writeDraft(projectId: string, kullaniciId: string | null, draft: LocalDraft): boolean {
+function writeDraft(anahtar: string, draft: LocalDraft): boolean {
   try {
-    window.localStorage.setItem(draftKey(projectId, kullaniciId), JSON.stringify(draft));
+    window.localStorage.setItem(anahtar, JSON.stringify(draft));
     return true;
   } catch {
     return false;
   }
 }
 
-function clearDraft(projectId: string, kullaniciId: string | null) {
+function anahtarlariSil(anahtarlar: (string | null | undefined)[]) {
   try {
-    window.localStorage.removeItem(draftKey(projectId, kullaniciId));
-    window.localStorage.removeItem(eskiDraftKey(projectId));
+    for (const anahtar of anahtarlar) if (anahtar) window.localStorage.removeItem(anahtar);
   } catch {
     // yok say
+  }
+}
+
+/* Bu sekmenin taslağı + eski sürümlerin ortak (sekmesiz) anahtarları: başarılı kayıttan sonra
+   bunlar kaydedilmiş metnin gerisinde kalır. Başka sekmenin taslağına DOKUNULMAZ. */
+function kendiTaslaginiSil(projectId: string, kullaniciId: string | null, sekmeAnahtari: string) {
+  anahtarlariSil([sekmeAnahtari, taslakAnahtari(projectId, kullaniciId, null), taslakAnahtari(projectId, null, null)]);
+}
+
+/* Sayfa yüklemesi başına sekme kimliği (sessionStorage değil: "sekmeyi çoğalt" onu kopyalıyor). */
+function yeniSekmeId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }
 
@@ -502,7 +538,14 @@ export default function ManuscriptEditor({
   */
   const [abonelikBitti, setAbonelikBitti] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
-  const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
+  /*
+    Teklif SIRASI (P52a1): ilk eleman önerilen taslak, ötekiler aynı banttan
+    ("Öncekini göster") erişilebilir. Eskiden yalnızca en yeni öneriliyordu;
+    ikinci bir sekmenin kaydedilmemiş metnine ancak sayfa yeniden açılınca
+    ulaşılıyordu.
+  */
+  const [teklifSirasi, setTeklifSirasi] = useState<TeklifTaslagi[]>([]);
+  const draftOffer: LocalDraft | null = teklifSirasi[0]?.taslak ?? null;
   const [taslakYukleniyor, setTaslakYukleniyor] = useState(false);
   const draftOfferRef = useRef<LocalDraft | null>(null);
   /*
@@ -597,6 +640,15 @@ export default function ManuscriptEditor({
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
   const [yazimAcik, setYazimAcik] = useState(asistanAcikBasla);
+  /*
+    Kaynak PDF paneli (Yazım Stüdyosu). Yazım asistanıyla aynı anda açılmaz:
+    asistan sağa yaslı yüzen bir panel, PDF paneli ise yerleşimin sağ
+    sütunu; ikisi birlikte açılınca asistan PDF'in üstüne biniyordu. Biri
+    açılınca öteki kapanır (iki düğme de araç çubuğunda yan yana).
+  */
+  const [kaynakAcik, setKaynakAcik] = useState(false);
+  const yerlesimRef = useRef<HTMLDivElement>(null);
+  const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -632,7 +684,21 @@ export default function ManuscriptEditor({
   const updatedAtRef = useRef<string | null>(initialUpdatedAt);
   const revisionRef = useRef(0);
   const savedRevisionRef = useRef(0);
-  const inFlightRef = useRef<Promise<boolean> | null>(null);
+  /* Aynı anda tek kayıt (lib/otomatik-kayit → tekUcusluCalistirici). */
+  const kayitKuyruguRef = useRef(tekUcusluCalistirici<boolean>());
+  /* Art arda bağlantı hatası: geri çekilme bundan hesaplanır, başarıda sıfırlanır. */
+  const ardisikHataRef = useRef(0);
+  /* Bekleyen geri çekilme denemesinin zamanı; yazarken korunur (markDirty). */
+  const denemeSonuRef = useRef<number | null>(null);
+  /* Bu sayfa yüklemesinin taslak anahtarı (sekme başına; ilk yazımda kurulur). */
+  const sekmeAnahtariRef = useRef<string | null>(null);
+  const sekmeAnahtari = useCallback(
+    () => (sekmeAnahtariRef.current ??= taslakAnahtari(projectId, kullaniciId, yeniSekmeId())),
+    [projectId, kullaniciId]
+  );
+  /* "Geri yükle"de önerilen taslağın anahtarı: metin bu sekmenin taslağına geçip SUNUCUYA
+     kaydedilince silinir (arada sekme kapanırsa kaybolmasın). */
+  const geriYuklenenTaslakRef = useRef<string | null>(null);
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
   const blockedRef = useRef(false);
@@ -660,7 +726,7 @@ export default function ManuscriptEditor({
     const editor = editorRef.current;
     if (!editor || revisionRef.current === savedRevisionRef.current) return true;
     const yazildi = olc("taslak yazımı", () =>
-      writeDraft(projectId, kullaniciId, {
+      writeDraft(sekmeAnahtari(), {
         content: editor.getJSON() as unknown as TiptapDoc,
         baseUpdatedAt: updatedAtRef.current,
         writtenAt: new Date().toISOString(),
@@ -669,7 +735,7 @@ export default function ManuscriptEditor({
     taslakYazilamadiRef.current = !yazildi;
     setTaslakYazilamadi(!yazildi);
     return yazildi;
-  }, [projectId, kullaniciId]);
+  }, [sekmeAnahtari]);
 
   /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
   const hataYaz = useCallback(
@@ -695,16 +761,26 @@ export default function ManuscriptEditor({
         window.clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
       }
-      // Aynı anda tek kayıt: öncekinin bitmesi beklenir, sonra en güncel metin gönderilir.
-      while (inFlightRef.current) await inFlightRef.current;
-      // Uyumsuz içerikte "benim sürümümü kaydet" (force) de budanmış metni yazardı.
-      if (icerikUyumsuzRef.current) return false;
-      if (blockedRef.current && !force) return false;
-      if (!force && revisionRef.current === savedRevisionRef.current) return true;
+      /*
+        Aynı anda tek kayıt: öncekinin bitmesi beklenir, sonra karar verilir —
+        önceki zaten en güncel metni kaydettiyse istek gönderilmez
+        (lib/otomatik-kayit → tekUcusluCalistirici, kayitKarari).
+      */
+      return kayitKuyruguRef.current.calistir(async () => {
+        const karar = kayitKarari({
+          // Uyumsuz içerikte "benim sürümümü kaydet" (force) de budanmış metni yazardı.
+          icerikUyumsuz: icerikUyumsuzRef.current,
+          engelli: blockedRef.current,
+          zorla: force,
+          revizyon: revisionRef.current,
+          kaydedilenRevizyon: savedRevisionRef.current,
+        });
+        if (karar === "uyumsuz" || karar === "engelli") return false;
+        if (karar === "gerek-yok") return true;
 
-      const revision = revisionRef.current;
-      const run = (async () => {
+        const revision = revisionRef.current;
         setSaveState("saving");
+        let sonuc: { tur: "cevap"; cevap: SunucuSonucu } | { tur: "hata"; mesaj: string };
         try {
           // ProseMirror öznitelik nesneleri prototipsizdir (Object.create(null)); React'in sunucu
           // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
@@ -735,86 +811,83 @@ export default function ManuscriptEditor({
             force,
             progress,
           });
-          if (res.success) {
-            updatedAtRef.current = res.updatedAt;
-            savedRevisionRef.current = revision;
-            blockedRef.current = false;
-            setSessionExpired(false);
-            setAbonelikBitti(false);
-            setSaveError(null);
-            setLastSavedAt(new Date(res.updatedAt));
-            if (revisionRef.current === revision) {
-              setSaveState("saved");
-              // Taslak teklifi henüz yanıtlanmadıysa taslağı silmek kullanıcının
-              // kararını onun yerine vermek olur (eskiden böyleydi).
-              if (!draftOfferRef.current) clearDraft(projectId, kullaniciId);
-            } else {
-              setSaveState("dirty");
-              scheduleSave(autosaveDelay(payloadBytesRef.current));
-            }
-            return true;
-          }
-          persistDraft();
-          hataYaz(res.error);
-          if (res.conflict) {
-            blockedRef.current = true;
-            setSaveState("conflict");
-          } else {
-            setSaveState("error");
-            if (res.sessionExpired) {
-              blockedRef.current = true;
-              setSessionExpired(true);
-            } else if (res.forbidden) {
-              // Yetki ya da abonelik reddi: yeniden denemek asla başarmaz,
-              // 10 saniyede bir sonsuza kadar denenmesin.
-              blockedRef.current = true;
-              if (res.abonelik) setAbonelikBitti(true);
-            } else {
-              scheduleSave(RETRY_DELAY_MS);
-            }
-          }
-          return false;
+          sonuc = { tur: "cevap", cevap: res };
         } catch (hata) {
-          persistDraft();
+          sonuc = { tur: "hata", mesaj: hata instanceof Error ? hata.message : String(hata) };
+        }
+
+        const sonra = kayitSonucuKarari(sonuc, {
+          ardisikBaglantiHatasi: ardisikHataRef.current,
+          araYazildi: revisionRef.current !== revision,
+        });
+        ardisikHataRef.current = sonra.ardisikBaglantiHatasi;
+        /* Kilidi yalnızca başarı açar, kalıcı hata kurar; bağlantı hatası olduğu gibi bırakır
+           (çakışma varken "benim sürümümü kaydet" ağda düşerse çakışma kilidi sürmeli). */
+        if (sonuc.tur === "cevap" && sonuc.cevap.success) blockedRef.current = false;
+        else if (sonra.engelle) blockedRef.current = true;
+
+        if (sonuc.tur === "cevap" && sonuc.cevap.success) {
+          updatedAtRef.current = sonuc.cevap.updatedAt;
+          savedRevisionRef.current = revision;
+          setSessionExpired(false);
+          setAbonelikBitti(false);
+          setSaveError(null);
+          setLastSavedAt(new Date(sonuc.cevap.updatedAt));
+          setSaveState(sonra.durum);
+          if (sonra.sonraki === "yeniden") {
+            scheduleSave(autosaveDelay(payloadBytesRef.current));
+          } else if (!draftOfferRef.current) {
+            // Taslak teklifi henüz yanıtlanmadıysa taslağı silmek kullanıcının
+            // kararını onun yerine vermek olur (eskiden böyleydi). Yalnızca BU
+            // sekmenin taslağı silinir; başka sekmenin kaydedilmemiş metni kalır.
+            kendiTaslaginiSil(projectId, kullaniciId, sekmeAnahtari());
+            anahtarlariSil([geriYuklenenTaslakRef.current]);
+            geriYuklenenTaslakRef.current = null;
+          }
+          return true;
+        }
+
+        persistDraft();
+        if (sonuc.tur === "cevap") {
+          if (!sonuc.cevap.success) hataYaz(sonuc.cevap.error);
+        } else if (eskiSurumHatasiMi(sonuc.mesaj)) {
           /*
             Yeni sürüm yayınlanınca açık sayfadaki server action kimliği
             geçersizleşir ("Failed to find Server Action"). Bu ağ hatası değil:
             yeniden denemek asla başarmaz, sayfa yenilenmelidir. Eskiden 10
             saniyede bir sonsuza kadar deneniyordu.
           */
-          const eskiSurum = /Failed to find Server Action|Server Action .* was not found/i.test(
-            hata instanceof Error ? hata.message : String(hata),
+          hataYaz(
+            t({
+              tr: "Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.",
+              en: "A new version has been released; refresh the page and continue where you left off.",
+            })
           );
-          if (eskiSurum) {
-            blockedRef.current = true;
-            hataYaz(
-              t({
-                tr: "Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.",
-                en: "A new version has been released; refresh the page and continue where you left off.",
-              })
-            );
-            setSaveState("error");
-            return false;
-          }
+        } else {
           hataYaz(
             t({
               tr: "Bağlantı sorunu nedeniyle kaydedilemedi; birazdan yeniden denenecek.",
               en: "Could not save due to a connection problem; it will be retried shortly.",
             })
           );
-          setSaveState("error");
-          scheduleSave(RETRY_DELAY_MS);
-          return false;
         }
-      })();
-      inFlightRef.current = run;
-      try {
-        return await run;
-      } finally {
-        inFlightRef.current = null;
-      }
+        setSaveState(sonra.durum);
+        if (sonra.oturumBitti) setSessionExpired(true);
+        // Yetki ya da abonelik reddi: yeniden denemek asla başarmaz, sonsuza kadar denenmesin.
+        if (sonra.abonelikBitti) setAbonelikBitti(true);
+        /*
+          Bağlantı sorunu: eskiden sabit 10 sn'de bir, sonsuza kadar tam belge
+          gönderiliyordu. Artık 10 → 20 → 40 → 80 → 120 sn (lib/otomatik-kayit).
+        */
+        if (sonra.sonraki === "geri-cekilme") {
+          const gecikme = tekrarGecikmesi(sonra.ardisikBaglantiHatasi);
+          denemeSonuRef.current = Date.now() + gecikme;
+          scheduleSave(gecikme);
+        }
+        return false;
+      });
     },
-    [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t]
+    [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t, sekmeAnahtari]
   );
 
   const markDirty = useCallback(() => {
@@ -822,7 +895,13 @@ export default function ManuscriptEditor({
     setSaveState((state) => (state === "conflict" || state === "saving" ? state : "dirty"));
     if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
     draftTimerRef.current = window.setTimeout(persistDraft, draftDelay(payloadBytesRef.current));
-    if (!blockedRef.current) scheduleSave(autosaveDelay(payloadBytesRef.current));
+    // Bağlantı hatası sürerken her tuş 1,5 sn'lik bir deneme kurmasın, ama
+    // bekleyen denemeyi de ileri itmesin (lib/otomatik-kayit: yazarkenKayitZamani).
+    if (!blockedRef.current) {
+      const zaman = yazarkenKayitZamani(Date.now(), payloadBytesRef.current, ardisikHataRef.current, denemeSonuRef.current);
+      denemeSonuRef.current = zaman.denemeSonu;
+      scheduleSave(zaman.gecikme);
+    }
   }, [persistDraft, scheduleSave]);
 
   useEffect(() => {
@@ -858,12 +937,12 @@ export default function ManuscriptEditor({
         }
       }
       // Önceki oturumdan kalan, kaydedilememiş taslak varsa geri yüklemeyi öner.
-      const draft = readDraft(projectId, kullaniciId);
-      if (draft && JSON.stringify(draft.content) !== JSON.stringify(created.getJSON())) {
-        setDraftOffer(draft);
-      } else if (draft) {
-        clearDraft(projectId, kullaniciId);
-      }
+      /* Bu kullanıcının bu çalışmaya ait (kapanan sekmeler dahil) taslakları; en yenisi önerilir.
+         Kayıtlı metinle aynı olan taslak artık bir şey kurtarmıyor: sessizce silinir (eskisi gibi). */
+      const mevcut = JSON.stringify(created.getJSON());
+      const taslaklar = readDrafts(projectId, kullaniciId);
+      anahtarlariSil(taslaklar.filter((x) => JSON.stringify(x.taslak.content) === mevcut).map((x) => x.anahtar));
+      setTeklifSirasi(taslaklar.filter((x) => JSON.stringify(x.taslak.content) !== mevcut));
     },
     onUpdate: () => markDirtyRef.current(),
     editorProps: {
@@ -908,8 +987,14 @@ export default function ManuscriptEditor({
   */
   const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
   const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
-  /* İnceleme paneli varsayılan AÇIK: kılavuz ve yapı uyarıları orada; kapatan öğrenci bilerek kapatır. */
-  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  /*
+    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
+    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
+    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
+    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
+    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
+  */
+  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
   /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
@@ -1128,19 +1213,26 @@ export default function ManuscriptEditor({
         return;
       }
       editor.commands.setContent(draftOffer.content);
-      setDraftOffer(null);
+      /* Önerilen taslak, metin sunucuya kaydedilince silinir (saveNow); o ana kadar yedek olarak
+         durur. Sıradaki ÖTEKİ taslaklar silinmez: bir sonraki açılışta yine önerilir. */
+      geriYuklenenTaslakRef.current = teklifSirasi[0]?.anahtar ?? null;
+      setTeklifSirasi([]);
       showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
     } catch {
       showToast("error", t({ tr: "Bağlantı sorunu nedeniyle geri yüklenemedi.", en: "Could not restore due to a connection problem." }));
     } finally {
       setTaslakYukleniyor(false);
     }
-  }, [editor, draftOffer, initialUpdatedAt, projectId, t]);
+  }, [editor, draftOffer, teklifSirasi, initialUpdatedAt, projectId, t]);
 
   const discardDraft = useCallback(() => {
-    clearDraft(projectId, kullaniciId);
-    setDraftOffer(null);
-  }, [projectId, kullaniciId]);
+    // YALNIZCA gösterilen taslak silinir; sıradaki (başka sekmenin) taslak önerilir.
+    anahtarlariSil([teklifSirasi[0]?.anahtar]);
+    setTeklifSirasi(teklifiYokSay);
+  }, [teklifSirasi]);
+
+  // Öteki taslağı göster: hiçbir taslak düşmez, sıra döner (lib/otomatik-kayit → sonrakiTeklif).
+  const oncekiTaslagiGoster = useCallback(() => setTeklifSirasi(sonrakiTeklif), []);
 
   /*
     Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
@@ -1149,7 +1241,17 @@ export default function ManuscriptEditor({
   */
   useEffect(() => {
     draftOfferRef.current = draftOffer;
-    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz);
+    /*
+      İkinci argüman (emitUpdate) false: Tiptap v3'te setEditable varsayılan
+      olarak belge değişmeden bir "update" olayı yayıyor ve onUpdate bunu
+      kullanıcı değişikliği sayıyor (markDirty → otomatik kayıt). Yalnızca
+      yazılabilirliği değiştirmek belgeyi değiştirmek değildir. Eskiden
+      (14.11.2026'ya kadar) bu efekt her açılışta ~1,5 sn sonra içeriği aynı
+      bir kayıt gönderiyordu: updated_at ileri gidiyor, 10 dakikada bir
+      otomatik sürüm ekleniyor ve ikinci sekme yanlış "başka sekmede
+      değiştirildi" çakışmasına düşebiliyordu.
+    */
+    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz, false);
   }, [editor, draftOffer, icerikUyumsuz]);
 
   const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);
@@ -1989,8 +2091,16 @@ export default function ManuscriptEditor({
     if (printWindow) printWindow.location.href = target;
     else window.open(target, "_self");
   };
+  /*
+    Sürüm geri yüklendi: BU sekmenin taslağı (ve sekmesiz eski anahtarlar) eski metne göre
+    yazılmıştı, silinir. Başka sekmelerin taslaklarına DOKUNULMAZ: eskiden hepsi siliniyordu
+    ve o sekmede kaydedilememiş metin varsa, sekme kapandığında kurtarma kopyası kalmıyordu.
+    Ötekilerin güvenliği yerinde: o sekmenin bir sonraki kaydı updated_at çakışmasına düşer
+    (sessizce üzerine yazmaz), taslak önerilirse "metin başka yerde değişmiş" uyarısı çıkar ve
+    geri yükleme önce sunucudaki hâli sürüm geçmişine yedekler.
+  */
   const handleRestored = () => {
-    clearDraft(projectId, kullaniciId);
+    kendiTaslaginiSil(projectId, kullaniciId, sekmeAnahtari());
     window.location.reload();
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
@@ -2039,21 +2149,64 @@ export default function ManuscriptEditor({
       {eylemHedefi
         ? createPortal(
             <>
+              {/*
+                SADE ÜST BÖLÜM (ikinci tur, 17.11.2026). Kayıt durumu başlığın
+                yanında; üç "kontrol" işlemi (teslim kontrol listesi, kılavuz ve
+                kaynakça kontrolü, inceleme paneli) tek "Kontroller" menüsünde.
+                Eskiden başlıkta dört düğme, belgenin üstünde ayrı bir kayıt
+                şeridi ve araç çubuğunda ayrıca "Kontroller" vardı: aynı aile
+                üç yere dağılmıştı. Teslim durumu (3/5) menü düğmesinde görünür.
+              */}
               <button
                 type="button"
-                className="projects-filter-button"
-                data-tone={checklist.done === checklist.total ? "success" : undefined}
-                onClick={() => setChecklistOpen(true)}
-                title={t({ tr: "Teslimden önce bakılacaklar", en: "What to check before submission" })}
-                aria-label={t({ tr: `Teslim kontrolü ${checklist.done}/${checklist.total}`, en: `Submission checklist ${checklist.done}/${checklist.total}` })}
+                className="save-status yazma-kayit"
+                data-state={saveState}
+                title={t({ tr: "Şimdi kaydet (Ctrl+S)", en: "Save now (Ctrl+S)" })}
+                aria-live="polite"
+                onClick={() => void saveNow()}
               >
-                <ClipboardCheck size={15} aria-hidden="true" />
-                {/* Telefonda yalnızca sayı kalır (Phase 3): başlık satırı 390 pikselde 722 piksele taşıyordu. */}
-                <span className="yazma-etiket">{t({ tr: "Teslim kontrolü", en: "Submission checklist" })}</span> {checklist.done}/{checklist.total}
-                {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
-                    açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
-                {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">{t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
+                {statusLabel}
               </button>
+              <AracMenusu
+                dugmeSinifi="projects-filter-button"
+                ikon={<ClipboardCheck size={15} aria-hidden="true" />}
+                etiket={t({ tr: `Kontroller · ${checklist.done}/${checklist.total}`, en: `Checks · ${checklist.done}/${checklist.total}` })}
+                aciklama={t({
+                  tr: `Kontroller: teslim kontrolü ${checklist.done}/${checklist.total}, kılavuz ve kaynakça kontrolü, inceleme paneli`,
+                  en: `Checks: submission checklist ${checklist.done}/${checklist.total}, guideline and reference check, review panel`,
+                })}
+              >
+                <button type="button" className="arac-menu-oge" onClick={() => setChecklistOpen(true)}>
+                  <ClipboardCheck size={16} aria-hidden="true" />
+                  <span>
+                    {t({ tr: `Teslim kontrolü · ${checklist.done}/${checklist.total}`, en: `Submission checklist · ${checklist.done}/${checklist.total}` })}
+                    {/* Kuralların kaynağı: pencereyi açmadan "neye göre hazır" sorusunun cevabı. */}
+                    {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi"> · {t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
+                  </span>
+                </button>
+                {/*
+                  Adı NE DENETLEDİĞİNİ söylüyor: kılavuzun zorunlu bölümleri, atıf
+                  stili ve kaynakça–atıf eşleşmesi. Teslim kontrolü bir liste,
+                  canlı yapı rozeti inceleme panelinde.
+                */}
+                <button
+                  type="button"
+                  className="arac-menu-oge"
+                  onClick={handleCheck}
+                  disabled={checking}
+                  title={t({
+                    tr: "Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi",
+                    en: "Required guideline sections, citation style and reference–citation matching",
+                  })}
+                >
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  <span>{checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" aria-pressed={incelemeAcik} onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}>
+                  {incelemeAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+                  <span>{incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}</span>
+                </button>
+              </AracMenusu>
               {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
               <AracMenusu
                 dugmeSinifi="projects-filter-button"
@@ -2074,35 +2227,11 @@ export default function ManuscriptEditor({
                   <span>{t({ tr: "LaTeX (Overleaf)", en: "LaTeX (Overleaf)" })}</span>
                 </button>
               </AracMenusu>
-              {/*
-                Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
-                vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
-                yalnızca YAPIYI denetliyor (canlı), "Teslim kontrolü" bir
-                kontrol listesi, bu düğme ise kılavuz uyumunu ve kaynakça
-                çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
-                öğrenci hangisinin neye baktığını ayırt edemiyordu.
-              */}
-              <button
-                type="button"
-                className="projects-primary-button"
-                onClick={handleCheck}
-                disabled={checking}
-                title={t({
-                  tr: "Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi",
-                  en: "Required guideline sections, citation style and reference–citation matching",
-                })}
-              >
-                <ShieldCheck size={15} aria-hidden="true" />
-                <span className="yazma-etiket">
-                  {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
-                </span>
-                <span className="yazma-etiket-kisa">{checking ? t({ tr: "Kontrol…", en: "Checking…" }) : t({ tr: "Kontrol", en: "Check" })}</span>
-              </button>
             </>,
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout" data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined}>
+    <div className="manuscript-layout" ref={yerlesimRef} data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined} data-pdf={kaynakAcik ? "" : undefined} data-asistan={yazimAcik ? "" : undefined}>
       {/*
         TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
         yazım ekranı örnek; "daha elit, daha akışkan").
@@ -2365,8 +2494,27 @@ export default function ManuscriptEditor({
         </div>
         <div className="arac-grup arac-grup-asistan">
           {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
-          <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
+          <ToolbarButton
+            label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}
+            metin={t({ tr: "Asistan", en: "Assistant" })}
+            active={yazimAcik}
+            onClick={() => {
+              setYazimAcik((acik) => !acik);
+              setKaynakAcik(false);
+            }}
+          >
             <Sparkles size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t({ tr: "Kaynak PDF: editörün yanında oku, pasaj seç, Arvo AI'a sor, doğrulanmış atıf ekle", en: "Source PDF: read beside the editor, select a passage, ask Arvo AI, insert a verified citation" })}
+            metin={t({ tr: "PDF", en: "PDF" })}
+            active={kaynakAcik}
+            onClick={() => {
+              setKaynakAcik((acik) => !acik);
+              setYazimAcik(false);
+            }}
+          >
+            <FileText size={16} />
           </ToolbarButton>
           <ToolbarButton
             label={t({
@@ -2400,10 +2548,24 @@ export default function ManuscriptEditor({
           </ToolbarButton>
         </div>
         <div className="arac-grup arac-grup-son">
-          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          {/*
+            "Bul" ve "Odak modu" 17.11.2026'dan beri "Belge" menüsünde (premium
+            çalışma alanı: ince araç çubuğu). Eskiden çubuktaydılar ve 1440 px'te
+            çubuk 323 px taşıyor, sağdaki "Kontroller" kaydırmadan görünmüyordu.
+            Ctrl+F ve Esc kısayolları değişmedi.
+          */}
+          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Bul, odak modu, sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Find, focus mode, page setup, cover, share, versions, shortcuts" })} etiketiGizle>
+          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul ve değiştir", en: "Find and replace" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
             <Search size={16} />
           </ToolbarButton>
-          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Page setup, cover, share, versions, shortcuts" })} etiketiGizle>
+          <ToolbarButton
+            label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
+            metin={odak ? t({ tr: "Odak modundan çık", en: "Exit focus mode" }) : t({ tr: "Odak modu", en: "Focus mode" })}
+            active={odak}
+            onClick={() => setOdak((o) => !o)}
+          >
+            {odak ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
@@ -2420,39 +2582,17 @@ export default function ManuscriptEditor({
             <Keyboard size={16} />
           </ToolbarButton>
           </AracMenusu>
-          <ToolbarButton
-            label={incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
-            active={incelemeAcik}
-            onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}
-          >
-            {incelemeAcik ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </ToolbarButton>
-          <ToolbarButton
-            label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
-            active={odak}
-            onClick={() => setOdak((o) => !o)}
-          >
-            {odak ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </ToolbarButton>
         </div>
       </div>
 
     <div className="manuscript-main">
     <div className="manuscript-editor-shell">
-      {/* Kayıt durumu ve bul-değiştir belgenin üstünde, yapışık */}
-      <div className="manuscript-toolbar manuscript-ust">
-        <button
-          type="button"
-          className="save-status"
-          data-state={saveState}
-          title={t({ tr: "Şimdi kaydet (Ctrl+S)", en: "Save now (Ctrl+S)" })}
-          aria-live="polite"
-          onClick={() => void saveNow()}
-        >
-          {statusLabel}
-        </button>
-        {findOpen ? <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
-      </div>
+      {/* Bul-değiştir belgenin üstünde, yapışık. Kayıt durumu 17.11.2026'dan beri sayfa başlığında (yukarıdaki portal); eskiden burada ayrı bir şerit her zaman ~48 px tutuyordu. */}
+      {findOpen ? (
+        <div className="manuscript-toolbar manuscript-ust">
+          <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} />
+        </div>
+      ) : null}
 
       {icerikUyumsuz ? (
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
@@ -2486,13 +2626,24 @@ export default function ManuscriptEditor({
                   en: " The text has changed elsewhere since this draft; if you restore, the server copy is first backed up to the history.",
                 })
               : ""}{" "}
+            {teklifSirasi.length > 1
+              ? t({
+                  tr: `Bu çalışma için ${teklifSirasi.length - 1} taslak daha var (başka bir sekmeden). `,
+                  en: `There ${teklifSirasi.length - 1 === 1 ? "is" : "are"} ${teklifSirasi.length - 1} more ${teklifSirasi.length - 1 === 1 ? "draft" : "drafts"} for this work (from another tab). `,
+                })
+              : ""}
             {t({ tr: "Karar verene kadar editör salt okunur.", en: "The editor is read-only until you decide." })}
           </span>
           <span className="cluster">
             <button type="button" className="projects-primary-button" disabled={taslakYukleniyor} onClick={() => void restoreDraft()}>
               {t({ tr: "Geri yükle", en: "Restore" })}
             </button>
-            <button type="button" className="projects-filter-button" onClick={discardDraft}>
+            {teklifSirasi.length > 1 ? (
+              <button type="button" className="projects-filter-button" disabled={taslakYukleniyor} onClick={oncekiTaslagiGoster}>
+                {t({ tr: "Öncekini göster", en: "Show the other draft" })}
+              </button>
+            ) : null}
+            <button type="button" className="projects-filter-button" disabled={taslakYukleniyor} onClick={discardDraft}>
               {t({ tr: "Yok say", en: "Discard" })}
             </button>
           </span>
@@ -2573,7 +2724,28 @@ export default function ManuscriptEditor({
             >
               {t({ tr: "Diğer sürümü aç", en: "Open the other version" })}
             </button>
-            <button type="button" className="button-danger" onClick={() => void saveNow(true)}>
+            {/*
+              Zorla kayıt artık reddedilebiliyor (P52a2): öteki sürüm
+              yedeklenemezse ya da yedekten sonra metin yeniden değiştiyse
+              hiçbir şey yazılmıyor ve çakışma bandı yerinde kalıyor. Bildirim
+              olmasa düğme "hiçbir şey yapmadı" gibi görünürdü.
+            */}
+            <button
+              type="button"
+              className="button-danger"
+              onClick={() =>
+                void saveNow(true).then((kaydedildi) => {
+                  if (!kaydedildi)
+                    showToast(
+                      "error",
+                      t({
+                        tr: "Sürümünüz kaydedilmedi: öteki sürüm yedeklenemedi ya da metin bu arada yeniden değişti. Hiçbir metin silinmedi; biraz sonra yeniden deneyin.",
+                        en: "Your version was not saved: the other version could not be backed up, or the text changed again in the meantime. Nothing was deleted; try again shortly.",
+                      })
+                    );
+                })
+              }
+            >
               {t({ tr: "Benim sürümümü kaydet", en: "Save my version" })}
             </button>
           </span>
@@ -2692,28 +2864,34 @@ export default function ManuscriptEditor({
           </div>
         </div>
       ) : !guideline && isThesis ? (
-        <div className="guideline-applied-banner" data-tone="muted" role="status">
-          <div>
-            <strong>{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</strong>
-            {/* Eskiden yalnızca "kurumu seçin" deniyordu: kataloğunda kılavuzu
-                olmayan (yurt dışındaki her) öğrenci kurumu seçse de bir şey
-                değişmiyordu. Asıl yol kendi kılavuzunu yüklemek. */}
-            <span>
-              {t({
-                tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-                en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
-              })}
-            </span>
-          </div>
-          <div className="cluster">
-            <Link href={calismaAdresi(projectId, { kilavuz: true })} className="projects-primary-button">
-              {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
-            </Link>
-            <Link href={editHref} className="projects-filter-button">
-              {t({ tr: "Kurumu seç", en: "Select institution" })}
-            </Link>
-          </div>
-        </div>
+        /*
+          KOMPAKT KILAVUZ BİLGİSİ (17.11.2026, onaylı tasarım): eskiden iki
+          satır açıklama ve iki büyük düğmeyle belgenin üstünde ~150 px'lik
+          bir kutuydu; telefonda belge metnini ilk ekranın altına itiyordu.
+          Şimdi tek satır: durum + iki bağlantı. Açıklama title'da ve
+          ekran okuyucuya açık (role=status). Asıl yol hâlâ kendi kılavuzunu
+          yüklemek; "kurumu seç" ikinci sırada (eskiden yalnızca o vardı ve
+          kataloğunda kılavuzu olmayan öğrencide bir şey değiştirmiyordu).
+        */
+        <p
+          className="kilavuz-satiri"
+          role="status"
+          title={t({
+            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
+            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
+          })}
+        >
+          <Info size={15} aria-hidden="true" />
+          {/* Telefonda kısa yazım (ikinci tur): uzun cümle iki satıra taşıyordu. Bağlantıların erişilebilir adı her ekranda tam. */}
+          <span className="kilavuz-uzun">{t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}</span>
+          <span className="kilavuz-kisa">{t({ tr: "Kılavuz yok.", en: "No guideline." })}</span>
+          <Link href={calismaAdresi(projectId, { kilavuz: true })} aria-label={t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}>
+            <span className="kilavuz-uzun">{t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}</span>
+            <span className="kilavuz-kisa">{t({ tr: "Yükle", en: "Upload" })}</span>
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link href={editHref}>{t({ tr: "Kurumu seç", en: "Select institution" })}</Link>
+        </p>
       ) : null}
 
       {guideline && syncMode === "offer" ? (
@@ -3058,6 +3236,9 @@ export default function ManuscriptEditor({
         />
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
       </ManuscriptOutline>
+
+      {kaynakAcik ? <PdfPanelAyirici yerlesim={yerlesimiAl} /> : null}
+      <KaynakPdfPaneli editor={editor} projectId={projectId} acik={kaynakAcik} onKapat={() => setKaynakAcik(false)} onCite={handleCite} />
 
       {/*
         Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık

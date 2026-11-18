@@ -321,6 +321,9 @@ export async function runCitationCheck(input: {
     possible: academicVerification.filter((item) => item.status === "possible_match").length,
     notFound: academicVerification.filter((item) => item.status === "not_found").length,
     insufficientData: academicVerification.filter((item) => item.status === "insufficient_data").length,
+    /* Dizine ulaşılamayanlar "bulunamadı"ya KATILMAZ: geçici arıza hüküm
+       değil. Eski kayıtlarda bu alan yok; okuyan taraf 0 sayıyor. */
+    unreachable: academicVerification.filter((item) => item.status === "ulasilamadi").length,
   };
 
   const { error } = await supabase.from("citation_checks").insert({
@@ -428,7 +431,7 @@ export async function sonKaynakcaDenetimi(projectId: string) {
     citationsWithoutReference?: { raw: string }[];
     referencesWithoutCitation?: { raw: string }[];
     academicVerification?: unknown[];
-    verificationSummary?: { verified: number; possible: number; notFound: number; insufficientData: number };
+    verificationSummary?: { verified: number; possible: number; notFound: number; insufficientData: number; unreachable?: number };
     tyk?: TykBulgusu[];
     ornekAtif?: string | null;
   };

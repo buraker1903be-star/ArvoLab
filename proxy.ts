@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
+import { ortamGirdisi, supabaseOrtamKarari } from "@/lib/supabase/ortam-guvenligi";
 import { NextResponse, type NextRequest } from "next/server";
 import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
 import { BASKA_CIHAZ_BILGISI, baskaCihazdanKapatildiMi, oturumCereziMi } from "@/lib/tek-oturum";
+import { amrYontemleri } from "@/lib/auth-link";
+import { SIFRE_VAR_CEREZI, ilkSifreGerekli, ilkSifreSorulmali } from "@/lib/ilk-sifre";
+import { ilkSifreDurumu } from "@/lib/supabase/sifre-durumu";
 
 // Next.js 16 "proxy" katmanı (eski adıyla middleware):
 // 1) Supabase oturum çerezini her istekte yeniler (Server Component'ler çerez yazamaz).
@@ -32,6 +36,16 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseKey) return dilCereziniYaz(NextResponse.next({ request }));
+  /*
+    Ortam güvenliği (lib/supabase/ortam-guvenligi.ts): oturum yenileme de bir
+    bağlantıdır. Ret varsa hiçbir istek Supabase'e gitmez; 503 ve ayrıntısız
+    metin (değişken adları ve kimlikler yalnızca sunucu günlüğünde).
+  */
+  const ortamKarari = supabaseOrtamKarari(ortamGirdisi(process.env, process.env.ARVOLAB_DAGITIM_ORTAMI));
+  if (ortamKarari.tur === "red") {
+    console.error(`[supabase-ortam] ${ortamKarari.mesaj} (${ortamKarari.neden})`);
+    return new NextResponse("Hizmet yapılandırması doğrulanamadı. / Service configuration could not be verified.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });
+  }
 
   // getUser oturumu reddedince çerezi kendisi siler; "çerez vardı mı" ondan ÖNCE okunur (lib/tek-oturum.ts).
   const oturumCereziVardi = request.cookies.getAll().some((c) => oturumCereziMi(c.name));
@@ -86,6 +100,30 @@ export async function proxy(request: NextRequest) {
   }
   if (user && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
     return redirectTo("/dashboard");
+  }
+
+  /*
+    İLK ŞİFRE KAPISI (G1, 07.11.2026; lib/ilk-sifre.ts). Hesabında şifre
+    olmayan ve ArvoOS üyesi olmayan oturum (kayıt/davet doğrulamasından sonra
+    şifre belirlemeden çıkan kişi) panelin hiçbir yolunu (sunucu işlemleri de
+    bu yollara POST ediliyor) açamadan şifre sayfasına gider. Karar
+    veritabanında (ilk_sifre_gerekli); şifreyle açılmış oturum hiç
+    sorgulanmaz. Gerekmediği bir kez görülen oturum çerezle işaretlenir,
+    sonraki isteklerde sorgu yok. Çerezi taklit etmek yalnızca kişinin
+    KENDİ kapısını atlatır.
+  */
+  if (user && pathname.startsWith("/dashboard") && request.cookies.get(SIFRE_VAR_CEREZI)?.value !== user.id) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const yontemler = amrYontemleri(session?.access_token);
+    if (ilkSifreSorulmali(yontemler)) {
+      const ilkSifre = await ilkSifreDurumu(supabase);
+      if (ilkSifreGerekli(ilkSifre)) return redirectTo("/reset-password", { ilk: "1" });
+      if (ilkSifre === false) {
+        response.cookies.set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
+      }
+    }
   }
 
   return dilCereziniYaz(response);

@@ -128,12 +128,19 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * runCitationCheck, analyzeUploadedDocument, importWordDocument,
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, kaynaklariIceAktar ve doiIleEkle
- * (toplu kaynak ekleme; DOI ayrıca Crossref'e gider), addManuscriptComment,
+ * (toplu kaynak ekleme; DOI ayrıca Crossref'e gider), lookupDoi (tek DOI'nin
+ * Crossref sorgusu; 12.11.2026'ya kadar kapısızdı, artık saatlik hakla da sınırlı:
+ * lib/doi-sorgu-siniri.ts), literaturAramasiYap ve aramaKaydiniEkle (OpenAlex/
+ * Crossref literatür araması ve sonucu kütüphaneye ekleme), addManuscriptComment,
  * addScoreEntry, createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
  * kılavuz yüklemesi; PDF/OCR çözümlemesi), tasEkle ve taslakTakvimOlustur (tez takvimi;
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
+ * kaynakSecimiDogrula (Yazım Stüdyosu: seçilen pasajı PDF'in metnine karşı
+ * doğrular; PDF çözümlemesi ayrıca kullanıcı başına saatlik işlem sınırından
+ * geçer, lib/pdf-islem-siniri.ts), kaynaklaSohbet (seçimli ya da seçimsiz;
+ * ortak kapı lib/ai/erisim.ts, PDF işlem sınırı da),
  * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
  * kurul sekmesi; tarama PDF/OCR çözümlemesi),
  * cslAtifUret (CSL stilinde belgeye girecek atıf ve künye; stil araması ve
@@ -153,6 +160,9 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    cevap yazabilmeli.
  *  - Okumalar, silmeler ve mevcut kaydın güncellenmesi: kullanıcı kendi
  *    verisini görebilmeli ve yönetebilmeli. Yeni değer üretmiyorlar.
+ *    Yazım Stüdyosu'nun PDF görüntüleyicisi de burada: goruntuleyiciKaynaklari
+ *    (liste) ve /api/kaynak-pdf/[pdfId] (kendi klasöründeki PDF'in baytları,
+ *    çözümleme yok) kapısız; engellenen öğrenci kendi kaynağını okuyabilmeli.
  *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller

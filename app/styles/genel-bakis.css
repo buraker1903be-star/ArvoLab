@@ -161,7 +161,7 @@
   .gb-grafik .gb-kart-bas { flex-wrap: wrap; }
 }
 @media (max-width: 760px) {
-  .gb-kart { padding: 16px; border-radius: 20px; }
+  .gb-kart { padding: 16px; border-radius: var(--kart-r); }
   .gb-ozet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
   .gb-cubuklar { gap: 4px; }
   .gb-cubuk-deger { display: none; }
@@ -190,6 +190,17 @@
 .tez-olcu dd { margin: 0; color: var(--ink); font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .tez-olcu dd small { margin-left: 4px; color: var(--muted); font-size: var(--fs-base); font-weight: 500; letter-spacing: 0; }
 .tez-olcu span { color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+/*
+  Ölçünün açıklama satırı dd'dir (18.11.2026). Eskiden <dl> içindeki
+  <div>'de <span> (ve teslim tarihi formu) duruyordu; dl yalnızca dt/dd
+  taşıyabildiği için ekran okuyucu listeyi bozuk okuyordu (axe:
+  definition-list). Görünüm span'la aynı; büyük sayı stilini (".tez-olcu
+  dd" ve medya sorgularındaki boyları) almaması için özgüllük yüksek.
+*/
+.tez-olcumler .tez-olcu > dd.tez-olcu-not {
+  margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 400;
+  line-height: var(--lh-metin); letter-spacing: 0; font-variant-numeric: normal;
+}
 .tez-olcu[data-tone="danger"] dd { color: var(--danger); }
 .tez-olcu[data-tone="warning"] dd { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 .tez-olcu[data-tone="success"] dd { color: var(--success); }
@@ -311,6 +322,9 @@
    (.gb-tek-ekran); burada yalnızca iki kartın kendi düzeni.
    ============================================================ */
 .calismalar-ikili { grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); }
+/* Seçili çalışmanın sütunu (17.11.2026): durum kartı + Danışmanıma gönder aynı hücrede; taşan sütun kayar, ızgara satır açmaz. */
+.calisma-secili-sutun { display: flex; flex-direction: column; gap: var(--kart-araligi); min-height: 0; min-width: 0; overflow-y: auto; }
+.calisma-secili-sutun > .gb-kart { flex: none; }
 .calisma-secim .gb-satir { border-left: 3px solid transparent; }
 .calisma-secim .gb-satir[aria-current="true"] { border-left-color: var(--primary-ink); background: var(--primary-soft); }
 /* Liste satırı (04.11.2026): rozet başlığı ezmesin, altta ince ilerleme çizgisi */
@@ -1191,6 +1205,15 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calismalar-ozet dd small { color: var(--muted); font-size: var(--fs-micro); font-weight: 500; }
 .calismalar-ozet [data-tone="danger"] dd { color: var(--danger); }
 .calismalar-ozet [data-tone="warning"] dd { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+/*
+  Telefonda değer sarar (18.11.2026). Üç sütunlu şeritte hücre 100 px
+  civarı; tek satır + üç nokta "10 hours ago"yu "10 hours …" diye
+  kesiyordu (İngilizce görüntü taraması; değer verinin yaşına göre
+  uzuyor, "9 hours ago" sığıyordu). Sığmayan değer artık alt satıra iner.
+*/
+@media (max-width: 760px) {
+  .calismalar-ozet dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+}
 .calisma-yeni-kutu {
   display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 14px;
   border: 1px dashed var(--line); border-radius: var(--r-md); color: var(--ink-soft); text-decoration: none;
@@ -1304,7 +1327,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .makale-araclari { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .gb-tek-ekran > .callout, .gb-tek-ekran > .alert { margin: 0; }
 /* Esnek sütunda sekme çubuğu tam genişliğe yayılıyordu; içeriği kadar kalsın. */
-.gb-tek-ekran > .calisma-sekmeleri { align-self: flex-start; }
+.gb-tek-ekran > .calisma-sekmeleri { align-self: stretch; }
+/* Yazım sayfası da .gb sütunu (Phase 5.1c): sekme şeridi içeriği kadar geniş, satır boyu uzamaz. */
+.dashboard-page.gb > .calisma-sekmeleri { align-self: stretch; }
 /* Kanıt durumu (sol kart): üç sayı alt alta, bakılacak varsa renkli kenar. */
 .kanit-durum { display: grid; gap: 8px; margin: 0; }
 .kanit-durum > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 10px; padding: 10px 12px; border: 1px solid var(--line-soft); border-left: 3px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
@@ -1353,3 +1378,79 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .doi-kutusu-donen { animation: doi-don .9s linear infinite; }
 @keyframes doi-don { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .doi-kutusu-donen { animation: none; } }
+
+/* ============================================================
+   KAYNAKLAR — PREMIUM ÇALIŞMA ALANI (17.11.2026, onaylı tasarım;
+   app/dashboard/literature/page.tsx). Tek sütun, tek liste; sekme
+   sırası (Kaynaklar | Kaynakça) çalışma sekmeleriyle aynı görünüm.
+   "Kaynak ekle" tek birincil giriş: altında üç yol açık adlarıyla.
+   ============================================================ */
+.kaynak-tek { display: flex; flex: 1; flex-direction: column; min-height: 0; width: 100%; max-width: 1040px; }
+.kaynak-tek-kart { flex: 1; min-height: 0; }
+.kaynak-tek-bas { align-items: center; }
+.kaynak-tek-bas p { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+.kaynak-sekme-sayi {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 6px;
+  border-radius: var(--os5-r-rozet); background: var(--surface-2); color: var(--ink-soft); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.kaynak-ekle { position: relative; }
+.kaynak-ekle > summary { list-style: none; cursor: pointer; }
+.kaynak-ekle > summary::-webkit-details-marker { display: none; }
+.kaynak-ekle-menu {
+  position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: var(--z-menu);
+  display: grid; gap: 2px; width: min(320px, calc(100vw - 32px)); padding: var(--s-1);
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface-raised); box-shadow: var(--os5-golge-katman);
+}
+.kaynak-ekle-menu .kaynak-ekle-oge {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 48px; padding: 8px var(--s-3);
+  border: 0; border-radius: var(--os5-kontrol-r); background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--os5-fs-govde); font-weight: 500; text-align: left; text-decoration: none; cursor: pointer;
+}
+.kaynak-ekle-menu .kaynak-ekle-oge:hover { background: var(--surface-2); }
+.kaynak-ekle-menu .kaynak-ekle-oge:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.kaynak-ekle-menu .kaynak-ekle-oge > svg { flex: none; color: var(--primary-ink); }
+.kaynak-ekle-oge > span { display: grid; gap: 1px; }
+.kaynak-ekle-oge small { color: var(--muted); font-size: var(--os5-fs-meta); font-weight: 400; }
+.pw-kaynak-bos { display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 1px dashed var(--line); border-radius: var(--os5-r-kart); color: var(--muted); font-size: var(--os5-fs-govde); }
+.pw-kaynak-bos p { margin: 0; }
+.pw-kaynak-bos > svg { flex: none; margin-top: 2px; }
+@media (max-width: 760px) {
+  .kaynak-tek-bas { align-items: stretch; }
+  .kaynak-ekle-menu { right: auto; left: 0; }
+}
+
+/*
+  Kaynaklar listesi dış kutusuz (ikinci tur, 17.11.2026): liste sekme
+  sırasının hemen altında, sayfanın kendisinde durur; kart yalnızca
+  kenarlık ve iç boşluk ekleyip içerideki satır çizgileriyle ikinci bir
+  çerçeve oluşturuyordu. Kaynakça sekmesi de aynı.
+*/
+.kaynak-tek .kaynak-tek-kart { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.kaynak-tek .kaynak-tek-bas { padding-bottom: 4px; }
+
+/*
+  TELEFONDA KAYNAKLAR ÜST ALANI (18.11.2026). 390x664'te ilk kaynak
+  528 px'te başlıyordu: sayfa aralığı 16 px, sekmelerin altında 20 px
+  boşluk, özet satırı iki düğmeyi alt alta itiyor (özet metni yarım
+  genişlikte iki satıra kırılıyordu), süzgeçler iki satır. Tasarım aynı;
+  yalnızca aralıklar daraldı, özet metni tam satıra, iki düğme yan yana,
+  süzgeçler tek satırda yatay kayar (hepsi erişilebilir, dokunma hedefi
+  44 px kalır).
+*/
+@media (max-width: 760px) {
+  .kaynaklar-sayfasi { gap: 8px; }
+  .kaynaklar-sayfasi > .projects-header { margin-bottom: 0; }
+  .kaynaklar-sayfasi .kaynak-sekmeleri { margin-bottom: 4px; }
+  .kaynaklar-sayfasi .kaynak-tek-bas { flex-wrap: wrap; gap: 8px; padding-bottom: 0; }
+  .kaynaklar-sayfasi .kaynak-tek-bas > div:first-child { flex: 1 1 100%; }
+  .kaynaklar-sayfasi .kaynak-tek-bas .pencere-dugmeler { flex-wrap: nowrap; }
+  /* Izgara sütunu kaba sabit: tek satır süzgeçler sütunu genişletip arama kutusunu kırpıyordu. */
+  .kaynaklar-sayfasi .kaynak-suzgec { grid-template-columns: minmax(0, 1fr); }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster {
+    flex-wrap: nowrap; margin-inline: -16px; padding: 0 16px 2px;
+    overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+  }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster::-webkit-scrollbar { display: none; }
+  .kaynaklar-sayfasi .kaynak-suzgec .cluster > * { flex: none; }
+}

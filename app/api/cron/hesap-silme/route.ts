@@ -61,6 +61,8 @@ export async function GET(request: Request) {
   const adaylar = (data ?? []) as { id: string; silme_talebi_at: string }[];
   let silinen = 0;
   let ertelenen = 0;
+  // Yetim profil silmesi düşenler ayrıca sayılır: yetki eksikliği gibi kalıcı bir sorunu geçici ertelemeden ayırmak için.
+  let yetimSilinemedi = 0;
 
   /*
     tuzak-tamam: silinen/ertelenen bir NÜFUS ölçmüyor, BU TURDA ne
@@ -91,9 +93,22 @@ export async function GET(request: Request) {
       ertelenen += 1;
       continue;
     }
-    // auth kaydı yoksa kişi zaten silinmiş, geride yetim bir profil kalmış.
+    /*
+      auth kaydı yoksa kişi zaten silinmiş, geride yetim bir profil kalmış.
+      Silme hatası OKUNUR. Eskiden okunmuyordu: Production'da service_role'ün
+      profiles üzerinde DELETE yetkisi yok (RC06, 17.11.2026), silme 42501 ile
+      düşüyor ama sayaç "silindi" diyor, profil kalıyor ve her koşuda yeniden
+      deneniyordu — rapor yalan, sorun görünmez. Artık başarısız silme
+      ertelenen sayılır ve hata koduyla kaydedilir.
+    */
     if (!kullanici?.user) {
-      await admin.from("profiles").delete().eq("id", aday.id);
+      const { error: profilHatasi } = await admin.from("profiles").delete().eq("id", aday.id);
+      if (profilHatasi) {
+        console.error("[hesap-silme] yetim profil silinemedi, ertelendi", aday.id, profilHatasi.code, profilHatasi.message);
+        ertelenen += 1;
+        yetimSilinemedi += 1;
+        continue;
+      }
       silinen += 1;
       continue;
     }
@@ -121,7 +136,7 @@ export async function GET(request: Request) {
     silinen += 1;
   }
 
-  return Response.json({ aday: adaylar.length, silinen, ertelenen });
+  return Response.json({ aday: adaylar.length, silinen, ertelenen, yetimSilinemedi });
 }
 
 /*

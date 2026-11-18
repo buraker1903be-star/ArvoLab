@@ -1,12 +1,11 @@
-import Image from "next/image";
-import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles } from "lucide-react";
-import ThemeToggle from "@/app/_components/theme-toggle";
-import DilSecici from "@/app/_components/dil-secici";
+import { ArrowRight } from "lucide-react";
+import KimlikYerlesimi from "@/app/_components/kimlik/kimlik-yerlesimi";
 import GirisFormu from "@/app/_components/giris-formu";
 import KayitPenceresi from "@/app/_components/kayit-penceresi";
-import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import { INGILIZCE_YAYINDA, type Metin } from "@/lib/dil";
-import { yasalAdres } from "@/lib/yasal-baglantilar";
+import { Bildirim } from "@/app/_components/ui/bildirim";
+import { dugmeSinifi } from "@/lib/os5/bilesen";
+import { ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import { BASKA_CIHAZ_BILGISI } from "@/lib/tek-oturum";
 
 /*
@@ -23,64 +22,18 @@ import { BASKA_CIHAZ_BILGISI } from "@/lib/tek-oturum";
   Telefonda eski sürümde logo yerine boş bir "A" kutusu çıkıyor, dil
   düğmeleri markanın üstüne biniyordu; üst çubuk artık her genişlikte aynı.
 
+  Signature OS 5 / Phase 2 (12.11.2026): tanıtım alanı (özellik kartları,
+  üç adım, ilkeler) kaldırıldı; sayfa ortak kimlik yerleşimine geçti
+  (app/_components/kimlik/kimlik-yerlesimi.tsx). Kurum sahibinin kararı:
+  giriş ekranında pazarlama metni yok. Kayıt girişin hemen altında ve hâlâ
+  bir düğme. Tanıtımdaki "asistan metninizi yazmaz" ilkesi 03.11.2026'dan
+  beri doğru değildi (yazım asistanı sohbette yazıyor); kaldırılınca o
+  çelişki de gitti. Hata/bilgi eşlemeleri ve `next` süzgeci aynen duruyor.
+
   Deneme süresinin GÜN SAYISI yazılmıyor: ArvoOS'ta ayarlanıyor
   (product_plans.trial_days) ve ArvoLab'ın okuyacağı bir uç nokta yok —
   burada yazılan sayı bir gün ayarla çelişirdi.
 */
-
-/*
-  TANITIM METNİ (02.11.2026, kurum sahibinin isteği: "biraz pazarlama dili").
-  Dil satış odaklı ama her cümle ürünün GERÇEKTEN yaptığını söylüyor: sayı,
-  kullanıcı sayısı ya da müşteri yorumu yok (uydurma bir rakam en kötü
-  pazarlamadır), "jüriden geçer" gibi bir söz de yok — ArvoLab onay vermiyor,
-  denetliyor. Özellikler "ne var" değil "size ne kazandırır" diye yazıldı.
-*/
-const OZELLIKLER: { ikon: typeof PenLine; baslik: Metin; aciklama: Metin }[] = [
-  {
-    ikon: PenLine,
-    baslik: { tr: "Kılavuzunuz hep önünüzde", en: "Your guideline, always in view" },
-    aciklama: {
-      tr: "Üniversitenizin kılavuzunu bir kez yükleyin; zorunlu bölümler, sayfa düzeni ve atıf sistemi siz yazarken editöre uygulanır.",
-      en: "Upload your university's guideline once; required sections, page layout and citation style are applied as you write.",
-    },
-  },
-  {
-    ikon: BookOpenCheck,
-    baslik: { tr: "Kaynakçanız kendiliğinden tutarlı", en: "A reference list that stays consistent" },
-    aciklama: {
-      tr: "Crossref ve OpenAlex'te arayın, atfı tek tıkla ekleyin; metindeki atıfla kaynakça eşleşmezse anında görün.",
-      en: "Search Crossref and OpenAlex, cite in one click, and see instantly when a citation and your reference list don't match.",
-    },
-  },
-  {
-    ikon: ChartNoAxesCombined,
-    baslik: { tr: "Ayrı istatistik programı gerekmez", en: "No separate stats package needed" },
-    aciklama: {
-      tr: "T testinden faktör analizine, sonuç tablosu hazır; SPSS, R ve Python sözdizimi de yanında. Veri dosyanız bilgisayarınızdan çıkmaz.",
-      en: "From t-tests to factor analysis, with ready result tables plus SPSS, R and Python syntax. Your data file never leaves your computer.",
-    },
-  },
-  {
-    ikon: FileCheck2,
-    baslik: { tr: "Teslim gününe hazır", en: "Ready for submission day" },
-    aciklama: {
-      tr: "Teslim kontrol listesi, Word ve PDF çıktısı, danışmanınıza salt okunur paylaşım bağlantısı — son gece sürprizi yok.",
-      en: "Submission checklist, Word and PDF export, a read-only link for your advisor — no last-night surprises.",
-    },
-  },
-];
-
-const ADIMLAR: Metin[] = [
-  { tr: "Ücretsiz hesabınızı açın", en: "Create your free account" },
-  { tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" },
-  { tr: "Yazmaya başlayın", en: "Start writing" },
-];
-
-const ILKELER: Metin[] = [
-  { tr: "Asistan metninizi yazmaz, denetler", en: "The assistant reviews your text, it doesn't write it" },
-  { tr: "Kaynak uydurmaz, gerçek dizinlerde arar", en: "It never invents sources; it searches real indexes" },
-  { tr: "Çalışmanız yalnızca size ve yetki verdiklerinize açık", en: "Your work is visible only to you and those you authorize" },
-];
 
 type HomePageProps = {
   searchParams: Promise<{ error?: string; next?: string; bilgi?: string; kayit?: string }>;
@@ -125,136 +78,52 @@ const bilgiMesajlari: Record<string, Metin> = {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const t = await ceviri();
-  const dil = await aktifDil();
   const hata = params.error ? errorMessages[params.error] : undefined;
   const bilgi = params.bilgi ? bilgiMesajlari[params.bilgi] : undefined;
   const next = params.next?.startsWith("/dashboard") ? params.next : "";
 
   return (
-    <div className="giris">
-      <header className="giris-ust">
-        <Image className="giris-logo" src="/arvolab-logo.png" alt="ArvoLab" width={1920} height={1080} priority />
-        <div className="giris-ust-araclar">
-          {/* Çeviri bitene kadar gizli (lib/dil.ts, INGILIZCE_YAYINDA). */}
-          {INGILIZCE_YAYINDA ? <DilSecici sinif="giris-dil" /> : null}
-          <ThemeToggle className="dashboard-icon-button" />
-        </div>
+    <KimlikYerlesimi>
+      <header className="os5-kimlik-baslik">
+        <h1 id="giris-baslik">{t({ tr: "ArvoLab'a giriş yapın", en: "Sign in to ArvoLab" })}</h1>
+        <p>{t({ tr: "E-posta adresiniz ve şifrenizle devam edin.", en: "Continue with your email address and password." })}</p>
       </header>
 
-      <main className="giris-govde">
-        <section className="giris-panel" aria-labelledby="giris-baslik">
-          <div className="login-card">
-            <div className="login-heading">
-              <span className="login-kicker">{t({ tr: "Çalışma alanınız", en: "Your workspace" })}</span>
-              <h1 id="giris-baslik">{t({ tr: "ArvoLab'a giriş yapın", en: "Sign in to ArvoLab" })}</h1>
-              <p>{t({ tr: "E-posta adresiniz ve şifrenizle devam edin.", en: "Continue with your email address and password." })}</p>
-            </div>
+      {hata || bilgi ? (
+        <div className="os5-kimlik-bildirimler">
+          {hata ? (
+            <Bildirim ton="hata" rol="alert">
+              {t(hata)}
+            </Bildirim>
+          ) : null}
+          {bilgi ? (
+            <Bildirim ton="uyari" rol="status">
+              {t(bilgi)}
+            </Bildirim>
+          ) : null}
+        </div>
+      ) : null}
 
-            {hata ? (
-              <p className="alert" role="alert">
-                {t(hata)}
-              </p>
-            ) : null}
-            {bilgi ? (
-              <p className="alert" data-tone="warning" role="status">
-                {t(bilgi)}
-              </p>
-            ) : null}
+      <GirisFormu next={next} />
 
-            <GirisFormu next={next} />
-          </div>
-
-          {/*
-            Kayıt kartı girişin hemen altında ve bir DÜĞME: sayfaya gelenlerin
-            çoğu henüz hesabı olmayanlar. Kurumsal kullanıcı notu da burada —
-            kurumu ArvoLab kullanan biri kendi başına kayıt olursa bireysel
-            denemeye düşer, kurum lisansına bağlanmaz.
-          */}
-          <aside className="giris-kayit" aria-labelledby="giris-kayit-baslik">
-            <div className="giris-kayit-ikon" aria-hidden="true">
-              <Sparkles size={18} />
-            </div>
-            <div className="giris-kayit-govde">
-              <h2 id="giris-kayit-baslik">{t({ tr: "ArvoLab'da yeni misiniz?", en: "New to ArvoLab?" })}</h2>
-              <p>
-                {t({
-                  tr: "Ücretsiz deneme ile hemen başlayın.",
-                  en: "Start right away with a free trial.",
-                })}
-              </p>
-              {/* Açılır pencere (02.11.2026); JavaScript'siz /kayit sayfasına gider. */}
-              <KayitPenceresi acik={params.kayit === "1"} />
-              <small>
-                {t({
-                  tr: "Kurumunuz ArvoLab kullanıyorsa kayıt olmak yerine kurum yöneticinizden davet isteyin.",
-                  en: "If your institution uses ArvoLab, ask your institution's administrator for an invitation instead of signing up.",
-                })}
-              </small>
-            </div>
-          </aside>
-        </section>
-
-        <section className="giris-tanitim" aria-labelledby="tanitim-baslik">
-          <span className="giris-ust-yazi">
-            {t({ tr: "Tez ve makale yazanlar için", en: "For thesis and article writers" })}
-          </span>
-          <h2 id="tanitim-baslik">
-            {t({ tr: "Siz yazın, ArvoLab kontrol etsin.", en: "You write. ArvoLab checks." })}
-          </h2>
-          <p className="giris-tanitim-ozet">
-            {t({
-              tr: "Kılavuza uymayan bir başlık, kaynakçada eksik bir künye, numarası kaymış bir tablo… Hepsini teslimden önce görün; danışmanınıza ve jüriye daha hazır bir metinle gidin.",
-              en: "A heading that breaks the guideline, a missing reference, a table numbered out of order… Catch them all before you submit, and go to your advisor and committee with a stronger draft.",
-            })}
-          </p>
-
-          <ul className="giris-ozellikler">
-            {OZELLIKLER.map(({ ikon: Ikon, baslik, aciklama }) => (
-              <li key={baslik.tr}>
-                <span className="giris-ozellik-ikon" aria-hidden="true">
-                  <Ikon size={18} strokeWidth={1.8} />
-                </span>
-                <span>
-                  <b>{t(baslik)}</b>
-                  {t(aciklama)}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="giris-baslangic">
-            <ol className="giris-adimlar" aria-label={t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}>
-              {ADIMLAR.map((adim, sira) => (
-                <li key={adim.tr}>
-                  <span aria-hidden="true">{sira + 1}</span>
-                  {t(adim)}
-                </li>
-              ))}
-            </ol>
-            {/* Aynı kayıt penceresi; tanıtımı okuyup ikna olan, forma geri dönmeden başlasın. */}
-            <KayitPenceresi sinif="giris-tanitim-dugme" etiket={{ tr: "Ücretsiz denemeye başla", en: "Start your free trial" }} />
-          </div>
-
-          <ul className="giris-ilkeler" aria-label={t({ tr: "İlkelerimiz", en: "Our principles" })}>
-            {ILKELER.map((ilke) => (
-              <li key={ilke.tr}>
-                <ShieldCheck size={15} aria-hidden="true" />
-                {t(ilke)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </main>
-
-      <footer className="giris-alt">
-        <span>© {new Date().getFullYear()} ArvoCulture Group</span>
-        <a href={yasalAdres("gizlilik", dil)} target="_blank" rel="noreferrer">
-          {t({ tr: "Gizlilik ve KVKK", en: "Privacy" })}
-        </a>
-        <a href="https://arvo-os.com" target="_blank" rel="noreferrer">
-          arvo-os.com
-        </a>
-      </footer>
-    </div>
+      {/*
+        Kayıt girişin hemen altında ve bir DÜĞME: sayfaya gelenlerin çoğu
+        henüz hesabı olmayanlar. Kurumsal kullanıcı notu da burada — kurumu
+        ArvoLab kullanan biri kendi başına kayıt olursa bireysel denemeye
+        düşer, kurum lisansına bağlanmaz.
+      */}
+      <section className="os5-kimlik-kayit" aria-labelledby="giris-kayit-baslik">
+        <h2 id="giris-kayit-baslik">{t({ tr: "ArvoLab'da yeni misiniz?", en: "New to ArvoLab?" })}</h2>
+        <p>{t({ tr: "Ücretsiz deneme ile hemen başlayın.", en: "Start right away with a free trial." })}</p>
+        {/* Açılır pencere (02.11.2026); JavaScript'siz /kayit sayfasına gider. */}
+        <KayitPenceresi acik={params.kayit === "1"} sinif={dugmeSinifi({ tur: "ikincil", tamGenislik: true })} sonEk={<ArrowRight size={16} aria-hidden="true" />} />
+        <small>
+          {t({
+            tr: "Kurumunuz ArvoLab kullanıyorsa kayıt olmak yerine kurum yöneticinizden davet isteyin.",
+            en: "If your institution uses ArvoLab, ask your institution's administrator for an invitation instead of signing up.",
+          })}
+        </small>
+      </section>
+    </KimlikYerlesimi>
   );
 }

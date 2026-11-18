@@ -37,32 +37,30 @@
   gap: 16px;
   min-height: var(--topbar-height);
   padding: 10px 32px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  /* Düz yüzey, ince çizgi (premium çalışma alanı, 17.11.2026): eskiden buzlu cam (saydam zemin + bulanıklık) idi; onaylı tasarımda üst çubuk sayfa yüzeyiyle aynı düz renk. */
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
-/* Marka + açık uygulama (ArvoOS'taki os-brand) */
-.os-marka { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: var(--ink); text-decoration: none; }
-.os-marka-isaret { flex: none; width: 34px; height: 34px; }
-.os-marka-zemin { fill: var(--brand-navy); }
-.os-marka-harf { fill: var(--on-brand); fill-rule: evenodd; }
-.os-marka-nokta { fill: var(--brand-green); }
-html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
-.os-marka > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.os-marka b { overflow: hidden; font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
-.os-marka b em { color: var(--brand-green); font-style: normal; }
-.os-marka small { overflow: hidden; color: var(--muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+/*
+  Marka + açık sayfa (Signature OS 5 / Phase 3). Resmî logo (ArvoLabLogosu)
+  ve sayfanın adı. Masaüstünde logo kenar çubuğunda; burada gizlenir ve
+  yalnızca sayfa adı kalır (os-shell.css).
+*/
+.os-marka { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: var(--ink); }
+.os-marka-logo { --logo-h: 26px; display: flex; align-items: center; min-height: 44px; border-radius: var(--r-xs); }
+.os-marka-logo:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-marka-sayfa { overflow: hidden; padding-left: 12px; border-left: 1px solid var(--line); color: var(--ink-soft); font-size: var(--fs-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-header-actions { display: flex; align-items: center; gap: 8px; }
 
 .dashboard-icon-button {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: var(--os5-kontrol-h);
+  height: var(--os5-kontrol-h);
   flex: none;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  /* 11 → 4 px (premium çalışma alanı): girişteki kontrol köşesiyle aynı aile. */
+  border-radius: var(--os5-kontrol-r);
   background: var(--surface);
   color: var(--ink-soft);
   cursor: pointer;
@@ -118,9 +116,6 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 .notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--primary-ink); }
 
 /* Tarih ve saat (ArvoOS'taki os-clock) */
-.os-saat { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 44px; padding: 0 6px; line-height: 1.2; }
-.os-saat small { color: var(--muted); font-size: var(--fs-micro); white-space: nowrap; }
-.os-saat time { color: var(--ink); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* Kullanıcı menüsü (ArvoOS'taki os-user): yuvarlak baş harf, açılır kart */
 .os-avatar {
@@ -137,9 +132,46 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 .os-kullanici-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: var(--z-menu);
   width: 280px; max-width: calc(100vw - 24px); padding: 8px;
+  /*
+    KISA EKRAN (Phase 5.1d-1, 14.11.2026). Eskiden yükseklik sınırı yoktu:
+    iç ekipte menü 583 px ve 600/500 px yükseklikte üst çubuktaki menünün
+    "Çıkış yap"ı ekranın altında kalıyordu, kaydırılamıyordu da. Menü
+    üst çubuğun altından (64 px) açılır; ekranın dibinde 16 px pay kalır,
+    içerik menünün içinde kayar. overscroll: sona gelen tekerlek sayfayı
+    kaydırmasın.
+  */
+  max-height: calc(100dvh - var(--topbar-height) - 16px);
+  overflow-y: auto; overscroll-behavior: contain;
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--surface-raised); box-shadow: var(--shadow-lg);
 }
+/*
+  Kenar çubuğundaki hesap satırı (Signature OS 5 / Phase 3): baş harf,
+  ad ve rol; menü YUKARI açılır. Lacivert zeminde: yazılar beyazın
+  saydamları, odak açık mavi halka (os5-tokens.css --os5-kenar-*).
+*/
+.os-kullanici--kenar > summary {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: auto; min-height: 48px; padding: 6px 8px;
+  border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi-guclu);
+  transition: background-color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os-kullanici--kenar > summary:hover, .os-kullanici--kenar[open] > summary { background: var(--os5-kenar-hover); }
+.os-kullanici--kenar > summary:focus-visible { box-shadow: var(--os5-kenar-odak); }
+.os-kullanici--kenar > summary > svg { flex: none; color: var(--os5-kenar-yazi); }
+.os-kullanici--kenar .os-avatar { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); }
+.os-kullanici-kimlik { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.3; text-align: left; }
+.os-kullanici-kimlik b, .os-kullanici-kimlik small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-kullanici-kimlik b { font-size: var(--os5-fs-meta); font-weight: 600; }
+.os-kullanici-kimlik small { color: var(--os5-kenar-yazi); font-size: var(--os5-fs-meta); }
+/*
+  Kenar çubuğunda menü YUKARI açılır ve tetikleyici ekranın dibinde
+  (alt kenarı ekran dibinden ~68 px yukarıda başlıyor). Eskiden menünün
+  üstü 1366×600'de 51 px, 1366×500'de 151 px ekranın dışına taşıyordu:
+  kimlik ve görünüm seçimi görünmüyordu. Sınır: ekran yüksekliğinden
+  tetikleyici payı ve üstte 12 px boşluk.
+*/
+.os-kullanici--kenar .os-kullanici-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; max-height: calc(100dvh - 96px); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .os-kullanici--kenar > summary { transition: none; } }
 .os-kullanici-bas { display: flex; align-items: center; gap: 12px; padding: 12px; }
 .os-kullanici-bas b { display: block; font-weight: 650; }
 .os-kullanici-bas small { display: block; color: var(--muted); font-size: var(--fs-sm); }
@@ -155,6 +187,8 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   .os-kullanici-cikis button:hover { background: var(--surface-2); }
 }
 .os-kullanici-cikis { padding-top: 4px; border-top: 1px solid var(--line-soft); }
+/* "Personel Araçları" başlığı (Phase 5.1d-3): hesap bağlantılarından ayrı bir bölüm olduğu görünsün. */
+.os-kullanici-bolum { display: block; padding: 6px 12px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .os-kullanici-cikis button { color: var(--danger); }
 .os-kullanici-alt { display: flex; align-items: center; gap: 6px; margin: 4px 12px 6px; color: var(--muted); font-size: var(--fs-micro); }
 
@@ -165,22 +199,15 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   .dashboard-header {
     min-height: calc(56px + env(safe-area-inset-top));
     padding: calc(8px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
-    border-bottom-color: transparent;
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    -webkit-backdrop-filter: saturate(170%) blur(16px);
-    backdrop-filter: saturate(170%) blur(16px);
+    /* Telefonda da düz yüzey + ince çizgi (17.11.2026); eskiden kaydırmayla belirginleşen buzlu camdı. */
   }
-  /* Kaydırınca iOS gibi çizgi ve cam belirginleşir (destekleyen tarayıcılarda) */
-  @supports (animation-timeline: scroll()) {
-    .dashboard-header { animation: header-edge linear both; animation-timeline: scroll(root block); animation-range: 0 56px; }
-    @keyframes header-edge {
-      from { border-bottom-color: transparent; background: color-mix(in srgb, var(--bg) 0%, transparent); }
-      to { border-bottom-color: color-mix(in srgb, var(--line) 80%, transparent); background: color-mix(in srgb, var(--surface) 80%, transparent); }
-    }
-  }
-  /* Telefonda tarih/saat yer kaplamasın: saat telefonun kendi çubuğunda zaten var. */
-  .os-saat { display: none; }
-  .os-marka b { font-size: var(--fs-lg); max-width: 52vw; }
+  /*
+    Telefonda logo biraz küçülür ve sayfa adı üst çubukta yazılmaz:
+    arama, bildirim, tema ve hesap düğmelerinden sonra ad iki-üç harfe
+    kesiliyordu ("An…"); sayfanın kendi başlığı zaten hemen altında.
+  */
+  .os-marka-logo { --logo-h: 22px; }
+  .os-marka-sayfa { display: none; }
 
   .dashboard-main-content {
     padding: 8px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
@@ -218,3 +245,38 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 }
 .onizleme-serit b { color: var(--primary-ink); }
 @media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }
+
+/* ============================================================
+   ÜST ÇUBUK DİL MENÜSÜ (premium çalışma alanı, 17.11.2026;
+   app/_components/dil-secici.tsx: UstDilSecici). Tema düğmesiyle aynı
+   boy ve köşe; menü tema menüsüyle aynı katman dili.
+   ============================================================ */
+.ust-dil { position: relative; }
+.ust-dil > summary {
+  display: inline-flex; align-items: center; gap: 6px; height: var(--os5-kontrol-h); padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); background: var(--surface);
+  color: var(--ink-soft); font-size: var(--os5-fs-meta); font-weight: 600; list-style: none; cursor: pointer;
+}
+.ust-dil > summary::-webkit-details-marker { display: none; }
+.ust-dil > summary:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); color: var(--primary-ink); }
+.ust-dil > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.ust-dil-menu {
+  position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: var(--z-menu);
+  display: grid; gap: 2px; min-width: 160px; padding: var(--s-1);
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface-raised); box-shadow: var(--os5-golge-katman);
+}
+.ust-dil-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: var(--os5-kontrol-h); padding: 0 var(--s-3);
+  border: 0; border-radius: var(--os5-kontrol-r); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--os5-fs-govde); text-align: left; cursor: pointer;
+}
+.ust-dil-menu button:hover { background: var(--surface-2); color: var(--ink); }
+.ust-dil-menu button[aria-pressed="true"] { color: var(--primary-ink); font-weight: 600; }
+.ust-dil-menu button:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .ust-dil > summary, .ust-dil-menu button { min-height: var(--os5-kontrol-h-dokunma); height: auto; }
+}
+/* Telefonda üst çubukta yer dar: dil hesap menüsünde ve Ayarlar'da zaten var. */
+@media (max-width: 760px) { .ust-dil { display: none; } }

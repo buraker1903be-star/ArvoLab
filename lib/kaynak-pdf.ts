@@ -17,9 +17,12 @@
 */
 
 import type { Dil, Metin } from "@/lib/dil";
+/* Doğrulama durumları tek yerde (lib/academic-reference-verification.ts);
+   eskiden burada ayrı bir kopya vardı ve yeni durum eklenince sapacaktı. */
+import type { DogrulamaDurumu } from "@/lib/academic-reference-verification";
+export type { DogrulamaDurumu };
 
 export type PdfDurumu = "indirildi" | "yuklendi" | "bulunamadi" | "erisilemedi" | "kayit_yok";
-export type DogrulamaDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
 
 /** kaynak_pdfleri satırı (migration 20261026110024). */
 export type KaynakPdfSatiri = {
@@ -100,6 +103,119 @@ export function pdfAdaylari(kayit: unknown): string[] {
 export function aranacakMi(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): boolean {
   if (durum === "not_found") return false;
   return Boolean(doi);
+}
+
+/*
+  PDF ARAMASININ BAŞLANGIÇ KARARI tek yerde, saf (12.11.2026). Eskiden
+  sunucu eyleminin içinde iki ayrı koşuldu ve test edilemiyordu.
+
+  - "ertele": dizine ulaşılamamış künye (ulasilamadi) ve DOI yok. Ortada
+    bakılmış bir şey yok; "kayıt yok" de "açık erişimli sürüm
+    bulunamadı" da yapılmamış bir aramanın sonucu gibi okunurdu. Satır
+    YAZILMAZ; denetim yeniden çalıştırılıp dizinler cevap verince olağan
+    yol işler. (Ekran bugün ulasilamadi künyeyi kuyruğa hiç koymuyor,
+    çünkü onun DOI'si yok: eşleşme yok. Bu dal sunucudaki güvence.)
+  - "kayit_yok": yalnızca İKİ dizinin de cevap verip bulamadığı künye.
+  - "bulunamadi": DOI bilinmiyor; açık erişim konumu sorulamaz.
+  - "ara": DOI var, açık erişim konumları sorulur.
+*/
+export type PdfBaslangici = "ertele" | "kayit_yok" | "bulunamadi" | "ara";
+
+export function pdfBaslangicKarari(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): PdfBaslangici {
+  if (durum === "ulasilamadi" && !doi) return "ertele";
+  if (durum === "not_found") return "kayit_yok";
+  return aranacakMi(durum, doi) ? "ara" : "bulunamadi";
+}
+
+/*
+  EKRANDA GÖSTERİLECEK PDF DURUMU. 12.11.2026'dan önce bir dizin kesintisi
+  sırasında yazılmış "kayit_yok" satırları veritabanında duruyor (geçmiş
+  kayıtlar silinmiyor). Künyenin GÜNCEL sonucu "ulasilamadi" iken o satırı
+  göstermek, kaldırdığımız yanlış "dizinde yok" işaretini yan yana geri
+  getirirdi; o durumda satır yokmuş gibi davranılır. Satırın kendisine
+  dokunulmaz: dizinler cevap verince yeni arama onu olağan yoldan yeniler.
+*/
+export function gosterilecekPdfDurumu(
+  satirDurumu: PdfDurumu | null | undefined,
+  dogrulama: DogrulamaDurumu | null | undefined,
+): PdfDurumu | null {
+  if (!satirDurumu) return null;
+  if (satirDurumu === "kayit_yok" && dogrulama === "ulasilamadi") return null;
+  return satirDurumu;
+}
+
+/*
+  PDF'İ HAZIR KÜNYEYE YENİDEN BAKILMAZ (P52-0, 15.11.2026). Eskiden sunucu
+  yalnızca öğrencinin yüklediğini ("yuklendi") koruyordu; "indirildi"
+  satırını ekran süzüyordu ama sunucu süzmüyordu. Doğrudan bir çağrıda
+  geçici bir indirme hatası hazır satırı "erisilemedi"ye çeviriyor ve
+  indirilmiş dosyayı depodan siliyordu. Ekran ile sunucu aynı kuralı
+  buradan okur.
+*/
+export function pdfHazirMi(durum: PdfDurumu | null | undefined): boolean {
+  return durum === "indirildi" || durum === "yuklendi";
+}
+
+/*
+  OTOMATİK İNDİRMENİN NEDEN BAŞARISIZ OLDUĞU (künye başına bir tane).
+  Durum sütunu yalnızca "erisilemedi" diyebiliyor (kısıt, migration yok);
+  neden çağrının sonucuyla ekrana taşınır. Eskiden bizim tarafımızdaki
+  hata da "yayıncı izin vermedi" gibi okunuyordu.
+    - erisim:      kaynak/dizin sunucusu reddetti, ulaşılamadı, zaman aşımı
+    - pdf_degil:   sunucu PDF yerine bir sayfa döndürdü (giriş, "erişiminiz yok")
+    - depo:        PDF indi ama bizim depomuza yazılamadı
+    - beklenmeyen: indirme kodunda beklenmeyen hata (bizim sorunumuz)
+*/
+export type IndirmeSorunu = "erisim" | "pdf_degil" | "depo" | "beklenmeyen";
+export type IndirmeSorunlari = Record<IndirmeSorunu, number>;
+export const bosIndirmeSorunlari = (): IndirmeSorunlari => ({ erisim: 0, pdf_degil: 0, depo: 0, beklenmeyen: 0 });
+
+/* Bir künyenin birden çok adayı olabilir: en ağır neden sayılır (bizim
+   sorunumuz, karşı tarafınkini örtmesin). */
+const SORUN_AGIRLIGI: Record<IndirmeSorunu, number> = { erisim: 1, pdf_degil: 2, depo: 3, beklenmeyen: 4 };
+export function agirSorun(onceki: IndirmeSorunu | null, yeni: IndirmeSorunu): IndirmeSorunu {
+  return onceki && SORUN_AGIRLIGI[onceki] >= SORUN_AGIRLIGI[yeni] ? onceki : yeni;
+}
+
+export function sorunlariTopla(a: IndirmeSorunlari, b: Partial<IndirmeSorunlari> | null | undefined): IndirmeSorunlari {
+  return {
+    erisim: a.erisim + (b?.erisim ?? 0),
+    pdf_degil: a.pdf_degil + (b?.pdf_degil ?? 0),
+    depo: a.depo + (b?.depo ?? 0),
+    beklenmeyen: a.beklenmeyen + (b?.beklenmeyen ?? 0),
+  };
+}
+
+/*
+  Kullanıcıya giden bildirim. Bizim sorunumuz "error" (tekrar deneyin,
+  sürerse destek); karşı tarafın sonucu "info" — yapılamayan değil,
+  öğrencinin kendi yüklemesine devredilen iş (toast-events, T2). Başarısız
+  indirme hiçbir zaman başarı olarak bildirilmez; hiç sorun yoksa bildirim
+  yok (başarıyı ekrandaki satır durumları zaten söylüyor).
+*/
+export function indirmeSorunuBildirimleri(s: IndirmeSorunlari): { tur: "error" | "info"; metin: Metin }[] {
+  const bildirimler: { tur: "error" | "info"; metin: Metin }[] = [];
+  const bizim = s.depo + s.beklenmeyen;
+  const karsi = s.erisim + s.pdf_degil;
+  if (bizim) {
+    bildirimler.push({
+      tur: "error",
+      metin: {
+        tr: `${bizim} kaynağın PDF'i bizim tarafımızdaki bir sorun yüzünden kaydedilemedi. Biraz sonra "PDF'leri bul"u yeniden deneyin; sürerse destek ekibine yazın.`,
+        en: `The PDF for ${bizim} ${bizim === 1 ? "source" : "sources"} couldn't be saved because of a problem on our side. Try "Find PDFs" again shortly; if it persists, contact support.`,
+      },
+    });
+  }
+  if (karsi) {
+    bildirimler.push({
+      tur: "info",
+      metin: {
+        tr: `${karsi} kaynağın PDF'i otomatik indirilemedi: sunucuya ulaşılamadı, erişim kısıtlı ya da PDF yerine bir sayfa döndü. "Kaynağa git" ile açıp PDF'i kendiniz yükleyebilirsiniz.`,
+        en: `The PDF for ${karsi} ${karsi === 1 ? "source" : "sources"} couldn't be downloaded automatically: the server was unreachable, access is restricted, or a web page came back instead of a PDF. Open it with "Go to source" and upload the PDF yourself.`,
+      },
+    });
+  }
+  return bildirimler;
 }
 
 /*

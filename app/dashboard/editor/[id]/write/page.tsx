@@ -1,4 +1,3 @@
-import { CalismaBaglamiYayinla } from "@/app/dashboard/_components/calisma-baglami";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { etikKaydiOku } from "@/lib/etik/oku";
 import Link from "next/link";
@@ -8,11 +7,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
-import { refreshImageUrls } from "@/lib/manuscript-images";
+import { calismaResimKlasorleri, refreshImageUrls } from "@/lib/manuscript-images";
 import { detectFormatLoss } from "@/lib/format-loss";
 import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
 import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
+import CalismaSekmeleri from "../calisma-sekmeleri";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
 
@@ -99,7 +99,7 @@ export default async function WriteManuscriptPage({
     calismaKilavuzuOku(supabase, id, project.guideline_id),
     // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
     // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
-    manuscript ? refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : Promise.resolve(null),
+    manuscript ? refreshImageUrls(manuscript.content, calismaResimKlasorleri(project)) : Promise.resolve(null),
   ]);
   const sync = resolveGuidelineSync(guideline, manuscript, await aktifDil());
   // Eski kayıt hatasından etkilenen belge: kullanıcıya neyin kaybolduğu gösterilir.
@@ -110,8 +110,6 @@ export default async function WriteManuscriptPage({
        (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
        sayfa öbür ekranlardan dar görünüyordu. */
     <main className="dashboard-page gb">
-      {/* Çalışma kenar çubuğuna bildirilir (Phase 3, os-gezinme.tsx): Yazım bölümü orada etkin görünür. */}
-      <CalismaBaglamiYayinla id={project.id} baslik={project.title ?? ""} tur={project.project_type} />
       {/* İnce başlık (04.11.2026): tek satır, kesilen başlığın tamamı üzerine gelince. Eskiden üç satırlık dev başlık yazı alanını ekranın üçte birine itiyordu. */}
       <section className="projects-header yazma-basligi">
         <div>
@@ -123,7 +121,7 @@ export default async function WriteManuscriptPage({
         {/*
           Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
           Literatür, kaynakça, belge ve analiz adımlarına oradan
-          geçiliyor (calisma-serit.tsx); listeye dönmek kullanıcıyı
+          geçiliyor; listeye dönmek kullanıcıyı
           bağlamdan çıkarıp aynı çalışmayı yeniden bulmaya zorluyordu.
           Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
           ekran olmamalı.
@@ -138,6 +136,18 @@ export default async function WriteManuscriptPage({
           </Link>
         </div>
       </section>
+
+      {/*
+        Çalışmanın bölümleri (Phase 5.1c): tablette ve masaüstü kenar çubuğu
+        DAR iken çalışma bölümlerine buradan geçilir. Açık masaüstünde gizli
+        (os-shell.css): aynı bölümler kenar çubuğunun alt menüsünde. Odak
+        modunda başlıkla birlikte çekilir (workspace.css). Eskiden yazım
+        ekranında yalnızca "Çalışmalarım" geri düğmesi vardı; tablette Kanıt,
+        Etik ve Makale'ye doğrudan geçiş yoktu.
+      */}
+      {/* Çalışmayı kenar çubuğuna da bu bileşen bildirir (CalismaBaglamiYayinla);
+          5.1d-4'e kadar sayfa aynı bildirimi ayrıca bir kez daha yapıyordu. */}
+      <CalismaSekmeleri calisma={project} aktif="yazim" />
 
       {kilavuzOkunamadi ? (
         /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin
