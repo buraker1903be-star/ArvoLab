@@ -197,7 +197,8 @@ kayıtları da gösterilmiyor. "AI geçmişi tamamlandı" denemez; tamamlanan, y
   sıkıştırmaz (önce ray, sonra çekmece). Çekmece 3. turdan beri editör başlığının altından başlar (eskiden Kontroller
   ve Dışa aktar'ı örtüyordu); incelemeye geçmek için çekmece kapatılır.
 - Odak modu Esc (son kabul turu, düzeltildi): 2ff370d'de Esc odak modundan çıkarmıyordu; tarayıcıda yeniden
-  üretildi (S18 FAIL, `sonuclar/calisma-alani-kabul-2ff370d.json` sonrası ölçüm). Üç neden vardı, üçü ayrı commit:
+  üretildi (yeni S18 senaryosu 2ff370d derlemesinde FAIL; o ölçüm depoya yazılmadı,
+  `calisma-alani-kabul-2ff370d.json` S18'den öncedir ve değiştirilmedi). Üç neden vardı, üçü ayrı commit:
   (1) açık pencere denetimi `[role=dialog]` ile 18 KAPALI pencereyi sayıyordu (204e6f0; S18 hâlâ FAIL,
   `calisma-alani-kabul-204e6f0.json`); (2) ProseMirror Esc'i her zaman `preventDefault` ediyor, imleç belgedeyken
   kabarcık dinleyicisi işlenmiş sayıp çıkmıyordu — aynı neden 1280'de PDF çekmecesinin Esc'le kapanmasını da
