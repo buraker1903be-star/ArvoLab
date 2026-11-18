@@ -47,3 +47,56 @@ C1–C8 → 30 dk gözlem.
 
 **HEAD notu:** bu kayıt dosyası dalda yeni bir commit oluşturur. Onaylanan `d3bc783` ile arasındaki fark yalnızca bu
 belgedir; uygulama kodu aynı.
+
+---
+
+## Devam: 18.11.2026 22:00–22:32 UTC
+
+**Yedek (kullanıcının panelden bildirdiği):** son veritabanı yedeği 18.11.2026 05:00 UTC / 08:00 TSİ. Bu yedek
+Storage dosyalarını kapsamıyor.
+
+| Adım | Sonuç |
+|---|---|
+| HEAD / CI | `18af35b`; `d3bc783`'e göre yalnızca bu belge farklı, uygulama kodu aynı; `kontrol` iki koşuda yeşil |
+| Migration'lar | Yeniden uygulanmadı; kayıtlı 2/2, toplam 123 |
+| Sentetik hesap | `6168c0ea-f7de-4a02-9e12-8c1e4df3dfd0` (`…af5173@resend.dev`), kullanıcı onayladı; geçici şifre kullanıcıdan, hiçbir dosyaya yazılmadı |
+| Oturumlu API | `academic_projects?select=id,belge_dili` → 200; `kaynak_pdfleri?select=id,kaynak_id` → 200 |
+| Eski kodla eski çalışma (C1 hazırlığı) | `7788514e-12a7-4c2c-bab7-669cbf2ef278`, `a076d9d` canlıdayken oluşturuldu; `belge_dili` NULL, sayfa hatası 0 |
+| Birleştirme | PR #110 taslaktan çıkarıldı, squash: **`ea010ace1f8ee4f710203d00a1bbe3a5d6dab92d`** |
+| Production dağıtımı | `dpl_H41HPBEkUF93mdpDgsKHNN566BSS`, READY 22:11:46 UTC; `lab.arvo-os.com` bu dağıtıma bağlı (`ea010ac`) |
+
+### Canlı kabul
+
+| # | Sonuç | Kanıt |
+|---|---|---|
+| C1 | PASS | Eski çalışma yeni kodla açıldı, yazıldı, yenilemede iki cümle de var; `belge_dili` NULL kaldı |
+| C2 | PASS | Yeni çalışma `9ff42aa9-9d6c-4c1e-a38d-5c39391eca37`, makale, `belge_dili='en'`, metin kaydedildi |
+| C3 | ÖLÇÜLMEDİ | C7 ile birlikte koşacaktı; durma sonrası koşulmadı |
+| C4 | PASS | Kaynak `c6fc66cf…` (arayüz, Manuel kaynak ekle); Kaynakça denetimi + PDF yükleme → "PDF yüklendi." (`cde880db…`); PDF panelinde "Kaynağa bağla" → `kaynak_id` dolu; atıf kartı (Deneme, 2020) eşleşti, "PDF'i aç" bağlı PDF'i açtı |
+| C5 | PASS | Başka çalışmanın kaynağı (`b5c98534…`) ve olmayan kaynak → 403/42501 "Kaynak bu çalışmaya ait değil…"; anon → 401; bağ değişmedi |
+| C6 | **FAIL** | Aşağıda |
+| C7 | ÖLÇÜLMEDİ | Durma |
+| C8 | KISMİ | 22:11:46–22:31:36 (~20 dk) Vercel çalışma hatası 0; 30 dk tamamlanmadı |
+
+**C6 ayrıntısı.** 1472'de liste + PDF yan yana, taşma 0. AI paneli açıldı/kapandı, AI isteği 0
+(`ai_assistant_runs` bu kullanıcı için boş). Telefonda (390) alt çubuk Belge / Kaynaklar / Arvo AI geçişleri
+çalışıyor, taşma 0. **Hata (1280):** PDF geçici çekmecesi açıkken ("Geçici görünüm · Esc ile kapatın"), imleç
+belgedeyken Esc çekmeceyi kapatmıyor — AYNI SEKMEDE daha önce Arvo AI paneli (`?sag=ai`) açılmışsa. Ölçüm:
+
+| Dizi (1280, imleç belgede, Esc) | Çekmece kapandı |
+|---|---|
+| Taze sekme | 3/3 |
+| 1472 → 1280 yeniden boyut | 1/1 |
+| Önce `?sag=ai` açılıp sonra PDF çekmecesi | 1/6 |
+
+Arada tam sayfa yüklemesi var; localStorage, sessionStorage ve çerezlerde fark yok. Satır içi öneri yok, atıf
+kartı yok, açık pencere yok. Çekmece çarpı düğmesiyle kapanıyor; veri kaybı ya da sayfa hatası yok. Yerel kabulde
+(S16/S18/S19) bu dizi sınanmamıştı. Görseller: düzenek klasöründe `c6-1280-esc.png`, `esc-*.png`.
+
+### Oluşturulan sentetik kayıtlar (temizlenmedi — hata yeniden üretilebilsin diye, karar bekliyor)
+
+- auth kullanıcı `6168c0ea-f7de-4a02-9e12-8c1e4df3dfd0`
+- çalışmalar `7788514e-12a7-4c2c-bab7-669cbf2ef278`, `9ff42aa9-9d6c-4c1e-a38d-5c39391eca37` (+ müsveddeleri)
+- kaynaklar `c6fc66cf-c456-4ce4-bc51-f8c58497f3d3`, `b5c98534-b5d0-4d90-ad57-3bc560737f36`
+- kaynak PDF'i `cde880db-d675-4eb9-9334-fbbe8f3a7fe5`, Storage `project-files/9ff42aa9-…/kaynak-pdf/y-6168c0ea-…-8e54f34e-….pdf`
+- Kaynakça denetiminin bıraktığı kayıt(lar) — temizlikte proje kimliğiyle aranacak
