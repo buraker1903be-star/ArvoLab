@@ -1,0 +1,107 @@
+[
+  {
+    "kimlik": "K1",
+    "ad": "Mevcut kullanıcı (8 altı eski şifre) giriş yapar, kapıya takılmaz",
+    "beklenen": "/dashboard/settings açılır",
+    "gozlenen": "/dashboard/settings",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K2",
+    "ad": "Yanlış mevcut şifre reddedilir, şifre değişmez",
+    "beklenen": "'Mevcut şifre yanlış.' + eski şifre geçerli",
+    "gozlenen": "mesaj=true, eski geçerli=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K3",
+    "ad": "8 karakter altı: tarayıcı uyarır, sunucu da reddeder",
+    "beklenen": "tarayıcı mesajı dolu + sunucu 'en az 8'",
+    "gozlenen": "tarayıcı='Şifre en az 8 karakter olmalı.', sunucu=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K4",
+    "ad": "Doğru mevcut şifre: şifre değişir, bu oturum açık kalır, diğer cihaz oturumu geçersiz",
+    "beklenen": "başarı + yeni şifre geçerli + eski geçersiz + öteki oturum /user 401/403, yenileme 400",
+    "gozlenen": "başarı=true, yeni=true, eski=false, bu oturum=true, öteki={\"kullanici\":403,\"yenile\":400,\"kod\":\"refresh_token_not_found\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K5",
+    "ad": "Yeni şifreyle yeniden giriş",
+    "beklenen": "/dashboard",
+    "gozlenen": "http://localhost:3124/dashboard",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K6",
+    "ad": "Şifre oturumu, kurtarma sayfasından mevcut şifresiz değiştiremez (atlatma kapalı)",
+    "beklenen": "ret metni + eski şifre geçerli",
+    "gozlenen": "ret=true, eski=true, yeni=false",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K7",
+    "ad": "Şifre kurtarma: bağlantı /reset-password'e iner, 8 altı reddedilir, yeni şifre kaydedilir, öteki oturum düşer",
+    "beklenen": "sayfa=/reset-password, kısa red, panel, yeni geçerli, eski geçersiz, öteki oturum geçersiz",
+    "gozlenen": "sayfa=/reset-password, kısa red=true, panel=true, yeni=true, eski=false, öteki={\"kullanici\":403,\"yenile\":400,\"kod\":\"refresh_token_not_found\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K8a",
+    "ad": "Kontrol: hesap silme işlemi panel dışı bir yoldan (Next-Action, /reset-password) çağrılabiliyor — saldırı yolu gerçek",
+    "beklenen": "şifreli kullanıcıda silme talebi yazılır",
+    "gozlenen": "eylem bulundu=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K8",
+    "ad": "Davetli: bağlantıdan sonra şifre sayfası; panel yolları ilk şifreye yönlenir",
+    "beklenen": "/reset-password, /dashboard ve /dashboard/settings → /reset-password?ilk=1",
+    "gozlenen": "ilk=/reset-password, dashboard→/reset-password?ilk=1, settings→/reset-password?ilk=1",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K9",
+    "ad": "Davetli (şifresiz): sunucu işlemi panel dışından çağrılsa da hesap silinemez",
+    "beklenen": "silme_talebi_at boş",
+    "gozlenen": "http=200, silme_talebi_at=''",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K10",
+    "ad": "Davetli ilk şifreyi belirler (8 altı reddedilir), sonra panel açılır",
+    "beklenen": "kısa red + şifre kaydı + /dashboard/settings",
+    "gozlenen": "kısa red=true, şifre var=true, yeni giriş=true, sonra=/dashboard/settings",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K11",
+    "ad": "Kayıt formu şifre istemez; doğrulanan yeni kullanıcı panele değil ilk şifreye gider",
+    "beklenen": "şifre alanı yok + /reset-password?ilk=1",
+    "gozlenen": "şifre alanı=0, panel denemesi→/reset-password?ilk=1",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K13",
+    "ad": "Yöneticinin tek istekte şifreli+onaylı açtığı hesap: verilen şifre geçersiz (G1), kurtarmayla şifre belirlenip girilir (kilitlenme yok)",
+    "beklenen": "verilen şifre geçersiz + kurtarma sonrası panel + yeni şifre geçerli",
+    "gozlenen": "verilen geçerli=false, panel=/dashboard, yeni=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K14",
+    "ad": "ArvoOS üyesi (şifresiz, magic link) panele girer, ilk şifreye yönlenmez, kuruma bağlı",
+    "beklenen": "/dashboard/settings + şifresiz + kurum bağı",
+    "gozlenen": "yol=/dashboard/settings, şifre var=false, kurum bağlı=true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K12",
+    "ad": "Telefon ve masaüstü: üç şifre alanı görünür, yatay taşma yok (Ayarlar + sıfırlama)",
+    "beklenen": "alanlar görünür, taşma yok",
+    "gozlenen": "[{\"ad\":\"telefon\",\"alanlar\":true,\"olcu\":\"currentPassword:350x40@20-370 password:350x40@20-370 passwordConfirm:350x40@20-370\",\"tasma\":false,\"tasma2\":false},{\"ad\":\"masaustu\",\"alanlar\":true,\"olcu\":\"currentPassword:610x39@415-1025 password:610x39@415-1025 passwordConfirm:610x39@415-1025\",\"tasma\":false,\"tasma2\":false}]",
+    "sonuc": "PASS"
+  }
+]

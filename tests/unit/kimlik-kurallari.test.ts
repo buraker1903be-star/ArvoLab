@@ -27,17 +27,18 @@ const guclu = (n: number) => "Kq7!mZ2x".repeat(Math.ceil(n / 8)).slice(0, n);
 
 /* ---------- D1: şifre politikası ---------- */
 
-test("politika: en az 12, en fazla 64 karakter, 72 bayt", () => {
-  assert.equal(EN_KISA_SIFRE, 12);
+test("politika: en az 8, en fazla 64 karakter, 72 bayt", () => {
+  // 8 = Production'daki Supabase "Minimum password length" (18.11.2026, Auth A1). İkisi ayrılırsa kural iki yerde iki değer olur.
+  assert.equal(EN_KISA_SIFRE, 8);
   assert.equal(EN_UZUN_SIFRE, 64);
   assert.equal(SIFRE_BAYT_SINIRI, 72);
 });
 
-test("sınır: 11 reddedilir, 12 kabul edilir (8–11 artık kısa)", () => {
-  for (const n of [7, 8, 11]) {
-    assert.deepEqual(sifreKuraliHatasi(guclu(n)), { tr: "Şifre en az 12 karakter olmalı.", en: "Password must be at least 12 characters." }, String(n));
+test("sınır: 7 reddedilir, 8 kabul edilir (8–11 yeniden geçerli)", () => {
+  for (const n of [1, 5, 7]) {
+    assert.deepEqual(sifreKuraliHatasi(guclu(n)), { tr: "Şifre en az 8 karakter olmalı.", en: "Password must be at least 8 characters." }, String(n));
   }
-  assert.equal(sifreKuraliHatasi(guclu(12)), null);
+  for (const n of [8, 11, 12]) assert.equal(sifreKuraliHatasi(guclu(n)), null, String(n));
   assert.notEqual(sifreKuraliHatasi(""), null);
 });
 
@@ -72,9 +73,9 @@ test("72 bayt: Türkçe harfler iki bayt; sınır nedeniyle birlikte söylenir",
 });
 
 test("uzunluk tarayıcının minLength'iyle aynı birimle ölçülür (UTF-16)", () => {
-  // Türkçe harf tek birim sayılır: 12 Türkçe harf (24 bayt) geçer, 11 geçmez.
-  assert.equal(sifreKuraliHatasi("çğışöüçğışöü"), null);
-  assert.deepEqual(sifreKuraliHatasi("çğışöüçğışö")?.tr, "Şifre en az 12 karakter olmalı.");
+  // Türkçe harf tek birim sayılır: 8 Türkçe harf (16 bayt) geçer, 7 geçmez.
+  assert.equal(sifreKuraliHatasi("çğışöüçğ"), null);
+  assert.deepEqual(sifreKuraliHatasi("çğışöüç")?.tr, "Şifre en az 8 karakter olmalı.");
 });
 
 test("yaygın şifreler reddedilir; büyük/küçük harf ve Türkçe İ/I farkı kurtarmaz", () => {
@@ -122,17 +123,17 @@ test("şifre eşleşmeme metni tek kaynakta; sunucu ve form aynı metni kullanı
   assert.match(form, /const sifreDenetle[\s\S]*?eslesmeyiDenetle\(kutu\.form\);/);
 });
 
-test("yaygın liste: her eleman en az 8 karakter (geçmişle uyum; 12 altı zaten uzunluktan düşer) ve tekrar yok", () => {
+test("yaygın liste: her eleman en az 8 karakter (8 altı zaten uzunluktan düşer) ve tekrar yok", () => {
   assert.ok(YAYGIN_SIFRE_LISTESI.length >= 50);
   for (const s of YAYGIN_SIFRE_LISTESI) assert.ok(s.length >= 8, s);
-  // 12 ve üstü yaygın şifreler de listede: politika 12 olunca listenin anlamlı kalan kısmı.
-  assert.ok(YAYGIN_SIFRE_LISTESI.filter((s) => s.length >= EN_KISA_SIFRE).length >= 15);
-  for (const s of ["password1234", "123456789012", "Galatasaray1905"]) assert.match(sifreKuraliHatasi(s)?.tr ?? "", /yaygın/, s);
+  // En kısa şifre 8 olunca listenin tamamı yeniden anlamlı; 8–11 karakterlik yaygınlar uzunluktan geçip burada düşer.
+  assert.ok(YAYGIN_SIFRE_LISTESI.filter((s) => s.length >= EN_KISA_SIFRE).length >= 50);
+  for (const s of ["password1234", "123456789012", "Galatasaray1905", "12345678", "password"]) assert.match(sifreKuraliHatasi(s)?.tr ?? "", /yaygın/, s);
   assert.ok(YAYGIN_SIFRE_SAYISI <= YAYGIN_SIFRE_LISTESI.length);
 });
 
 test("kural sırası: kısa → uzun → bayt → tekrar → yaygın", () => {
-  assert.match(sifreKuraliHatasi("1234567")?.tr ?? "", /en az 12/); // hem kısa hem yaygın görünümlü: kısa söylenir
+  assert.match(sifreKuraliHatasi("1234567")?.tr ?? "", /en az 8/); // hem kısa hem yaygın görünümlü: kısa söylenir
   assert.match(sifreKuraliHatasi("a".repeat(65))?.tr ?? "", /en fazla 64/); // hem uzun hem tekrar: uzun söylenir
 });
 
@@ -194,8 +195,8 @@ test("nedenler yalnızca bilinen üç değerden, sabit sırayla alınır", () =>
 
 test("length: en az uzunluğu söyler", () => {
   const m = sifreHatasi("weak_password", "sifirlama", ["length"]);
-  assert.match(m.tr, /en az 12 karakter/);
-  assert.match(m.en, /at least 12 characters/);
+  assert.match(m.tr, /en az 8 karakter/);
+  assert.match(m.en, /at least 8 characters/);
   assert.doesNotMatch(m.tr, /sızıntı|sembol/);
 });
 
@@ -203,7 +204,7 @@ test("characters: karakter türlerini söyler", () => {
   const m = sifreHatasi("weak_password", "ayarlar", ["characters"]);
   assert.match(m.tr, /karakter türlerini/);
   assert.match(m.en, /character types/);
-  assert.doesNotMatch(m.tr, /sızıntı|en az 12/);
+  assert.doesNotMatch(m.tr, /sızıntı|en az 8/);
 });
 
 test("pwned: veri sızıntısını söyler, sembol eklemeyi önermez", () => {
@@ -215,8 +216,8 @@ test("pwned: veri sızıntısını söyler, sembol eklemeyi önermez", () => {
 
 test("birden çok neden: hepsi, sabit sırayla", () => {
   const m = sifreHatasi("weak_password", "sifirlama", ["pwned", "length"]);
-  assert.ok(m.tr.indexOf("en az 12") < m.tr.indexOf("sızıntı"));
-  assert.ok(m.en.indexOf("at least 12") < m.en.indexOf("breach"));
+  assert.ok(m.tr.indexOf("en az 8") < m.tr.indexOf("sızıntı"));
+  assert.ok(m.en.indexOf("at least 8") < m.en.indexOf("breach"));
 });
 
 test("neden yoksa ya da tanınmıyorsa güvenli genel metin", () => {
@@ -230,7 +231,7 @@ test("neden yoksa ya da tanınmıyorsa güvenli genel metin", () => {
 });
 
 test("nedenler yalnızca weak_password'ü etkiler; öteki kodlar ve bağlamlar değişmez", () => {
-  for (const kod of ["same_password", "reauthentication_needed", undefined, "bilinmeyen"]) {
+  for (const kod of ["same_password", "reauthentication_needed", "current_password_invalid", "current_password_required", undefined, "bilinmeyen"]) {
     for (const baglam of ["sifirlama", "ayarlar"] as const) {
       assert.deepEqual(sifreHatasi(kod, baglam, ["pwned"]), sifreHatasi(kod, baglam), `${String(kod)} ${baglam}`);
     }
@@ -248,6 +249,39 @@ test("zayıf şifre hatası: yalnızca neden adları okunur, günlüğe şifre y
   // İki günlük: güncelleme hatası ve (16.11.2026) diğer oturumların kapatılamaması; ikisi de yalnızca kod/durum.
   assert.equal((uygula.match(/console\.\w+\(/g) ?? []).length, 2);
   assert.doesNotMatch(uygula, /console\.\w+\([^)]*(password|passwordConfirm|error\.message|error\.reasons|nedenler)/);
+});
+
+/* ---------- Auth A1 (18.11.2026): mevcut şifre GoTrue'ya da gider ---------- */
+
+test("Ayarlar yolu mevcut şifreyi updateUser'a current_password olarak verir; sıfırlama ve ilk şifre vermez", () => {
+  /*
+    Eskiden updateUser({ password }) yalnızdı: mevcut şifreyi uygulama
+    doğruluyordu, Auth API'si sormuyordu ve oturum belirteciyle doğrudan
+    PUT /auth/v1/user mevcut şifresiz geçiyordu (sifre-api-kabul.mjs, A2).
+    Supabase'te "Require current password" açılınca alan gönderilmezse
+    Ayarlar'daki meşru değişiklik de "current_password_required" ile düşer.
+  */
+  const auth = oku("app/actions/auth.ts");
+  const uygula = auth.slice(auth.indexOf("async function applyNewPassword("), auth.indexOf("async function yerelOturumuKapat("));
+  const cagrilar = uygula.match(/supabase\.auth\.updateUser\([^;]*\);/g) ?? [];
+  assert.equal(cagrilar.length, 1, "tek updateUser çağrısı");
+  assert.equal(cagrilar[0], 'supabase.auth.updateUser(baglam === "ayarlar" ? { password, current_password: mevcut } : { password });');
+  // Gönderilen değer formdaki ve uygulamanın doğruladığı değerin aynısı (ikinci bir okuma yok).
+  assert.equal((uygula.match(/formData\.get\("currentPassword"\)/g) ?? []).length, 1);
+  assert.match(uygula, /mevcut = String\(formData\.get\("currentPassword"\) \?\? ""\);\s*if \(!mevcut\)/);
+});
+
+test("GoTrue'nun mevcut şifre kodları anlaşılır metne çevrilir (genel 'güncellenemedi' değil)", () => {
+  const genel = sifreHatasi(undefined, "ayarlar");
+  for (const kod of ["current_password_invalid", "current_password_required"]) {
+    assert.notDeepEqual(sifreHatasi(kod, "ayarlar"), genel, kod);
+  }
+  assert.deepEqual(sifreHatasi("current_password_invalid", "ayarlar"), { tr: "Mevcut şifre yanlış.", en: "The current password is incorrect." });
+  assert.deepEqual(sifreHatasi("current_password_required", "ayarlar"), { tr: "Mevcut şifrenizi girin.", en: "Enter your current password." });
+  // Uygulamanın kendi doğrulamasıyla AYNI metin: kullanıcı iki ayrı yazım görmez.
+  const auth = oku("app/actions/auth.ts");
+  assert.match(auth, /tr: "Mevcut şifre yanlış\.", en: "The current password is incorrect\."/);
+  assert.match(auth, /tr: "Mevcut şifrenizi girin\.", en: "Enter your current password\."/);
 });
 
 /* ---------- A0: doğrulama bağlantısı süresi ---------- */

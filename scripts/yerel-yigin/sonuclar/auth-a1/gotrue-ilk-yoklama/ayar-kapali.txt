@@ -1,0 +1,11 @@
+PASS min-uzunluk: 7 karakter reddedilir | beklenen: 422 weak_password | gözlenen: 422 weak_password
+PASS AÇIK: mevcut şifresiz doğrudan PUT /user kabul edilir | beklenen: 200 | gözlenen: 200
+PASS diğer oturum (B) değişiklikten sonra kapandı | beklenen: 400 | gözlenen: 400
+PASS değiştiren oturum (A) açık kaldı | beklenen: 200 | gözlenen: 200
+PASS yeni şifreyle giriş | beklenen: 200 | gözlenen: 200
+PASS sıfırlama oturumu: mevcut şifresiz PUT kabul | beklenen: 200 | gözlenen: 200
+PASS sıfırlamadan sonra önceki oturum (C) kapandı | beklenen: 400 | gözlenen: 400
+PASS ilk şifre: mevcut şifresiz PUT kabul | beklenen: 200 | gözlenen: 200
+PASS ilk şifreyle giriş | beklenen: 200 | gözlenen: 200
+PASS şifreli kullanıcı + e-posta bağlantısı oturumu: mevcut şifresiz PUT | beklenen: 200 | gözlenen: 200
+{"mod":"false","gecti":10,"toplam":10}

@@ -84,6 +84,16 @@ export function sifreHatasi(kod: string | undefined, baglam: SifreBaglami, neden
       return { tr: "Yeni şifre mevcut şifrenizden farklı olmalı.", en: "The new password must be different from your current one." };
     case "weak_password":
       return zayifSifreMetni(nedenler);
+    /*
+      Mevcut şifreyi GoTrue de denetliyor (18.11.2026, Auth A1; Supabase'te
+      "Require current password when updating"). Uygulama önce kendisi
+      doğruladığı için bu iki kod normalde gelmez; gelirse (iki istek arasında
+      şifre başka yerden değişti) genel "güncellenemedi" yerine sebep söylenir.
+    */
+    case "current_password_invalid":
+      return { tr: "Mevcut şifre yanlış.", en: "The current password is incorrect." };
+    case "current_password_required":
+      return { tr: "Mevcut şifrenizi girin.", en: "Enter your current password." };
     case "reauthentication_needed":
       return baglam === "sifirlama"
         ? {
