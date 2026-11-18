@@ -1,5 +1,7 @@
 # `main` birleştirmesi neden otomatik Production dağıtımı başlatmadı? (18.11.2026)
 
+**DURUM: KAPANDI (18.11.2026).** Kök neden kanıtlanamadı; ayar değiştirilmedi; gerçek tetikleme sonraki onaylı `main` birleştirmesinde doğrulanacak (UNVERIFIED).
+
 Kapsam: yalnızca Vercel otomatik dağıtımı. Supabase, Auth, tasarım, bağımlılıklar kapsam dışı.
 Bu incelemede **hiçbir ayar değiştirilmedi, dal açılmadı, commit/merge/dağıtım oluşturulmadı.**
 
