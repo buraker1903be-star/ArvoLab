@@ -5,6 +5,7 @@
 // bu taklitle ölçülmez; kabul raporu onu ayrıca UNVERIFIED yazar.
 //
 // Davranış (sorudaki işarete göre):
+//   - yazım asistanı istemi → {yanit, metin}; metin Demir (2019)'a atıf yapar
 //   - "UYDUR"    → kaynakta OLMAYAN bir alıntı döner (sunucu cevabı düşürmeli)
 //   - diğerleri  → istemdeki seçili pasajı «…» ya da ilk sayfanın ilk cümlesini
 //                  birebir alıntılar ve geldiği sayfayı yazar
@@ -18,6 +19,14 @@ const KAYIT = process.env.STUDYO_ISTEM_KAYDI ?? "/tmp/studyo-istem-kaydi.jsonl";
 
 function cevapUret(mesajlar) {
   const hepsi = mesajlar.map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content))).join("\n");
+  /*
+    Yazım asistanı (19.11.2026, Kayıtlı sekme kabulü): istem {"yanit","metin"}
+    biçimini istiyor. Metin kütüphanedeki Demir (2019) kaynağına atıf yapar;
+    sunucunun atıf ve sayı denetimi (yazimDenetle) gerçekten çalışır.
+  */
+  if (/YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür/.test(hepsi)) {
+    return { yanit: "Akran gruplarıyla ilgili kısa bir paragraf yazdım.", metin: "Akran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor (Demir, 2019)." };
+  }
   const soru = String(mesajlar.at(-1)?.content ?? "");
   if (/UYDUR/.test(soru)) {
     return { bulundu: true, cevap: "Kaynak bunu açıkça söylüyor.", alintilar: [{ sayfa: 1, metin: "Remote learning eliminated isolation for every student in the sample." }] };

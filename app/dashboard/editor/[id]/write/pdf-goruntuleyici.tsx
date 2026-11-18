@@ -53,6 +53,25 @@ export type PdfSecimi = { sayfa: number; metin: string };
 /** Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), panel yeniden açılınca geri yüklenir. */
 export type OkumaKonumu = { sayfa: number; olcek: number | "sigdir" };
 
+/*
+  Pasaja kaydırma YALNIZCA PDF alanının içinde. Eskiden scrollIntoView
+  kullanılıyordu: tarayıcı kaydırılabilir BÜTÜN ataları kaydırıyor, telefonda
+  tam ekran PDF panelinin kendisi de yukarı kayıyor ve "Kaynak PDF" başlığı
+  ile kapatma düğmesi ekrandan çıkıyordu; "inline: center" da okunur ölçekte
+  ekrandan geniş olan cümlenin BAŞINI kesiyordu (kabul S15, 18.11.2026).
+  Pasajın başı sola (12px payla), satırı dikeyde ortaya getirilir.
+*/
+function pasajaKaydir(alan: HTMLElement | null, parca: Element | null) {
+  if (!alan || !parca) return;
+  const a = alan.getBoundingClientRect();
+  const p = parca.getBoundingClientRect();
+  alan.scrollTo({
+    left: Math.max(0, alan.scrollLeft + p.left - a.left - 12),
+    top: Math.max(0, alan.scrollTop + p.top - a.top - (alan.clientHeight - p.height) / 2),
+    behavior: "smooth",
+  });
+}
+
 export default function PdfGoruntuleyici({
   pdfId,
   gidilecekSayfa,
@@ -60,6 +79,7 @@ export default function PdfGoruntuleyici({
   konumAl,
   onKonum,
   onPasaj,
+  onGidisUygulandi,
 }: {
   pdfId: string;
   /**
@@ -70,6 +90,8 @@ export default function PdfGoruntuleyici({
   gidilecekSayfa?: { sayfa: number; anahtar: number; pasaj?: string; pdfId?: string } | null;
   /** Pasaj vurgusunun sonucu: bulundu mu (atıf kartı/panel kullanıcıya söyler). */
   onPasaj?: (bulundu: boolean) => void;
+  /** "Git" isteği uygulandı: üst bileşen isteği düşürür, panel yeniden açılınca bayat istek kalmaz. */
+  onGidisUygulandi?: (anahtar: number) => void;
   onSecim: (secim: PdfSecimi | null) => void;
   /** Bu PDF için hatırlanan konum (yoksa null). */
   konumAl?: (pdfId: string) => OkumaKonumu | null;
@@ -172,8 +194,20 @@ export default function PdfGoruntuleyici({
   }, [pdfId]);
 
   /* Cevaptaki "PDF s. N" bağlantısı: her istek kendi anahtarıyla bir kez uygulanır (render sırasında, aynı kalıp). */
-  // Bağlanırken elde olan istek uygulanmış sayılır: panel yeniden açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin.
-  const [uygulananGidis, setUygulananGidis] = useState<number | null>(() => gidilecekSayfa?.anahtar ?? null);
+  /*
+    Eskiden bağlanırken elde olan istek "uygulanmış" sayılıyordu (panel yeniden
+    açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin diye). Ama PDF
+    paneli KAPALIYKEN basılan "Dayanağa git" de paneli açıp görüntüleyiciyi
+    yeni bağlıyor: istek bağlanırken elde olduğu için hiç uygulanmıyordu —
+    telefonda (panel alıntı eklenince kapanır) PDF sığdırılmış 1. sayfada,
+    vurgusuz açılıyordu (kabul S15, 18.11.2026). Artık uygulanan istek üst
+    bileşene bildirilir ve orada düşürülür (onGidisUygulandi); panel yeniden
+    açıldığında bayat istek yoktur, elde olan her istek yenidir.
+  */
+  const [uygulananGidis, setUygulananGidis] = useState<number | null>(null);
+  useEffect(() => {
+    if (uygulananGidis !== null) onGidisUygulandi?.(uygulananGidis);
+  }, [uygulananGidis, onGidisUygulandi]);
   if (
     gidilecekSayfa &&
     belge &&
@@ -213,7 +247,7 @@ export default function PdfGoruntuleyici({
     if (pasaj && katman.dataset.sayfa === String(pasaj.sayfa)) {
       const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
       kapsanan?.forEach((i) => parcalar[i].classList.add("pdf-pasaj"));
-      if (kapsanan) parcalar[kapsanan[0]].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+      if (kapsanan) pasajaKaydir(kapRef.current, parcalar[kapsanan[0]]);
       setPasajBulundu(Boolean(kapsanan));
       onPasajRef.current?.(Boolean(kapsanan));
     }
@@ -383,7 +417,7 @@ export default function PdfGoruntuleyici({
               onClick={() => {
                 if (sayfaNo !== pasaj.sayfa) sayfayaGit(pasaj.sayfa);
                 if (cizilenOlcek < 1.6) setOlcek(1.6);
-                else window.requestAnimationFrame(() => katmanRef.current?.querySelector(".pdf-pasaj")?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }));
+                else window.requestAnimationFrame(() => pasajaKaydir(kapRef.current, katmanRef.current?.querySelector(".pdf-pasaj") ?? null));
               }}
               aria-label={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
               title={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}

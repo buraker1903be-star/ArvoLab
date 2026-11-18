@@ -155,3 +155,25 @@ describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
     assert.match(oku("app/styles/genel-bakis.css"), /\.tez-olcumler \.tez-olcu > dd\.tez-olcu-not \{/);
   });
 });
+
+/*
+  3. tur (18.11.2026, kabul S15): PDF paneli kapalıyken basılan "Dayanağa
+  git" görüntüleyiciyi yeni bağlıyordu ve istek "zaten uygulanmış"
+  sayılıyordu; telefonda PDF sığdırılmış 1. sayfada vurgusuz açılıyordu.
+  Pasaja kaydırma scrollIntoView ile yapılıyor, telefonda panelin
+  kendisini de kaydırıp kapatma düğmesini ekrandan çıkarıyordu.
+*/
+describe("PDF: Dayanağa git panel kapalıyken de uygulanır, kaydırma PDF alanında kalır", () => {
+  const goruntuleyici = oku("app/dashboard/editor/[id]/write/pdf-goruntuleyici.tsx");
+  const panel = oku("app/dashboard/editor/[id]/write/kaynak-pdf-paneli.tsx");
+  test("bağlanırken elde olan istek uygulanmış sayılmaz; uygulanan istek panelde düşer", () => {
+    assert.match(goruntuleyici, /const \[uygulananGidis, setUygulananGidis\] = useState<number \| null>\(null\);/);
+    assert.match(goruntuleyici, /onGidisUygulandi\?\.\(uygulananGidis\)/);
+    assert.match(panel, /onGidisUygulandi=\{gidisUygulandi\}/);
+    assert.match(panel, /setGidilecek\(\(g\) => \(g\?\.anahtar === anahtar \? null : g\)\)/);
+  });
+  test("pasaja kaydırma scrollIntoView kullanmaz (ataları kaydırmasın)", () => {
+    assert.doesNotMatch(goruntuleyici.replace(/\/\*[\s\S]*?\*\//g, ""), /scrollIntoView\(/);
+    assert.match(goruntuleyici, /function pasajaKaydir\(alan: HTMLElement \| null, parca: Element \| null\)/);
+  });
+});

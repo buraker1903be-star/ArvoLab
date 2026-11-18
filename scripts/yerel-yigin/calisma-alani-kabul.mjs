@@ -651,6 +651,226 @@ try {
     return { ayrinti: sonuc.join("; ") + "; AI/PDF açıkken gizli (örtüşme yok); telefon menüden açılır ve görünür alana gelir" };
   });
 
+  /* ---------- S12 ---------- */
+  /*
+    Kayıtlı AI cevapları, yerel model taklidiyle (scripts/yerel-yigin/
+    model-taklidi.mjs; gerçek sağlayıcı yok). Sohbette bir cevap üretilir
+    (+1 kayıt, +1 taklit isteği). Sayfa yeniden açılınca sohbet boştur,
+    Kayıtlı sekmede cevap ve isteği durur; sekmeyi açmak ve oradan eklemek
+    YENİ kayıt ve model isteği üretmez. Kullanıcı/çalışma ayrımı: başka
+    kullanıcının, başka çalışmanın ve başka yeteneğin kaydı listede yok.
+    Güncel kaynak denetimi: kütüphanede olmayan kaynağa atıflı eski cevap
+    eklenmez, belge değişmez.
+  */
+  await dene("S12", "Kayıtlı AI cevapları: yeniden açılınca durur, yalnızca kullanıcının bu çalışmadaki kayıtları, model/hak tüketmez, ekleme denetimli", async () => {
+    const taklitIstekleri = () => {
+      try { return fs.readFileSync(process.env.STUDYO_ISTEM_KAYDI ?? "/tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad/tasarim/istem-kaydi.jsonl", "utf8").split("\n").filter(Boolean).length; } catch { return 0; }
+    };
+    try { await fetch("http://127.0.0.1:54900/v1/chat/completions", { method: "POST", body: "{}" }); } catch { return { durum: "UNVERIFIED", ayrinti: "model taklidi çalışmıyor (54900)" }; }
+    const kayitSayisi = () => Number(psql(`select count(*) from public.ai_assistant_runs where user_id='${A.id}'`));
+    // Ayrım için tohum: başka kullanıcı, başka çalışma, başka yetenek; ayrıca kaynağı kütüphanede olmayan eski bir cevap.
+    const satir = (uid, proje, yetenek, metin, istek) =>
+      psql(`insert into public.ai_assistant_runs (user_id, project_id, capability, status, output, findings, context, created_at) values ('${uid}','${proje}','${yetenek}','completed',${q(JSON.stringify({ yanit: "Tohum.", metin }))},${q(JSON.stringify({ gorev: "paragraf", istek }))}::jsonb,'tohum', now() - interval '1 day')`);
+    satir(B.id, BASKA_TEZ, "yazim", "BASKA-KULLANICI-CEVABI metni.", "B isteği");
+    satir(A.id, IKINCI, "yazim", "BASKA-CALISMA-CEVABI metni.", "İkinci çalışma isteği");
+    satir(A.id, ESKI, "kaynak", "BASKA-YETENEK-CEVABI metni.", "Kaynak sohbeti");
+    satir(A.id, ESKI, "yazim", "Bu bulgu önceki çalışmalarla uyumlu (Şahin, 2017).", "SILINMIS-KAYNAK-ISTEGI");
+    const { c, s } = await oturum(A, { genislik: 1920, yukseklik: 1080 });
+    await editorAc(s, "?sag=ai");
+    const once = { kayit: kayitSayisi(), taklit: taklitIstekleri() };
+    await s.locator(".yazim-girdi textarea").fill("KABUL-S12 akran grupları için bir paragraf yaz");
+    await s.locator(".yazim-girdi button[type=submit]").click();
+    await s.waitForSelector(".yazim-oneri-metin", { timeout: 60000 });
+    const sonra = { kayit: kayitSayisi(), taklit: taklitIstekleri() };
+    beklenen(sonra.kayit === once.kayit + 1 && sonra.taklit === once.taklit + 1, `üretim: kayıt ${once.kayit}→${sonra.kayit}, taklit ${once.taklit}→${sonra.taklit}`);
+    // Yeniden aç: sohbet boş, Kayıtlı'da cevap ve istek.
+    await editorAc(s, "?sag=ai");
+    beklenen((await s.locator(".yazim-oneri-metin").count()) === 0, "yeniden açılınca sohbet dolu (beklenen: boş, cevap Kayıtlı'da)");
+    await s.locator("#yazim-sekme-kayitli").click();
+    await s.waitForSelector(".yazim-kayitli-kart, .yazim-kayitli-bos", { timeout: 30000 });
+    const liste = await s.locator(".yazim-kayitli").innerText();
+    beklenen(/KABUL-S12/.test(liste) && /Demir, 2019/.test(liste), `Kayıtlı'da cevap/istek yok: ${liste.slice(0, 200)}`);
+    beklenen(!/BASKA-KULLANICI|BASKA-CALISMA|BASKA-YETENEK/.test(liste), `ayrım: ${liste.match(/BASKA-[A-Z]+/g)}`);
+    beklenen(/SILINMIS-KAYNAK-ISTEGI/.test(liste), "kütüphane dışı atıflı eski cevap listede yok");
+    await goruntu(s, "s12-kayitli");
+    const acinca = { kayit: kayitSayisi(), taklit: taklitIstekleri() };
+    beklenen(acinca.kayit === sonra.kayit && acinca.taklit === sonra.taklit, "Kayıtlı sekmeyi açmak kayıt/model isteği üretti");
+    // Ekle: denetimden geçen cevap imlece girer, asistan izi taşır.
+    await s.locator(".ProseMirror p").last().click(); await s.keyboard.press("End");
+    const kart = s.locator(".yazim-kayitli-kart", { hasText: "KABUL-S12" });
+    await kart.getByRole("button", { name: /İmlece ekle/ }).click();
+    await s.waitForFunction(() => document.querySelector(".ProseMirror")?.textContent?.includes("Akran çalışma grupları birinci sınıf"), null, { timeout: 30000 });
+    const iz = await s.evaluate(() => Array.from(document.querySelectorAll(".ProseMirror [data-asistan-izi], .ProseMirror .asistan-izi")).some((e) => e.textContent.includes("Akran çalışma grupları")));
+    beklenen(iz, "eklenen metin asistan izi taşımıyor");
+    // Kütüphanede olmayan kaynağa atıflı eski cevap: eklenmez, nedeni yazar.
+    const metinOnce = await s.locator(".ProseMirror").innerText();
+    const eski = s.locator(".yazim-kayitli-kart", { hasText: "SILINMIS-KAYNAK-ISTEGI" });
+    await eski.getByRole("button", { name: /İmlece ekle/ }).click();
+    await eski.locator(".yazim-kayitli-hata").waitFor({ timeout: 30000 });
+    const hata = await eski.locator(".yazim-kayitli-hata").innerText();
+    beklenen(/kütüphanenizde yok/.test(hata), `hata metni: ${hata}`);
+    beklenen((await s.locator(".ProseMirror").innerText()) === metinOnce && !/Şahin, 2017/.test(metinOnce), "kütüphane dışı atıflı metin belgeye girdi");
+    const son = { kayit: kayitSayisi(), taklit: taklitIstekleri() };
+    beklenen(son.kayit === sonra.kayit && son.taklit === sonra.taklit, `ekleme/denetim kayıt ya da model isteği üretti: ${JSON.stringify(son)}`);
+    await c.close();
+    return { ayrinti: `üretim +1 kayıt/+1 taklit; yeniden açma, Kayıtlı ve iki ekleme denemesi +0; 3 yabancı kayıt görünmedi; Şahin (2017) atıflı cevap eklenmedi` };
+  });
+
+  /* ---------- S13 ---------- */
+  await dene("S13", "Gezinme prototip gruplamasıyla; Kaynakça ve Kılavuz ve biçim araçları; kalıcı kılavuz şeridi yok; üst başlık çalışmayı anlatır", async () => {
+    const { c, s } = await oturum(A, { genislik: 1440, yukseklik: 900 });
+    await editorAc(s);
+    const gruplar = await s.evaluate(() => Array.from(document.querySelectorAll(".os-calisma-grup")).map((g) => ({ ad: g.querySelector(".os-calisma-grup-ad, .os-gezinme-ad")?.textContent?.trim(), ogeler: Array.from(g.querySelectorAll("ul a .os-gezinme-ad")).map((e) => e.textContent.trim()), kapali: g.querySelector("ul")?.hidden ?? false })));
+    const ozet = gruplar.map((g) => `${g.ad}: ${g.ogeler.join(", ")}${g.kapali ? " (kapalı)" : ""}`).join(" | ");
+    beklenen(ozet.startsWith("Yaz: Belge, Bölümler | Araştır: Kaynaklar, Makale bul, Arvo AI | Kontrol et: Kaynakça, Kılavuz ve biçim, Özet ve teslim | Diğer araçlar:"), `gruplar: ${ozet}`);
+    beklenen(gruplar[3]?.kapali && gruplar[3].ogeler.length === 4, `Diğer araçlar kapalı ve 4 öğe değil: ${ozet}`);
+    beklenen((await s.locator(".kilavuz-satiri").count()) === 0, "kalıcı kılavuz şeridi duruyor");
+    const baslik = await s.locator(".os-marka-sayfa").innerText();
+    beklenen(baslik === "Belge · Eski Tez: Akran Teması ve Yalnızlık", `üst başlık: ${baslik}`);
+    // Diğer araçlar açılır, öğesi çalışır ve çalışma bağlamı korunur.
+    await s.locator(".os-calisma-ikincil-bas").click();
+    await s.locator("#os-calisma-ikincil-liste a", { hasText: "Kanıt matrisi" }).click();
+    await s.waitForURL(/\/kanit/);
+    beklenen(await s.locator(".os-calisma-geri").first().isVisible(), "Kanıt matrisinde çalışma gezinmesi yok");
+    beklenen((await s.locator(".os-marka-sayfa").innerText()).startsWith("Kanıt matrisi · "), "Kanıt matrisinde üst başlık");
+    // Kılavuz ve biçim: kılavuz yok + iki yol + biçim özeti + kontrol.
+    await editorAc(s, "?sol=kilavuz");
+    const k = s.locator(".os-sol-alan[data-acik='kilavuz']");
+    await k.waitFor();
+    const kmetin = await k.innerText();
+    beklenen(/kılavuz yok/i.test(kmetin) && /Kenar boşlukları/.test(kmetin), `Kılavuz aracı: ${kmetin.slice(0, 160)}`);
+    beklenen((await k.locator('a[href*="kilavuz"]').count()) >= 1 && (await k.getByRole("link", { name: "Kurumu seç" }).count()) === 1, "Kılavuzumu yükle / Kurumu seç yok");
+    await goruntu(s, "s13-kilavuz");
+    // Kaynakça: stil, kaynakça bölümü, uyum ve atıf yapılmamış kaynaklar.
+    await editorAc(s, "?sol=kaynakca");
+    const r = s.locator(".os-sol-alan[data-acik='kaynakca']");
+    await r.waitFor(); await s.waitForTimeout(1500);
+    const rmetin = await r.innerText();
+    beklenen(/Atıf stili/.test(rmetin) && /KAYNAKÇA UYUMU|kaynakça uyumu/.test(rmetin), `Kaynakça aracı: ${rmetin.slice(0, 160)}`);
+    const git = r.getByRole("button", { name: /bölümüne git/ });
+    if (await git.count()) {
+      await git.click(); await s.waitForTimeout(800);
+      beklenen(await s.evaluate(() => { const h = Array.from(document.querySelectorAll(".ProseMirror h1, .ProseMirror h2")).find((e) => /Kaynakça/.test(e.textContent)); if (!h) return false; const d = h.getBoundingClientRect(); return d.top >= 0 && d.top < innerHeight; }), "Kaynakça bölümüne gidilmedi");
+    }
+    await goruntu(s, "s13-kaynakca");
+    await c.close();
+    // Telefon: Çalışma sayfasında dört grup, Kaynakça ve Kılavuz ve biçim doğrudan.
+    const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
+    await editorAc(m.s);
+    await m.s.locator(".os-gezinme-daha:visible").first().click();
+    await m.s.waitForTimeout(600);
+    const dmetin = await m.s.locator("dialog[open]").first().evaluate((d) => d.textContent).catch(() => "");
+    beklenen(/Kaynakça/.test(dmetin) && /Kılavuz ve biçim/.test(dmetin) && /Diğer araçlar/.test(dmetin), `telefon Çalışma sayfası: ${dmetin.slice(0, 200)}`);
+    await goruntu(m.s, "s13-telefon-calisma");
+    await m.c.close();
+    return { ayrinti: ozet };
+  });
+
+  /* ---------- S14 ---------- */
+  await dene("S14", "PDF denetimleri ortak görünümde (koyu tema dahil); çekmece başlığı örtmez; telefonda alt çubuk ve ölçek davranışı", async () => {
+    // Koyu tema: kaynak seçici, sayfa kutusu ve arama varsayılan açık gri değil; field-control ile aynı zemin.
+    const kd = await oturum(A, { genislik: 1920, yukseklik: 1080, tema: "dark" });
+    await kd.s.evaluate(() => { document.documentElement.dataset.theme = "dark"; try { localStorage.setItem("arvolab.tema", "dark"); } catch {} });
+    await editorAc(kd.s, "?sag=pdf");
+    await kd.s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 });
+    const zemin = await kd.s.evaluate(() => {
+      const lum = (c) => { const m = c.match(/\d+(\.\d+)?/g)?.map(Number) ?? [255, 255, 255]; return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      return ["." + "kaynak-pdf-secici select", ".pdf-sayfa-girdi input", ".pdf-ara input"].map((q) => { const e = document.querySelector(q); const st = getComputedStyle(e); return { q, sinif: e.classList.contains("field-control"), zemin: st.backgroundColor, lum: lum(st.backgroundColor) }; });
+    });
+    beklenen(zemin.every((z) => z.sinif && z.lum < 0.35), `koyu temada denetim zeminleri: ${JSON.stringify(zemin)}`);
+    await goruntu(kd.s, "s14-pdf-koyu");
+    await kd.c.close();
+    // 1280: PDF çekmece; üstü editör başlığının altında, Kontroller ve Dışa aktar tıklanabilir, kapatma görünür.
+    const d = await oturum(A, { genislik: 1280, yukseklik: 800 });
+    await editorAc(d.s, "?sag=pdf"); await d.s.waitForTimeout(1500);
+    const g = await d.s.evaluate(() => {
+      const panel = document.querySelector(".kaynak-pdf-paneli").getBoundingClientRect();
+      const baslik = document.querySelector(".yazma-basligi").getBoundingClientRect();
+      const ust = (q) => { const e = document.querySelector(q); if (!e) return false; const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e.contains(x); };
+      return { panelUst: Math.round(panel.top), baslikAlt: Math.round(baslik.bottom), kontroller: ust('button[aria-label^="Kontroller"]'), disaAktar: ust('button[aria-label^="Word"], button[aria-label^="Dışa"], .yazma-eylemleri .projects-filter-button:last-child'), kapat: ust('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]') };
+    });
+    beklenen(g.panelUst >= g.baslikAlt && g.kontroller && g.kapat, `1280 çekmece: ${JSON.stringify(g)}`);
+    await goruntu(d.s, "s14-cekmece-1280");
+    await d.c.close();
+    // Telefon: PDF alt çubuğun üstünde biter; alt çubuk görünür ve tıklanır; pasaj yokken sığdır + yakınlaştırma çalışır.
+    const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
+    await editorAc(m.s, "?sag=pdf");
+    await m.s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 });
+    const t = await m.s.evaluate(() => {
+      const panel = document.querySelector(".kaynak-pdf-paneli").getBoundingClientRect();
+      const alt = document.querySelector(".os-calisma-telefon, .os-gezinme").getBoundingClientRect();
+      const belge = Array.from(document.querySelectorAll(".os-gezinme a, .os-calisma-telefon a")).find((a) => /Belge/.test(a.textContent) && a.offsetParent);
+      const r = belge?.getBoundingClientRect();
+      const x = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+      return { panelAlt: Math.round(panel.bottom), altUst: Math.round(alt.top), belgeTiklanir: Boolean(belge && belge.contains(x)), olcek: document.querySelector(".pdf-yuzde")?.textContent?.match(/(\d+)/)?.[1] };
+    });
+    beklenen(t.panelAlt <= t.altUst + 1 && t.belgeTiklanir, `telefon PDF/alt çubuk: ${JSON.stringify(t)}`);
+    await m.s.getByRole("button", { name: /^Yakınlaştır$/ }).click(); await m.s.waitForTimeout(700);
+    const yakin = await m.s.evaluate(() => document.querySelector(".pdf-yuzde")?.textContent?.match(/(\d+)/)?.[1]);
+    beklenen(Number(yakin) > Number(t.olcek), `yakınlaştırma: ${t.olcek}% → ${yakin}%`);
+    await goruntu(m.s, "s14-telefon-pdf");
+    await m.c.close();
+    return { ayrinti: `koyu zemin lum ${zemin.map((z) => z.lum.toFixed(2)).join("/")}; 1280 panel üstü ${g.panelUst} ≥ başlık altı ${g.baslikAlt}; telefon panel altı ${t.panelAlt} ≤ alt çubuk ${t.altUst}, ölçek ${t.olcek}%→${yakin}% (pasajlı odak S15)` };
+  });
+
+  /* ---------- S15 ---------- */
+  /*
+    Telefonda pasajlı odak: doğrulanmış alıntı telefonda eklenir, atıf kartından
+    "Dayanağa git" → PDF okunabilir ölçekte (≥ %160) açılır, vurgulu parça
+    görünür alandadır, "Pasaja odaklan" düğmesi vardır.
+  */
+  await dene("S15", "telefonda pasaj: okunabilir ölçekte odak, vurgu görünür alanda", async () => {
+    const { c, s } = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
+    await editorAc(s, "?sag=pdf");
+    if ((await s.locator(".kaynak-pdf-paneli select").first().inputValue()) !== PDF) await s.locator(".kaynak-pdf-paneli select").first().selectOption(PDF);
+    await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 });
+    if ((await s.locator(".pdf-sayfa-girdi input").inputValue()) !== "1") { await s.locator(".pdf-sayfa-girdi input").fill("1"); await s.keyboard.press("Enter"); await s.waitForTimeout(1200); }
+    // Telefonda PDF paneli belgeyi örttüğü için imleç dokunarak konamıyor; ilk
+    // denemede imleç belgenin başında (Giriş başlığı) kaldı ve alıntı başlığın
+    // İÇİNE eklendi. İmleç masaüstü senaryosundaki gibi 3. paragrafın sonuna konur.
+    await s.evaluate(() => {
+      const ed = document.querySelector(".ProseMirror").editor;
+      let hedef = null, say = 0;
+      ed.state.doc.descendants((n, pos) => { if (hedef !== null) return false; if (n.type.name === "paragraph" && ++say === 3) hedef = pos + n.nodeSize - 1; });
+      ed.commands.setTextSelection(hedef);
+    });
+    await s.evaluate(() => {
+      const hedef = Array.from(document.querySelectorAll(".pdf-sayfa .textLayer span")).find((x) => x.textContent.includes("The effect was strongest"));
+      const r = document.createRange(); r.selectNodeContents(hedef);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      hedef.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+    await s.getByRole("button", { name: /Alıntı ve atıf ekle/ }).click();
+    await s.waitForSelector(".kaynak-dogrulandi", { timeout: 60000 });
+    await s.locator('input[name="kaynak-aday"]').first().check().catch(() => {});
+    await s.locator(".kaynak-onay input[type=checkbox]").first().check().catch(() => {});
+    await s.getByRole("button", { name: /^İmlece ekle$/ }).click(); await s.waitForTimeout(2500);
+    // Telefonda panel eklemeden sonra kapanır; atfa dokun → kart → Dayanağa git.
+    const k = await s.evaluate(() => { const y = document.createTreeWalker(document.querySelector(".ProseMirror"), NodeFilter.SHOW_TEXT); let n, son = null; while ((n = y.nextNode())) { const j = n.data.lastIndexOf("sessions.” (Kaya"); if (j >= 0) son = { n, j: j + 12 }; } if (!son) return null; const r = document.createRange(); r.setStart(son.n, son.j); r.setEnd(son.n, son.j + 1); son.n.parentElement.scrollIntoView({ block: "center" }); const d = r.getBoundingClientRect(); return { x: d.left + d.width / 2, y: d.top + d.height / 2 }; });
+    beklenen(k, "eklenen atıf bulunamadı");
+    // Kaydırma oturmadan dokunulursa kart açılmıyor: kart açılana kadar en fazla üç deneme.
+    for (let deneme = 0; deneme < 3 && !(await s.locator(".atif-karti").count()); deneme++) {
+      await s.waitForTimeout(500);
+      const k2 = await s.evaluate(() => { const y = document.createTreeWalker(document.querySelector(".ProseMirror"), NodeFilter.SHOW_TEXT); let n, son = null; while ((n = y.nextNode())) { const j = n.data.lastIndexOf("sessions.” (Kaya"); if (j >= 0) son = { n, j: j + 12 }; } const r = document.createRange(); r.setStart(son.n, son.j); r.setEnd(son.n, son.j + 1); const d = r.getBoundingClientRect(); return { x: d.left + d.width / 2, y: d.top + d.height / 2 }; });
+      await s.mouse.click(k2.x, k2.y); await s.waitForTimeout(1200);
+    }
+    if (await s.locator(".atif-karti-aday", { hasText: "Remote learning" }).count()) await s.locator(".atif-karti-aday", { hasText: "Remote learning" }).click();
+    await s.getByRole("button", { name: /Dayanağa git/ }).first().click(); await s.waitForTimeout(3500);
+    const r = await s.evaluate(() => {
+      const olcek = Number(document.querySelector(".pdf-yuzde")?.textContent?.match(/(\d+)/)?.[1] ?? 0);
+      const v = document.querySelector(".pdf-sayfa .textLayer span.pdf-pasaj");
+      const d = v?.getBoundingClientRect();
+      const alan = document.querySelector(".pdf-sayfa-alani")?.getBoundingClientRect();
+      // Okunur ölçekte cümle ekrandan geniş olabilir: BAŞI ve satırı görünür alanda olmalı.
+      const kapat = document.querySelector(".kaynak-pdf-paneli")?.querySelector('button[aria-label*="kapat"], button[aria-label*="Close"]')?.getBoundingClientRect();
+      return { olcek, vurgu: Boolean(v), gorunur: Boolean(d && alan && d.top >= alan.top && d.bottom <= alan.bottom && d.left >= alan.left - 1 && d.left < alan.right - 40), odakla: Boolean(document.querySelector(".pdf-pasaja-odaklan")), kapatGorunur: Boolean(kapat && kapat.top >= 0 && kapat.bottom <= innerHeight) };
+    });
+    await goruntu(s, "s15-telefon-pasaj");
+    beklenen(r.olcek >= 160 && r.vurgu && r.gorunur && r.odakla && r.kapatGorunur, `telefon pasaj: ${JSON.stringify(r)}`);
+    await c.close();
+    return { ayrinti: `ölçek %${r.olcek}, pasajın başı görünür alanda, Pasaja odaklan var, panelin kapatma düğmesi ekranda` };
+  });
+
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
   if (GORSEL) {
     // Görseller senaryoların bıraktığı eklemelerden arınmış, tohumdaki belgeyle alınır.

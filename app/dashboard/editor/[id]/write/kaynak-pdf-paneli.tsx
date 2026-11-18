@@ -160,6 +160,9 @@ export default function KaynakPdfPaneli({
     }
   }
 
+  /* Uygulanan "git" isteği düşer: yalnızca aynı istekse (bu arada yenisi geldiyse o kalır). */
+  const gidisUygulandi = useCallback((anahtar: number) => setGidilecek((g) => (g?.anahtar === anahtar ? null : g)), []);
+
   /* Görüntüleyici seçim bildirdiğinde: yeni seçim önceki atıf adımını sıfırlar. */
   const secimGeldi = useCallback((yeni: PdfSecimi | null) => {
     setSecim(yeni);
@@ -309,6 +312,7 @@ export default function KaynakPdfPaneli({
               pdfId={pdf.id}
               gidilecekSayfa={gidilecek}
               onPasaj={setPasajSonucu}
+              onGidisUygulandi={gidisUygulandi}
               onSecim={secimGeldi}
               konumAl={konumAl}
               onKonum={konumDegisti}
