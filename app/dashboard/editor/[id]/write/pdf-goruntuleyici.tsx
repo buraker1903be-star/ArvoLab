@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { pasajParcalari } from "@/lib/pdf-pasaj";
 import { kanitMetniNormallestir } from "@/lib/kanit/alinti";
 import { olcekSinirla, OLCEK_ADIM } from "@/lib/pdf-goruntu";
 
@@ -58,10 +59,17 @@ export default function PdfGoruntuleyici({
   onSecim,
   konumAl,
   onKonum,
+  onPasaj,
 }: {
   pdfId: string;
-  /** Dışarıdan istenen sayfa (ör. asistanın alıntısındaki "PDF s. N"); değişince oraya gidilir. */
-  gidilecekSayfa?: { sayfa: number; anahtar: number } | null;
+  /**
+   * Dışarıdan istenen sayfa (ör. asistanın alıntısındaki "PDF s. N"); değişince oraya gidilir.
+   * `pasaj` verilirse (atıf kartının "Dayanağa git"i) o sayfada doğrulanmış metin bütünüyle
+   * bulunursa vurgulanır; bulunamazsa hiçbir şey işaretlenmez (lib/pdf-pasaj.ts).
+   */
+  gidilecekSayfa?: { sayfa: number; anahtar: number; pasaj?: string; pdfId?: string } | null;
+  /** Pasaj vurgusunun sonucu: bulundu mu (atıf kartı/panel kullanıcıya söyler). */
+  onPasaj?: (bulundu: boolean) => void;
   onSecim: (secim: PdfSecimi | null) => void;
   /** Bu PDF için hatırlanan konum (yoksa null). */
   konumAl?: (pdfId: string) => OkumaKonumu | null;
@@ -70,6 +78,8 @@ export default function PdfGoruntuleyici({
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
+  /* Yüklü belgenin hangi PDF'e ait olduğu: PDF değişirken bekleyen bir "git" isteği eski belgeye uygulanmasın. */
+  const [belgeninPdfi, setBelgeninPdfi] = useState<string | null>(null);
   const [durum, setDurum] = useState<"yukleniyor" | "hazir" | "hata">("yukleniyor");
   const [sayfaNo, setSayfaNo] = useState(1);
   const [sayfaGirdi, setSayfaGirdi] = useState("1");
@@ -84,6 +94,13 @@ export default function PdfGoruntuleyici({
   const katmanRef = useRef<HTMLDivElement>(null);
   const metinlerRef = useRef<Map<number, string>>(new Map());
   const aramaTerimiRef = useRef("");
+  /* Vurgulanacak pasaj durumda; çizim sonrası okunabilsin diye ref'e efektte aktarılır. */
+  const [pasaj, setPasaj] = useState<{ sayfa: number; metin: string } | null>(null);
+  const pasajRef = useRef<{ sayfa: number; metin: string } | null>(null);
+  const onPasajRef = useRef(onPasaj);
+  useEffect(() => {
+    onPasajRef.current = onPasaj;
+  }, [onPasaj]);
 
   /*
     PDF değişince görünür durum RENDER sırasında sıfırlanır (React'in "prop
@@ -126,6 +143,7 @@ export default function PdfGoruntuleyici({
         // Hatırlanan sayfa (panel yeniden açıldıysa), belgenin sayfa sayısına sıkıştırılarak.
         const ilk = Math.min(Math.max(1, Math.trunc(konumAlRef.current?.(pdfId)?.sayfa ?? 1)), yuklenen.numPages);
         setBelge(yuklenen);
+        setBelgeninPdfi(pdfId);
         setSayfaNo(ilk);
         setSayfaGirdi(String(ilk));
         setDurum("hazir");
@@ -144,9 +162,18 @@ export default function PdfGoruntuleyici({
   /* Cevaptaki "PDF s. N" bağlantısı: her istek kendi anahtarıyla bir kez uygulanır (render sırasında, aynı kalıp). */
   // Bağlanırken elde olan istek uygulanmış sayılır: panel yeniden açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin.
   const [uygulananGidis, setUygulananGidis] = useState<number | null>(() => gidilecekSayfa?.anahtar ?? null);
-  if (gidilecekSayfa && belge && gidilecekSayfa.anahtar !== uygulananGidis) {
+  if (
+    gidilecekSayfa &&
+    belge &&
+    belgeninPdfi === pdfId &&
+    gosterilenPdf === pdfId &&
+    (!gidilecekSayfa.pdfId || gidilecekSayfa.pdfId === pdfId) &&
+    gidilecekSayfa.anahtar !== uygulananGidis
+  ) {
     setUygulananGidis(gidilecekSayfa.anahtar);
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
+    // Yeni gidiş eski pasaj vurgusunu düşürür; pasaj yoksa vurgu da yok.
+    setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj } : null);
     setSayfaNo(n);
     setSayfaGirdi(String(n));
   }
@@ -164,7 +191,23 @@ export default function PdfGoruntuleyici({
       const esles = terim.length > 1 && kanitMetniNormallestir(parca.textContent ?? "").toLocaleLowerCase("tr").includes(terim);
       parca.classList.toggle("pdf-esles", esles);
     }
+    /* Doğrulanmış pasaj: yalnızca istenen sayfada ve metin bütünüyle bulunursa. */
+    const parcalar = Array.from(katman.querySelectorAll<HTMLSpanElement>("span:not(.markedContent)"));
+    parcalar.forEach((p) => p.classList.remove("pdf-pasaj"));
+    const pasaj = pasajRef.current;
+    if (pasaj && katman.dataset.sayfa === String(pasaj.sayfa)) {
+      const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
+      kapsanan?.forEach((i) => parcalar[i].classList.add("pdf-pasaj"));
+      if (kapsanan) parcalar[kapsanan[0]].scrollIntoView({ block: "center", behavior: "smooth" });
+      onPasajRef.current?.(Boolean(kapsanan));
+    }
   }, []);
+
+  /* Aynı sayfaya gidişte sayfa yeniden çizilmez; pasaj vurgusu burada uygulanır (farklı sayfada çizim sonrası). */
+  useEffect(() => {
+    pasajRef.current = pasaj;
+    vurgula();
+  }, [pasaj, uygulananGidis, vurgula]);
 
   /* Sayfa çizimi: kanvas + metin katmanı; önceki çizim iptal edilir. */
   useEffect(() => {
@@ -201,6 +244,7 @@ export default function PdfGoruntuleyici({
         await Promise.all([cizim.promise, metinKatmani.render()]);
         if (!iptal) {
           setCizilenOlcek(hedef);
+          katman.dataset.sayfa = String(sayfaNo);
           vurgula();
         }
       } catch {

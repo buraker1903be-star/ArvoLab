@@ -119,7 +119,7 @@ export function doiNormallestir(ham: string | null | undefined): string | null {
 export type KutuphaneKaydi = { id: string; title: string; doi_or_url: string | null; project_id: string | null };
 
 export type KaynakEslesmesi =
-  | { tur: "kesin"; kaynakId: string; neden: "doi" }
+  | { tur: "kesin"; kaynakId: string; neden: "doi" | "bag" }
   | { tur: "belirsiz"; neden: "doi_coklu" | "doi_yok" | "doi_eslesmedi"; adaylar: string[] }
   | { tur: "yok"; neden: "doi_yok" | "doi_eslesmedi" };
 
@@ -145,10 +145,12 @@ function baslikAdayiMi(pdfBaslik: string, kayitBaslik: string): boolean {
  * yalnızca başlık adayları (belirsiz) ya da hiç (yok).
  */
 export function kaynakEslesmesi(
-  pdf: { doi: string | null; baslik: string },
+  pdf: { doi: string | null; baslik: string; kaynakId?: string | null },
   kayitlar: KutuphaneKaydi[],
   projectId: string,
 ): KaynakEslesmesi {
+  /* Kullanıcının kurduğu açık bağ (K2-A) her tahminden önce gelir; bağlı kayıt kütüphanede yoksa (silinmiş) tahmine düşülür. */
+  if (pdf.kaynakId && kayitlar.some((k) => k.id === pdf.kaynakId)) return { tur: "kesin", kaynakId: pdf.kaynakId, neden: "bag" };
   const pdfDoi = doiNormallestir(pdf.doi);
   const sirali = [...kayitlar].sort((x, y) => Number(y.project_id === projectId) - Number(x.project_id === projectId));
   if (pdfDoi) {

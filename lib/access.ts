@@ -163,6 +163,9 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    Yazım Stüdyosu'nun PDF görüntüleyicisi de burada: goruntuleyiciKaynaklari
  *    (liste) ve /api/kaynak-pdf/[pdfId] (kendi klasöründeki PDF'in baytları,
  *    çözümleme yok) kapısız; engellenen öğrenci kendi kaynağını okuyabilmeli.
+ *    pdfKaynaginiBagla (PDF'i kendi kaynak kaydına bağlama/bağı kaldırma,
+ *    K2-A) ve kaynakKunyeDurumlari (atıf kartının künye satırı) da kapısız:
+ *    mevcut kaydın güncellenmesi ve okuma, dış maliyet yok.
  *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller

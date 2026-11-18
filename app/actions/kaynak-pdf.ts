@@ -55,7 +55,7 @@ const PARTI = 3;
 const SURE_BUTCESI_MS = 40_000;
 const KOVA = "project-files";
 
-const SECIM = "id, kunye_anahtari, kunye, doi, durum, depo_yolu, kaynak_adres, baslik_eslesti, bakildi";
+const SECIM = "id, kunye_anahtari, kunye, doi, durum, depo_yolu, kaynak_adres, baslik_eslesti, bakildi, kaynak_id";
 
 const yenile = () => revalidatePath("/dashboard/editor");
 
@@ -434,4 +434,86 @@ export async function teslimPaketi(
   const dil = await aktifDil();
   const tarih = new Intl.DateTimeFormat(YEREL[dil], { timeZone: await aktifSaatDilimi(), dateStyle: "long", timeStyle: "short" }).format(new Date());
   return { baslik: calisma.title, dosyalar, rapor: kaynakRaporu(calisma.title, paket, tarih, dil) };
+}
+
+/*
+  PDF'İ KAYNAK KAYDINA BAĞLAMA (K2-A, 19.11.2026; migration 20261118125346).
+  Yalnızca kullanıcının açık eylemiyle; eski satırlar toplu ya da tahminle
+  bağlanmaz. Yetki yalnızca yabancı anahtara bırakılmaz: PDF'in bu çalışmaya,
+  kaynağın da AYNI çalışmaya ve çağıranın görebildiği kayıtlara (RLS)
+  ait olduğu burada okunarak denetlenir. Veritabanı aynı kuralı
+  tetikleyiciyle ayrıca uygular (kaynak_pdf_bagi_denetle); buradaki
+  denetim anlaşılır mesaj için. Mevcut kaydın güncellenmesi olduğu için
+  abonelik kapısı yok (lib/access.ts).
+*/
+export async function pdfKaynaginiBagla(girdi: { projectId: string; pdfId: string; kaynakId: string | null }): Promise<{ ok: true } | { hata: string }> {
+  const t = await ceviri();
+  const { projectId, pdfId, kaynakId } = girdi;
+  if (!UUID.test(String(projectId ?? "")) || !UUID.test(String(pdfId ?? "")) || (kaynakId !== null && !UUID.test(String(kaynakId)))) {
+    return { hata: t({ tr: "Kaynak ya da PDF bulunamadı.", en: "Source or PDF not found." }) };
+  }
+  const ctx = await getAuthContext();
+  if (!ctx) return { hata: await oturumYokMesaji() };
+
+  const { data: pdf, error: pdfHatasi } = await ctx.supabase.from("kaynak_pdfleri").select("id, project_id").eq("id", pdfId).eq("project_id", projectId).maybeSingle();
+  if (pdfHatasi) {
+    console.error("[kaynak-pdf] bağ: PDF okunamadı:", pdfHatasi.message);
+    return { hata: t({ tr: "PDF okunamadı; bağ kurulmadı. Tekrar deneyin.", en: "The PDF couldn't be read; nothing was linked. Try again." }) };
+  }
+  if (!pdf) return { hata: t({ tr: "Bu PDF bu çalışmada bulunamadı.", en: "This PDF wasn't found in this work." }) };
+
+  if (kaynakId) {
+    const { data: kaynak, error: kaynakHatasi } = await ctx.supabase.from("literature_sources").select("id, project_id").eq("id", kaynakId).maybeSingle();
+    if (kaynakHatasi) {
+      console.error("[kaynak-pdf] bağ: kaynak okunamadı:", kaynakHatasi.message);
+      return { hata: t({ tr: "Kaynak okunamadı; bağ kurulmadı. Tekrar deneyin.", en: "The source couldn't be read; nothing was linked. Try again." }) };
+    }
+    if (!kaynak || kaynak.project_id !== projectId) {
+      return { hata: t({ tr: "Bu kaynak bu çalışmaya ait değil; PDF bağlanmadı.", en: "This source doesn't belong to this work; the PDF wasn't linked." }) };
+    }
+  }
+
+  const { data: guncel, error } = await ctx.supabase.from("kaynak_pdfleri").update({ kaynak_id: kaynakId }).eq("id", pdfId).eq("project_id", projectId).select("id");
+  if (error) {
+    console.error("[kaynak-pdf] bağ yazılamadı:", error.message);
+    return { hata: t({ tr: "Bağ kaydedilemedi; tekrar deneyin.", en: "The link couldn't be saved; try again." }) };
+  }
+  // RLS satırı sessizce elerse "bağlandı" denmez.
+  if (!guncel?.length) return { hata: t({ tr: "Bu çalışmada değişiklik yetkiniz yok.", en: "You don't have permission to change this work." }) };
+  return { ok: true };
+}
+
+/*
+  ATIF KARTININ KÜNYE SATIRI (K3-A). Kaynak başına en güçlü künye denetim
+  sonucu, kanıt matrisinin gerçek kayıtlarından (kanit_kayitlari.kunye_durumu,
+  Crossref/OpenAlex). Kayıt yoksa "denetlenmedi": tahmin yok. Okuma; kapısız.
+*/
+export type KunyeDurumOzeti = { kaynakId: string; durum: "dogrulandi" | "kismen" | "uyusmuyor" | "dogrulanamadi"; dizin: "crossref" | "openalex" | null };
+
+export async function kaynakKunyeDurumlari(projectId: string): Promise<{ satirlar: KunyeDurumOzeti[] } | { hata: string }> {
+  const t = await ceviri();
+  if (!UUID.test(String(projectId ?? ""))) return { hata: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
+  const ctx = await getAuthContext();
+  if (!ctx) return { hata: await oturumYokMesaji() };
+  const { data, error } = await ctx.supabase
+    .from("kanit_kayitlari")
+    .select("kaynak_id, kunye_durumu, kunye_kaynagi")
+    .eq("project_id", projectId)
+    .not("kaynak_id", "is", null)
+    .neq("kunye_durumu", "bakilmadi");
+  if (error) {
+    console.error("[kaynak-pdf] künye durumları okunamadı:", error.message);
+    return { hata: t({ tr: "Künye denetimleri okunamadı.", en: "Reference checks couldn't be read." }) };
+  }
+  const SIRA = ["dogrulandi", "kismen", "uyusmuyor", "dogrulanamadi"] as const;
+  const enIyi = new Map<string, KunyeDurumOzeti>();
+  for (const satir of data ?? []) {
+    const durum = satir.kunye_durumu as KunyeDurumOzeti["durum"];
+    if (!SIRA.includes(durum) || !satir.kaynak_id) continue;
+    const onceki = enIyi.get(satir.kaynak_id);
+    if (!onceki || SIRA.indexOf(durum) < SIRA.indexOf(onceki.durum)) {
+      enIyi.set(satir.kaynak_id, { kaynakId: satir.kaynak_id, durum, dizin: (satir.kunye_kaynagi as KunyeDurumOzeti["dizin"]) ?? null });
+    }
+  }
+  return { satirlar: [...enIyi.values()] };
 }

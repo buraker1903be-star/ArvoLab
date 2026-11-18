@@ -81,7 +81,13 @@ import {
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
+import { SolArama, SolBolumler, SolKaynaklar, kaynaginPdfi, type KaynakPdfi } from "./sol-araclar";
+import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
+import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
+import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
+import { belgeBolumleri, kaynakcaGirdileri, type Dugum } from "@/lib/kaynakca-bolumu";
+import { goruntuleyiciKaynaklari as kartPdfleriniOku, kaynakKunyeDurumlari, type KunyeDurumOzeti } from "@/app/actions/kaynak-pdf";
+import { getLiteratureSources as kartKaynaklariniOku } from "@/app/actions/literature";
 import {
   KAGIT_GENISLIGI,
   SAG_PANEL_SINIRI,
@@ -689,7 +695,19 @@ export default function ManuscriptEditor({
     window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
   }, []);
   /* Kaynaklar aracından "PDF'i aç": panel o PDF'le açılır (anahtar aynı PDF'e ikinci basışı da iletir). */
-  const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number } | null>(null);
+  const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number; sayfa?: number; pasaj?: string } | null>(null);
+
+  /*
+    ATIF KARTI (K3-A) ve SEÇİM İŞLEMLERİ: iki ayrı durum, aynı anda açılmaz
+    (atif-karti.tsx). Kartın verisi ilk tıklamada okunur ve PDF bağı ya da
+    atıf değişince tazelenir. Doğrulanmış pasajlar yalnızca bu oturumda,
+    bellekte (K3-ek onaylı değil: kalıcı kayıt yok).
+  */
+  const [atifKarti, setAtifKarti] = useState<AtifKartiDurumu | null>(null);
+  const [kartVerisi, setKartVerisi] = useState<{ kaynaklar: LiteratureSource[]; pdfler: KaynakPdfi[]; kunye: Map<string, KunyeDurumOzeti> } | null>(null);
+  const [kartYukleniyor, setKartYukleniyor] = useState(false);
+  const [dogrulanmisPasajlar, setDogrulanmisPasajlar] = useState<DogrulanmisPasaj[]>([]);
+  const [secimKonumu, setSecimKonumu] = useState<{ yan: "sag" | "alt"; x: number; y: number } | null>(null);
   const yerlesimRef = useRef<HTMLDivElement>(null);
   const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
   const anaRef = useRef<HTMLDivElement>(null);
@@ -1767,6 +1785,141 @@ export default function ManuscriptEditor({
     onSayfaOtoRef.current = true;
     kilavuzOnSayfalariniEkle();
   }, [editor, guideline, guidelineSync, kilavuzOnSayfalariniEkle]);
+
+  /*
+    ATIFA TIKLAMA (K3-A). Belge değişmez: tıklanan noktadaki düz metin
+    atıf, o anda çalışmanın kaynaklarıyla eşleştirilir (lib/atif-karti.ts).
+    Metin seçiliyken kart açılmaz (seçim işlemleri durumu); belge değişince
+    ya da seçim yapılınca kart kapanır.
+  */
+  const stilTuru: AtifStilTuru = (() => {
+    const tur = stilTanimi(citationStyle).tur;
+    return tur === "numara" ? "numara" : tur === "dipnot" ? "dipnot" : "yazar-tarih";
+  })();
+  const cikarmaStili = atifCikarmaStili(stilTanimi(citationStyle));
+  const kartVerisiRef = useRef(kartVerisi);
+  useEffect(() => {
+    kartVerisiRef.current = kartVerisi;
+  }, [kartVerisi]);
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const tikla = (olay: MouseEvent) => {
+      if (!editor.state.selection.empty || olay.button !== 0 || olay.detail > 1) return;
+      const yer = editor.view.posAtCoords({ left: olay.clientX, top: olay.clientY });
+      if (!yer) return;
+      const $pos = editor.state.doc.resolve(yer.pos);
+      if (!$pos.parent.isTextblock) {
+        setAtifKarti(null);
+        return;
+      }
+      // Satır içi düğümler (dipnot işareti) metin konumunu kaydırmasın diye yer tutucuyla okunur.
+      const metin = $pos.parent.textBetween(0, $pos.parent.content.size, undefined, "\ufffc");
+      const ofset = $pos.parent.textBetween(0, $pos.parentOffset, undefined, "\ufffc").length;
+      const isabet = tiklananAtif(metin, ofset, stilTuru, cikarmaStili);
+      if (!isabet) {
+        setAtifKarti(null);
+        return;
+      }
+      const basPos = $pos.start() + isabet.bas;
+      const satir = editor.view.coordsAtPos(Math.min(basPos, $pos.end()));
+      const kagit = dom.getBoundingClientRect();
+      const konum = kartKonumu({
+        kagit,
+        satir: { left: satir.left, right: satir.right, top: satir.top, bottom: satir.bottom },
+        ekranGenisligi: window.innerWidth,
+        ekranYuksekligi: window.innerHeight,
+        genislik: 300,
+        yukseklik: 320,
+      });
+      const girdiler = () => {
+        const bloklar = (editor.getJSON().content ?? []) as Dugum[];
+        return kaynakcaGirdileri(bloklar, belgeBolumleri(bloklar).kaynakca).girdiler;
+      };
+      const hesapla = (veri: NonNullable<typeof kartVerisi>) => {
+        const adaylar = atifAdaylari(isabet, veri.kaynaklar, isabet.tur === "numara" ? girdiler() : []);
+        return { isabet, adaylar, secilen: adaylar.length === 1 ? adaylar[0] : null, konum };
+      };
+      const mevcut = kartVerisiRef.current;
+      if (mevcut) {
+        setAtifKarti(hesapla(mevcut));
+        return;
+      }
+      setAtifKarti({ isabet, adaylar: [], secilen: null, konum });
+      setKartYukleniyor(true);
+      void Promise.all([kartKaynaklariniOku(), kartPdfleriniOku(projectId), kaynakKunyeDurumlari(projectId)]).then(([kaynakSonuc, pdfSonuc, kunyeSonuc]) => {
+        const veri = {
+          kaynaklar: kaynakSonuc.okunamadi ? [] : kaynakSonuc.satirlar.filter((k) => k.project_id === projectId),
+          pdfler: "hata" in pdfSonuc ? [] : pdfSonuc.satirlar.map((p) => ({ id: p.id, doi: p.doi, kaynakId: p.kaynak_id ?? null })),
+          kunye: new Map("hata" in kunyeSonuc ? [] : kunyeSonuc.satirlar.map((k) => [k.kaynakId, k] as const)),
+        };
+        setKartVerisi(veri);
+        setKartYukleniyor(false);
+        setAtifKarti((d) => (d && d.isabet === isabet ? hesapla(veri) : d));
+      });
+    };
+    dom.addEventListener("click", tikla);
+    /* Kart ekrana sabit: belge kayınca satırdan kopmasın diye kapanır. */
+    const kaydirildi = () => setAtifKarti(null);
+    window.addEventListener("scroll", kaydirildi, { passive: true });
+    const kapat = ({ transaction }: { transaction: { docChanged: boolean } }) => {
+      if (transaction.docChanged) setAtifKarti(null);
+    };
+    editor.on("transaction", kapat);
+    return () => {
+      dom.removeEventListener("click", tikla);
+      window.removeEventListener("scroll", kaydirildi);
+      editor.off("transaction", kapat);
+    };
+  }, [editor, stilTuru, cikarmaStili, projectId]);
+
+  /*
+    SEÇİM İŞLEMLERİ: metin seçiliyken kâğıdın sağında (yer yoksa seçimin
+    altında). Kaydırmada ve seçim değişince yeniden konumlanır.
+  */
+  useEffect(() => {
+    if (!editor) return;
+    let kare = 0;
+    const konumla = () => {
+      kare = 0;
+      const { from, to, empty } = editor.state.selection;
+      if (empty || !editor.isFocused || window.innerWidth <= 760) {
+        setSecimKonumu(null);
+        return;
+      }
+      setAtifKarti(null);
+      const bas = editor.view.coordsAtPos(from);
+      const son = editor.view.coordsAtPos(to);
+      const kagit = (editor.view.dom as HTMLElement).getBoundingClientRect();
+      setSecimKonumu(
+        kartKonumu({
+          kagit,
+          satir: { left: bas.left, right: son.right, top: bas.top, bottom: son.bottom },
+          ekranGenisligi: window.innerWidth,
+          ekranYuksekligi: window.innerHeight,
+          genislik: 168,
+          yukseklik: 120,
+        }),
+      );
+    };
+    const planla = () => {
+      if (!kare) kare = window.requestAnimationFrame(konumla);
+    };
+    const bulanik = () => window.setTimeout(planla, 120);
+    editor.on("selectionUpdate", planla);
+    editor.on("blur", bulanik);
+    editor.on("focus", planla);
+    window.addEventListener("scroll", planla, { passive: true, capture: true });
+    window.addEventListener("resize", planla);
+    return () => {
+      editor.off("selectionUpdate", planla);
+      editor.off("blur", bulanik);
+      editor.off("focus", planla);
+      window.removeEventListener("scroll", planla, { capture: true });
+      window.removeEventListener("resize", planla);
+      if (kare) window.cancelAnimationFrame(kare);
+    };
+  }, [editor]);
 
   /* Belge sütununun genişliği: "Sığdır" ölçeği ondan hesaplanır (kâğıt sabit genişlikte, sütun daralınca küçülür). */
   useEffect(() => {
@@ -3497,7 +3650,56 @@ export default function ManuscriptEditor({
       {sag && karar?.sag === "sutun" ? (
         <SagPanelAyirici panel={sag} genislik={sagGenislik} enCok={karar.sagEnCok} onDegis={sagGenislikDegisti} yerlesim={yerlesimiAl} />
       ) : null}
-      <KaynakPdfPaneli editor={editor} projectId={projectId} acik={kaynakAcik} acilacak={acilacakPdf} onKapat={() => sagAc(null)} onCite={handleCite} />
+      <KaynakPdfPaneli
+        editor={editor}
+        projectId={projectId}
+        acik={kaynakAcik}
+        acilacak={acilacakPdf}
+        onKapat={() => sagAc(null)}
+        onCite={handleCite}
+        onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
+        onBagDegisti={() => setKartVerisi(null)}
+      />
+      {atifKarti ? (
+        <AtifKarti
+          durum={atifKarti}
+          projectId={projectId}
+          kaynaklar={kartVerisi?.kaynaklar ?? []}
+          pdfBul={(k) => (kartVerisi ? kaynaginPdfi(k, kartVerisi.pdfler) : null)}
+          kunye={kartVerisi?.kunye ?? new Map()}
+          pasajlar={dogrulanmisPasajlar}
+          yukleniyor={kartYukleniyor}
+          onSec={(id) => setAtifKarti((d) => (d ? { ...d, secilen: id } : d))}
+          onKapat={() => setAtifKarti(null)}
+          onPdfAc={(id) => {
+            setAcilacakPdf({ id, anahtar: Date.now() });
+            sagAc("pdf");
+            setAtifKarti(null);
+          }}
+          onDayanagaGit={(p) => {
+            setAcilacakPdf({ id: p.pdfId, anahtar: Date.now(), sayfa: p.sayfa, pasaj: p.metin });
+            sagAc("pdf");
+            setAtifKarti(null);
+          }}
+          onKaynaklariAc={() => {
+            const u = new URL(window.location.href);
+            u.searchParams.set("sol", "kaynaklar");
+            window.history.pushState(window.history.state, "", u.pathname + u.search);
+            setAtifKarti(null);
+          }}
+        />
+      ) : secimKonumu ? (
+        <SecimIslemleri
+          konum={secimKonumu}
+          onAi={() => sagAc("ai")}
+          onDayanak={() => {
+            const { from, to } = editor.state.selection;
+            setKaynakBulCumle(editor.state.doc.textBetween(from, to, " "));
+            setKaynakBulAcik(true);
+          }}
+          onAtif={() => setCiteOpen(true)}
+        />
+      ) : null}
 
       {/*
         Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık

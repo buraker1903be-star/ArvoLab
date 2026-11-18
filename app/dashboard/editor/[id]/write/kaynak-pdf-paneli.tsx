@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Editor } from "@tiptap/react";
-import { BookOpenCheck, FileText, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
+import { BookOpenCheck, FileText, Link2, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useOturumDurumu } from "@/app/_components/oturum-durumu";
-import { goruntuleyiciKaynaklari, kaynakSecimiDogrula } from "@/app/actions/kaynak-pdf";
+import { goruntuleyiciKaynaklari, kaynakSecimiDogrula, pdfKaynaginiBagla } from "@/app/actions/kaynak-pdf";
 import { kaynaklaSohbet, type KaynakSohbetYaniti } from "@/app/actions/ai-kaynak-sohbeti";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { kunyeBasligi, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
@@ -52,6 +52,8 @@ export default function KaynakPdfPaneli({
   projectId,
   acik,
   acilacak = null,
+  onDogrulanmisPasaj,
+  onBagDegisti,
   onKapat,
   onCite,
 }: {
@@ -59,7 +61,11 @@ export default function KaynakPdfPaneli({
   projectId: string;
   acik: boolean;
   /** Kaynaklar aracından "PDF'i aç" (sol-araclar.tsx): panel bu PDF'le açılır. */
-  acilacak?: { id: string; anahtar: number } | null;
+  acilacak?: { id: string; anahtar: number; sayfa?: number; pasaj?: string } | null;
+  /** Doğrulanmış alıntı belgeye eklenince: atıf kartının "Dayanağa git"i bu oturumda bunu kullanır (kalıcı kayıt yok, K3-ek onaylı değil). */
+  onDogrulanmisPasaj?: (pasaj: { kaynakId: string; pdfId: string; sayfa: number; metin: string }) => void;
+  /** PDF'in kaynak bağı değişince (K2-A): editör atıf kartının verisini tazeler. */
+  onBagDegisti?: () => void;
   onKapat: () => void;
   onCite: (source: LiteratureSource, secenek: { sayfa?: string | null }) => Promise<void>;
 }) {
@@ -75,7 +81,9 @@ export default function KaynakPdfPaneli({
   const [pdfId, setPdfId] = useOturumDurumu<string>(`arvolab.pdf.${projectId}.secili`, "");
   const [konumlar, setKonumlar] = useOturumDurumu<Record<string, OkumaKonumu>>(`arvolab.pdf.${projectId}.konumlar`, {});
   const [secim, setSecim] = useState<PdfSecimi | null>(null);
-  const [gidilecek, setGidilecek] = useState<{ sayfa: number; anahtar: number } | null>(null);
+  const [gidilecek, setGidilecek] = useState<{ sayfa: number; anahtar: number; pasaj?: string; pdfId?: string } | null>(null);
+  /* "Dayanağa git"in sonucu: pasaj sayfada bulundu mu. Bulunamadıysa söylenir, hiçbir yer işaretlenmez. */
+  const [pasajSonucu, setPasajSonucu] = useState<boolean | null>(null);
   const [soru, setSoru] = useState("");
   const [analizler, setAnalizler] = useState<Analiz[]>([]);
   const [soruluyor, setSoruluyor] = useState(false);
@@ -138,12 +146,15 @@ export default function KaynakPdfPaneli({
   const [islenenAcilis, setIslenenAcilis] = useState<number | null>(null);
   if (acilacak && acilacak.anahtar !== islenenAcilis && liste) {
     setIslenenAcilis(acilacak.anahtar);
-    if (liste.some((r) => r.id === acilacak.id) && acilacak.id !== pdfId) {
-      setPdfId(acilacak.id);
-      setSecim(null);
-      setAnalizler([]);
-      setAtif(null);
-      setGidilecek(null);
+    if (liste.some((r) => r.id === acilacak.id)) {
+      if (acilacak.id !== pdfId) {
+        setPdfId(acilacak.id);
+        setSecim(null);
+        setAnalizler([]);
+        setAtif(null);
+      }
+      setPasajSonucu(null);
+      setGidilecek(acilacak.sayfa ? { sayfa: acilacak.sayfa, anahtar: acilacak.anahtar, pasaj: acilacak.pasaj, pdfId: acilacak.id } : null);
     }
   }
 
@@ -189,7 +200,7 @@ export default function KaynakPdfPaneli({
       setAtif({ adim: "hata", mesaj: t({ tr: "Literatür kütüphaneniz okunamadı; sayfayı yenileyip tekrar deneyin.", en: "Your Literature library couldn't be read; refresh and try again." }) });
       return;
     }
-    const eslesme = kaynakEslesmesi({ doi: pdf.doi, baslik: kunyeBasligi(pdf.kunye) || pdf.kunye }, kutuphane.satirlar, projectId);
+    const eslesme = kaynakEslesmesi({ doi: pdf.doi, baslik: kunyeBasligi(pdf.kunye) || pdf.kunye, kaynakId: pdf.kaynak_id ?? null }, kutuphane.satirlar, projectId);
     if (eslesme.tur === "kesin") setSecilenKaynak(eslesme.kaynakId);
     setAtif({ adim: "hazir", alinti: dogrulama.metin, pdfSayfa: dogrulama.sayfa, eslesme, kaynaklar: kutuphane.satirlar });
   };
@@ -203,6 +214,7 @@ export default function KaynakPdfPaneli({
     try {
       if (alintiEkle) editor.chain().focus().insertContent(`“${atif.alinti}” `).run();
       await onCite(kaynak, { sayfa: basiliSayfa.trim() || null });
+      if (pdf) onDogrulanmisPasaj?.({ kaynakId: kaynak.id, pdfId: pdf.id, sayfa: atif.pdfSayfa, metin: atif.alinti });
       setAtif(null);
       setSecim(null);
       window.getSelection()?.removeAllRanges();
@@ -216,6 +228,7 @@ export default function KaynakPdfPaneli({
   if (!acik) return null;
 
   const eslesmeMetni = (e: KaynakEslesmesi): string => {
+    if (e.tur === "kesin" && e.neden === "bag") return t({ tr: "Bu PDF'i bu kaynak kaydına siz bağladınız.", en: "You linked this PDF to this source record." });
     if (e.tur === "kesin") return t({ tr: "Kaynak DOI ile Literatür kütüphanenizdeki tek kayıtla eşleşti.", en: "The source matched a single record in your Literature library by DOI." });
     if (e.neden === "doi_coklu") return t({ tr: "Bu DOI kütüphanenizde birden çok kayıtta var. Hangisi olduğunu seçin.", en: "This DOI appears in several records in your library. Choose which one it is." });
     if (e.tur === "belirsiz")
@@ -267,9 +280,33 @@ export default function KaynakPdfPaneli({
             </select>
           </label>
 
+          {pdf ? (
+            <PdfBagSatiri
+              projectId={projectId}
+              pdf={pdf}
+              onDegisti={(kaynakId) => {
+                setListe((onceki) => onceki?.map((r) => (r.id === pdf.id ? { ...r, kaynak_id: kaynakId } : r)) ?? onceki);
+                onBagDegisti?.();
+              }}
+            />
+          ) : null}
+          {pasajSonucu === false ? (
+            <p className="pdf-pasaj-durum" role="status">
+              {t({
+                tr: "Doğrulanmış pasaj bu sayfanın metninde bulunamadı; hiçbir yer işaretlenmedi.",
+                en: "The verified passage wasn't found in this page's text; nothing was highlighted.",
+              })}
+            </p>
+          ) : pasajSonucu === true ? (
+            <p className="pdf-pasaj-durum" data-tamam="" role="status">
+              {t({ tr: "Doğrulanmış pasaj sarıyla işaretlendi.", en: "The verified passage is highlighted in yellow." })}
+            </p>
+          ) : null}
+
           {pdf ? <PdfGoruntuleyici
               pdfId={pdf.id}
               gidilecekSayfa={gidilecek}
+              onPasaj={setPasajSonucu}
               onSecim={secimGeldi}
               konumAl={konumAl}
               onKonum={konumDegisti}
@@ -429,5 +466,106 @@ export default function KaynakPdfPaneli({
         </>
       )}
     </aside>
+  );
+}
+
+/*
+  PDF ↔ KAYNAK KAYDI BAĞI (K2-A). Bağ varsa adıyla gösterilir ve
+  kaldırılabilir; yoksa bu çalışmanın kaynaklarından biri AÇIKÇA seçilip
+  bağlanır. Künye/DOI eşleşmesi yalnızca "olası" diye önerilir, kendiliğinden
+  bağlanmaz. Sunucu iki tarafı da doğrular (pdfKaynaginiBagla).
+*/
+function PdfBagSatiri({ projectId, pdf, onDegisti }: { projectId: string; pdf: KaynakPdfSatiri; onDegisti: (kaynakId: string | null) => void }) {
+  const t = useCeviri();
+  const [kaynaklar, setKaynaklar] = useState<LiteratureSource[] | null>(null);
+  const [secilen, setSecilen] = useState("");
+  const [hata, setHata] = useState<string | null>(null);
+  const [bekliyor, setBekliyor] = useState(false);
+  const [acik, setAcik] = useState(false);
+
+  useEffect(() => {
+    let iptal = false;
+    void getLiteratureSources().then((sonuc) => {
+      if (!iptal && !sonuc.okunamadi) setKaynaklar(sonuc.satirlar.filter((k) => k.project_id === projectId));
+    });
+    return () => {
+      iptal = true;
+    };
+  }, [projectId]);
+
+  const bagli = pdf.kaynak_id ? kaynaklar?.find((k) => k.id === pdf.kaynak_id) ?? null : null;
+  const olasi = useMemo(() => {
+    if (pdf.kaynak_id || !kaynaklar) return null;
+    const e = kaynakEslesmesi({ doi: pdf.doi, baslik: kunyeBasligi(pdf.kunye) || pdf.kunye }, kaynaklar, projectId);
+    return e.tur === "kesin" ? [e.kaynakId] : e.tur === "belirsiz" ? e.adaylar : [];
+  }, [pdf, kaynaklar, projectId]);
+
+  const yaz = async (kaynakId: string | null) => {
+    setBekliyor(true);
+    setHata(null);
+    const sonuc = await pdfKaynaginiBagla({ projectId, pdfId: pdf.id, kaynakId });
+    setBekliyor(false);
+    if ("hata" in sonuc) {
+      setHata(sonuc.hata);
+      return;
+    }
+    setAcik(false);
+    setSecilen("");
+    onDegisti(kaynakId);
+  };
+
+  return (
+    <div className="pdf-bag" aria-live="polite">
+      {pdf.kaynak_id ? (
+        <p className="pdf-bag-durum">
+          <span className="guven-cip" data-tur="kunye">
+            <Link2 size={12} aria-hidden="true" /> {t({ tr: "Kaynağa bağlı", en: "Linked to source" })}
+          </span>
+          <span className="pdf-bag-ad">{bagli ? `${bagli.authors ?? ""} ${bagli.year ? `(${bagli.year})` : ""} ${bagli.title}`.trim() : t({ tr: "Kaynak kaydı", en: "Source record" })}</span>
+          <button type="button" className="link-button" disabled={bekliyor} onClick={() => void yaz(null)}>
+            {t({ tr: "Bağı kaldır", en: "Unlink" })}
+          </button>
+        </p>
+      ) : (
+        <p className="pdf-bag-durum">
+          <span className="guven-cip" data-tur="uyari">{olasi?.length ? t({ tr: "Olası eşleşme", en: "Possible match" }) : t({ tr: "Kaynağa bağlı değil", en: "Not linked" })}</span>
+          <span className="pdf-bag-ad">
+            {olasi?.length
+              ? t({ tr: "Künyeye göre tahmin; doğrulamak için bağlayın.", en: "Guessed from the reference; link it to confirm." })
+              : t({ tr: "Bu PDF bir kaynak kaydına bağlı değil.", en: "This PDF isn't linked to a source record." })}
+          </span>
+          <button type="button" className="link-button" onClick={() => setAcik((a) => !a)} aria-expanded={acik}>
+            {t({ tr: "Kaynağa bağla", en: "Link to source" })}
+          </button>
+        </p>
+      )}
+      {acik && !pdf.kaynak_id ? (
+        <div className="pdf-bag-sec">
+          <label>
+            <span className="sr-only">{t({ tr: "Bağlanacak kaynak", en: "Source to link" })}</span>
+            <select value={secilen} onChange={(e) => setSecilen(e.target.value)}>
+              <option value="">{t({ tr: "Kaynak seçin…", en: "Choose a source…" })}</option>
+              {(kaynaklar ?? [])
+                .slice()
+                .sort((a, b) => Number(olasi?.includes(b.id)) - Number(olasi?.includes(a.id)))
+                .map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {olasi?.includes(k.id) ? "★ " : ""}
+                    {[k.authors, k.year ? `(${k.year})` : null, k.title].filter(Boolean).join(" ")}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button type="button" className="projects-primary-button button-compact" disabled={!secilen || bekliyor} onClick={() => void yaz(secilen)}>
+            {t({ tr: "Bağla", en: "Link" })}
+          </button>
+        </div>
+      ) : null}
+      {hata ? (
+        <p className="kaynak-hata" role="alert">
+          {hata}
+        </p>
+      ) : null}
+    </div>
   );
 }

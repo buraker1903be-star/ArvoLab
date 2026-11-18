@@ -1526,6 +1526,8 @@
 .pdf-sayfa .textLayer ::selection { background: var(--primary-soft); }
 .pdf-sayfa .textLayer br::selection { background: transparent; }
 .pdf-sayfa .textLayer span.pdf-esles { background: var(--warning-soft); border-radius: 2px; }
+/* Doğrulanmış pasaj (atıf kartı "Dayanağa git"): sarı vurgu, iki temada aynı — PDF sayfası her temada beyaz. */
+.pdf-sayfa .textLayer span.pdf-pasaj { background: var(--pasaj-vurgu); border-radius: 2px; }
 
 .kaynak-pdf-alt { display: grid; gap: 10px; max-height: 45%; overflow: auto; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
 .kaynak-ipucu, .kaynak-secim small { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
@@ -1794,3 +1796,55 @@
 @media (min-width: 1200px) {
   html[data-gezinme="dar"] .os-root .manuscript-layout[data-sabit-kagit] { max-width: none; }
 }
+/* PDF ↔ kaynak kaydı bağı (K2-A) ve "Dayanağa git" sonucu. */
+.pdf-bag { display: grid; gap: 6px; padding: 8px 14px 0; font-size: var(--os5-fs-meta); }
+.pdf-bag-durum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; color: var(--ink-soft); }
+.pdf-bag-ad { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-bag-sec { display: flex; gap: 6px; align-items: center; }
+.pdf-bag-sec label { flex: 1; min-width: 0; }
+.pdf-bag-sec select { width: 100%; min-width: 0; }
+.pdf-pasaj-durum { margin: 6px 14px 0; padding: 6px 10px; border-radius: var(--r-sm); background: var(--warning-soft); color: var(--warning); font-size: var(--os5-fs-meta); }
+.pdf-pasaj-durum[data-tamam] { background: var(--success-soft); color: var(--success); }
+
+/* ============================================================
+   ATIF KARTI ve SEÇİM İŞLEMLERİ (19.11.2026, atif-karti.tsx). İki ayrı
+   durum; konum JS'ten (--kart-x/--kart-y, lib/atif-karti.ts kartKonumu):
+   kâğıdın sağında, yer yoksa satırın altında. Metni örtmez.
+   ============================================================ */
+.atif-karti, .secim-islemleri {
+  position: fixed; left: var(--kart-x, 0); top: var(--kart-y, 0); z-index: var(--z-menu);
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised); color: var(--ink);
+  box-shadow: var(--shadow-md); font-family: var(--os5-font-govde);
+}
+.atif-karti { display: grid; gap: 10px; width: 300px; max-height: min(70dvh, 520px); overflow-y: auto; padding: 12px; }
+.atif-karti-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.atif-karti-atif { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--primary-ink); font-size: var(--os5-fs-meta); font-weight: 600; overflow-wrap: anywhere; }
+.atif-karti-kaynak { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
+.atif-karti-kaynak b { color: var(--ink); }
+.atif-karti-kaynak span { color: var(--ink-soft); }
+.atif-karti-durumlar { display: grid; gap: 6px; margin: 0; }
+.atif-karti-durumlar > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.atif-karti-durumlar dt { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+.atif-karti-durumlar dd { margin: 0; }
+.atif-karti-uyari, .atif-karti-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: 1.45; }
+.atif-karti-not { font-size: var(--os5-fs-meta); color: var(--ink-soft); }
+.atif-karti-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
+.atif-karti-adaylar { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.atif-karti-adaylar legend { margin-bottom: 4px; color: var(--ink-soft); font-size: var(--os5-fs-meta); font-weight: 600; }
+.atif-karti-aday {
+  display: grid; gap: 2px; padding: 8px; border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  background: var(--surface); color: var(--ink-soft); font: inherit; font-size: var(--os5-fs-meta); text-align: left; cursor: pointer;
+}
+.atif-karti-aday:hover { border-color: var(--primary); }
+.atif-karti-aday:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.atif-karti-aday b { color: var(--ink); }
+.secim-islemleri { display: grid; gap: 2px; padding: 4px; }
+.secim-islemleri[data-yan="alt"] { grid-auto-flow: column; }
+.secim-islemleri button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--os5-fs-meta); font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.secim-islemleri button:hover { background: var(--surface-2); color: var(--ink); }
+.secim-islemleri button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media print { .atif-karti, .secim-islemleri { display: none !important; } }

@@ -454,6 +454,8 @@
 
 /* Yazdırma / PDF: kâğıt her temada beyaz, mürekkep siyah (karanlık temada yeniden tanımlanmaz) */
 :root {
+  /* PDF'te doğrulanmış pasajın vurgusu (pdf-goruntuleyici.tsx). PDF sayfası her temada beyaz: tek değer. */
+  --pasaj-vurgu: #f6d24a8c;
   --print-paper: #ffffff;
   --print-ink: #111111;
   --print-desk: #e6e9ee;
