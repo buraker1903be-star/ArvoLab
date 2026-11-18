@@ -1,5 +1,5 @@
 95a3bb2eab9290808b983b1f21af1ea1c31d13d2e603189610fd0c8665a8c85a  ./RAPOR.md
-cc3165ad683152790924af93c838671d07ae986c2885865450476c9d0e01c879  ./YAYIN-PLANI.md
+9ac0654fab2d6de898530f19c7caf24e5966282aa740382bd3b5d1cd4a7df4bf  ./YAYIN-PLANI.md
 d52fbb5eba7cf50353bce4ec470d24dbb5de25b5c091f888bdd3c288808769db  ./betikler/derle-baslat.sh.txt
 6fdba72cdc7e4ec38765d228a9d9031333b4c2b14f3a2dac61fc97a099743350  ./betikler/erisim-kabul.mjs.txt
 e938d2a070351646020c0a862431f8baed0c1f49a479ab3c9b9311237598dd16  ./betikler/kabul.sh.txt
@@ -10,7 +10,7 @@ b74b517fb06217dd43b04ec128dc732ced27e7a62f0803c638eb2c1c5fbac049  ./dal-temizlig
 3c3700a69fcb84c55a7a08596b4535e559b001cb1be23198713966f8dedf8b2e  ./dal-temizligi/silinecek.tsv
 8217910c0daaf4a4ad5650e9b4f729c4d7b3b05c13c836493de2ce04854190f9  ./dal-temizligi/silme-sonucu.tsv
 87341c67b59a16c9fbcfc108649c47d9b4ac9d87c2ba01682a81ee53b644b6c3  ./dal-temizligi/uzak-dallar-oncesi.txt
-033569d51bcf525a9e77857835265fc0f1585364c8c410f280c6a7f89e4fa904  ./eski-kod-uyumu/RAPOR.md
+0765371fd5a2a691f29edcdfad182aa3d4f8939aeb10fb82ad3d94d8c2fd7ce8  ./eski-kod-uyumu/RAPOR.md
 ad27febfd85b4b1f6770eb3b454673aefb080942610d53376cccc1dc05dfdc96  ./eski-kod-uyumu/betikler/baslat-eski.sh.txt
 1ab05159dbb78568db24f25e179ec6338ad656b033ee5a2f5a1470d38350894b  ./eski-kod-uyumu/betikler/eski-uyum.mjs.txt
 afb49827211ff83ea15d64f5175b5596e714c7e0cee62dca849208e584221426  ./eski-kod-uyumu/betikler/kur-sema.sh.txt

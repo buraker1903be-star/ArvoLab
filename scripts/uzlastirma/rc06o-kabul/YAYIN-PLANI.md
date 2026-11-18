@@ -101,7 +101,7 @@ karşılaştırması, sonra o paketin `gecmis/dalga-B-<P>.txt` sürümleri `repa
 | M.1 | `design/os5` (`a08b61d`) → `main` birleştirmesi (PR) | 0.1 kapalı, B.8 tamam, Onay K verilmiş, CI yeşil | merge commit ağacı = `a08b61d` ağacı | aday SHA değişmişse ya da CI kırmızı | merge'i geri alan commit (`git revert -m 1`) — yalnızca kod |
 | M.2 | Vercel Production dağıtımı READY | M.1 | `target: production`, kaynak `main` merge commit'i | derleme düşerse (önceki Production çalışmaya devam eder) | Vercel'de önceki Production dağıtımına anında geri dönüş (`b62bfcf` dağıtımı) |
 | M.3 | Duman: giriş sayfası, oturum açma (iç ekip hesabı), Ana Sayfa, editör açılışı, Kaynaklar/Kaynakça, Ayarlar; Vercel çalışma zamanı hataları | M.2 | sayfa hatası yok; çalışma zamanı hatası yok | 5xx ya da hata sınırı ekranı | Vercel geri dönüşü; şema paketleri yerinde kalabilir: eski kod paketli şemada yerelde sınandı, 8/9 — tek fark yeni kayıtların şifresi (§5 R1) |
-| M.5 | Ara dönemde onaylanıp şifresi silinen hesap sayısı (`eski-kod-uyumu/RAPOR.md` sorgusu, P5 anı → M.2 anı; salt okunur, yalnızca sayı) | M.2 | 0 ya da küçük, kayıtlı sayı | — (durma değil) | kişiler "Şifremi unuttum" yoluyla şifre belirler (yerelde S1/S2 PASS); gerekirse destek bildirimi |
+| M.5 | **Kontrol anında hâlâ şifresi boş hesaplar** (`eski-kod-uyumu/RAPOR.md` sorgusu, P5 anı → yeni kodun dağıtım anı, dağıtım yoksa kontrol anı; salt okunur, yalnızca sayı). Arada "Şifremi unuttum" ile şifre belirleyenleri saymaz: **toplam etkilenen kullanıcı sayısı DEĞİLDİR** | M.2 (ya da eski koda dönüş) | sayı kayıtlı | — (durma değil) | kişiler "Şifremi unuttum" yoluyla şifre belirler (yerelde S1/S2 PASS); gerekirse destek bildirimi |
 | M.4 | Cron'lar (`vercel.json`: hesap-silme, deneme-hatirlatma, kaynak-onbellegi-temizle, academic-directory-refresh) ilk koşu günlüğü | M.2 | hata yok; hesap silmede yetim dal "ertelendi" (P9 yoksa beklenen) | hata | ilgili cron'u Vercel'de durdurma kararı |
 
 **Geri alma sırası:** önce kod (Vercel geri dönüşü / revert), sonra gerekiyorsa şema (R8 → R1). R1 ve
@@ -156,10 +156,15 @@ mevcut hesapla giriş, mevcut belgeyi açma ve kaydetme iki durumda da PASS; ön
 çıkmadı. **Tek yeni etki (K3):** ara dönemde eski kodla kaydolup e-postasını onaylayan kişi ilk
 oturumda panele girer, oturum kapandıktan sonra kayıtta seçtiği şifreyle giremez — P5 onaydan önce
 konmuş şifreyi bilerek siliyor. Kurtarma yolu çalışıyor ("Şifremi unuttum", S1/S2 PASS); veri kaybı yok.
-Ters sıra (önce yeni kod, sonra P5) aynı etkiyi yeni kodla üretir (kod okunarak; koşulmadı), yani
-etkiyi sıfırlayan sıra yok. Etki ara dönemin süresiyle sınırlı: plan bu yüzden B.6 → M.2'yi arka arkaya
-yürütür (0.7) ve dağıtımdan sonra etkilenen hesapları sayar (M.5). Bu etkinin kabulü tek yayın
-onayının parçasıdır (§7).
+İncelenen iki sıradan hiçbiri etkiyi sıfırlamıyor: (1) önce P5, sonra yeni kod — ölçüldü (K3 FAIL);
+(2) önce yeni kod, sonra P5 — kod okunarak, koşulmadı: yeni kod P5 olmadan aynı kilitlenmeyi üretir.
+Başka sıralar ya da yollar incelenmedi; bu bir "hiçbir sıra çözmez" garantisi değildir. Plan etkiyi
+ara dönemi kısaltarak sınırlar (0.7: B.6 → M.2 arka arkaya) ve kontrol anında şifresi boş kalan
+hesapları sayar (M.5).
+
+**K3: RİSK KABULÜ BEKLİYOR.** Bu etki tek yayın onayında (§7) açıkça kabul edilmeden yayın yürümez.
+
+**Eski koda dönüş ya da başarısız dağıtım:** M.2 düşerse ya da Vercel'de önceki dağıtıma (`b62bfcf`) dönülürse Production'da yine eski kod + P5 çalışır ve K3 etkisi **devam eder**: bu sürede kaydolup onaylayan her kişi kendi şifresiyle yeniden giremez. Kod geri dönüşü bu etkiyi durdurmaz; R5 ise yeni kod çalışmıyorken uygulanabilir ama ilk şifre kapısını da kaldırır, ayrı karar ister. Bu durumda M.5 kontrolü dönüş süresince düzenli tekrarlanır.
 
 **R2 — dokunmatik kaydırma (Stüdyo U5-dokunma, UNVERIFIED).** Başsız tarayıcıda üretilemiyor.
 Dar kontrol: gerçek bir telefonda (iOS Safari ve Android Chrome) yazım ekranı açıkken asistan yaprağı
@@ -192,16 +197,16 @@ istenerek doğrulanabilir (gerçek kullanıcıya gönderim yok).
 | P8 | **GO** (karar) / uygulama onayı bekliyor | hedef `client` kararlaştırıldı, satır güncellemez | B.7 için Production uygulama onayı |
 | Mevcut 2 `employee` hesabı | **GO** | P8 dokunmaz; yayını engellemez | §4.2'de (a)/(b) kararı — yayından bağımsız |
 | **Auth A1** | **HOLD** | açık karar maddesi; "eski davranışla aynı" maddeyi kapatmaz | §4.4: (a), (b) ya da (c) seçimi (önerilen b) |
-| Ara dönem uyumu (R1) | **GO** (ölçüldü; etkinin kabulü onayda) | eski kod paketli şemada 8/9; tek yeni etki: ara dönemde kaydolanlar şifre sıfırlamayla girer; önceden var hata yok | §7 onayında K3 etkisinin kabulü; M.5 ölçümü |
+| **Ara dönem uyumu (R1) — K3** | **HOLD: risk kabulü bekliyor** | eski kod paketli şemada **8/9, K3 FAIL** (yeni; önceden var hata yok): ara dönemde kaydolanlar kendi şifresiyle giremez, şifre sıfırlamayla girer; dağıtım düşer ya da eski koda dönülürse etki sürer | §7 onayında K3'ün açık kabulü; M.5 kontrolü |
 | Dokunmatik kaydırma (R2) | **HOLD** (dar) | UNVERIFIED; başsız tarayıcıda üretilemez | §5 R2: gerçek telefonda kontrol (kullanıcı) ya da riskin kabulü |
 | Preview çalışma anı (R3) | **HOLD** (dar) | bağlanılan projenin Test olduğu UNVERIFIED | §5 R3: CSP okuma (yazmasız; paylaşım bağlantısı için onay) ya da riskin kabulü. Uygulama kabulü yerel üretim derlemesinde yapıldığı için yayın kodunu doğrudan etkilemez |
 | P9 | **ERTELENDİ** (öneri) | geri yükleme provası yok; R9 veri getirmez | yayından sonra: 0.4 kapalı + ayrı onay |
 | Hak iadesi | **ERTELENDİ** (öneri) | politika değişikliği, yayın riski değil | ayrı iş |
 | Production'a uygulama (Dalga A, K, B, main) | **HOLD** | yukarıdaki HOLD'lar açık | HOLD satırları kapandıktan sonra §7'deki **tek yayın onayı**; onay yoksa uygulama yok |
 
-**Sonuç:** kod tarafı hazır (GO); eski kod–yeni şema uyumu ölçüldü (8/9, tek sınırlı yeni etki).
-Yayın, Production tarafında dört karar/kanıt yüzünden **HOLD**: geri yükleme provası, güncel yedek
-okuması, Onay K ve Auth A1 kararı. Dokunma ve Preview maddeleri dar ve kullanıcının kabulüyle
+**Sonuç:** kod tarafı hazır (GO); eski kod–yeni şema uyumu ölçüldü: **8/9, K3 FAIL**.
+Yayın, Production tarafında beş karar/kanıt yüzünden **HOLD**: geri yükleme provası, güncel yedek
+okuması, Onay K, Auth A1 kararı ve K3 risk kabulü. Dokunma ve Preview maddeleri dar ve kullanıcının kabulüyle
 kapanabilir. Hepsi kapanınca tek onay (§7) yeterli.
 
 ## 7. Tek yayın onayı (önerilen metin)
@@ -234,9 +239,10 @@ aday hâlâ `a08b61d` ve CI yeşil.
 (`paketler/GERI_DONUS.md`; R1 ve R5 yeni kod çalışırken uygulanmaz). Geçmiş satırları şemayı
 değiştirmediği için yerinde kalabilir. P5 veri adımı yalnızca kaydedilen listeden elle döner.
 
-**Onayla kabul edilen bilinen etki:** P5 uygulandığı andan yeni kod dağıtılana kadar eski kodla
-kaydolup onaylayan kişiler kendi şifreleriyle yeniden giremez, "Şifremi unuttum" ile girer (§5 R1);
-M.5 sayısı rapora yazılır.
+**Onayla kabul edilen bilinen etki (K3, risk kabulü):** P5 uygulandığı andan yeni kod dağıtılana
+kadar eski kodla kaydolup onaylayan kişiler kendi şifreleriyle yeniden giremez, "Şifremi unuttum"
+ile girer (§5 R1). M.2 düşerse ya da eski koda dönülürse etki dönüş süresince **devam eder**. M.5
+"kontrol anında hâlâ şifresi boş hesaplar" sayısı rapora yazılır; toplam etkilenen sayısı olarak sunulmaz.
 
 **Kapsam DIŞI (bu onay vermez):** P7, P9, Auth ayarı değişikliği (A1), hak iadesi politikası, mevcut
 `employee` hesaplarına dokunma, Production'da restore, PITR/ücret ayarı, ArvoOS, PR #96.
@@ -249,5 +255,6 @@ HEAD'i ve `design/os5` @ `a08b61d`'nin atası), **121 dal korunuyor** (2 ana dal
 5 kabul raporu dalı, oturumun geliştirme dalı, 49 PR'sız dal, 59 birleşmiş ama `design/os5`'in atası
 olmayan — squash/rebase olasılığı incelenmedi, 1 PR'dan sonra commit almış dal).
 **Silinen: 0.** Uzak dal silme bu oturumda izin katmanınca engellendi; 32 dal `dal-temizligi/silme-sonucu.tsv`'de
-"SİLİNMEDİ" olarak duruyor. Aday `a08b61d`, `main` ve ayrışan dallar değişmedi.
+"SİLİNMEDİ" olarak duruyor. Aday `a08b61d`, `main` ve ayrışan dallar değişmedi. **Yayın engeli değildir**: dal temizliği yayın sırasının
+parçası değil; silme izni ya da GitHub'dan elle silme yayından bağımsız yapılabilir.
 

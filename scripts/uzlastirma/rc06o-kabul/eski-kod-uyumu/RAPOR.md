@@ -41,15 +41,22 @@ bir şifreyle açılır ve `ilk_sifre_gerekli()` bulunamadığı için ilk şifr
 (`lib/ilk-sifre.ts`: okunamazsa kapı kapanmaz) → aynı kişi aynı biçimde kilitli kalır. Yeni kod P5'i
 gerektirir (`paketler/GERI_DONUS.md`: R5 kod geri alınmadan uygulanmaz).
 
-Sonuç: etkiyi sıfırlayan bir sıra yok; etki ara dönemin **süresiyle** sınırlı ve kurtarma yolu var.
-Yayın planında (YAYIN-PLANI §3, §5) bu yüzden: P5 → P8 → main → Production dağıtımı arka arkaya;
-dağıtımdan sonra etkilenen hesap sayısı ölçülür ve kişiler "Şifremi unuttum" yoluna yönlendirilir.
+Sonuç: **incelenen iki sıradan** (önce P5 — ölçüldü; önce yeni kod — kod okunarak) hiçbiri etkiyi
+sıfırlamıyor. Başka sıralar ya da yollar incelenmedi; bu genel bir garanti değildir. Etki ara dönemin
+**süresiyle** sınırlı ve kurtarma yolu var. **Durum: K3 FAIL — risk kabulü bekliyor** (YAYIN-PLANI §7).
 
-Ölçüm sorgusu (salt okunur, dağıtımdan sonra; yalnızca sayı ve kimlik, içerik yok):
+**Dağıtım düşerse ya da eski koda dönülürse** Production'da yine eski kod + P5 çalışır ve etki dönüş
+süresince **devam eder**; kod geri dönüşü onu durdurmaz.
+
+Yayın planında (YAYIN-PLANI §3, §5): P5 → P8 → main → Production dağıtımı arka arkaya; ardından M.5.
+
+M.5 — **kontrol anında hâlâ şifresi boş hesaplar** (salt okunur, yalnızca sayı). Arada "Şifremi
+unuttum" ile şifre belirleyenleri kaçırır; bu yüzden **toplam etkilenen kullanıcı sayısı değildir**.
+Üst sınır yeni kodun dağıtım anıdır; dağıtım yoksa ya da eski koda dönüldüyse kontrol anı:
 ```sql
 select count(*) from auth.users u
  where u.email_confirmed_at >= :p5_uygulama_ani
-   and u.email_confirmed_at <  :yeni_kod_dagitim_ani   -- sonrası yeni kodun ilk şifre kapısından geçer
+   and u.email_confirmed_at <  :yeni_kod_dagitim_ani_ya_da_kontrol_ani   -- yeni kod dağıtıldıysa sonrası ilk şifre kapısından geçer
    and u.created_at < u.email_confirmed_at
    and (u.encrypted_password is null or u.encrypted_password = '');
 ```
