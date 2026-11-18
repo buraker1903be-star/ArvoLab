@@ -1205,6 +1205,15 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calismalar-ozet dd small { color: var(--muted); font-size: var(--fs-micro); font-weight: 500; }
 .calismalar-ozet [data-tone="danger"] dd { color: var(--danger); }
 .calismalar-ozet [data-tone="warning"] dd { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+/*
+  Telefonda değer sarar (18.11.2026). Üç sütunlu şeritte hücre 100 px
+  civarı; tek satır + üç nokta "10 hours ago"yu "10 hours …" diye
+  kesiyordu (İngilizce görüntü taraması; değer verinin yaşına göre
+  uzuyor, "9 hours ago" sığıyordu). Sığmayan değer artık alt satıra iner.
+*/
+@media (max-width: 760px) {
+  .calismalar-ozet dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+}
 .calisma-yeni-kutu {
   display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 14px;
   border: 1px dashed var(--line); border-radius: var(--r-md); color: var(--ink-soft); text-decoration: none;

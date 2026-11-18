@@ -96,6 +96,7 @@ Tasarım yönü korundu; yalnızca ölçülen sorunlar düzeltildi.
 | İlk denemede arama kutusu 120 px'e kırpıldı | Seçilen sayfa sınıfı (`kaynak-sayfa`) PDF panelindeki bir etiketle çakıştı | Sınıf `kaynaklar-sayfasi`; birim testi çakışmayı yakalar |
 | Ölçü listesinde `dl` içinde `span` ve form (axe: definition-list, ciddi) | Çalışmalarım ve çalışma özeti, tabandan geliyor | Açıklama satırı ve teslim tarihi formu `dd`; görünüm aynı. Personel kartı ve Ekip sayfasındaki aynı yapı da |
 | Arama yer tutucusu telefonda kesiliyor | EN "Search by title, author, journal, publisher or DOI" 390 px'te; TR ve EN 320 px'te (kutu 246 px, metin 280/247 px) | Kısa yer tutucu: "Başlık, yazar, dergi ya da DOI" / "Title, author, journal or DOI" (arama yayınevi ve yılda da eşleşir) |
+| Çalışmalarım özet şeridinde değer kesiliyor | EN telefonda "Last written · 10 hours …" (tabandan; değer verinin yaşıyla uzuyor) | Telefonda değer alt satıra sarar |
 | Editör menüleri `role="menu"` ama öğe rolü ve ok tuşu yok (axe: aria-required-children, kritik) | Kontroller menüsü açıkken; aynı bileşen bütün araç menülerinde | Açılır panel kalıbı: düğme `aria-expanded`/`aria-controls`, panel adlı grup; Tab ve Esc aynı |
 
 Tarama: axe-core 4.10.2 (WCAG 2.0/2.1 A-AA, 2.2 AA), 11 ekran/durum ×

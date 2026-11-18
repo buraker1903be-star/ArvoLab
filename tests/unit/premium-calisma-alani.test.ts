@@ -133,6 +133,10 @@ describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
     assert.match(menu, /role="group"\s+aria-label=\{etiket\}/);
     assert.match(menu, /aria-expanded=\{acik\}\s+aria-controls=\{kimlik\}/);
   });
+  test("Çalışmalarım özet şeridi telefonda değeri kesmez, sarar", () => {
+    const gb = oku("app/styles/genel-bakis.css");
+    assert.match(gb, /@media \(max-width: 760px\) \{\s*\.calismalar-ozet dd \{ overflow: visible; white-space: normal; overflow-wrap: anywhere; \}/);
+  });
   test("ölçü listesinde dl yalnızca dt/dd taşır (span ve form dd içinde)", () => {
     for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx", "app/dashboard/editor/personel-calisma-karti.tsx", "app/dashboard/team/page.tsx"]) {
       const s = oku(dosya);
