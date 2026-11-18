@@ -73,15 +73,20 @@ describe("hesap menüsü iki yerleşimde aynı", () => {
 });
 
 /*
-  EDİTÖR AÇILINCA GEZİNME DEĞİŞMEZ (17.11.2026, kurum sahibinin şartı).
-  Eskiden (Phase 5.1d) çalışmanın içindeyken "Çalışmalarım"ın altında o
-  çalışmanın alt menüsü açılıyordu; bu blok onu sabitliyordu. Artık
-  gezinme çalışma bağlamını HİÇ okumuyor; bölümler sayfadaki sekmelerde.
+  İKİ DÜZEYLİ GEZİNME (19.11.2026, bağlamlı çalışma alanı; onaylı tasarım).
+  17.11.2026–19.11.2026 arasında kural "editör açılınca gezinme değişmez"
+  idi ve bu blok gezinmenin çalışma bağlamını HİÇ okumadığını sabitliyordu.
+  Kurum sahibi 2. tur tasarımı onaylayınca kural değişti: çalışmanın
+  içinde aynı yuva çalışma gezinmesini gösterir. Karar ADRESTEN verilir
+  (adrestekiCalisma); yayınlanan bağlama bakmak ilk boyamada menüyü
+  zıplatırdı.
 */
-describe("editörde gezinme sabit; gruplar erişilebilir", () => {
+describe("iki düzeyli gezinme; gruplar erişilebilir", () => {
   const gezinme = yorumsuz(oku("app/dashboard/_components/os-gezinme.tsx"));
-  test("gezinme çalışma bağlamını okumuyor; tek <nav>", () => {
-    assert.doesNotMatch(gezinme, /useCalismaBaglami|calismaBaglantilari|calismaIcindeMi/);
+  test("çalışma düzeyi adresten; tek <nav>; sol araç yuvası", () => {
+    assert.match(gezinme, /adrestekiCalisma\(yol, sorgu\)/);
+    assert.match(gezinme, /calismaBaglantilari\(calisma, t\)/);
+    assert.match(gezinme, /id="sol-alan-yuva"/);
     assert.equal(gezinme.match(/<nav /g)?.length, 1);
   });
   test("grup düğmeleri aria-expanded ve aria-controls taşıyor; adı görünür", () => {

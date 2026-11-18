@@ -1,0 +1,39 @@
+{
+  "_kaynak": "SENTETİK KAYITLI YANIT (yerel kabul). Gerçek OpenAlex yanıtı değildir; biçim OpenAlex /works yanıtının uygulamanın okuduğu alanlarıyla aynıdır. DOI'ler 10.5555 deneme önekindedir.",
+  "meta": { "count": 3, "page": 1, "per_page": 20 },
+  "results": [
+    {
+      "id": "https://openalex.org/W0000000001",
+      "doi": "https://doi.org/10.5555/kayitli.2022.101",
+      "title": "Peer support and loneliness during online study: a two-wave survey",
+      "publication_year": 2022,
+      "type": "article",
+      "cited_by_count": 41,
+      "authorships": [{ "author": { "display_name": "Yıldız, M." } }, { "author": { "display_name": "Ortega, L." } }],
+      "primary_location": { "landing_page_url": "https://example.org/kayitli/101", "source": { "display_name": "Synthetic Journal of Higher Education" } },
+      "open_access": { "is_oa": true, "oa_url": "https://example.org/kayitli/101.pdf" }
+    },
+    {
+      "id": "https://openalex.org/W0000000002",
+      "doi": "https://doi.org/10.5555/kayitli.2020.044",
+      "title": "Peer study groups in higher education: a synthetic review",
+      "publication_year": 2020,
+      "type": "review",
+      "cited_by_count": 17,
+      "authorships": [{ "author": { "display_name": "Demir, B." } }],
+      "primary_location": { "landing_page_url": "https://example.org/kayitli/044", "source": { "display_name": "Synthetic Review of Education" } },
+      "open_access": { "is_oa": false }
+    },
+    {
+      "id": "https://openalex.org/W0000000003",
+      "doi": null,
+      "title": "Belonging in remote cohorts: a scoping review",
+      "publication_year": 2021,
+      "type": "article",
+      "cited_by_count": 6,
+      "authorships": [{ "author": { "display_name": "Nakamura, K." } }, { "author": { "display_name": "Ak, E." } }, { "author": { "display_name": "Şahin, C." } }, { "author": { "display_name": "Brown, T." } }],
+      "primary_location": { "landing_page_url": "https://example.org/kayitli/belonging", "source": { "display_name": "Synthetic Studies in Pedagogy" } },
+      "open_access": { "is_oa": false }
+    }
+  ]
+}

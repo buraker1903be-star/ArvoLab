@@ -44,7 +44,21 @@ export default function ManuscriptOutline({
   const t = useCeviri();
 
   return (
-    <aside className="manuscript-outline" aria-label={t({ tr: "İnceleme paneli", en: "Review panel" })}>
+    <aside
+      className="manuscript-outline"
+      aria-label={t({ tr: "İnceleme paneli", en: "Review panel" })}
+      onKeyDown={(olay) => {
+        /*
+          Çekmeceyken (belgenin üstünde, workspace.css) Esc paneli kapatır;
+          sütunken kapatmaz: orada panel belgeyi örtmüyor ve Esc yorum
+          kutusundaki yazıyı iptal etmek gibi başka işlere ait.
+        */
+        if (olay.key !== "Escape" || olay.defaultPrevented || !onKapat) return;
+        if (!olay.currentTarget.closest("[data-inceleme-yer='cekmece']")) return;
+        olay.preventDefault();
+        onKapat();
+      }}
+    >
       {/* Panel kapanabilir (04.11.2026): yazmaya odaklanan öğrenci metne yer açar; tercih tarayıcıda kalır. */}
       <header className="inceleme-bas">
         <b>{t({ tr: "İncele", en: "Review" })}</b>

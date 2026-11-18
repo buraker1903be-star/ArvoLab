@@ -6,10 +6,6 @@
   megapiksellik kanvasa çevirip telefonda belleği tüketir (görüntüleyici
   ayrıca kanvas alanını da sınırlıyor).
 
-  Panel genişliği: editör hiçbir zaman okunamayacak kadar daralmamalı
-  (en az EDITOR_EN_DAR), PDF de bir sayfa sütununu gösterebilmeli (en az
-  PANEL_EN_DAR). Kayıtlı tercih ekran küçülünce de bu sınırlara çekilir;
-  yoksa geniş ekranda kaydedilen 900 px dizüstünde editörü yok ederdi.
 */
 
 export const OLCEK_EN_AZ = 0.5;
@@ -21,14 +17,11 @@ export function olcekSinirla(olcek: number): number {
   return Math.round(Math.min(OLCEK_EN_COK, Math.max(OLCEK_EN_AZ, olcek)) * 100) / 100;
 }
 
-export const PANEL_EN_DAR = 360;
-export const PANEL_EN_GENIS = 960;
-export const PANEL_VARSAYILAN = 520;
-export const EDITOR_EN_DAR = 420;
-
-/** Panelin genişliği: kaplanan alan (editör + ayırıcı + panel) içinde iki tarafın da en az sınırları korunur. */
-export function panelGenisligiSinirla(istenen: number, kapGenisligi: number): number {
-  const ust = Math.max(PANEL_EN_DAR, Math.min(PANEL_EN_GENIS, kapGenisligi - EDITOR_EN_DAR));
-  const deger = Number.isFinite(istenen) ? istenen : PANEL_VARSAYILAN;
-  return Math.round(Math.min(ust, Math.max(PANEL_EN_DAR, deger)));
-}
+/*
+  Yan panel genişliği 19.11.2026'dan beri lib/calisma-alani-yerlesimi.ts'te
+  (SAG_PANEL_SINIRI): Arvo AI ve PDF aynı yuvayı paylaşıyor ve genişlik
+  belgenin okunabilirlik sınırıyla birlikte karar veriliyor. Eskiden burada
+  yalnızca PDF için 360–960 px ve "editör en az 420 px" kuralı vardı;
+  editörün akarak 420 px'e inmesi, kurum sahibinin incelemesinde görülen
+  sıkışmanın kendisiydi.
+*/

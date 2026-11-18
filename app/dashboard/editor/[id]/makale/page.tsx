@@ -27,7 +27,7 @@ import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 import MakaleAsistani from "./makale-asistani";
-import CalismaSekmeleri from "../calisma-sekmeleri";
+import { CalismaBaglamiYayinla } from "../../../_components/calisma-baglami";
 
 /*
   MAKALE ÇALIŞMA ALANI.
@@ -304,7 +304,7 @@ export default async function MakaleCalismaAlani({
         </div>
       </section>
 
-      <CalismaSekmeleri calisma={calisma} aktif="makale" />
+      <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
 
       {profilOkunamadi && (
         <p className="alert mb-md" role="alert">

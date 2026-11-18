@@ -350,67 +350,127 @@ export function dahaFazlasi(uygulamalar: OsUygulama[]): OsUygulama[] {
 }
 
 export type CalismaBaglami = { id: string; baslik: string; tur: string };
-export type BaglamBaglantisi = { key: string; label: string; href: string; grup: "calisma" | "arac" };
-
-/** Çalışmanın kendi bölümleri; sayfadaki sekmeler ve kenar çubuğu alt menüsü aynı anahtarları kullanır. */
-export type CalismaBolumu = "merkez" | "yazim" | "kanit" | "etik" | "makale";
 
 /*
-  ÇALIŞMANIN İÇİNDEYKEN GEZİNME. Çalışmanın kendi bölümleri (Özet,
-  Yazım, Kanıt, Etik, makalede Makale) ve o çalışmaya süzülmüş araçlar
-  (Kaynaklar, Analiz, Belge Kontrol). Araçların adresleri `calisma`
-  değişkeniyle çalışmayı seçili açar; o sayfalar bunu zaten tanıyor.
-  Makale bölümü yalnızca makale türünde: tezde boş bir sekme göstermek
-  calisma-sekmeleri.tsx'teki kuralla çelişirdi.
+  ÇALIŞMA GEZİNMESİ (19.11.2026, bağlamlı çalışma alanı; onaylı tasarım,
+  tasarim/baglamli-calisma-alani). Bir çalışmanın içine girilince sol
+  yuvadaki GENEL gezinme yerini bu listeye bırakır: başta "Çalışmalarıma
+  dön", sonra çalışmanın adı ve üç grup — Yaz, Araştır, Kontrol et.
+
+  17.11.2026'da kural tersiydi ("editör açılınca gezinme değişmez",
+  333e76e): bölümler sayfanın içindeki bir sekme satırındaydı
+  (calisma-sekmeleri.tsx), üstünde genel kenar çubuğu, yanında ayrıca bir
+  "Çalışmalarım" düğmesi duruyordu. Editörde üç gezinme katmanı oluyordu
+  ve hangisinin bu çalışmaya ait olduğu belli değildi. Kurum sahibi 2. tur
+  tasarımı onaylayınca (19.11.2026) sekme satırı kalktı; liste yine TEK
+  yerde, burada.
+
+  Öğeler GERÇEK sayfalara gider: "Kaynaklar" çalışmaya süzülü kütüphane,
+  "Özet ve teslim" çalışmanın özeti. Yazım ekranının içindeki araçlar
+  (bölümler, makale arama, Arvo AI) adreste `sol`/`sag` değişkeniyle
+  açılır; böylece geri/ileri ve doğrudan bağlantı onları da taşır.
 */
+/*
+  GRUPLAR ONAYLI PROTOTİPTEKİ GİBİ (19.11.2026, kabul turu 2): Yaz (Belge,
+  Bölümler), Araştır (Kaynaklar, Makale bul, Arvo AI), Kontrol et
+  (Kaynakça, Kılavuz ve biçim, Özet ve teslim). İlk uygulamada Kanıt
+  matrisi, Etik kurul, Makale, Analiz ve Belge kontrolü bu üç grubun
+  içindeydi, Kaynakça ve Kılavuz ise hiç yoktu (yalnızca "Özet ve teslim"in
+  altında bulunabiliyordu); kurum sahibi menüyü yoğun buldu. O beş araç
+  kaldırılmadı: "Diğer araçlar" grubunda, yetkileri aynı.
+*/
+export type CalismaGrubu = "yaz" | "arastir" | "kontrol" | "diger";
+export type CalismaIkon =
+  | "belge" | "bolumler" | "kaynaklar" | "arama" | "ai" | "kanit" | "ozet" | "etik" | "makale" | "analiz" | "kontrol"
+  | "kaynakca" | "kilavuz";
+export type BaglamBaglantisi = { key: string; label: string; href: string; grup: CalismaGrubu; ikon: CalismaIkon };
+
+/** Yazım ekranının sol araçları; adres değişkeni `sol`. */
+export const SOL_ARACLAR = ["bolumler", "kaynaklar", "arama", "kaynakca", "kilavuz"] as const;
+export type SolArac = (typeof SOL_ARACLAR)[number];
+/** Yazım ekranının sağ paneli; adres değişkeni `sag`. */
+export const SAG_PANELLER = ["ai", "pdf"] as const;
+export type SagPanel = (typeof SAG_PANELLER)[number];
+
+export const solAracOku = (deger: string | null | undefined): SolArac | null =>
+  (SOL_ARACLAR as readonly string[]).includes(deger ?? "") ? (deger as SolArac) : null;
+export const sagPanelOku = (deger: string | null | undefined): SagPanel | null =>
+  (SAG_PANELLER as readonly string[]).includes(deger ?? "") ? (deger as SagPanel) : null;
+
+export function calismaGrupAdi(grup: CalismaGrubu, t: Cevirici = ceviriciKur("tr")): string {
+  if (grup === "yaz") return t({ tr: "Yaz", en: "Write" });
+  if (grup === "arastir") return t({ tr: "Araştır", en: "Research" });
+  if (grup === "diger") return t({ tr: "Diğer araçlar", en: "More tools" });
+  return t({ tr: "Kontrol et", en: "Review" });
+}
+
 export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = ceviriciKur("tr")): BaglamBaglantisi[] {
   const id = encodeURIComponent(calisma.id);
+  const yazim = `/dashboard/editor/${id}/write`;
   return [
-    { key: "merkez", label: t({ tr: "Özet", en: "Overview" }), href: `/dashboard/editor?sec=${id}`, grup: "calisma" },
-    { key: "yazim", label: t({ tr: "Yazım", en: "Writing" }), href: `/dashboard/editor/${id}/write`, grup: "calisma" },
-    { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "calisma" },
-    { key: "etik", label: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${id}/etik`, grup: "calisma" },
+    { key: "yazim", label: t({ tr: "Belge", en: "Document" }), href: yazim, grup: "yaz", ikon: "belge" },
+    { key: "bolumler", label: t({ tr: "Bölümler", en: "Sections" }), href: `${yazim}?sol=bolumler`, grup: "yaz", ikon: "bolumler" },
+    { key: "kaynaklar", label: t({ tr: "Kaynaklar", en: "Sources" }), href: `${yazim}?sol=kaynaklar`, grup: "arastir", ikon: "kaynaklar" },
+    { key: "arama", label: t({ tr: "Makale bul", en: "Find papers" }), href: `${yazim}?sol=arama`, grup: "arastir", ikon: "arama" },
+    { key: "ai", label: "Arvo AI", href: `${yazim}?sag=ai`, grup: "arastir", ikon: "ai" },
+    { key: "kaynakca", label: t({ tr: "Kaynakça", en: "References" }), href: `${yazim}?sol=kaynakca`, grup: "kontrol", ikon: "kaynakca" },
+    { key: "kilavuz", label: t({ tr: "Kılavuz ve biçim", en: "Guideline and format" }), href: `${yazim}?sol=kilavuz`, grup: "kontrol", ikon: "kilavuz" },
+    { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" },
+    { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "diger", ikon: "kanit" },
     ...(calisma.tur === "article"
-      ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "calisma" as const }]
+      ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "diger" as const, ikon: "makale" as const }]
       : []),
-    { key: "kaynaklar", label: t({ tr: "Kaynaklar", en: "Sources" }), href: `/dashboard/literature?calisma=${id}`, grup: "arac" },
-    { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "arac" },
-    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), href: `/dashboard/documents?calisma=${id}`, grup: "arac" },
+    { key: "etik", label: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${id}/etik`, grup: "diger", ikon: "etik" },
+    { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "diger", ikon: "analiz" },
+    { key: "belge", label: t({ tr: "Belge kontrolü", en: "Document check" }), href: `/dashboard/documents?calisma=${id}`, grup: "diger", ikon: "kontrol" },
   ];
 }
 
 /**
- * Yalnızca çalışmanın kendi bölümleri (araçlar hariç), sırasıyla. Sayfadaki
- * sekmeler (calisma-sekmeleri.tsx) bunu okur; 5.1d-4'e kadar sekmeler aynı
- * listeyi kendi içinde ayrıca yazıyordu ve bir bölüm eklenince iki yer
- * birden güncellenmeliydi.
+ * Adresteki çalışma: çalışmanın kendi sayfaları (/dashboard/editor/<id>/…)
+ * ve ona süzülmüş araçlar (?calisma=<id>). Çalışmalarım listesi
+ * (/dashboard/editor, ?sec= ile seçili olsa da) GENEL düzeydir: orası
+ * çalışmalar arasında seçim yapılan yer.
+ *
+ * Kimlik ADRESTEN okunur, sayfanın yayınladığı bağlamdan değil: bağlam
+ * istemcide, sayfa çizildikten sonra geliyor; ona bakan gezinme ilk
+ * boyamada genel menüyü gösterip sonra çalışma menüsüne zıplardı.
  */
-export function calismaBolumleri(calisma: CalismaBaglami, t: Cevirici = ceviriciKur("tr")): (BaglamBaglantisi & { key: CalismaBolumu })[] {
-  return calismaBaglantilari(calisma, t).filter((b): b is BaglamBaglantisi & { key: CalismaBolumu } => b.grup === "calisma");
+export function adrestekiCalisma(yol: string, sorgu: URLSearchParams): string | null {
+  const m = /^\/dashboard\/editor\/([^/?#]+)(?:\/|$)/.exec(yol);
+  if (m && m[1] !== "new") return decodeURIComponent(m[1]);
+  if (yol.startsWith("/dashboard/editor")) return null;
+  return sorgu.get("calisma") || null;
 }
 
 /**
- * Bu adres şu çalışmanın içinde mi? Çalışmanın kendi sayfaları
- * (/dashboard/editor/<id>/…), Özet (?sec=<id>) ve ona süzülmüş araçlar
- * (?calisma=<id>). Başka bir çalışmaya ya da genel sayfaya geçince
- * bağlam gizlenir: kullanıcı yanlış çalışmanın bölümlerini görmesin.
+ * Bu adres şu çalışmanın içinde mi? Gezinme ile adres aynı kuralla
+ * karar verir (adrestekiCalisma); başka bir çalışmaya ya da genel
+ * sayfaya geçince çalışma menüsü kalkar.
  */
 export function calismaIcindeMi(calismaId: string, yol: string, sorgu: URLSearchParams): boolean {
-  if (yol.startsWith(`/dashboard/editor/${calismaId}/`) || yol === `/dashboard/editor/${calismaId}`) return true;
-  if (yol === "/dashboard/editor" && sorgu.get("sec") === calismaId) return true;
-  return sorgu.get("calisma") === calismaId;
+  return adrestekiCalisma(yol, sorgu) === calismaId;
 }
 
-/** Bağlamdaki etkin bağlantı: yol eşleşmesi; Özet ve araçlar sorgu değişkeniyle. */
-export function etkinBaglanti(baglantilar: BaglamBaglantisi[], yol: string): BaglamBaglantisi | null {
+/**
+ * Etkin bağlantı. Yazım ekranında araç adresteki `sol`/`sag` değişkeninden
+ * okunur: araç açıkken "Belge" değil o araç seçili görünür. Kütüphane ve
+ * araç sayfaları (?calisma=) yol eşleşmesiyle; "Kaynaklar" kütüphane
+ * sayfasında da etkin.
+ */
+export function etkinBaglanti(baglantilar: BaglamBaglantisi[], yol: string, sorgu: URLSearchParams = new URLSearchParams()): BaglamBaglantisi | null {
+  const bul = (key: string) => baglantilar.find((b) => b.key === key) ?? null;
+  if (/^\/dashboard\/editor\/[^/]+\/write\/?$/.test(yol)) {
+    return bul(solAracOku(sorgu.get("sol")) ?? sagPanelOku(sorgu.get("sag")) ?? "yazim") ?? bul("yazim");
+  }
+  if (yol.startsWith("/dashboard/literature") || yol.startsWith("/dashboard/citations")) return bul("kaynaklar");
   for (const b of baglantilar) {
     const [bYol] = b.href.split("?");
-    if (b.grup === "calisma" && b.key !== "merkez" && (yol === bYol || yol.startsWith(`${bYol}/`))) return b;
+    if (bYol.endsWith("/write")) continue;
+    if (bYol === "/dashboard/editor") continue;
+    if (yol === bYol || yol.startsWith(`${bYol}/`)) return b;
   }
-  for (const b of baglantilar) {
-    const [bYol] = b.href.split("?");
-    if ((b.key === "merkez" || b.grup === "arac") && yol === bYol) return b;
-  }
+  if (yol === "/dashboard/editor") return bul("merkez");
   return null;
 }
 

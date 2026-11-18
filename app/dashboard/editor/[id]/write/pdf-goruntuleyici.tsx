@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal, LocateFixed } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { pasajParcalari } from "@/lib/pdf-pasaj";
 import { kanitMetniNormallestir } from "@/lib/kanit/alinti";
 import { olcekSinirla, OLCEK_ADIM } from "@/lib/pdf-goruntu";
 
@@ -52,16 +53,45 @@ export type PdfSecimi = { sayfa: number; metin: string };
 /** Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), panel yeniden açılınca geri yüklenir. */
 export type OkumaKonumu = { sayfa: number; olcek: number | "sigdir" };
 
+/*
+  Pasaja kaydırma YALNIZCA PDF alanının içinde. Eskiden scrollIntoView
+  kullanılıyordu: tarayıcı kaydırılabilir BÜTÜN ataları kaydırıyor, telefonda
+  tam ekran PDF panelinin kendisi de yukarı kayıyor ve "Kaynak PDF" başlığı
+  ile kapatma düğmesi ekrandan çıkıyordu; "inline: center" da okunur ölçekte
+  ekrandan geniş olan cümlenin BAŞINI kesiyordu (kabul S15, 18.11.2026).
+  Pasajın başı sola (12px payla), satırı dikeyde ortaya getirilir.
+*/
+function pasajaKaydir(alan: HTMLElement | null, parca: Element | null) {
+  if (!alan || !parca) return;
+  const a = alan.getBoundingClientRect();
+  const p = parca.getBoundingClientRect();
+  alan.scrollTo({
+    left: Math.max(0, alan.scrollLeft + p.left - a.left - 12),
+    top: Math.max(0, alan.scrollTop + p.top - a.top - (alan.clientHeight - p.height) / 2),
+    behavior: "smooth",
+  });
+}
+
 export default function PdfGoruntuleyici({
   pdfId,
   gidilecekSayfa,
   onSecim,
   konumAl,
   onKonum,
+  onPasaj,
+  onGidisUygulandi,
 }: {
   pdfId: string;
-  /** Dışarıdan istenen sayfa (ör. asistanın alıntısındaki "PDF s. N"); değişince oraya gidilir. */
-  gidilecekSayfa?: { sayfa: number; anahtar: number } | null;
+  /**
+   * Dışarıdan istenen sayfa (ör. asistanın alıntısındaki "PDF s. N"); değişince oraya gidilir.
+   * `pasaj` verilirse (atıf kartının "Dayanağa git"i) o sayfada doğrulanmış metin bütünüyle
+   * bulunursa vurgulanır; bulunamazsa hiçbir şey işaretlenmez (lib/pdf-pasaj.ts).
+   */
+  gidilecekSayfa?: { sayfa: number; anahtar: number; pasaj?: string; pdfId?: string } | null;
+  /** Pasaj vurgusunun sonucu: bulundu mu (atıf kartı/panel kullanıcıya söyler). */
+  onPasaj?: (bulundu: boolean) => void;
+  /** "Git" isteği uygulandı: üst bileşen isteği düşürür, panel yeniden açılınca bayat istek kalmaz. */
+  onGidisUygulandi?: (anahtar: number) => void;
   onSecim: (secim: PdfSecimi | null) => void;
   /** Bu PDF için hatırlanan konum (yoksa null). */
   konumAl?: (pdfId: string) => OkumaKonumu | null;
@@ -70,6 +100,8 @@ export default function PdfGoruntuleyici({
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
+  /* Yüklü belgenin hangi PDF'e ait olduğu: PDF değişirken bekleyen bir "git" isteği eski belgeye uygulanmasın. */
+  const [belgeninPdfi, setBelgeninPdfi] = useState<string | null>(null);
   const [durum, setDurum] = useState<"yukleniyor" | "hazir" | "hata">("yukleniyor");
   const [sayfaNo, setSayfaNo] = useState(1);
   const [sayfaGirdi, setSayfaGirdi] = useState("1");
@@ -84,6 +116,25 @@ export default function PdfGoruntuleyici({
   const katmanRef = useRef<HTMLDivElement>(null);
   const metinlerRef = useRef<Map<number, string>>(new Map());
   const aramaTerimiRef = useRef("");
+  /* Vurgulanacak pasaj durumda; çizim sonrası okunabilsin diye ref'e efektte aktarılır. */
+  /*
+    Pasaj hangi PDF için istendiyse onunla birlikte tutulur. Eskiden yalnızca
+    sayfa ve metin tutuluyordu: başka bir PDF'e geçilince görüntüleyici aynı
+    pasajı YENİ PDF'in o sayfasında arıyor ve "bulunamadı" diyordu (kabul S10).
+  */
+  const [pasajIstegi, setPasaj] = useState<{ sayfa: number; metin: string; pdfId: string } | null>(null);
+  const pasaj = pasajIstegi && pasajIstegi.pdfId === pdfId ? pasajIstegi : null;
+  const pasajRef = useRef<{ sayfa: number; metin: string } | null>(null);
+  /*
+    Pasaj sayfada bulundu mu (null: henüz bakılmadı). "Pasaja odaklan" yalnızca
+    bulunduysa çıkar: ilk sürümde düğme pasaj İSTENİNCE çıkıyordu, bulunamayan
+    pasajda kullanıcıyı işaretsiz bir sayfaya götürüyordu (kabul S10).
+  */
+  const [pasajBulundu, setPasajBulundu] = useState<boolean | null>(null);
+  const onPasajRef = useRef(onPasaj);
+  useEffect(() => {
+    onPasajRef.current = onPasaj;
+  }, [onPasaj]);
 
   /*
     PDF değişince görünür durum RENDER sırasında sıfırlanır (React'in "prop
@@ -126,6 +177,7 @@ export default function PdfGoruntuleyici({
         // Hatırlanan sayfa (panel yeniden açıldıysa), belgenin sayfa sayısına sıkıştırılarak.
         const ilk = Math.min(Math.max(1, Math.trunc(konumAlRef.current?.(pdfId)?.sayfa ?? 1)), yuklenen.numPages);
         setBelge(yuklenen);
+        setBelgeninPdfi(pdfId);
         setSayfaNo(ilk);
         setSayfaGirdi(String(ilk));
         setDurum("hazir");
@@ -142,11 +194,35 @@ export default function PdfGoruntuleyici({
   }, [pdfId]);
 
   /* Cevaptaki "PDF s. N" bağlantısı: her istek kendi anahtarıyla bir kez uygulanır (render sırasında, aynı kalıp). */
-  // Bağlanırken elde olan istek uygulanmış sayılır: panel yeniden açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin.
-  const [uygulananGidis, setUygulananGidis] = useState<number | null>(() => gidilecekSayfa?.anahtar ?? null);
-  if (gidilecekSayfa && belge && gidilecekSayfa.anahtar !== uygulananGidis) {
+  /*
+    Eskiden bağlanırken elde olan istek "uygulanmış" sayılıyordu (panel yeniden
+    açılınca eski "PDF s. N" isteği hatırlanan sayfayı ezmesin diye). Ama PDF
+    paneli KAPALIYKEN basılan "Dayanağa git" de paneli açıp görüntüleyiciyi
+    yeni bağlıyor: istek bağlanırken elde olduğu için hiç uygulanmıyordu —
+    telefonda (panel alıntı eklenince kapanır) PDF sığdırılmış 1. sayfada,
+    vurgusuz açılıyordu (kabul S15, 18.11.2026). Artık uygulanan istek üst
+    bileşene bildirilir ve orada düşürülür (onGidisUygulandi); panel yeniden
+    açıldığında bayat istek yoktur, elde olan her istek yenidir.
+  */
+  const [uygulananGidis, setUygulananGidis] = useState<number | null>(null);
+  useEffect(() => {
+    if (uygulananGidis !== null) onGidisUygulandi?.(uygulananGidis);
+  }, [uygulananGidis, onGidisUygulandi]);
+  if (
+    gidilecekSayfa &&
+    belge &&
+    belgeninPdfi === pdfId &&
+    gosterilenPdf === pdfId &&
+    (!gidilecekSayfa.pdfId || gidilecekSayfa.pdfId === pdfId) &&
+    gidilecekSayfa.anahtar !== uygulananGidis
+  ) {
     setUygulananGidis(gidilecekSayfa.anahtar);
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
+    // Yeni gidiş eski pasaj vurgusunu düşürür; pasaj yoksa vurgu da yok.
+    setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj, pdfId } : null);
+    setPasajBulundu(null);
+    /* Telefonda pasaj okunur ölçekte açılır (2. tur, madde 4): sığdırılmış sayfa dar ekranda okunmuyordu. Görüntüleyici yalnızca tarayıcıda çizilir (ssr: false). */
+    if (gidilecekSayfa.pasaj && window.innerWidth <= 760 && (olcek === "sigdir" || olcek < 1.6)) setOlcek(1.6);
     setSayfaNo(n);
     setSayfaGirdi(String(n));
   }
@@ -164,7 +240,24 @@ export default function PdfGoruntuleyici({
       const esles = terim.length > 1 && kanitMetniNormallestir(parca.textContent ?? "").toLocaleLowerCase("tr").includes(terim);
       parca.classList.toggle("pdf-esles", esles);
     }
+    /* Doğrulanmış pasaj: yalnızca istenen sayfada ve metin bütünüyle bulunursa. */
+    const parcalar = Array.from(katman.querySelectorAll<HTMLSpanElement>("span:not(.markedContent)"));
+    parcalar.forEach((p) => p.classList.remove("pdf-pasaj"));
+    const pasaj = pasajRef.current;
+    if (pasaj && katman.dataset.sayfa === String(pasaj.sayfa)) {
+      const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
+      kapsanan?.forEach((i) => parcalar[i].classList.add("pdf-pasaj"));
+      if (kapsanan) pasajaKaydir(kapRef.current, parcalar[kapsanan[0]]);
+      setPasajBulundu(Boolean(kapsanan));
+      onPasajRef.current?.(Boolean(kapsanan));
+    }
   }, []);
+
+  /* Aynı sayfaya gidişte sayfa yeniden çizilmez; pasaj vurgusu burada uygulanır (farklı sayfada çizim sonrası). */
+  useEffect(() => {
+    pasajRef.current = pasaj;
+    vurgula();
+  }, [pasaj, uygulananGidis, vurgula]);
 
   /* Sayfa çizimi: kanvas + metin katmanı; önceki çizim iptal edilir. */
   useEffect(() => {
@@ -201,6 +294,7 @@ export default function PdfGoruntuleyici({
         await Promise.all([cizim.promise, metinKatmani.render()]);
         if (!iptal) {
           setCizilenOlcek(hedef);
+          katman.dataset.sayfa = String(sayfaNo);
           vurgula();
         }
       } catch {
@@ -282,6 +376,7 @@ export default function PdfGoruntuleyici({
           <label className="pdf-sayfa-girdi">
             <span className="sr-only">{t({ tr: "Sayfa", en: "Page" })}</span>
             <input
+              className="field-control"
               inputMode="numeric"
               value={sayfaGirdi}
               onChange={(e) => setSayfaGirdi(e.target.value.replace(/\D/g, "").slice(0, 5))}
@@ -308,12 +403,34 @@ export default function PdfGoruntuleyici({
           <button type="button" className="yazim-ikon" onClick={() => setOlcek("sigdir")} disabled={!belge} aria-pressed={olcek === "sigdir"} aria-label={t({ tr: "Genişliğe sığdır", en: "Fit to width" })}>
             <StretchHorizontal size={16} aria-hidden="true" />
           </button>
+          {/*
+            PASAJA ODAKLAN (2. tur tasarımı, madde 4): doğrulanmış pasaj varken
+            (atıf kartının "Dayanağa git"i) pasajın sayfasına döner, okunur bir
+            ölçeğe (en az %160, telefonda dar sütunda küçük kalmasın) getirir ve
+            vurgulu satırı ortalar. Pasaj yoksa düğme yok: işaretlenecek bir şey yok.
+          */}
+          {pasaj && pasajBulundu ? (
+            <button
+              type="button"
+              className="yazim-ikon pdf-pasaja-odaklan"
+              disabled={!belge}
+              onClick={() => {
+                if (sayfaNo !== pasaj.sayfa) sayfayaGit(pasaj.sayfa);
+                if (cizilenOlcek < 1.6) setOlcek(1.6);
+                else window.requestAnimationFrame(() => pasajaKaydir(kapRef.current, katmanRef.current?.querySelector(".pdf-pasaj") ?? null));
+              }}
+              aria-label={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+              title={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+            >
+              <LocateFixed size={16} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <form className="pdf-ara" onSubmit={ara} role="search">
           <label className="sr-only" htmlFor={`pdf-ara-${pdfId}`}>
             {t({ tr: "PDF içinde ara", en: "Search in PDF" })}
           </label>
-          <input id={`pdf-ara-${pdfId}`} type="search" value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
+          <input id={`pdf-ara-${pdfId}`} className="field-control" type="search" value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
           <button type="submit" className="yazim-ikon" disabled={!belge || araniyor} aria-label={t({ tr: "Ara", en: "Search" })}>
             {araniyor ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
           </button>

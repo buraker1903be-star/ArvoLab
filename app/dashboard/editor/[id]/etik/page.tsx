@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ceviri } from "@/lib/dil-sunucu";
 import { ETIK_DURUM_ADI } from "@/lib/etik/durum";
-import CalismaSekmeleri from "../calisma-sekmeleri";
+import { CalismaBaglamiYayinla } from "../../../_components/calisma-baglami";
 import EtikIcerigi, { etikVerisiOku } from "./etik-icerigi";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -58,7 +58,7 @@ export default async function EtikKurulSayfasi({ params }: { params: Promise<{ i
         </div>
       </section>
 
-      <CalismaSekmeleri calisma={calisma} aktif="etik" />
+      <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
 
       <EtikIcerigi projectId={id} veri={veri} />
     </main>

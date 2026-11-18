@@ -14,7 +14,6 @@ const gezinme = oku("app/dashboard/_components/os-gezinme.tsx");
 const yardimci = oku("app/_components/gezinme.ts");
 const kabuk = oku("app/styles/os-shell.css");
 const yazim = oku("app/dashboard/editor/[id]/write/page.tsx");
-const calismaSekmeleri = oku("app/dashboard/editor/[id]/calisma-sekmeleri.tsx");
 
 /** `@media (min-width: 1200px) { … }` bloklarının içi (iç içe parantezler dengeli). */
 function masaustuBloklari(css: string): string {
@@ -90,9 +89,10 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
     assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-takim,\s*html\[data-gezinme="dar"\] \.os-gezinme-alt-bolge \{ display: none; \}/);
   });
 
-  // 17.11.2026: sekmeler her ekran boyunda görünür; dar hâle özel kural gerekmiyor (gizleyen kural da yok).
-  test("çalışma sekmelerini gizleyen bir kabuk kuralı yok", () => {
-    assert.doesNotMatch(kabuk, /\.calisma-sekmeleri \{ display: none/);
+  // 19.11.2026: çalışma sekme satırı kalktı; dar hâlde çalışma gezinmesi rayda simgelerle, ray kayar.
+  test("dar hâlde çalışma gezinmesi kayar ve adlar ekran okuyucuda kalır", () => {
+    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-calisma-govde \{ overflow-y: auto;/);
+    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-calisma-govde \.os-gezinme-oge \.os-gezinme-ad \{ position: absolute; width: 1px;/);
   });
 
   test("kâğıt geometrisi sabit: yazım düzeni açık kenar çubuğundaki genişliğinde kalır", () => {
@@ -112,16 +112,13 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
   });
 });
 
-describe("yazım sayfasında çalışma sekmeleri", () => {
-  test("Yazım sekmesi etkin olarak çizilir", () => {
-    assert.match(yazim, /<CalismaSekmeleri calisma=\{project\} aktif="yazim" \/>/);
+describe("yazım sayfası çalışmayı gezinmeye bildirir", () => {
+  test("sekme satırı yok; bağlam yayınlanır", () => {
+    assert.doesNotMatch(yazim, /CalismaSekmeleri/);
+    assert.match(yazim, /<CalismaBaglamiYayinla id=\{project\.id\} baslik=\{project\.title \?\? ""\} tur=\{project\.project_type\} \/>/);
   });
 
-  test("tür kuralı tek yerde: Makale sekmesi yalnızca makale türünde", () => {
-    // 5.1d-4: kural lib'de (calismaBaglantilari); sekmeler listeyi oradan okur.
-    assert.match(calismaSekmeleri, /const baglam = \{ id: calisma\.id, baslik: calisma\.title \?\? "", tur: calisma\.project_type \};/);
-    assert.match(calismaSekmeleri, /calismaBolumleri\(baglam, t\)/);
-    assert.doesNotMatch(calismaSekmeleri, /"article"/);
+  test("tür kuralı tek yerde: Makale yalnızca makale türünde", () => {
     assert.match(oku("lib/os/uygulamalar.ts"), /calisma\.tur === "article"/);
   });
 });

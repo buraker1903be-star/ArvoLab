@@ -27,12 +27,17 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     assert.equal(editor.match(/tercihYaz\(INCELEME_TERCIHI, !incelemeAcik\)/g)?.length, 1);
     assert.match(editor, /className="save-status yazma-kayit"/);
   });
-  test("kılavuz yoksa tek satırlık bilgi; iki yol da duruyor", () => {
-    const blok = editor.slice(editor.indexOf('className="kilavuz-satiri"'), editor.indexOf('className="kilavuz-satiri"') + 1200);
-    assert.match(blok, /role="status"/);
-    assert.match(blok, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
-    assert.match(blok, /href=\{editHref\}/);
-    assert.doesNotMatch(editor, /data-tone="muted" role="status">\s*<div>\s*<strong>\{t\(\{ tr: "Bu çalışmaya bağlı kılavuz yok"/);
+  /*
+    19.11.2026 (kabul turu 2): kalıcı "kılavuz yok" şeridi editörden kalktı;
+    durumu ve iki yolu (Kılavuzumu yükle, Kurumu seç) çalışma menüsündeki
+    "Kılavuz ve biçim" aracında. İki yolun da kaybolmadığını sabitler.
+  */
+  test("kılavuz yok şeridi editörde yok; iki yol Kılavuz ve biçim aracında", () => {
+    assert.doesNotMatch(editor, /className="kilavuz-satiri"/);
+    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kilavuz")'), editor.indexOf('acilanAraclar.includes("kilavuz")') + 6000);
+    assert.match(arac, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
+    assert.match(arac, /href=\{editHref\}/);
+    assert.match(arac, /setGuidelineOpen\(true\)/);
   });
   test("Bul ve Odak modu kaldırılmadı: Belge menüsünde", () => {
     const menu = editor.slice(editor.indexOf('etiket={t({ tr: "Belge", en: "Document" })}'), editor.indexOf("</AracMenusu>", editor.indexOf('etiket={t({ tr: "Belge", en: "Document" })}')));
@@ -43,12 +48,14 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     const portal = editor.slice(editor.indexOf("createPortal("), editor.indexOf("eylemHedefi,", editor.indexOf("createPortal(")));
     assert.doesNotMatch(portal, /projects-primary-button/);
   });
-  test("telefonda kılavuz satırı kısa yazımla; bağlantının erişilebilir adı tam", () => {
-    assert.match(editor, /aria-label=\{t\(\{ tr: "Kılavuzumu yükle", en: "Upload my guideline" \}\)\}/);
-    assert.match(calisma, /\.kilavuz-satiri \.kilavuz-kisa \{ display: inline; \}/);
+  test("Kaynakça aracı: canlı atıf–kaynakça denetimi, atıf yapılmamış kaynaklar ve kontrol düğmesi", () => {
+    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kaynakca")'), editor.indexOf('acilanAraclar.includes("kilavuz")'));
+    assert.match(arac, /kaynakcaSorunlari/);
+    assert.match(arac, /<BekleyenKaynaklarKarti/);
+    assert.match(arac, /onClick=\{handleCheck\}/);
   });
-  test("telefonda sekmeler yalnızca yazım ekranında gizli; araç çubuğu dar ekranda sarar", () => {
-    assert.match(calisma, /\.dashboard-page:has\(\.manuscript-layout\) > \.calisma-sekmeleri \{ display: none; \}/);
+  test("araç çubuğu dar ekranda sarar", () => {
+    // 19.11.2026: çalışma sekme satırı kalktı (gezinme iki düzeyli); onu gizleyen kural da gereksiz.
     assert.match(calisma, /@media \(min-width: 761px\) and \(max-width: 1439px\) \{\s*\.manuscript-araclar \{ flex-wrap: wrap;/);
   });
 });
@@ -146,5 +153,52 @@ describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
       assert.doesNotMatch(dl, /\n\s*<TeslimTarihiFormu/, dosya);
     }
     assert.match(oku("app/styles/genel-bakis.css"), /\.tez-olcumler \.tez-olcu > dd\.tez-olcu-not \{/);
+  });
+});
+
+/*
+  3. tur (18.11.2026, kabul S15): PDF paneli kapalıyken basılan "Dayanağa
+  git" görüntüleyiciyi yeni bağlıyordu ve istek "zaten uygulanmış"
+  sayılıyordu; telefonda PDF sığdırılmış 1. sayfada vurgusuz açılıyordu.
+  Pasaja kaydırma scrollIntoView ile yapılıyor, telefonda panelin
+  kendisini de kaydırıp kapatma düğmesini ekrandan çıkarıyordu.
+*/
+describe("PDF: Dayanağa git panel kapalıyken de uygulanır, kaydırma PDF alanında kalır", () => {
+  const goruntuleyici = oku("app/dashboard/editor/[id]/write/pdf-goruntuleyici.tsx");
+  const panel = oku("app/dashboard/editor/[id]/write/kaynak-pdf-paneli.tsx");
+  test("bağlanırken elde olan istek uygulanmış sayılmaz; uygulanan istek panelde düşer", () => {
+    assert.match(goruntuleyici, /const \[uygulananGidis, setUygulananGidis\] = useState<number \| null>\(null\);/);
+    assert.match(goruntuleyici, /onGidisUygulandi\?\.\(uygulananGidis\)/);
+    assert.match(panel, /onGidisUygulandi=\{gidisUygulandi\}/);
+    assert.match(panel, /setGidilecek\(\(g\) => \(g\?\.anahtar === anahtar \? null : g\)\)/);
+  });
+  test("pasaja kaydırma scrollIntoView kullanmaz (ataları kaydırmasın)", () => {
+    assert.doesNotMatch(goruntuleyici.replace(/\/\*[\s\S]*?\*\//g, ""), /scrollIntoView\(/);
+    assert.match(goruntuleyici, /function pasajaKaydir\(alan: HTMLElement \| null, parca: Element \| null\)/);
+  });
+});
+
+/*
+  18.11.2026 (son kabul): odak modundan Esc ile çıkış hiç çalışmıyordu.
+  Denetim "[role=dialog]" arıyordu; ortak pencere bileşeni kapalıyken de
+  sayfada role="dialog" ile durduğu için (inert) koşul her zaman doğruydu.
+  Tarayıcıda yeniden üretildi (18 kapalı pencere, 0 açık); kabul S18 da sınar.
+*/
+describe("Esc: açık pencere denetimi kapalı pencereleri saymaz", () => {
+  const kod = oku("app/dashboard/editor/[id]/write/manuscript-editor.tsx").replace(/\/\*[\s\S]*?\*\//g, "");
+  test("hiçbir querySelector '[role=dialog]' aramaz", () => {
+    assert.doesNotMatch(kod, /querySelector(All)?\([^)]*\[role=dialog\]/);
+  });
+  test("odak modu ve PDF çekmecesi aynı Esc kararını (escIsle) ve açık-pencere seçicisini kullanır", () => {
+    assert.match(kod, /const ACIK_PENCERE = "dialog\[open\], \.drawer-root\.open";/);
+    assert.match(kod, /const acikPencere = Boolean\(document\.querySelector\(ACIK_PENCERE\)\);/);
+    // Pencere Esc ile kapanırken aynı Esc odak modundan çıkarmasın: yakalama aşamasındaki durum kaydedilir.
+    assert.match(kod, /if \(yakalama && \(acikPencere \|\| atifKarti\)\) sahipliEsc\.add\(olay\);/);
+    assert.match(kod, /escIsle\(escDurumu\(olay\)\)\) pdfKapat\(\)/);
+    assert.match(kod, /escIsle\(escDurumu\(e\)\)\) setOdak\(false\)/);
+  });
+  test("belgeden gelen Esc için yakalama aşamasında da dinlenir (ProseMirror Esc'i her zaman işler)", () => {
+    assert.equal((kod.match(/window\.addEventListener\("keydown", tus, true\);/g) ?? []).length >= 2, true);
+    assert.match(kod, /const yakalama = olay\.eventPhase === Event\.CAPTURING_PHASE;/);
   });
 });

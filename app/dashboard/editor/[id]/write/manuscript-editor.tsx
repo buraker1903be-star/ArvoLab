@@ -77,8 +77,31 @@ import {
   TableCellsSplit,
   Sparkles,
   FileText,
-  Info,
 } from "lucide-react";
+import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { SolArama, SolBolumler, SolKaynaklar, kaynaginPdfi, type KaynakPdfi } from "./sol-araclar";
+import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
+import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
+import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
+import { belgeBolumleri, kaynakcaGirdileri, type Dugum } from "@/lib/kaynakca-bolumu";
+import { goruntuleyiciKaynaklari as kartPdfleriniOku, kaynakKunyeDurumlari, type KunyeDurumOzeti } from "@/app/actions/kaynak-pdf";
+import { getLiteratureSources as kartKaynaklariniOku } from "@/app/actions/literature";
+import {
+  KAGIT_GENISLIGI,
+  SAG_PANEL_SINIRI,
+  gecerliOlcek,
+  olcekAdimi,
+  olcekTercihiOku,
+  sagPanelGenisligiSinirla,
+  yerlesimKarari,
+  SOL_ALAN_DAR_OZNITELIGI,
+  SOL_ALAN_GENISLET_OLAYI,
+  type OlcekTercihi,
+} from "@/lib/calisma-alani-yerlesimi";
+import { sagPanelOku, solAracOku, type SagPanel, type SolArac } from "@/lib/os/uygulamalar";
+import { GEZINME_DAR, GEZINME_OZNITELIGI } from "@/lib/os5/gezinme";
+import { gezinmeAbone } from "@/app/_components/gezinme";
 
 import type { ImportMode } from "./import-dialog";
 import type { DocxImportStats } from "@/lib/docx-import";
@@ -104,6 +127,8 @@ import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
+import { etkinOneri } from "@/lib/tiptap-satir-ici-oneri";
+import { escIsle, type EscDurumu } from "@/lib/editor-esc";
 import AracMenusu from "./arac-menusu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
@@ -185,6 +210,21 @@ import {
   kapalı pencerenin sunucuda çizilecek bir hâli yok). Davranış aynı:
   bileşenler eskisi gibi her zaman yerinde, `open` ile açılıyor.
 */
+/*
+  AÇIK PENCERE (Esc'i kendisi kullanan) = açık <dialog> ya da açık ortak
+  pencere (dialog.tsx, .drawer-root.open). Ortak pencere KAPALIYKEN de
+  sayfada role="dialog" ile durur (inert); "[role=dialog]" aramak her zaman
+  bir şey bulur. Eskiden odak modu ve PDF çekmecesi böyle arıyordu ve Esc
+  ikisinde de hiç çalışmıyordu (18.11.2026, tarayıcıda: 18 kapalı pencere).
+*/
+const ACIK_PENCERE = "dialog[open], .drawer-root.open";
+/*
+  Esc başladığında (yakalama aşamasında) bir pencere ya da atıf kartı açık
+  mıydı? Pencere kendi Esc'iyle document'ta kapanır ve React güncellemesi
+  window dinleyicisinden ÖNCE işlenir: kabarcık aşamasında pencere artık
+  kapalı görünür ve aynı Esc odak modundan da çıkarıyordu (kabul S18).
+*/
+const sahipliEsc = new WeakSet<Event>();
 const FindReplaceBar = dynamic(() => import("./find-replace-bar"), { ssr: false });
 const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
@@ -198,7 +238,7 @@ const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr
 const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
 /* Yazım Stüdyosu (16.11.2026): editörün yanında kaynak PDF'i, pasaj seçimi, Arvo AI analizi ve doğrulanmış atıf. */
 const KaynakPdfPaneli = dynamic(() => import("./kaynak-pdf-paneli"), { ssr: false });
-const PdfPanelAyirici = dynamic(() => import("./pdf-panel-ayirici"), { ssr: false });
+const SagPanelAyirici = dynamic(() => import("./sag-panel-ayirici"), { ssr: false });
 const OlcumPaneli = dynamic(() => import("./olcum-paneli"), { ssr: false });
 
 // Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
@@ -289,6 +329,8 @@ interface ManuscriptEditorProps {
   acilacakMadde?: string | null;
   /** "?asistan=1" ile gelinirse yazım asistanı açık başlar (Ctrl+K'daki "Yazım asistanını aç", Phase 3). */
   asistanAcikBasla?: boolean;
+  /** Yeni çalışmadan "Word dosyasından içe aktar" ile gelindi: içe aktarma penceresi açık başlar. */
+  iceAktarAcikBasla?: boolean;
   /* Çalışmada kurum girili mi: teslim kontrolünde "kılavuz yok"un iki
      hâli farklı çözüm istiyor (lib/submission-checklist.ts). */
   kurumGirili?: boolean;
@@ -496,6 +538,7 @@ export default function ManuscriptEditor({
   belgeDili = "tr",
   acilacakMadde = null,
   asistanAcikBasla = false,
+  iceAktarAcikBasla = false,
   kurumGirili = false,
   initialContent,
   initialUpdatedAt,
@@ -639,19 +682,238 @@ export default function ManuscriptEditor({
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
-  const [yazimAcik, setYazimAcik] = useState(asistanAcikBasla);
   /*
-    Kaynak PDF paneli (Yazım Stüdyosu). Yazım asistanıyla aynı anda açılmaz:
-    asistan sağa yaslı yüzen bir panel, PDF paneli ise yerleşimin sağ
-    sütunu; ikisi birlikte açılınca asistan PDF'in üstüne biniyordu. Biri
-    açılınca öteki kapanır (iki düğme de araç çubuğunda yan yana).
+    SAĞ PANEL: TEK YUVA (19.11.2026, bağlamlı çalışma alanı). Arvo AI ve
+    Kaynak PDF aynı yuvayı, aynı ayırıcıyı paylaşır; biri açılınca öteki
+    kapanır. Eskiden asistan sağa yaslı yüzen bir kutuydu (400 px, sabit),
+    PDF ise yerleşimin sütunu: iki ayrı mekanizma, iki ayrı genişlik kuralı.
+    Açık panel ADRESTE (?sag=ai|pdf): çalışma gezinmesindeki "Arvo AI"
+    bağlantısı, doğrudan bağlantı ve geri/ileri aynı paneli açar. Düğmeyle
+    açıp kapamak geçmişe yeni kayıt eklemez (replaceState); Next bunu
+    useSearchParams'a yansıtıyor.
   */
-  const [kaynakAcik, setKaynakAcik] = useState(false);
+  const adres = useSearchParams();
+  const solArac = solAracOku(adres.get("sol"));
+  const sagAdresi = sagPanelOku(adres.get("sag"));
+  const [sag, setSag] = useState<SagPanel | null>(sagAdresi ?? (asistanAcikBasla ? "ai" : null));
+  const [oncekiSagAdresi, setOncekiSagAdresi] = useState(sagAdresi);
+  if (sagAdresi !== oncekiSagAdresi) {
+    setOncekiSagAdresi(sagAdresi);
+    setSag(sagAdresi);
+  }
+  const yazimAcik = sag === "ai";
+  const kaynakAcik = sag === "pdf";
+  const sagAc = useCallback((panel: SagPanel | null) => {
+    setSag(panel);
+    const u = new URL(window.location.href);
+    if (panel) u.searchParams.set("sag", panel);
+    else u.searchParams.delete("sag");
+    // "?asistan=1" (eski bağlantılar) kalırsa yenilemede panel yeniden açılırdı.
+    u.searchParams.delete("asistan");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  }, []);
+  /* Kaynaklar aracından "PDF'i aç": panel o PDF'le açılır (anahtar aynı PDF'e ikinci basışı da iletir). */
+  const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number; sayfa?: number; pasaj?: string } | null>(null);
+
+  /*
+    ATIF KARTI (K3-A) ve SEÇİM İŞLEMLERİ: iki ayrı durum, aynı anda açılmaz
+    (atif-karti.tsx). Kartın verisi ilk tıklamada okunur ve PDF bağı ya da
+    atıf değişince tazelenir. Doğrulanmış pasajlar yalnızca bu oturumda,
+    bellekte (K3-ek onaylı değil: kalıcı kayıt yok).
+  */
+  const [atifKarti, setAtifKarti] = useState<AtifKartiDurumu | null>(null);
+  const [kartVerisi, setKartVerisi] = useState<{ kaynaklar: LiteratureSource[]; pdfler: KaynakPdfi[]; kunye: Map<string, KunyeDurumOzeti> } | null>(null);
+  const [kartYukleniyor, setKartYukleniyor] = useState(false);
+  const [dogrulanmisPasajlar, setDogrulanmisPasajlar] = useState<DogrulanmisPasaj[]>([]);
+  const [secimKonumu, setSecimKonumu] = useState<{ yan: "sag" | "alt"; x: number; y: number } | null>(null);
   const yerlesimRef = useRef<HTMLDivElement>(null);
   const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
+  const anaRef = useRef<HTMLDivElement>(null);
+
+  /*
+    YERLEŞİM VE BELGE ÖLÇEĞİ (lib/calisma-alani-yerlesimi.ts). Ekran genişliği
+    ilk çizimden sonra ölçülür; o ana kadar karar yok ve CSS eski (akan)
+    düzeni çizer — sunucu ile tarayıcının ilk HTML'i aynı kalır.
+  */
+  const [ekran, setEkran] = useState(0);
+  useEffect(() => {
+    const olc = () => setEkran(window.innerWidth);
+    olc();
+    window.addEventListener("resize", olc);
+    return () => window.removeEventListener("resize", olc);
+  }, []);
+  const SAG_ANAHTARI: Record<SagPanel, string> = { ai: "arvolab.sagPanel.ai", pdf: "arvolab.pdfPanelGenisligi" };
+  const [sagGenislikleri, setSagGenislikleri] = useState<Record<SagPanel, number>>({ ai: SAG_PANEL_SINIRI.ai.varsayilan, pdf: SAG_PANEL_SINIRI.pdf.varsayilan });
+  const [olcekTercihi, setOlcekTercihi] = useState<OlcekTercihi>("sigdir");
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- tercihler yalnızca tarayıcıda okunabilir; ilk çizim sunucuyla aynı kalır
+      setSagGenislikleri({
+        ai: sagPanelGenisligiSinirla("ai", Number(window.localStorage.getItem(SAG_ANAHTARI.ai))),
+        pdf: sagPanelGenisligiSinirla("pdf", Number(window.localStorage.getItem(SAG_ANAHTARI.pdf))),
+      });
+      setOlcekTercihi(olcekTercihiOku(window.localStorage.getItem("arvolab.belgeOlcegi")));
+    } catch {
+      /* Gizli sekme: varsayılanlar. */
+    }
+    // Anahtarlar sabit; yalnızca açılışta okunur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const sagGenislikDegisti = (genislik: number, kaydet: boolean) => {
+    if (!sag) return;
+    setSagGenislikleri((onceki) => ({ ...onceki, [sag]: genislik }));
+    if (kaydet) {
+      try {
+        window.localStorage.setItem(SAG_ANAHTARI[sag], String(genislik));
+      } catch {
+        /* Gizli sekme: tercih hatırlanmaz. */
+      }
+    }
+  };
+  const olcekSec = (tercih: OlcekTercihi) => {
+    setOlcekTercihi(tercih);
+    try {
+      window.localStorage.setItem("arvolab.belgeOlcegi", String(tercih));
+    } catch {
+      /* Gizli sekme: tercih hatırlanmaz. */
+    }
+  };
+  /* Kullanıcının kendi daraltma tercihi; aşağıdaki geçici ray işareti (data-gezinme-gecici) onu taklit etmesin. */
+  const kullaniciDar = useSyncExternalStore(
+    gezinmeAbone,
+    () => document.documentElement.getAttribute(GEZINME_OZNITELIGI) === GEZINME_DAR && !document.documentElement.hasAttribute("data-gezinme-gecici"),
+    () => false,
+  );
+  /*
+    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
+    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
+    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
+    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
+    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
+    Yerleşim kararından ÖNCE okunur: panelin sütunu belgeden yer alıyor
+    (lib/calisma-alani-yerlesimi.ts, "İNCELEME PANELİ").
+  */
+  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
+  /*
+    KAYNAK LİSTESİ + PDF (4. tur, 18.11.2026). PDF açılınca belge %85'in
+    altına inecekse sol araç şeride iner (lib/calisma-alani-yerlesimi.ts,
+    "aracDar"); şeritteki düğme (os-gezinme.tsx) aracı geri açar ve PDF
+    çekmece olur. Bu istek yalnızca o araç + PDF birlikteliği için geçerli:
+    araç ya da sağ panel değişince düşer (çizim sırasında, önceki anahtarla
+    karşılaştırarak; efektte sıfırlamak bir çizim gecikmeli kalırdı).
+  */
+  const [solGenis, setSolGenis] = useState<{ anahtar: string; istendi: boolean }>({ anahtar: "", istendi: false });
+  const solGenisAnahtari = `${solArac ?? ""}|${sag ?? ""}`;
+  if (solGenis.anahtar !== solGenisAnahtari) setSolGenis({ anahtar: solGenisAnahtari, istendi: false });
+  const solGenisIstendi = solGenis.anahtar === solGenisAnahtari && solGenis.istendi;
+  useEffect(() => {
+    const ac = () => setSolGenis({ anahtar: solGenisAnahtari, istendi: true });
+    window.addEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
+    return () => window.removeEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
+  }, [solGenisAnahtari]);
+  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik, solGenisIstendi }) : null;
+  const solAlanDar = karar?.kenar === "aracDar";
+  useEffect(() => {
+    const kok = document.documentElement;
+    if (solAlanDar) kok.setAttribute(SOL_ALAN_DAR_OZNITELIGI, "");
+    else kok.removeAttribute(SOL_ALAN_DAR_OZNITELIGI);
+  }, [solAlanDar]);
+  useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_DAR_OZNITELIGI), []);
+  /*
+    Gezinme yalnızca GEÇİCİ olarak raya iner (sağ panel açıkken belge
+    okunabilirlik sınırının altına inecekse): tercih kaydedilmez, panel
+    kapanınca ya da editörden çıkınca geri açılır.
+  */
+  const geciciRay = karar?.kenar === "ray" && !kullaniciDar && !solArac;
+  useEffect(() => {
+    const kok = document.documentElement;
+    const gecici = kok.hasAttribute("data-gezinme-gecici");
+    if (geciciRay && !gecici && kok.getAttribute(GEZINME_OZNITELIGI) !== GEZINME_DAR) {
+      kok.setAttribute("data-gezinme-gecici", "");
+      kok.setAttribute(GEZINME_OZNITELIGI, GEZINME_DAR);
+    } else if (!geciciRay && gecici) {
+      kok.removeAttribute("data-gezinme-gecici");
+      kok.removeAttribute(GEZINME_OZNITELIGI);
+    }
+  }, [geciciRay]);
+  useEffect(
+    () => () => {
+      const kok = document.documentElement;
+      if (kok.hasAttribute("data-gezinme-gecici")) {
+        kok.removeAttribute("data-gezinme-gecici");
+        kok.removeAttribute(GEZINME_OZNITELIGI);
+      }
+    },
+    [],
+  );
+  /*
+    ÇEKMECE BAŞLIĞI ÖRTMEZ (19.11.2026, kabul turu 2). Dar masaüstünde AI/PDF
+    ya da inceleme paneli çekmece olunca üst çubuğun hemen altından
+    başlıyordu ve editörün başlık satırını (çalışma adı, ölçek, Kontroller,
+    Dışa aktar) örtüyordu; incelemeye ya da dışa aktarmaya geçmek için önce
+    çekmeceyi kapatmak gerekiyordu. Çekmecenin üstü başlığın alt kenarına
+    hizalanır; sayfa kayıp başlık görünümden çıkınca çekmece üst çubuğa
+    kadar uzar.
+  */
+  /* Telefonda (≤760) çekmece yok: PDF tam ekran, asistan alttan yaprak (workspace.css). */
+  const cekmeceVar = Boolean(karar && (ekran ?? 0) > 760 && (karar.sag === "cekmece" || karar.inceleme === "cekmece"));
+  const pdfCekmece = Boolean(cekmeceVar && sag === "pdf" && karar?.sag === "cekmece");
+  useEffect(() => {
+    const yerlesim = yerlesimRef.current;
+    if (!yerlesim) return;
+    if (!cekmeceVar) {
+      yerlesim.style.removeProperty("--cekmece-ust");
+      return;
+    }
+    const ayarla = () => {
+      const baslik = document.querySelector(".yazma-basligi");
+      const ustCubuk = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64;
+      const alt = baslik ? baslik.getBoundingClientRect().bottom : 0;
+      yerlesim.style.setProperty("--cekmece-ust", `${Math.round(Math.max(ustCubuk + 8, alt + 8))}px`);
+    };
+    ayarla();
+    window.addEventListener("scroll", ayarla, { passive: true });
+    window.addEventListener("resize", ayarla);
+    return () => {
+      window.removeEventListener("scroll", ayarla);
+      window.removeEventListener("resize", ayarla);
+    };
+  }, [cekmeceVar]);
+  const [anaGenislik, setAnaGenislik] = useState(0);
+  const otomatikOlcek = karar?.sabitKagit && anaGenislik ? Math.min(1, Math.floor(((anaGenislik - 2) / KAGIT_GENISLIGI) * 100) / 100) : 1;
+  const belgeOlcegi = karar?.sabitKagit ? gecerliOlcek(olcekTercihi, otomatikOlcek) : 1;
+  const sagGenislik = karar?.sag === "sutun" ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
+  /* CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css). */
+  useEffect(() => {
+    const kap = yerlesimRef.current;
+    if (!kap) return;
+    kap.style.setProperty("--belge-olcek", String(belgeOlcegi));
+    if (sagGenislik) kap.style.setProperty("--sag-panel-genislik", `${sagGenislik}px`);
+    else kap.style.removeProperty("--sag-panel-genislik");
+  });
+
+  /*
+    SOL ARAÇLAR (#sol-alan-yuva, os-gezinme.tsx). Bir kez açılan araç
+    söküLMEZ, yalnızca gizlenir: arama, süzgeç ve liste konumu araç
+    değiştirince kaybolmasın.
+  */
+  const [acilanAraclar, setAcilanAraclar] = useState<SolArac[]>([]);
+  if (solArac && !acilanAraclar.includes(solArac)) setAcilanAraclar([...acilanAraclar, solArac]);
+  const [solYuva, setSolYuva] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- yuva gezinmenin DOM'unda; ancak çizimden sonra bulunur
+    setSolYuva(document.getElementById("sol-alan-yuva"));
+  }, [solArac]);
+  /* Dar ekranda araç belgenin üstünde: bir başlığa gidince ya da atıf ekleyince belge görünsün diye araç kapanır. */
+  const solAraciKapatDarsa = () => {
+    if (window.innerWidth >= 1200) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("sol");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  };
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(iceAktarAcikBasla);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formatLossDismissed, setFormatLossDismissed] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -977,6 +1239,63 @@ export default function ManuscriptEditor({
   });
 
   /*
+    PDF paneli kapanınca odak BELGEYE, kullanıcının bıraktığı konuma döner
+    (4. tur, 18.11.2026). Eskiden odak kapatma düğmesinde kalıyordu (düğme
+    sökülünce sayfanın gövdesine düşüyordu): seçim korunuyordu ama yazmaya
+    devam etmek için belgeye yeniden tıklamak, yani konumu yeniden seçmek
+    gerekiyordu. Seçim değiştirilmez, belge kaydırılmaz.
+  */
+  const pdfKapat = useCallback(() => {
+    sagAc(null);
+    window.requestAnimationFrame(() => {
+      if (editor && !editor.isDestroyed) editor.commands.focus(null, { scrollIntoView: false });
+    });
+  }, [sagAc, editor]);
+  /*
+    PDF ÇEKMECESİ GEÇİCİDİR (4. tur, 18.11.2026): belgenin üstünü kapattığı
+    için Esc ile kapanır; eskiden yalnızca köşedeki çarpı kapatıyordu.
+    Açık bir pencere (dialog), atıf kartı ya da Esc'i kendisi işleyen bir
+    öğe (defaultPrevented) varsa dokunulmaz. Kapanınca yerleşim kendiliğinden
+    eski hâline döner (sol araç yeniden tam genişlikte).
+  */
+  /*
+    Esc kararı lib/editor-esc.ts'te (escIsle): imleç belgedeyken ProseMirror
+    Esc'i her zaman işlenmiş sayar, bu yüzden belgeden gelen Esc yakalama
+    aşamasında değerlendirilir. Yalnızca AÇIK pencere sayılır (ACIK_PENCERE);
+    ilk sürüm "[role=dialog]" arıyordu ve kapalı pencereleri de sayıyordu.
+  */
+  const escDurumu = useCallback(
+    (olay: KeyboardEvent): EscDurumu => {
+      const yakalama = olay.eventPhase === Event.CAPTURING_PHASE;
+      const acikPencere = Boolean(document.querySelector(ACIK_PENCERE));
+      const atifKarti = Boolean(document.querySelector(".atif-karti"));
+      if (yakalama && (acikPencere || atifKarti)) sahipliEsc.add(olay);
+      const sahipli = sahipliEsc.has(olay);
+      return {
+        belgeden: olay.target instanceof Element && Boolean(olay.target.closest(".ProseMirror")),
+        yakalama,
+        islenmis: olay.defaultPrevented,
+        acikPencere: acikPencere || sahipli,
+        atifKarti,
+        oneri: Boolean(editor && !editor.isDestroyed && etkinOneri(editor.state)),
+      };
+    },
+    [editor],
+  );
+  useEffect(() => {
+    if (!pdfCekmece) return;
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key === "Escape" && escIsle(escDurumu(olay))) pdfKapat();
+    };
+    window.addEventListener("keydown", tus, true);
+    window.addEventListener("keydown", tus);
+    return () => {
+      window.removeEventListener("keydown", tus, true);
+      window.removeEventListener("keydown", tus);
+    };
+  }, [pdfCekmece, pdfKapat, escDurumu]);
+
+  /*
     Satır içi öneri (03.11.2026): otomatik mod tarayıcıda hatırlanır,
     varsayılan kapalı (her öneri bir asistan hakkı; satir-ici-oneri.tsx).
   */
@@ -988,14 +1307,6 @@ export default function ManuscriptEditor({
   const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
   const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
   /*
-    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
-    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
-    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
-    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
-    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
-  */
-  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
-  /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
     yeniden açan öğrenci uyarıları görmeden yazmaya devam etmesin. Esc çıkar.
@@ -1003,13 +1314,17 @@ export default function ManuscriptEditor({
   const [odak, setOdak] = useState(false);
   useEffect(() => {
     if (!odak) return;
+    // Açık pencere, atıf kartı ve satır içi öneri Esc'i kendisi kullanır (escIsle). PDF çekmecesi açıksa önce o kapanır.
     const tus = (e: KeyboardEvent) => {
-      // Açık bir pencere ya da öneri Esc'i kendisi kullanıyor; yalnızca editör boştayken çık.
-      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("dialog[open], [role=dialog]")) setOdak(false);
+      if (e.key === "Escape" && !pdfCekmece && escIsle(escDurumu(e))) setOdak(false);
     };
+    window.addEventListener("keydown", tus, true);
     window.addEventListener("keydown", tus);
-    return () => window.removeEventListener("keydown", tus);
-  }, [odak]);
+    return () => {
+      window.removeEventListener("keydown", tus, true);
+      window.removeEventListener("keydown", tus);
+    };
+  }, [odak, pdfCekmece, escDurumu]);
   const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
   useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
@@ -1609,6 +1924,168 @@ export default function ManuscriptEditor({
     kilavuzOnSayfalariniEkle();
   }, [editor, guideline, guidelineSync, kilavuzOnSayfalariniEkle]);
 
+  /*
+    ATIFA TIKLAMA (K3-A). Belge değişmez: tıklanan noktadaki düz metin
+    atıf, o anda çalışmanın kaynaklarıyla eşleştirilir (lib/atif-karti.ts).
+    Metin seçiliyken kart açılmaz (seçim işlemleri durumu); belge değişince
+    ya da seçim yapılınca kart kapanır.
+  */
+  const stilTuru: AtifStilTuru = (() => {
+    const tur = stilTanimi(citationStyle).tur;
+    return tur === "numara" ? "numara" : tur === "dipnot" ? "dipnot" : "yazar-tarih";
+  })();
+  const cikarmaStili = atifCikarmaStili(stilTanimi(citationStyle));
+  const kartVerisiRef = useRef(kartVerisi);
+  useEffect(() => {
+    kartVerisiRef.current = kartVerisi;
+  }, [kartVerisi]);
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const kartiAc = (pos: number) => {
+      const $pos = editor.state.doc.resolve(pos);
+      if (!$pos.parent.isTextblock) {
+        setAtifKarti(null);
+        return;
+      }
+      // Satır içi düğümler (dipnot işareti) metin konumunu kaydırmasın diye yer tutucuyla okunur.
+      const metin = $pos.parent.textBetween(0, $pos.parent.content.size, undefined, "\ufffc");
+      const ofset = $pos.parent.textBetween(0, $pos.parentOffset, undefined, "\ufffc").length;
+      const isabet = tiklananAtif(metin, ofset, stilTuru, cikarmaStili);
+      if (!isabet) {
+        setAtifKarti(null);
+        return;
+      }
+      const basPos = $pos.start() + isabet.bas;
+      const satir = editor.view.coordsAtPos(Math.min(basPos, $pos.end()));
+      const kagit = dom.getBoundingClientRect();
+      const konum = kartKonumu({
+        kagit,
+        satir: { left: satir.left, right: satir.right, top: satir.top, bottom: satir.bottom },
+        ekranGenisligi: window.innerWidth,
+        ekranYuksekligi: window.innerHeight,
+        genislik: 300,
+        yukseklik: 320,
+      });
+      const girdiler = () => {
+        const bloklar = (editor.getJSON().content ?? []) as Dugum[];
+        return kaynakcaGirdileri(bloklar, belgeBolumleri(bloklar).kaynakca).girdiler;
+      };
+      const hesapla = (veri: NonNullable<typeof kartVerisi>) => {
+        const adaylar = atifAdaylari(isabet, veri.kaynaklar, isabet.tur === "numara" ? girdiler() : []);
+        return { isabet, adaylar, secilen: adaylar.length === 1 ? adaylar[0] : null, konum };
+      };
+      const mevcut = kartVerisiRef.current;
+      if (mevcut) {
+        setAtifKarti(hesapla(mevcut));
+        return;
+      }
+      setAtifKarti({ isabet, adaylar: [], secilen: null, konum });
+      setKartYukleniyor(true);
+      void Promise.all([kartKaynaklariniOku(), kartPdfleriniOku(projectId), kaynakKunyeDurumlari(projectId)]).then(([kaynakSonuc, pdfSonuc, kunyeSonuc]) => {
+        const veri = {
+          kaynaklar: kaynakSonuc.okunamadi ? [] : kaynakSonuc.satirlar.filter((k) => k.project_id === projectId),
+          pdfler: "hata" in pdfSonuc ? [] : pdfSonuc.satirlar.map((p) => ({ id: p.id, doi: p.doi, kaynakId: p.kaynak_id ?? null })),
+          kunye: new Map("hata" in kunyeSonuc ? [] : kunyeSonuc.satirlar.map((k) => [k.kaynakId, k] as const)),
+        };
+        setKartVerisi(veri);
+        setKartYukleniyor(false);
+        setAtifKarti((d) => (d && d.isabet === isabet ? hesapla(veri) : d));
+      });
+    };
+    const tikla = (olay: MouseEvent) => {
+      if (!editor.state.selection.empty || olay.button !== 0 || olay.detail > 1) return;
+      const yer = editor.view.posAtCoords({ left: olay.clientX, top: olay.clientY });
+      if (yer) kartiAc(yer.pos);
+    };
+    /*
+      Klavye: imleç bir atfın içindeyken Alt+Enter kartı açar, Esc kapatır.
+      Fareyle tıklamak tek yol olsaydı klavye kullanan öğrenci karta ulaşamazdı.
+      Kart açılınca odak kartın ilk düğmesine geçer; Esc odağı belgeye geri verir.
+    */
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key === "Enter" && olay.altKey && editor.state.selection.empty) {
+        olay.preventDefault();
+        kartiAc(editor.state.selection.from);
+        window.setTimeout(() => document.querySelector<HTMLElement>(".atif-karti button, .atif-karti a")?.focus(), 0);
+      } else if (olay.key === "Escape") {
+        setAtifKarti(null);
+      }
+    };
+    dom.addEventListener("keydown", tus);
+    dom.addEventListener("click", tikla);
+    /* Kart ekrana sabit: belge kayınca satırdan kopmasın diye kapanır. */
+    const kaydirildi = () => setAtifKarti(null);
+    window.addEventListener("scroll", kaydirildi, { passive: true });
+    const kapat = ({ transaction }: { transaction: { docChanged: boolean } }) => {
+      if (transaction.docChanged) setAtifKarti(null);
+    };
+    editor.on("transaction", kapat);
+    return () => {
+      dom.removeEventListener("click", tikla);
+      dom.removeEventListener("keydown", tus);
+      window.removeEventListener("scroll", kaydirildi);
+      editor.off("transaction", kapat);
+    };
+  }, [editor, stilTuru, cikarmaStili, projectId]);
+
+  /*
+    SEÇİM İŞLEMLERİ: metin seçiliyken kâğıdın sağında (yer yoksa seçimin
+    altında). Kaydırmada ve seçim değişince yeniden konumlanır.
+  */
+  useEffect(() => {
+    if (!editor) return;
+    let kare = 0;
+    const konumla = () => {
+      kare = 0;
+      const { from, to, empty } = editor.state.selection;
+      if (empty || !editor.isFocused || window.innerWidth <= 760) {
+        setSecimKonumu(null);
+        return;
+      }
+      setAtifKarti(null);
+      const bas = editor.view.coordsAtPos(from);
+      const son = editor.view.coordsAtPos(to);
+      const kagit = (editor.view.dom as HTMLElement).getBoundingClientRect();
+      setSecimKonumu(
+        kartKonumu({
+          kagit,
+          satir: { left: bas.left, right: son.right, top: bas.top, bottom: son.bottom },
+          ekranGenisligi: window.innerWidth,
+          ekranYuksekligi: window.innerHeight,
+          genislik: 168,
+          yukseklik: 120,
+        }),
+      );
+    };
+    const planla = () => {
+      if (!kare) kare = window.requestAnimationFrame(konumla);
+    };
+    const bulanik = () => window.setTimeout(planla, 120);
+    editor.on("selectionUpdate", planla);
+    editor.on("blur", bulanik);
+    editor.on("focus", planla);
+    window.addEventListener("scroll", planla, { passive: true, capture: true });
+    window.addEventListener("resize", planla);
+    return () => {
+      editor.off("selectionUpdate", planla);
+      editor.off("blur", bulanik);
+      editor.off("focus", planla);
+      window.removeEventListener("scroll", planla, { capture: true });
+      window.removeEventListener("resize", planla);
+      if (kare) window.cancelAnimationFrame(kare);
+    };
+  }, [editor]);
+
+  /* Belge sütununun genişliği: "Sığdır" ölçeği ondan hesaplanır (kâğıt sabit genişlikte, sütun daralınca küçülür). */
+  useEffect(() => {
+    const ana = anaRef.current;
+    if (!ana || typeof ResizeObserver === "undefined") return;
+    const gozlem = new ResizeObserver(([g]) => setAnaGenislik(Math.round(g.contentRect.width)));
+    gozlem.observe(ana);
+    return () => gozlem.disconnect();
+  }, [editor]);
+
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
   const eylemHedefi = document.getElementById("yazma-eylemleri");
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
@@ -2016,6 +2493,15 @@ export default function ManuscriptEditor({
       ? (citationStyle as CitationStyle)
       : "apa7";
   /*
+    Kaynakça ve Kılavuz araçlarının verisi: yeni bir hesap değil, canlı yapı
+    denetiminin (liveIssues) ve başlık listesinin süzülmüş hâli. Kaynakça
+    başlığı checkStructure'ın tanıdığı adlarla aranır (Kaynakça/Kaynaklar/
+    References/Bibliography), aynı sözcükler orada da geçiyor.
+  */
+  const kaynakcaBasligi = stats.headings.find((h) => /^\s*(\d+(\.\d+)*\.?\s*)?(kaynakça|kaynaklar|references|bibliography)\s*$/i.test(h.text)) ?? null;
+  const kaynakcaSorunlari = (liveIssues ?? []).filter((issue) => issue.kategori === "kaynakca");
+  const kilavuzSorunlari = (liveIssues ?? []).filter((issue) => issue.kategori !== "kaynakca");
+  /*
     Analiz sonucu satır satır paragraf olarak eklenir: sonuç metni tablo
     satırlarını da taşıyor, tek paragrafa sığdırmak satırları birbirine
     yapıştırırdı. Boş satırlar atlanır.
@@ -2146,9 +2632,250 @@ export default function ManuscriptEditor({
         kutusuna portal ile yerleşiyorlar. Editör yalnızca tarayıcıda
         kurulduğu için bu satıra gelindiğinde document hep var.
       */}
+      {/*
+        SOL ARAÇLAR: çalışma gezinmesinin yuvasına (os-gezinme.tsx). Bir kez
+        açılan araç söküLMEZ; gizlenir.
+      */}
+      {solYuva
+        ? createPortal(
+            <>
+              {acilanAraclar.includes("bolumler") ? (
+                <div className="sol-arac" hidden={solArac !== "bolumler"}>
+                  <SolBolumler
+                    projectId={projectId}
+                    gorunur={solArac === "bolumler"}
+                    basliklar={stats.headings}
+                    bolumler={sections}
+                    onJump={(baslik) => {
+                      handleJump(baslik);
+                      solAraciKapatDarsa();
+                    }}
+                    onInsert={handleInsertSections}
+                  />
+                </div>
+              ) : null}
+              {acilanAraclar.includes("kaynaklar") ? (
+                <div className="sol-arac" hidden={solArac !== "kaynaklar"}>
+                  <SolKaynaklar
+                    projectId={projectId}
+                    gorunur={solArac === "kaynaklar"}
+                    onCite={(kaynak) => {
+                      void handleCite(kaynak);
+                      solAraciKapatDarsa();
+                    }}
+                    onPdfAc={(id) => {
+                      setAcilacakPdf({ id, anahtar: Date.now() });
+                      sagAc("pdf");
+                      solAraciKapatDarsa();
+                    }}
+                  />
+                </div>
+              ) : null}
+              {acilanAraclar.includes("arama") ? (
+                <div className="sol-arac" hidden={solArac !== "arama"}>
+                  <SolArama projectId={projectId} projeAdi={projectDefaults?.title ?? ""} gorunur={solArac === "arama"} />
+                </div>
+              ) : null}
+              {/*
+                KAYNAKÇA ve KILAVUZ VE BİÇİM (19.11.2026, kabul turu 2; onaylı
+                prototipin "Kontrol et" grubu). Eskiden ikisi de yalnızca "Özet ve
+                teslim"in, Kontroller menüsünün ve inceleme panelinin içindeydi;
+                kılavuzun durumu ise belgenin üstünde KALICI bir şeritti ("Bu
+                çalışmaya bağlı kılavuz yok · Kılavuzumu yükle · Kurumu seç").
+                Şerit kalktı, içeriği ve iki bağlantısı burada. Hiçbir işlev
+                kaldırılmadı: Kontroller menüsü ve inceleme paneli aynen duruyor,
+                buradaki düğmeler aynı işleyicileri çağırıyor.
+              */}
+              {acilanAraclar.includes("kaynakca") ? (
+                <div className="sol-arac" hidden={solArac !== "kaynakca"}>
+                  <div className="sol-arac-govde">
+                    <p className="sol-arac-satir">
+                      <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
+                      <b>{stilAdi(citationStyle)}</b>
+                    </p>
+                    {kaynakcaBasligi ? (
+                      <button
+                        type="button"
+                        className="projects-filter-button button-compact"
+                        onClick={() => {
+                          handleJump(kaynakcaBasligi);
+                          solAraciKapatDarsa();
+                        }}
+                      >
+                        {t({ tr: `“${kaynakcaBasligi.text}” bölümüne git`, en: `Go to “${kaynakcaBasligi.text}”` })}
+                      </button>
+                    ) : (
+                      <p className="sol-arac-bos">
+                        {t({
+                          tr: "Belgede “Kaynakça” başlığı yok. Kaynakça bir başlık altında olmalı; atıf eklediğinizde kaynak oraya yazılır.",
+                          en: "The document has no “References” heading. The reference list should sit under a heading; cited sources are written there.",
+                        })}
+                      </p>
+                    )}
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Atıf ve kaynakça uyumu", en: "Citation and reference match" })}>
+                      <h3>{t({ tr: "Atıf ve kaynakça uyumu", en: "Citation and reference match" })}</h3>
+                      {kaynakcaSorunlari.length === 0 ? (
+                        <p className="sol-arac-bos">
+                          {liveIssues
+                            ? t({ tr: "Yazarken yapılan denetimde atıf–kaynakça sorunu yok.", en: "The live check found no citation–reference issues." })
+                            : t({ tr: "Denetim yazmaya başlayınca çalışır.", en: "The check runs once you start writing." })}
+                        </p>
+                      ) : (
+                        <ul className="sol-sorun-listesi">
+                          {kaynakcaSorunlari.map((issue, i) => (
+                            <li key={`${issue.message}-${i}`} data-ton={issue.tone}>
+                              <span>{issue.message}</span>
+                              {sorunEylemi(issue, solAraciKapatDarsa)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Atıf yapılmamış kaynaklar", en: "Sources not cited yet" })}>
+                      <BekleyenKaynaklarKarti
+                        projectId={projectId}
+                        govdeMetni={govdeMetni}
+                        numarali={NUMERIC_STYLES.includes(style)}
+                        belgeDili={belgeDili}
+                        onCite={(source) => void handleCite(source)}
+                      />
+                    </section>
+                    <div className="sol-arac-eylem">
+                      <button type="button" className="projects-filter-button button-compact" onClick={handleCheck} disabled={checking}>
+                        {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {acilanAraclar.includes("kilavuz") ? (
+                <div className="sol-arac" hidden={solArac !== "kilavuz"}>
+                  <div className="sol-arac-govde">
+                    {guideline ? (
+                      <>
+                        <p className="sol-arac-kilavuz">
+                          <b>{kilavuzGorunenAdi(guideline.label, dil)}</b>
+                          <span>
+                            {stilAdi(guideline.citationStyle)}
+                            {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
+                            {formatDate(guideline.version)
+                              ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
+                              : ""}
+                          </span>
+                          {!guideline.dogrulandi ? <small>{t({ tr: "Kendi yüklediğiniz kılavuz", en: "A guideline you uploaded" })}</small> : null}
+                        </p>
+                        <div className="sol-arac-eylem">
+                          <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
+                            {t({ tr: "Kuralları gör", en: "View rules" })}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="sol-arac-bos">
+                          {t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}{" "}
+                          {t({
+                            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
+                            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
+                          })}
+                        </p>
+                        <div className="sol-arac-eylem">
+                          <Link className="projects-filter-button button-compact" href={calismaAdresi(projectId, { kilavuz: true })}>
+                            {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
+                          </Link>
+                          <Link className="projects-filter-button button-compact" href={editHref}>
+                            {t({ tr: "Kurumu seç", en: "Select institution" })}
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Biçim", en: "Format" })}>
+                      <h3>{t({ tr: "Biçim", en: "Format" })}</h3>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Kenar boşlukları", en: "Margins" })}</span>
+                        <b>{t({ tr: `üst ${margins.top} · alt ${margins.bottom} · sol ${margins.left} · sağ ${margins.right} cm`, en: `top ${margins.top} · bottom ${margins.bottom} · left ${margins.left} · right ${margins.right} cm` })}</b>
+                      </p>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Başlık numaraları", en: "Heading numbers" })}</span>
+                        <b>{headingNumbering ? t({ tr: "Açık", en: "On" }) : t({ tr: "Kapalı", en: "Off" })}</b>
+                      </p>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Sayfa numarası", en: "Page numbers" })}</span>
+                        <b>{showPageNumbers ? t({ tr: "Açık", en: "On" }) : t({ tr: "Kapalı", en: "Off" })}</b>
+                      </p>
+                      {guideline?.settings.margins || guideline?.settings.pageSize ? (
+                        <button type="button" className="projects-filter-button button-compact" onClick={() => handleChecklistAction("apply-page-setup")}>
+                          {t({ tr: "Sayfa düzenini kılavuza göre ayarla", en: "Set the page layout from the guideline" })}
+                        </button>
+                      ) : null}
+                    </section>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Yapı uyarıları", en: "Structure warnings" })}>
+                      <h3>{t({ tr: "Yapı uyarıları", en: "Structure warnings" })}</h3>
+                      {kilavuzSorunlari.length === 0 ? (
+                        <p className="sol-arac-bos">{t({ tr: "Yazarken yapılan denetimde yapı sorunu yok.", en: "The live check found no structure issues." })}</p>
+                      ) : (
+                        <ul className="sol-sorun-listesi">
+                          {kilavuzSorunlari.map((issue, i) => (
+                            <li key={`${issue.message}-${i}`} data-ton={issue.tone}>
+                              <span>{issue.message}</span>
+                              {sorunEylemi(issue, solAraciKapatDarsa)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                    <div className="sol-arac-eylem">
+                      <button type="button" className="projects-filter-button button-compact" onClick={handleCheck} disabled={checking}>
+                        {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>,
+            solYuva,
+          )
+        : null}
       {eylemHedefi
         ? createPortal(
             <>
+              {/*
+                BELGE ÖLÇEĞİ (19.11.2026). Yalnızca masaüstünde, kâğıt sabit
+                genişlikteyken: belge yeniden akmaz, ekranda büyür/küçülür.
+                Punto, sayfa biçimi ve dışa aktarma DEĞİŞMEZ; bu açıklama
+                sürekli üst çubukta yer kaplamasın diye düğmelerin ipucunda
+                ve ekran okuyucu metninde.
+              */}
+              {karar?.sabitKagit ? (
+                <div
+                  className="belge-olcek"
+                  role="group"
+                  aria-label={t({ tr: "Belge ölçeği", en: "Document zoom" })}
+                  title={t({
+                    tr: "Yalnızca ekrandaki görünüm değişir; punto, sayfa biçimi ve dışa aktarma aynı kalır.",
+                    en: "Only the on-screen view changes; font size, page format and export stay the same.",
+                  })}
+                >
+                  <button type="button" className="belge-olcek-dugme" aria-label={t({ tr: "Küçült", en: "Zoom out" })} onClick={() => olcekSec(olcekAdimi(belgeOlcegi, -1))}>
+                    <OlcekEksi size={14} aria-hidden="true" />
+                  </button>
+                  <output className="belge-olcek-deger" aria-live="polite">
+                    {Math.round(belgeOlcegi * 100)}%
+                  </output>
+                  <button type="button" className="belge-olcek-dugme" aria-label={t({ tr: "Büyüt", en: "Zoom in" })} onClick={() => olcekSec(olcekAdimi(belgeOlcegi, 1))}>
+                    <OlcekArti size={14} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="belge-olcek-sigdir" aria-pressed={olcekTercihi === "sigdir"} onClick={() => olcekSec("sigdir")}>
+                    {t({ tr: "Sığdır", en: "Fit" })}
+                  </button>
+                  <span className="sr-only">
+                    {t({
+                      tr: "Yalnızca ekrandaki görünüm değişir; punto, sayfa biçimi ve dışa aktarma aynı kalır.",
+                      en: "Only the on-screen view changes; font size, page format and export stay the same.",
+                    })}
+                  </span>
+                </div>
+              ) : null}
               {/*
                 SADE ÜST BÖLÜM (ikinci tur, 17.11.2026). Kayıt durumu başlığın
                 yanında; üç "kontrol" işlemi (teslim kontrol listesi, kılavuz ve
@@ -2202,9 +2929,37 @@ export default function ManuscriptEditor({
                   <ShieldCheck size={16} aria-hidden="true" />
                   <span>{checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}</span>
                 </button>
-                <button type="button" className="arac-menu-oge" aria-pressed={incelemeAcik} onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}>
-                  {incelemeAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-                  <span>{incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}</span>
+                {/*
+                  Sağ yuva tek: AI ya da PDF açıkken inceleme paneli gösterilmez.
+                  Eskiden düğme o sırada "İnceleme panelini kapat" diyordu (tercih
+                  açıktı) ama panel ekranda yoktu; basmak onu kapatıyordu. Artık
+                  sağ panel açıkken düğme panele GEÇER: sağ panel kapanır,
+                  inceleme açılır. Özellik kaybolmuyor, yalnızca yer paylaşıyor.
+                */}
+                <button
+                  type="button"
+                  className="arac-menu-oge"
+                  aria-pressed={incelemeAcik && !sag}
+                  onClick={() => {
+                    if (sag) {
+                      sagAc(null);
+                      tercihYaz(INCELEME_TERCIHI, true);
+                    } else tercihYaz(INCELEME_TERCIHI, !incelemeAcik);
+                    if (!sag && incelemeAcik) return;
+                    /* Telefonda panel belgenin altında akar (önce yazma alanı); açılınca oraya kaydırılır, yoksa açıldığı görünmez. */
+                    if (window.matchMedia("(max-width: 760px)").matches) {
+                      window.setTimeout(() => document.querySelector(".manuscript-outline")?.scrollIntoView({ block: "start" }), 50);
+                    }
+                  }}
+                >
+                  {incelemeAcik && !sag ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+                  <span>
+                    {sag
+                      ? t({ tr: "İnceleme paneline geç", en: "Switch to review panel" })
+                      : incelemeAcik
+                        ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" })
+                        : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
+                  </span>
                 </button>
               </AracMenusu>
               {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
@@ -2231,7 +2986,18 @@ export default function ManuscriptEditor({
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout" ref={yerlesimRef} data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined} data-pdf={kaynakAcik ? "" : undefined} data-asistan={yazimAcik ? "" : undefined}>
+    <div
+      className="manuscript-layout"
+      ref={yerlesimRef}
+      data-inceleme={incelemeAcik ? "" : undefined}
+      data-inceleme-yer={karar && karar.inceleme !== "yok" ? karar.inceleme : undefined}
+      data-odak={odak ? "" : undefined}
+      data-pdf={kaynakAcik ? "" : undefined}
+      data-asistan={yazimAcik ? "" : undefined}
+      data-sag={sag ?? undefined}
+      data-sag-cekmece={sag && karar?.sag !== "sutun" ? "" : undefined}
+      data-sabit-kagit={karar?.sabitKagit ? "" : undefined}
+    >
       {/*
         TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
         yazım ekranı örnek; "daha elit, daha akışkan").
@@ -2498,10 +3264,7 @@ export default function ManuscriptEditor({
             label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}
             metin={t({ tr: "Asistan", en: "Assistant" })}
             active={yazimAcik}
-            onClick={() => {
-              setYazimAcik((acik) => !acik);
-              setKaynakAcik(false);
-            }}
+            onClick={() => sagAc(yazimAcik ? null : "ai")}
           >
             <Sparkles size={16} />
           </ToolbarButton>
@@ -2509,10 +3272,7 @@ export default function ManuscriptEditor({
             label={t({ tr: "Kaynak PDF: editörün yanında oku, pasaj seç, Arvo AI'a sor, doğrulanmış atıf ekle", en: "Source PDF: read beside the editor, select a passage, ask Arvo AI, insert a verified citation" })}
             metin={t({ tr: "PDF", en: "PDF" })}
             active={kaynakAcik}
-            onClick={() => {
-              setKaynakAcik((acik) => !acik);
-              setYazimAcik(false);
-            }}
+            onClick={() => sagAc(kaynakAcik ? null : "pdf")}
           >
             <FileText size={16} />
           </ToolbarButton>
@@ -2585,7 +3345,7 @@ export default function ManuscriptEditor({
         </div>
       </div>
 
-    <div className="manuscript-main">
+    <div className="manuscript-main" ref={anaRef}>
     <div className="manuscript-editor-shell">
       {/* Bul-değiştir belgenin üstünde, yapışık. Kayıt durumu 17.11.2026'dan beri sayfa başlığında (yukarıdaki portal); eskiden burada ayrı bir şerit her zaman ~48 px tutuyordu. */}
       {findOpen ? (
@@ -2863,36 +3623,12 @@ export default function ManuscriptEditor({
             </button>
           </div>
         </div>
-      ) : !guideline && isThesis ? (
-        /*
-          KOMPAKT KILAVUZ BİLGİSİ (17.11.2026, onaylı tasarım): eskiden iki
-          satır açıklama ve iki büyük düğmeyle belgenin üstünde ~150 px'lik
-          bir kutuydu; telefonda belge metnini ilk ekranın altına itiyordu.
-          Şimdi tek satır: durum + iki bağlantı. Açıklama title'da ve
-          ekran okuyucuya açık (role=status). Asıl yol hâlâ kendi kılavuzunu
-          yüklemek; "kurumu seç" ikinci sırada (eskiden yalnızca o vardı ve
-          kataloğunda kılavuzu olmayan öğrencide bir şey değiştirmiyordu).
-        */
-        <p
-          className="kilavuz-satiri"
-          role="status"
-          title={t({
-            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
-          })}
-        >
-          <Info size={15} aria-hidden="true" />
-          {/* Telefonda kısa yazım (ikinci tur): uzun cümle iki satıra taşıyordu. Bağlantıların erişilebilir adı her ekranda tam. */}
-          <span className="kilavuz-uzun">{t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}</span>
-          <span className="kilavuz-kisa">{t({ tr: "Kılavuz yok.", en: "No guideline." })}</span>
-          <Link href={calismaAdresi(projectId, { kilavuz: true })} aria-label={t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}>
-            <span className="kilavuz-uzun">{t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}</span>
-            <span className="kilavuz-kisa">{t({ tr: "Yükle", en: "Upload" })}</span>
-          </Link>
-          <span aria-hidden="true">·</span>
-          <Link href={editHref}>{t({ tr: "Kurumu seç", en: "Select institution" })}</Link>
-        </p>
-      ) : null}
+      ) : null /*
+          KILAVUZ YOK ŞERİDİ KALKTI (19.11.2026, kabul turu 2): eskiden kılavuzu
+          olmayan tezde belgenin üstünde kalıcı bir satırdı ("Bu çalışmaya bağlı
+          kılavuz yok · Kılavuzumu yükle · Kurumu seç"). İçeriği ve iki bağlantısı
+          çalışma menüsündeki "Kılavuz ve biçim" aracında (sol=kilavuz).
+        */}
 
       {guideline && syncMode === "offer" ? (
         <div className="callout editor-notice cluster" data-tone="accent" role="status">
@@ -3237,8 +3973,62 @@ export default function ManuscriptEditor({
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
       </ManuscriptOutline>
 
-      {kaynakAcik ? <PdfPanelAyirici yerlesim={yerlesimiAl} /> : null}
-      <KaynakPdfPaneli editor={editor} projectId={projectId} acik={kaynakAcik} onKapat={() => setKaynakAcik(false)} onCite={handleCite} />
+      {sag && karar?.sag === "sutun" ? (
+        <SagPanelAyirici panel={sag} genislik={sagGenislik} enCok={karar.sagEnCok} onDegis={sagGenislikDegisti} yerlesim={yerlesimiAl} />
+      ) : null}
+      <KaynakPdfPaneli
+        editor={editor}
+        projectId={projectId}
+        acik={kaynakAcik}
+        acilacak={acilacakPdf}
+        onKapat={pdfKapat}
+        onCite={handleCite}
+        onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
+        onBagDegisti={() => setKartVerisi(null)}
+      />
+      {atifKarti ? (
+        <AtifKarti
+          durum={atifKarti}
+          projectId={projectId}
+          kaynaklar={kartVerisi?.kaynaklar ?? []}
+          pdfBul={(k) => (kartVerisi ? kaynaginPdfi(k, kartVerisi.pdfler) : null)}
+          kunye={kartVerisi?.kunye ?? new Map()}
+          pasajlar={dogrulanmisPasajlar}
+          yukleniyor={kartYukleniyor}
+          onSec={(id) => setAtifKarti((d) => (d ? { ...d, secilen: id } : d))}
+          onKapat={() => {
+            setAtifKarti(null);
+            editor.commands.focus();
+          }}
+          onPdfAc={(id) => {
+            setAcilacakPdf({ id, anahtar: Date.now() });
+            sagAc("pdf");
+            setAtifKarti(null);
+          }}
+          onDayanagaGit={(p) => {
+            setAcilacakPdf({ id: p.pdfId, anahtar: Date.now(), sayfa: p.sayfa, pasaj: p.metin });
+            sagAc("pdf");
+            setAtifKarti(null);
+          }}
+          onKaynaklariAc={() => {
+            const u = new URL(window.location.href);
+            u.searchParams.set("sol", "kaynaklar");
+            window.history.pushState(window.history.state, "", u.pathname + u.search);
+            setAtifKarti(null);
+          }}
+        />
+      ) : secimKonumu ? (
+        <SecimIslemleri
+          konum={secimKonumu}
+          onAi={() => sagAc("ai")}
+          onDayanak={() => {
+            const { from, to } = editor.state.selection;
+            setKaynakBulCumle(editor.state.doc.textBetween(from, to, " "));
+            setKaynakBulAcik(true);
+          }}
+          onAtif={() => setCiteOpen(true)}
+        />
+      ) : null}
 
       {/*
         Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık
@@ -3490,19 +4280,20 @@ export default function ManuscriptEditor({
         cumle={kaynakBulCumle.slice(0, 600)}
         onCite={(source) => void handleCite(source)}
       />
-      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => {
-        setYazimAcik(false);
-        /* Adres temizlenir: "?asistan=1" kalsaydı sayfa yenilenince panel yeniden açılırdı (teslim ile aynı kural). */
-        const temiz = new URL(window.location.href);
-        if (temiz.searchParams.has("asistan")) {
-          temiz.searchParams.delete("asistan");
-          window.history.replaceState(null, "", temiz.toString());
-        }
-      }} zorunluBolumler={guideline?.requiredSections ?? []} />
+      {/* Kapanınca adres de temizlenir (sagAc): "?asistan=1" ya da "?sag=ai" kalsaydı yenilemede panel yeniden açılırdı. */}
+      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => sagAc(null)} zorunluBolumler={guideline?.requiredSections ?? []} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}
-        onClose={() => setImportOpen(false)}
+        onClose={() => {
+          setImportOpen(false);
+          /* ?ice=1 adreste kalırsa yenilemede pencere yeniden açılırdı; Next replaceState'i izler. */
+          const adres = new URL(window.location.href);
+          if (adres.searchParams.has("ice")) {
+            adres.searchParams.delete("ice");
+            window.history.replaceState(window.history.state, "", adres.pathname + adres.search);
+          }
+        }}
         projectId={projectId}
         documentEmpty={stats.empty}
         flush={() => saveNow()}

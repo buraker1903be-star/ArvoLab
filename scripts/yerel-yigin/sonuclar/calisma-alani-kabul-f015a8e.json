@@ -1,0 +1,90 @@
+{
+  "tarih": "2026-11-18T15:07:56.387Z",
+  "uygulama": "http://localhost:3132",
+  "derleme": {
+    "gitHead": "f015a8e097a257c3f975be86a75d9b3c379daac7",
+    "buildId": "JDfzdEnYb2lyq3WlDpDD0",
+    "uygulamaKoduTemiz": true,
+    "kirliDosyalar": []
+  },
+  "sonuclar": [
+    {
+      "no": "S1a",
+      "ad": "eski çalışma (belge_dili NULL) açılır, düzenlenir, kaydedilir, yenilemede kalır",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S1b",
+      "ad": "yeni çalışma (ad, tür, belge dili EN) oluşturulur, yazılır, kaydedilir",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S2",
+      "ad": "genel → çalışma gezinmesi, araç adreste; geri/ileri, doğrudan bağlantı, Esc, listeye dönüş",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S3",
+      "ad": "durum koruma: arama sorgusu, kaynak süzgeci, PDF seçimi ve sayfası",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S4",
+      "ad": "panel boyutlandırma ve okunabilirlik: ölçek ≥ %85 ya da çekmece; ayırıcı klavyeyle",
+      "durum": "PASS",
+      "ayrinti": "1920 %100 sütun; 1440 %91 ray+sütun; 1280 çekmece %100; 1024 akan+çekmece"
+    },
+    {
+      "no": "S5",
+      "ad": "kaynak–PDF bağı: başka çalışmanın/kullanıcının kaynağı reddedilir; yetkisiz kullanıcı yazamaz; meşru bağ yazılır",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S6",
+      "ad": "atıf kartı: tek eşleşme, belirsiz eşleşme (kullanıcı seçer), eşleşme yok; doğrulanmış pasaj ve dayanağa git",
+      "durum": "PASS",
+      "ayrinti": "bulunamayan pasaj: S10"
+    },
+    {
+      "no": "S10",
+      "ad": "bulunamayan pasaj: önceki ya da yanlış yer vurgulanmaz, kullanıcıya söylenir",
+      "durum": "PASS",
+      "ayrinti": "önceki vurgu 1 parça → değişik kopyada 1. sayfa 0, 2. sayfa 0; bildirim \"Doğrulanmış pasaj bu sayfanın metninde bulunamadı; hiçbir ye…\""
+    },
+    {
+      "no": "S7",
+      "ad": "belge dili arayüz dilinden bağımsız (Word içindekiler başlığı)",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S8",
+      "ad": "dışa aktarma içeriği: Word ve yazdırmada metin, atıflar, tablo etiketi, kaynakça ve belge dili korunur",
+      "durum": "PASS",
+      "ayrinti": "Word-en, yazdırma-en, Word-tr, yazdırma-tr; kart açmak içeriği değiştirmedi. LaTeX ve paylaşım: test:editor (latex-*, cikti-yollari)"
+    },
+    {
+      "no": "S9",
+      "ad": "klavye ve dokunma: Tab ile gezinme, Alt+Enter kart, Esc, telefonda 44 px",
+      "durum": "PASS",
+      "ayrinti": ""
+    },
+    {
+      "no": "S11",
+      "ad": "inceleme paneli: belgeyi sıkıştırmaz, AI/PDF ile örtüşmez, geçiş ve telefon erişimi",
+      "durum": "PASS",
+      "ayrinti": "1920: sutun %100; 1920+araç: sutun %100; 1920 AI sütun → menüden geçiş; 1440: sutun %100; 1440+araç: cekmece %100; 1440 AI sütun → menüden geçiş; 1280: sutun %85; 1280+araç: cekmece %98; 1280 AI çekmece → kapat, inceleme geri gelir; AI/PDF açıkken gizli (örtüşme yok); telefon menüden açılır ve görünür alana gelir"
+    },
+    {
+      "no": "S0",
+      "ad": "sayfa hataları (pageerror)",
+      "durum": "PASS",
+      "ayrinti": "yok"
+    }
+  ]
+}

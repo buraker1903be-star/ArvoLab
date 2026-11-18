@@ -6,7 +6,7 @@ import { kanitAsistaniAcik } from "@/app/actions/ai-kanit";
 import { DESTEK_ETIKETI_METIN, DESTEK_TONU, KUNYE_ETIKETI_METIN, gecerliDestek, matrisOzeti, sonrakiAdim } from "@/lib/kanit/durum";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
-import CalismaSekmeleri from "../calisma-sekmeleri";
+import { CalismaBaglamiYayinla } from "../../../_components/calisma-baglami";
 import { IddiaEkleFormu, KanitPenceresi, kunyeMetni } from "./kanit-parcalari";
 
 /*
@@ -78,7 +78,7 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
         </div>
       </section>
 
-      <CalismaSekmeleri calisma={calisma} aktif="kanit" />
+      <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
 
       {okunamadi && (
         <p className="alert mb-md" role="alert">

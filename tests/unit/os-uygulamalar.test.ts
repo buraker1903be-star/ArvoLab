@@ -226,13 +226,17 @@ test("çalışma bağlamı: Makale yalnızca makale türünde, araçlar çalış
   const makale = calismaBaglantilari({ id: "c1", baslik: "M", tur: "article" });
   assert.equal(tez.some((b) => b.key === "makale"), false);
   assert.equal(makale.some((b) => b.key === "makale"), true);
-  assert.equal(tez.find((b) => b.key === "kaynaklar")?.href, "/dashboard/literature?calisma=c1");
+  // 19.11.2026: "Kaynaklar" yazım ekranının sol aracı; kütüphane sayfası o panelden açılır.
+  assert.equal(tez.find((b) => b.key === "kaynaklar")?.href, "/dashboard/editor/c1/write?sol=kaynaklar");
+  assert.equal(tez.find((b) => b.key === "analiz")?.href, "/dashboard/analysis?calisma=c1");
 });
 
 test("bağlam yalnızca o çalışmanın sayfalarında görünür", () => {
   const q = (s: string) => new URLSearchParams(s);
   assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c1/write", q("")), true);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/editor", q("sec=c1")), true);
+  // 19.11.2026: Çalışmalarım listesi (seçili olsa da) genel düzey.
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor", q("sec=c1")), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/new", q("")), false);
   assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c1")), true);
   assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c2")), false);
   assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c2/write", q("")), false);
@@ -244,4 +248,12 @@ test("bağlamda etkin bağlantı", () => {
   assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/kanit")?.key, "kanit");
   assert.equal(etkinBaglanti(b, "/dashboard/editor")?.key, "merkez");
   assert.equal(etkinBaglanti(b, "/dashboard/analysis")?.key, "analiz");
+  assert.equal(etkinBaglanti(b, "/dashboard/literature")?.key, "kaynaklar");
+  // Yazım ekranında araç adresin sol/sag değişkeninden okunur.
+  const q = (s: string) => new URLSearchParams(s);
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q(""))?.key, "yazim");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=arama"))?.key, "arama");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sag=ai"))?.key, "ai");
+  // Bilinmeyen değer belgeye düşer (elle yazılmış ya da eski adres).
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=yok"))?.key, "yazim");
 });

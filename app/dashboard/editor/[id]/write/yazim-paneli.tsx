@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
+import { ArrowUp, Check, Copy, CornerDownLeft, History, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
@@ -12,6 +12,7 @@ import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { collectHeadings } from "./editor-navigation";
+import KayitliCevaplar from "./kayitli-cevaplar";
 
 /*
   YAZIM ASİSTANI PANELİ (03.11.2026, kurum sahibinin kararı: "paragrafı
@@ -61,6 +62,8 @@ export default function YazimPaneli({
 }) {
   const t = useCeviri();
   const [mesajlar, setMesajlar] = useState<Kayit[]>([]);
+  /* Sohbet ya da Kayıtlı. Kayıtlı sekme yalnızca açılınca okunur (KayitliCevaplar); model çağrılmaz. */
+  const [sekme, setSekme] = useState<"sohbet" | "kayitli">("sohbet");
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
   const listeRef = useRef<HTMLDivElement>(null);
@@ -130,9 +133,12 @@ export default function YazimPaneli({
   const dugumler = (metin: string, kayit?: string | null) =>
     paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
 
-  const ekle = (indeks: number, yerineKoy: boolean) => {
-    const kayit = mesajlar[indeks];
-    if (!kayit?.ekMetin || !kayit.aralik) return;
+  /*
+    Ekleme tek yerde: sohbetteki cevap da Kayıtlı sekmedeki cevap da buradan
+    girer, ikisi de asistan izi taşır (yazarlık raporu). Kayıtlı cevapta
+    istek anındaki seçim yok; ekleme o anki imlece yapılır.
+  */
+  const metniEkle = (kayit: { ekMetin: string; aralik: Aralik; gorev?: YazimGorevi | null; kayitId?: string | null }, yerineKoy: boolean): boolean => {
     const boyut = editor.state.doc.content.size;
     const from = Math.min(kayit.aralik.from, boyut);
     const to = Math.min(kayit.aralik.to, boyut);
@@ -168,11 +174,19 @@ export default function YazimPaneli({
     }
     if (!tamam) {
       showToast("error", t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
-      return;
+      return false;
     }
-    setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true } : m)));
     if (kayit.kayitId) void asistanPuanla(kayit.kayitId, "faydali", "metne eklendi").catch(() => undefined);
     showToast("success", t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }));
+    return true;
+  };
+
+  const ekle = (indeks: number, yerineKoy: boolean) => {
+    const kayit = mesajlar[indeks];
+    if (!kayit?.ekMetin || !kayit.aralik) return;
+    if (metniEkle({ ekMetin: kayit.ekMetin, aralik: kayit.aralik, gorev: kayit.gorev, kayitId: kayit.kayitId }, yerineKoy)) {
+      setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true } : m)));
+    }
   };
 
   const kopyala = async (metin: string) => {
@@ -193,7 +207,7 @@ export default function YazimPaneli({
 
   /*
     ALTTAN AÇILAN YAPRAK ARAÇ ÇUBUĞUNU ÖRTMEZ (17.11.2026, RELEASE CLOSURE 05).
-    1180 px ve altında panel alttan açılan bir yaprak; eskiden yüksekliği
+    Telefonda (760 px ve altı; 19.11.2026'ya kadar 1180 px ve altı) panel alttan açılan bir yaprak; eskiden yüksekliği
     sabit %70'ti ve sayfa en üstteyken araç çubuğu (1024 px'te 255–313, 390
     px'te 279–337) yaprağın altında kalıyordu (studyo-kabul.mjs U3). Yaprağın
     üst kenarı açılışta ve yeniden boyutlanınca araç çubuğunun altına
@@ -210,7 +224,7 @@ export default function YazimPaneli({
     const hizala = () => {
       const panel = panelRef.current;
       if (!panel) return;
-      if (!window.matchMedia("(max-width: 1180px)").matches) {
+      if (!window.matchMedia("(max-width: 760px)").matches) {
         if (son !== "") panel.style.removeProperty("--yaprak-ust");
         son = "";
         return;
@@ -326,6 +340,27 @@ export default function YazimPaneli({
           <X size={16} aria-hidden="true" />
         </button>
       </header>
+      <div className="yazim-sekmeler" role="tablist" aria-label={t({ tr: "Asistan görünümü", en: "Assistant view" })}>
+        <button type="button" role="tab" id="yazim-sekme-sohbet" aria-selected={sekme === "sohbet"} aria-controls="yazim-sekme-icerik" onClick={() => setSekme("sohbet")}>
+          {t({ tr: "Sohbet", en: "Chat" })}
+        </button>
+        <button type="button" role="tab" id="yazim-sekme-kayitli" aria-selected={sekme === "kayitli"} aria-controls="yazim-sekme-icerik" onClick={() => setSekme("kayitli")}>
+          <History size={14} aria-hidden="true" /> {t({ tr: "Kayıtlı", en: "Saved" })}
+        </button>
+      </div>
+      {sekme === "kayitli" ? (
+        <div id="yazim-sekme-icerik" role="tabpanel" aria-labelledby="yazim-sekme-kayitli" className="yazim-paneli-liste">
+          <KayitliCevaplar
+            projectId={projectId}
+            onEkle={(c) => {
+              const { from, to } = editor.state.selection;
+              return metniEkle({ ekMetin: c.metin, aralik: { from, to }, gorev: c.gorev, kayitId: c.id }, false);
+            }}
+            onKopyala={(metin) => void kopyala(metin)}
+          />
+        </div>
+      ) : (
+        <>
 
       <div className="yazim-paneli-liste" ref={listeRef} aria-live="polite">
         {mesajlar.length === 0 ? (
@@ -505,6 +540,8 @@ export default function YazimPaneli({
           <ArrowUp size={16} aria-hidden="true" />
         </button>
       </form>
+        </>
+      )}
     </aside>
   );
 }
