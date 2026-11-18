@@ -8,3 +8,5 @@ drop trigger if exists kaynak_pdf_bagi_denetle_trigger on public.kaynak_pdfleri;
 drop function if exists public.kaynak_pdf_bagi_denetle();
 drop index if exists public.kaynak_pdfleri_kaynak_idx;
 alter table public.kaynak_pdfleri drop column if exists kaynak_id;
+-- Şema önbelleği: PostgREST eski sütunu bilmeye devam ederse istekler PGRST204 ile düşer.
+notify pgrst, 'reload schema';
