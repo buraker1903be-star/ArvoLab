@@ -14,7 +14,9 @@ Dal `tasarim/baglamli-calisma-alani`, taban `main` = `a076d9d` (18.11.2026).
 | `sonra/` | İlk teslimin görüntüleri (23e927c derlemesi); tarihsel, üzerine yazılmaz |
 | `sonra-903bd9a/` | 2. kabul turu: 903bd9a, temiz üretim derlemesi `XRV2st2SilgSkE62Kuq3H`; tarihsel |
 | `sonra-8525487/` | 3. kabul turu, son hâl: kabul betiğinin görselleri (8525487; uygulama kodu be40f94 ile aynı, temiz üretim derlemesi `Lr4ceYU3KXnrsryusC0Br`), aynı yerel yığın, sentetik içerik |
-| `karsilastirma-be40f94/` | Prototiple aynı boyut ve içerikte karşılaştırma: `NN.png` üstte prototip, altta uygulama; `uygulama/NN.png` prototip karesiyle birebir aynı ölçüde uygulama görüntüsü. `scripts/yerel-yigin/prototip-karsilastirma.mjs` üretir |
+| `sonra-2ff370d/` | 4. tur: kaynak listesi + belge + PDF (S16) ve Makale bul kayıtlı yanıtlarla (S17) görselleri; 2ff370d, temiz üretim derlemesi `CiSZT8n1HjF6tw9Dljkit` |
+| `karsilastirma-2ff370d/` | Son prototip karşılaştırması (2ff370d, `CiSZT8n1HjF6tw9Dljkit`): 19 sahne, prototiple aynı boyut ve içerik. 06/tel-06'daki Makale bul sonuçları SENTETİK kayıtlı yanıttır, gerçek dizin değil (görselin etiketinde yazar) |
+| `karsilastirma-be40f94/` | 3. tur karşılaştırması (tarihsel): `NN.png` üstte prototip, altta uygulama; `uygulama/NN.png` prototip karesiyle birebir aynı ölçüde uygulama görüntüsü. `scripts/yerel-yigin/prototip-karsilastirma.mjs` üretir |
 
 Prototipte içerik sentetik ve davranışlar taklittir: arama sonuçları, PDF sayfası, AI cevabı, kayıtlı cevaplar,
 kelime sayıları ve atıf kartı gerçek veriye bağlı değildir. Prototip sunucuya istek göndermez. Her ekranın üstünde **Mevcut** (bugün çalışan),
@@ -55,7 +57,8 @@ pasaj vurgusu · 5 klavye, dokunma, telefon. Ardından iki kabul turu: inceleme 
 Kabul sonuçları commit adıyla ayrı dosyalarda (`scripts/yerel-yigin/sonuclar/`); her dosya git HEAD, BUILD_ID ve
 uygulama kodunun temiz olup olmadığını taşır. Eski dosyalar yerinde: `calisma-alani-kabul.json` (23e927c, ilk
 teslim), `-903bd9a.json` (13 PASS), `-be40f94.json` (16 PASS, 1 FAIL: S8, yazdırma sayfasının sayfalara bölünme
-yarışı; senaryo düzeltildi, uygulama değişmedi). Son tam koşu: `calisma-alani-kabul-8525487.json`.
+yarışı; senaryo düzeltildi, uygulama değişmedi). 3. turun tam koşusu `calisma-alani-kabul-8525487.json`
+(17 PASS); son tam koşu `calisma-alani-kabul-2ff370d.json` (19 PASS, aşağıda 4. tur).
 
 **3. turda yapılanlar**
 
@@ -69,7 +72,7 @@ yarışı; senaryo düzeltildi, uygulama değişmedi). Son tam koşu: `calisma-a
   düzenini kılavuza göre ayarlama, yapı uyarıları, kontrol. **Kaynakça** aracı: atıf stili, kaynakça bölümüne git,
   atıf–kaynakça uyumu, atıf yapılmamış kaynaklar, kontrol. İkisi de çalışma menüsünde doğrudan; "Özet ve teslim"
   yalnızca teslim durumunu gösterir.
-- **Kayıtlı AI cevapları** (Arvo AI panelinde "Kayıtlı" sekmesi), aşağıda.
+- **Kayıtlı AI cevapları** (Arvo AI panelinde "Kayıtlı" sekmesi), yalnızca yazım asistanı; kaynakla sohbet geçmişi yok (kapsam farkı, aşağıda).
 - PDF denetimleri (kaynak seçici, sayfa kutusu, PDF içinde arama, Kaynağa sor) ortak `field-control` görünümünde;
   koyu temada varsayılan açık gri zemin kalmadı. Telefonda PDF ve AI paneli alt çubuğun üstünde biter.
 - Çekmece (AI/PDF) editör başlığının ALTINDAN başlar; Kontroller, Dışa aktar ve kapatma düğmesi her zaman
@@ -86,6 +89,39 @@ denemesi +0; başka kullanıcının, başka çalışmanın ve başka yeteneğin 
 eklenmez) · S13 gezinme grupları, Diğer araçlar, kalıcı şerit yok, üst başlık, iki araç, telefon Çalışma sayfası ·
 S14 koyu tema denetimleri, 1280 çekmece başlığın altında, 1472 AI açılışında kayma yok, telefon alt çubuk ve ölçek ·
 S15 telefonda pasaj odağı (%160, pasajın başı görünür, "Pasaja odaklan", kapatma düğmesi ekranda).
+
+### 4. tur (18.11.2026): kaynak listesi + belge + PDF
+
+Kural: PDF açılınca belge %85'in altına inmez; önce sol kaynak alanı daralır, gerçekten yer yetmezse PDF çekmece olur.
+
+| Genişlik | Kaynak listesi + PDF açılınca | Belge |
+|---|---|---|
+| 1472 | Liste 64 px'lik şeride iner, PDF belgenin yanında sütun (520 px) | %86 |
+| 1440 | Liste şeride iner, PDF sütun (440 px) | %91 |
+| 1280 | Şeritle de belge %74'e inerdi: liste açık kalır, PDF belgenin üstünde geçici çekmece | %98 |
+| Şeritten liste geri açılırsa (1472'de ölçüldü) | PDF geçici çekmeceye geçer | — |
+
+- Şerit listeyi SÖKMEZ: arama, süzgeç ve liste konumu korunur; şeritteki düğme listeyi geri açar.
+- Çekmece geçici bir inceleme görünümüdür: başlığında "Geçici görünüm · Esc ile kapatın" yazar; Esc ya da çarpı kapatır,
+  kapanınca yerleşim eski hâline döner (liste tam genişlikte). Esc yalnızca açık bir pencere, atıf kartı ya da Esc'i
+  kendisi işleyen bir öğe yokken kapatır. İlk sürümde kontrol kapalı pencereleri de sayıyordu ve Esc çekmeceyi hiç
+  kapatmıyordu; S16 bunu yakaladı.
+- PDF paneli kapanınca odak belgeye, bırakılan konuma döner (eskiden odak kapatma düğmesinde kalıyordu ve yazmaya devam
+  etmek için belgeye yeniden tıklamak gerekiyordu). Seçim değişmez, belge kaymaz.
+- AI paneli için araç daraltılmaz (önceki kural); yalnızca PDF.
+- S16 her üç genişlikte PDF açıkken belgeye tıklar, yazar, kaydın veritabanında göründüğünü bekler; PDF'i kapatır;
+  seçimin, odağın ve kaydırma konumunun aynı kaldığını ve kaldığı yerden yazılabildiğini doğrular.
+
+**Makale bul, kayıtlı yanıtlarla (S17; gerçek dizin kabulü DEĞİL).** Yerel ortamın OpenAlex/Crossref'e ağ erişimi yok.
+`scripts/yerel-yigin/kayitli-dizin-yanitlari.mjs` sunucu başlamadan yüklenir (`NODE_OPTIONS="--import …"`) ve yalnızca bu
+iki dizinin `/works` aramalarını `scripts/yerel-yigin/kayitli-yanitlar/` altındaki elle yazılmış SENTETİK yanıtlara
+çevirir; uygulama kodu değişmez, her yakalanan istek bir kayda yazılır. S17: 3 + 2 kayıt → 4 satır (aynı DOI
+birleşir), taşma yok, satır boyu ≤ 260 px; "Listeme ekle" bu çalışmaya tek kayıt yazar, yeniden aramada "Listenizde".
+Bu düzenek dar araçta sonuç satırının ~400 px'e uzadığını gösterdi (ortak kuraldaki `flex: 1 1 320px` dikey satırda
+yüksekliğe dönüşüyordu); düzeltildi (2ff370d). Gerçek dizinlerin yanıtı, hızı ve hata davranışı sınanmadı.
+
+Kabul: `calisma-alani-kabul-2ff370d.json`, 19 PASS (S1–S17 + S0). Ara koşu `-f2f6b90.json` da 19 PASS'tir ama Makale bul
+satır boyu denetimi o zaman yoktu ve satır hatasını yakalamadı; olduğu gibi korunuyor.
 
 ### Migration → şema önbelleği → kod sırası
 
@@ -108,7 +144,12 @@ Kaybolan: kullanıcıların seçtiği belge dilleri (çalışmalar arayüz dili 
 bağları (eşleşme künye/DOI tahminine döner). PDF'ler, kaynaklar ve belgeler silinmez. İki dosya yerel veritabanında
 bir işlem içinde çalıştırılıp geri sarıldı: sütunlar ve tetikleyici kalktı, 20 PDF satırı yerinde kaldı.
 
-### Kayıtlı AI cevapları (3. turda tamamlandı)
+### Kayıtlı AI cevapları (yazım asistanı için; bütün AI geçmişi DEĞİL)
+
+**Kapsam farkı, açık:** Kayıtlı sekmesi yalnızca yazım asistanının (`yazim`) cevaplarını gösterir. Kaynakla sohbet
+(`kaynak`, PDF panelindeki "Kaynağa sor") geçmişi bu sekmede YOK; o cevaplar yine `ai_assistant_runs`'a yazılıyor ama
+listelenmiyor ve yeniden açılamıyor. Diğer yeteneklerin (analiz, kaynakça, literatür, belge, kanıt, makale, kılavuz)
+kayıtları da gösterilmiyor. "AI geçmişi tamamlandı" denemez; tamamlanan, yazım asistanının kayıtlı cevaplarıdır.
 
 Önceki turda yapılmamıştı; kapsam dışı sayılmamıştı. Migration gerekmedi:
 
@@ -124,8 +165,9 @@ bir işlem içinde çalıştırılıp geri sarıldı: sütunlar ve tetikleyici k
 - Belgeye ekleme kullanıcının "İmlece ekle" düğmesidir ve eklemeden önce sunucuda güncel kaynak denetimi yeniden
   çalışır (`kayitliCevabiDenetle`, üretimdeki `yazimDenetle`, BUGÜNKÜ Literatür kütüphanesiyle). Kaynağı sonradan
   silinmiş atıf varsa metin eklenmez ve nedeni kartta yazar. Eklenen metin asistan izi taşır.
-- Kapsam yalnızca yazım asistanı (`yazim`). Kaynakla sohbet (`kaynak`) cevaplarının biçimi farklı (alıntılı bulgu)
-  ve belgeye ekleme yolu PDF panelinde; o kayıtlar bu sekmede listelenmiyor.
+- Kaynakla sohbet cevapları neden dışarıda: biçimleri farklı (alıntılı bulgu, PDF sayfası) ve belgeye ekleme yolları
+  PDF panelinde, doğrulanmış pasajla birlikte. Eklemek için ayrı bir çözümleme, PDF'in hâlâ çalışmada olup olmadığının
+  denetimi ve alıntının metinde yeniden doğrulanması gerekir; bu turda yapılmadı.
 
 **Prototipten kalan farklar** (karşılaştırma görüntüleri `karsilastirma-be40f94/`; bilerek ya da henüz yapılmadı):
 
@@ -134,12 +176,15 @@ bir işlem içinde çalıştırılıp geri sarıldı: sütunlar ve tetikleyici k
   tipi kılavuzdan gelir, kılavuzsuz çalışmada numarasız ve sans (05, 07, 08).
 - Seçim işlemleri prototipte belgenin sağında dikey bir kutu; uygulamada seçimin hemen altında yatay şerit (05secim).
 - Yeni çalışma penceresi ana sayfadan açılınca Çalışmalarım'ın üstünde açılır; prototipte ana sayfanın üstünde (03).
-- 1472'de kaynak listesi + PDF birlikte açıkken PDF sütun değil çekmece: belge %85'in altına sıkıştırılmaz kuralı
-  (prototipte belge %86'ya küçülüp üç sütun). 1440/1280'de de çekmece (07, 071440, 071280).
+- Kaynak listesi + PDF: 1472 ve 1440'ta liste şeride iner, belge ile PDF yan yana (prototipte liste açık, belge %86 ile
+  üç sütun; uygulamanın 924 px'lik kâğıdıyla liste açıkken belge %69–%71'e inerdi). 1280'de prototip listeyi raya indirip
+  belge ile PDF'i yan yana gösteriyor; uygulamada şeritle de belge %74'e ineceği için liste açık kalır, PDF geçici
+  çekmecedir (07, 071440, 071280).
 - AI paneli açıkken 1472'de genel kenar çubuğu raya iner; panel başlığı "Yazım asistanı", sekme "Kayıtlı"
   (prototipte "Arvo AI", "Kayıtlı cevaplar") (08).
-- Makale bul bu ortamda sonuç gösteremiyor: yerel yığının dış dizinlere (OpenAlex, Crossref) ağ erişimi yok,
-  ekranda "Dizinlere şu anda ulaşılamıyor" yazıyor; prototipteki sonuç listesi taklit (06, tel-06).
+- Makale bul: yerel ortamın dış dizinlere ağ erişimi yok. `karsilastirma-2ff370d/` 06 ve tel-06'daki sonuçlar SENTETİK
+  kayıtlı yanıttır (S17), gerçek dizin değil. Prototipte süzgeçler çip; uygulamada yıl kutuları ve açık erişim kutucuğu;
+  prototipteki "PDF açılabilir / Kütüphanede" rozetleri yerine "Açık erişim / N atıf" ve "Listeme ekle".
 - Telefonda üst satır prototipteki "‹ Çalışmalarım · Belge" değil, uygulamanın genel üst çubuğu; alt çubuk
   Çalışmalar · Belge · Kaynaklar · Arvo AI · Çalışma (prototipte Belge · Araştır · AI · Çalışma) (tel-*).
 - Telefonda metin kutusu odaktayken alt çubuk klavyeye yer açmak için aşağı kayar; odak bırakılınca döner.
@@ -151,5 +196,8 @@ bir işlem içinde çalıştırılıp geri sarıldı: sütunlar ve tetikleyici k
 - İnceleme paneli sağ panelle aynı yuvayı paylaşır, AI/PDF açıkken gizlenir; yalnız açıkken belgeyi %85'in altına
   sıkıştırmaz (önce ray, sonra çekmece). Çekmece 3. turdan beri editör başlığının altından başlar (eskiden Kontroller
   ve Dışa aktar'ı örtüyordu); incelemeye geçmek için çekmece kapatılır.
+- Bu turda görülen, düzeltilmeyen (kapsam dışı): editördeki odak modunun Esc kontrolü de kapalı pencereleri sayan
+  aynı seçiciyi kullanıyor (`manuscript-editor.tsx`, `setOdak(false)`); büyük olasılıkla Esc odak modundan çıkarmıyor.
+  Ölçülmedi.
 - Prototipin koyu tema ve İngilizce kareleri karşılaştırmaya alınmadı (açık/TR karşılaştırıldı); koyu tema PDF
   denetimleri S14'te ölçülüyor.
