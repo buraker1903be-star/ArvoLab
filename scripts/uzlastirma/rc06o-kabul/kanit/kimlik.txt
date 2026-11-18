@@ -1,0 +1,47 @@
+PASS  K1  Mevcut kullanıcı (12 altı eski şifre) giriş yapar, kapıya takılmaz
+      beklenen: /dashboard/settings açılır
+      gözlenen: /dashboard/settings
+PASS  K2  Yanlış mevcut şifre reddedilir, şifre değişmez
+      beklenen: 'Mevcut şifre yanlış.' + eski şifre geçerli
+      gözlenen: mesaj=true, eski geçerli=true
+PASS  K3  12 karakter altı: tarayıcı uyarır, sunucu da reddeder
+      beklenen: tarayıcı mesajı dolu + sunucu 'en az 12'
+      gözlenen: tarayıcı='Şifre en az 12 karakter olmalı.', sunucu=true
+PASS  K4  Doğru mevcut şifre: şifre değişir, bu oturum açık kalır, diğer cihaz oturumu geçersiz
+      beklenen: başarı + yeni şifre geçerli + eski geçersiz + öteki oturum /user 401/403, yenileme 400
+      gözlenen: başarı=true, yeni=true, eski=false, bu oturum=true, öteki={"kullanici":403,"yenile":400,"kod":"refresh_token_not_found"}
+PASS  K5  Yeni şifreyle yeniden giriş
+      beklenen: /dashboard
+      gözlenen: http://localhost:3124/dashboard
+PASS  K6  Şifre oturumu, kurtarma sayfasından mevcut şifresiz değiştiremez (atlatma kapalı)
+      beklenen: ret metni + eski şifre geçerli
+      gözlenen: ret=true, eski=true, yeni=false
+PASS  K7  Şifre kurtarma: bağlantı /reset-password'e iner, 12 altı reddedilir, yeni şifre kaydedilir, öteki oturum düşer
+      beklenen: sayfa=/reset-password, kısa red, panel, yeni geçerli, eski geçersiz, öteki oturum geçersiz
+      gözlenen: sayfa=/reset-password, kısa red=true, panel=true, yeni=true, eski=false, öteki={"kullanici":403,"yenile":400,"kod":"refresh_token_not_found"}
+PASS  K8a  Kontrol: hesap silme işlemi panel dışı bir yoldan (Next-Action, /reset-password) çağrılabiliyor — saldırı yolu gerçek
+      beklenen: şifreli kullanıcıda silme talebi yazılır
+      gözlenen: eylem bulundu=true
+PASS  K8  Davetli: bağlantıdan sonra şifre sayfası; panel yolları ilk şifreye yönlenir
+      beklenen: /reset-password, /dashboard ve /dashboard/settings → /reset-password?ilk=1
+      gözlenen: ilk=/reset-password, dashboard→/reset-password?ilk=1, settings→/reset-password?ilk=1
+PASS  K9  Davetli (şifresiz): sunucu işlemi panel dışından çağrılsa da hesap silinemez
+      beklenen: silme_talebi_at boş
+      gözlenen: http=200, silme_talebi_at=''
+PASS  K10  Davetli ilk şifreyi belirler (12 altı reddedilir), sonra panel açılır
+      beklenen: kısa red + şifre kaydı + /dashboard/settings
+      gözlenen: kısa red=true, şifre var=true, yeni giriş=true, sonra=/dashboard/settings
+PASS  K11  Kayıt formu şifre istemez; doğrulanan yeni kullanıcı panele değil ilk şifreye gider
+      beklenen: şifre alanı yok + /reset-password?ilk=1
+      gözlenen: şifre alanı=0, panel denemesi→/reset-password?ilk=1
+PASS  K13  Yöneticinin tek istekte şifreli+onaylı açtığı hesap: verilen şifre geçersiz (G1), kurtarmayla şifre belirlenip girilir (kilitlenme yok)
+      beklenen: verilen şifre geçersiz + kurtarma sonrası panel + yeni şifre geçerli
+      gözlenen: verilen geçerli=false, panel=/dashboard, yeni=true
+PASS  K14  ArvoOS üyesi (şifresiz, magic link) panele girer, ilk şifreye yönlenmez, kuruma bağlı
+      beklenen: /dashboard/settings + şifresiz + kurum bağı
+      gözlenen: yol=/dashboard/settings, şifre var=false, kurum bağlı=true
+PASS  K12  Telefon ve masaüstü: üç şifre alanı görünür, yatay taşma yok (Ayarlar + sıfırlama)
+      beklenen: alanlar görünür, taşma yok
+      gözlenen: [{"ad":"telefon","alanlar":true,"olcu":"currentPassword:350x40@20-370 password:350x40@20-370 passwordConfirm:350x40@20-370","tasma":false,"tasma2":false},{"ad":"masaustu","alanlar":true,"olcu":"currentPassword:610x39@415-1025 password:610x39@415-1025 passwordConfirm:610x39@415-1025","tasma":false,"tasma2":false}]
+
+15/15 PASS

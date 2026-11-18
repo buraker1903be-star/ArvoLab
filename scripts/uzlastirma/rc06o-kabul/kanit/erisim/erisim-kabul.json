@@ -1,0 +1,139 @@
+{
+  "uygulama": "http://localhost:3124",
+  "zaman": "2026-11-18T06:44:49.190Z",
+  "sonuclar": [
+    {
+      "kimlik": "M1",
+      "ad": "Kenar çubuğunda üç ana öğe; Ana Sayfa etkin",
+      "beklenen": "/dashboard, /dashboard/editor, /dashboard/literature; etkin Ana Sayfa",
+      "gozlenen": "/dashboard, /dashboard/editor, /dashboard/literature · etkin Ana Sayfa",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "M2",
+      "ad": "Araçlar grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret",
+      "beklenen": "kapalı→Enter açık→Space kapalı; iki sayfa açılır, grup açık, tek etkin",
+      "gozlenen": "false→true→false; görünen Analiz Merkezi, Belge Kontrol; /dashboard/analysis: etkin Analiz Merkezi başlık \"Analiz Merkezi\" · /dashboard/documents: etkin Belge Kontrol başlık \"Belge Kontrol\"",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "M3",
+      "ad": "Yardım grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret",
+      "beklenen": "kapalı→Enter açık→Space kapalı; iki sayfa açılır, grup açık, tek etkin",
+      "gozlenen": "false→true→false; görünen Kullanım Kılavuzu, Destek; /dashboard/yardim: etkin Kullanım Kılavuzu başlık \"Kullanım Kılavuzu\" · /dashboard/expert-requests: etkin Destek başlık \"Destek\"",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "M4",
+      "ad": "Ayarlar kenar çubuğunun altında; hesap menüsünde Ayarlar, Abonelik ve Kredi, Destek",
+      "beklenen": "alt bölgede Ayarlar; hesap: Ayarlar, Abonelik ve Kredi, Destek; Ayarlar sayfası etkin",
+      "gozlenen": "alt true; hesap Ayarlar, Abonelik ve Kredi, Destek; etkin Ayarlar",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "M5",
+      "ad": "Öğrencide personel araçları gezinmede ve hesap menüsünde yok",
+      "beklenen": "personel bölümü 0, adlar yok",
+      "gozlenen": "bölüm 0; görünen yok",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E1",
+      "ad": "Kontroller menüsü: üç işlem; panel adlı grup; inceleme paneli aç/kapat çalışır",
+      "beklenen": "role=group + ad; Teslim kontrolü, Kılavuz ve kaynakça kontrolü, İnceleme paneli; data-inceleme değişir",
+      "gozlenen": "role=group ad=\"Kontroller · 2/5\"; öğeler: Teslim kontrolü · 2/5 | Kılavuz ve kaynakça kontrolü | İnceleme panelini aç; data-inceleme null→",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E2",
+      "ad": "Kontroller → Teslim kontrolü penceresini açar; Esc kapatır",
+      "beklenen": "pencere açılır, Esc kapatır",
+      "gozlenen": "başlık \"TESLİM KONTROLÜ\"; kapandı true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E3",
+      "ad": "Belge menüsünde Bul ve Odak modu; Bul arama çubuğunu açar; Ctrl+F aynı",
+      "beklenen": "Bul ve Odak modu menüde; ikisi de arama kutusunu açar",
+      "gozlenen": "öğeler: Bul ve değiştir | Odak modu | Sayfa ayarı | Kapak | Paylaş | Sürümler | Kısayollar; menüden true; Ctrl+F true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "E4",
+      "ad": "Çalışma sekmeleri yazım ekranında: dört bölüm, Yazım etkin, araçlar bu çalışmaya süzülü; Kanıt matrisi açılır",
+      "beklenen": "Özet, Yazım, Kanıt matrisi, Etik kurul; Kaynaklar, Analiz, Belge Kontrol ?calisma=ID",
+      "gozlenen": "[[\"Özet\",null],[\"Yazım\",\"page\"],[\"Kanıt matrisi\",null],[\"Etik kurul\",null]] · [[\"Kaynaklar\",\"/dashboard/literature?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac\"],[\"Analiz\",\"/dashboard/analysis?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac\"],[\"Belge Kontrol\",\"/dashboard/documents?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac\"]] · kanıt etkin \"Kanıt matrisi\"",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K1",
+      "ad": "Kaynak ekle menüsü klavyeyle açılır; üç yol; DOI ile ekle kutuyu açar; varsayılanda kutu kapalı",
+      "beklenen": "kutu 0; DOI / içe aktar / dizinlerde ara; Esc kapatır; ?ekle=1 kutu görünür",
+      "gozlenen": "kutu 0; yollar DOI ile ekle | Dosyadan içe aktar | Dizinlerde ara; Esc true; DOI kutusu true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K2",
+      "ad": "Kaynakça sekmesi: etkin işaret, içerik ve denetim düğmesi",
+      "beklenen": "önce Kaynaklar etkin; sonra Kaynakça etkin, başlık + düğme görünür, kaynak listesi yok",
+      "gozlenen": "önce \"Kaynaklar\n1\"; sonra \"Kaynakça\"; başlık true; düğme true; liste 0",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K3",
+      "ad": "Eski /dashboard/citations bağlantısı Kaynakça sekmesine gider",
+      "beklenen": "…/literature?calisma=ID&sekme=kaynakca, Kaynakça etkin",
+      "gozlenen": "/dashboard/literature?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac&sekme=kaynakca · etkin \"Kaynakça\"",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "K4",
+      "ad": "Çalışma özetinin Kaynakça adımı/düğmesi Kaynakça sekmesine bağlanır",
+      "beklenen": "≥1 bağlantı sekme=kaynakca; /dashboard/citations bağlantısı 0",
+      "gozlenen": "sekme=kaynakca 1; citations 0",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "H0",
+      "ad": "Masaüstü turunda sayfa hatası yok",
+      "beklenen": "0 pageerror",
+      "gozlenen": "0",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "R1",
+      "ad": "Tablet rayı: gruplar çizilmez; Daha fazla tüm taşınan sayfaları taşır",
+      "beklenen": "görünen grup 0; Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi",
+      "gozlenen": "grup 0; Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "T1",
+      "ad": "Telefon: alt çubukta üç uygulama + Daha fazla; pencerede adlı bağlantılar; Analiz Merkezi açılır",
+      "beklenen": "Ana Sayfa, Çalışmalar, Kaynaklar, Daha fazla; 6 adlı bağlantı; analiz sayfası",
+      "gozlenen": "Ana Sayfa, Çalışmalar, Kaynaklar, Daha fazla · Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi · /dashboard/analysis",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "T2",
+      "ad": "Telefon: Kaynakça sekmesi etkin ve içerik görünür",
+      "beklenen": "Kaynakça etkin, başlık görünür",
+      "gozlenen": "etkin \"Kaynakça\"; başlık true",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "P-employee",
+      "ad": "employee: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider",
+      "beklenen": "Doçentlik Puanı",
+      "gozlenen": "hesap: Doçentlik Puanı; kenarda yok; /dashboard/associate-professorship açıldı; hata 0",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "P-system_admin",
+      "ad": "system_admin: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider",
+      "beklenen": "Doçentlik Puanı, Asistan Kayıtları, Ekip Yönetimi",
+      "gozlenen": "hesap: Doçentlik Puanı, Asistan Kayıtları, Ekip Yönetimi; kenarda yok; /dashboard/team açıldı; hata 0",
+      "sonuc": "PASS"
+    }
+  ]
+}

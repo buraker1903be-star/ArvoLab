@@ -1,0 +1,10 @@
+#!/bin/bash
+# RC06o: gerçek yerel PG + GoTrue + Storage üzerinde üç kabul (taklit model; sağlayıcı isteği 0).
+S=/tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad; O=$S/rc06o/kanit
+cd /home/user/arvolab-rc06o-aday
+export NODE_PATH=$(npm root -g)
+node --import ./tests/register.mjs scripts/yerel-yigin/kayit-butunlugu.mjs yeni > $O/butunluk.txt 2>&1; echo "butunluk çıkış $? · $(tail -1 $O/butunluk.txt)"
+mkdir -p $O/kimlik; KIMLIK_CIKTI=$O/kimlik/ node scripts/yerel-yigin/kimlik-kabul.mjs http://localhost:3124 > $O/kimlik.txt 2>&1; echo "kimlik çıkış $? · $(tail -1 $O/kimlik.txt)"
+mkdir -p $O/studyo; PDF_ISLEM_SAATLIK=12 STUDYO_ISTEM_KAYDI=$O/istem-taklit.jsonl STUDYO_DERLEME=uretim STUDYO_CIKTI=$O/studyo/ timeout 5400 node scripts/yerel-yigin/studyo-kabul.mjs http://localhost:3124 > $O/studyo.txt 2>&1; echo "studyo çıkış $? · $(tail -1 $O/studyo.txt)"
+cp scripts/yerel-yigin/sonuclar/studyo-kabul.json scripts/yerel-yigin/sonuclar/studyo-kabul-derleme.json $O/studyo/ 2>/dev/null
+echo BITTI

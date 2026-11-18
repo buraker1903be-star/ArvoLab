@@ -1,0 +1,19 @@
+#!/bin/bash
+# RC06o: adayın temiz checkout'unda next build + next start (taklit model, gerçek sağlayıcı YOK).
+# Kullanım: derle-baslat.sh build|start
+set -euo pipefail
+S=/tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad; O=$S/rc06o
+cd /home/user/arvolab-rc06o-aday
+set -a; . $S/prova/anahtar.env; set +a
+unset ARVOLAB_KABUL_AI_ANAHTAR AI_ANAHTAR OPENAI_API_KEY ANTHROPIC_API_KEY RESEND_API_KEY || true
+export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON" SUPABASE_SERVICE_ROLE_KEY="$SERVIS"
+unset ANON SERVIS
+if [ "$1" = build ]; then
+  [ -z "$(git status --porcelain)" ] || { echo "ağaç temiz değil"; exit 1; }
+  rm -rf .next
+  npx next build > $O/aday/build.log 2>&1
+  echo "BUILD_ID $(cat .next/BUILD_ID)"
+else
+  export AI_TABAN_URL=http://127.0.0.1:54900/v1 AI_MODEL=taklit PDF_ISLEM_SAATLIK=12
+  exec npx next start -p 3124
+fi

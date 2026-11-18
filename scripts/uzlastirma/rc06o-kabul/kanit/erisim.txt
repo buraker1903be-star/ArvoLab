@@ -1,0 +1,41 @@
+PASS  M1  Kenar çubuğunda üç ana öğe; Ana Sayfa etkin
+      gözlenen: /dashboard, /dashboard/editor, /dashboard/literature · etkin Ana Sayfa
+PASS  M2  Araçlar grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret
+      gözlenen: false→true→false; görünen Analiz Merkezi, Belge Kontrol; /dashboard/analysis: etkin Analiz Merkezi başlık "Analiz Merkezi" · /dashboard/documents: etkin Belge Kontrol başlık "Belge Kontrol"
+PASS  M3  Yardım grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret
+      gözlenen: false→true→false; görünen Kullanım Kılavuzu, Destek; /dashboard/yardim: etkin Kullanım Kılavuzu başlık "Kullanım Kılavuzu" · /dashboard/expert-requests: etkin Destek başlık "Destek"
+PASS  M4  Ayarlar kenar çubuğunun altında; hesap menüsünde Ayarlar, Abonelik ve Kredi, Destek
+      gözlenen: alt true; hesap Ayarlar, Abonelik ve Kredi, Destek; etkin Ayarlar
+PASS  M5  Öğrencide personel araçları gezinmede ve hesap menüsünde yok
+      gözlenen: bölüm 0; görünen yok
+PASS  E1  Kontroller menüsü: üç işlem; panel adlı grup; inceleme paneli aç/kapat çalışır
+      gözlenen: role=group ad="Kontroller · 2/5"; öğeler: Teslim kontrolü · 2/5 | Kılavuz ve kaynakça kontrolü | İnceleme panelini aç; data-inceleme null→
+PASS  E2  Kontroller → Teslim kontrolü penceresini açar; Esc kapatır
+      gözlenen: başlık "TESLİM KONTROLÜ"; kapandı true
+PASS  E3  Belge menüsünde Bul ve Odak modu; Bul arama çubuğunu açar; Ctrl+F aynı
+      gözlenen: öğeler: Bul ve değiştir | Odak modu | Sayfa ayarı | Kapak | Paylaş | Sürümler | Kısayollar; menüden true; Ctrl+F true
+PASS  E4  Çalışma sekmeleri yazım ekranında: dört bölüm, Yazım etkin, araçlar bu çalışmaya süzülü; Kanıt matrisi açılır
+      gözlenen: [["Özet",null],["Yazım","page"],["Kanıt matrisi",null],["Etik kurul",null]] · [["Kaynaklar","/dashboard/literature?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac"],["Analiz","/dashboard/analysis?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac"],["Belge Kontrol","/dashboard/documents?calisma=a37e63a9-24e3
+PASS  K1  Kaynak ekle menüsü klavyeyle açılır; üç yol; DOI ile ekle kutuyu açar; varsayılanda kutu kapalı
+      gözlenen: kutu 0; yollar DOI ile ekle | Dosyadan içe aktar | Dizinlerde ara; Esc true; DOI kutusu true
+PASS  K2  Kaynakça sekmesi: etkin işaret, içerik ve denetim düğmesi
+      gözlenen: önce "Kaynaklar
+1"; sonra "Kaynakça"; başlık true; düğme true; liste 0
+PASS  K3  Eski /dashboard/citations bağlantısı Kaynakça sekmesine gider
+      gözlenen: /dashboard/literature?calisma=a37e63a9-24e3-4ff9-945d-0e11a28b3aac&sekme=kaynakca · etkin "Kaynakça"
+PASS  K4  Çalışma özetinin Kaynakça adımı/düğmesi Kaynakça sekmesine bağlanır
+      gözlenen: sekme=kaynakca 1; citations 0
+PASS  H0  Masaüstü turunda sayfa hatası yok
+      gözlenen: 0
+PASS  R1  Tablet rayı: gruplar çizilmez; Daha fazla tüm taşınan sayfaları taşır
+      gözlenen: grup 0; Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi
+PASS  T1  Telefon: alt çubukta üç uygulama + Daha fazla; pencerede adlı bağlantılar; Analiz Merkezi açılır
+      gözlenen: Ana Sayfa, Çalışmalar, Kaynaklar, Daha fazla · Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi · /dashboard/analysis
+PASS  T2  Telefon: Kaynakça sekmesi etkin ve içerik görünür
+      gözlenen: etkin "Kaynakça"; başlık true
+PASS  P-employee  employee: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider
+      gözlenen: hesap: Doçentlik Puanı; kenarda yok; /dashboard/associate-professorship açıldı; hata 0
+PASS  P-system_admin  system_admin: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider
+      gözlenen: hesap: Doçentlik Puanı, Asistan Kayıtları, Ekip Yönetimi; kenarda yok; /dashboard/team açıldı; hata 0
+
+19 PASS · 0 FAIL

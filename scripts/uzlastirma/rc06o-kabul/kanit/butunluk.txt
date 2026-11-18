@@ -1,0 +1,28 @@
+PASS  S1 iki oturum sırayla: eski damgalı ikinci kayıt çakışmaya düşer
+PASS  S2 eşzamanlı iki oturum (25 tur, aynı anda): her turda tek kazanan, kayıp yok
+PASS  S3 eski sürümden yazma: üç kayıt sonra eski damgayla yazan reddedilir
+PASS  S4 aynı milisaniyede iki kayıt (sunucu saatleri çakışır): eski oturum öteki metni ezemez
+{
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'permission denied for table project_manuscript_versions'
+}
+PASS  S5 zorla kayıt, yedek ALINAMIYOR: öteki sürüm ezilmez
+PASS  S6 zorla kayıt yarışı: yedekten SONRA kaydedilen metin ezilmez
+PASS  S7 sürüm geri yükleme yarışı: yedekten SONRA kaydedilen metin ezilmez
+{
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'permission denied for table project_manuscript_versions'
+}
+PASS  S8 sürüm geri yükleme, yedek ALINAMIYOR: belge değişmez
+PASS  S9 meşru sürüm geri yükleme: yazılır, önceki hâl yedekte, damga ilerler
+PASS  S10 meşru zorla kayıt: yazılır, öteki sürüm yedekte
+PASS  S11 damga doğrudan API'den geri çekilemez (kilit tek yönlü)
+PASS  S12 yabancı kullanıcı doğru damgayla bile yazamaz (RLS korunuyor)
+PASS  S13 ilk kayıt yarışı (satır yok): tek ekleme kazanır
+PASS  S14 hızlı ardışık kayıtlar (30): sahte çakışma yok, damgalar kesin artar
+
+yeni: 14/14 PASS

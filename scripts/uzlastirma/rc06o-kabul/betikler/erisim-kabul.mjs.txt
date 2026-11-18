@@ -1,0 +1,301 @@
+// RC06o: taşınan menüler ve Kaynakça sekmesi — gerçek yerel yığın (Postgres + GoTrue + Storage) ve üretim derlemesi.
+// Test düzeneği, uygulama kodu DEĞİL. Kullanım: NODE_PATH=$(npm root -g) node erisim-kabul.mjs http://localhost:3124 <çıktı-dizini>
+// Hesaplar sentetik (@yerel.test), yalnızca yerel GoTrue'da. Ölçütler PR #107 kabulündeki (scripts/onizleme/*-kabul.mjs) davranışlardır.
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { chromium, devices } = require("playwright");
+
+const [UYGULAMA = "http://localhost:3124", CIKTI = "/tmp/erisim"] = process.argv.slice(2);
+if (!/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(UYGULAMA)) { console.error("ÖN KOŞUL: yalnızca localhost"); process.exit(2); }
+fs.mkdirSync(CIKTI, { recursive: true });
+const GECIT = "http://127.0.0.1:54401";
+const SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
+const KOK = "/home/user/arvolab-rc06o-aday";
+const imzala = (yuk) => {
+  const b = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const g = `${b({ alg: "HS256", typ: "JWT" })}.${b({ iss: "yerel-yigin", iat: 1763200000, exp: 2079000000, ...yuk })}`;
+  return `${g}.${crypto.createHmac("sha256", SIR).update(g).digest("base64url")}`;
+};
+const SERVIS = imzala({ role: "service_role" });
+const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+const yonetici = async (yol, govde, yontem = "POST") => {
+  const r = await fetch(`${GECIT}/auth/v1${yol}`, { method: yontem, headers: { apikey: SERVIS, Authorization: `Bearer ${SERVIS}`, "Content-Type": "application/json" }, body: JSON.stringify(govde) });
+  return { durum: r.status, json: await r.json().catch(() => null) };
+};
+const SOZLESME_SURUMU = fs.readFileSync(`${KOK}/lib/sozlesme/kullanim-sozlesmesi.ts`, "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+const ek = crypto.randomBytes(3).toString("hex");
+async function hesap(ad, rol) {
+  const adres = `${ad}-${ek}@yerel.test`, parola = `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
+  const r = await yonetici("/admin/users", { email: adres, email_confirm: true });
+  if (r.durum >= 300) throw new Error(`kullanıcı açılamadı ${r.durum}`);
+  // G1 tetikleyicisi onayda şifreyi siler; şifre ayrı güncellemeyle konur (kimlik-kabul.mjs ile aynı).
+  const g = await yonetici(`/admin/users/${r.json.id}`, { password: parola }, "PUT");
+  if (g.durum >= 300) throw new Error(`şifre konamadı ${g.durum}`);
+  psql(`insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi) values ('${r.json.id}', 'kullanim_sozlesmesi', '${SOZLESME_SURUMU}', 'tr', '${"0".repeat(64)}', 'giris', true)`);
+  if (rol) psql(`update public.profiles set role='${rol}' where id='${r.json.id}'`);
+  return { id: r.json.id, adres, parola };
+}
+
+const sonuclar = [];
+const kayit = (kimlik, ad, beklenen, gozlenen, gecti) => {
+  sonuclar.push({ kimlik, ad, beklenen, gozlenen: String(gozlenen).slice(0, 400), sonuc: gecti ? "PASS" : "FAIL" });
+  console.log(`${gecti ? "PASS" : "FAIL"}  ${kimlik}  ${ad}\n      gözlenen: ${String(gozlenen).slice(0, 300)}`);
+};
+async function senaryo(kimlik, ad, fn) {
+  try { await fn(); } catch (h) { kayit(kimlik, ad, "senaryo koşar", String(h?.message ?? h).split("\n")[0], false); }
+}
+const tarayici = await chromium.launch();
+async function oturum(h, secenek = { viewport: { width: 1440, height: 900 } }) {
+  const c = await tarayici.newContext({ baseURL: UYGULAMA, ...secenek });
+  await c.addCookies([{ name: "arvolab_dil", value: "tr", url: UYGULAMA }]);
+  const s = await c.newPage();
+  const hatalar = [];
+  s.on("pageerror", (e) => hatalar.push(String(e).slice(0, 160)));
+  await s.goto("/"); // giriş formu kökte (kimlik-kabul.mjs ile aynı)
+  await s.fill('input[name="email"]', h.adres);
+  await s.fill('input[name="password"]', h.parola);
+  await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  return { c, s, hatalar };
+}
+const git = async (s, yol) => { await s.goto(yol, { timeout: 120000 }); await s.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => {}); };
+const etkin = (s) => s.locator('nav.os-gezinme [aria-current="page"]').allInnerTexts();
+const h1 = (s) => s.locator("main h1").first().innerText().catch(() => "");
+
+// ---------- Veri ----------
+const ogrenci = await hesap("erisim-ogrenci");
+const PROJE = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${ogrenci.id}', 'thesis', 'Erisim kabul tezi ${ek}') returning id`).split("\n")[0];
+psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${PROJE}', '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Giris paragrafi."}]}]}'::jsonb, 'Giris paragrafi.')`);
+psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, container_title) values ('${ogrenci.id}', '${PROJE}', 'Sentetik kaynak', 'Kaya, A.', 2021, 'Journal of Synthetic Studies')`);
+
+// ---------- Masaüstü: kenar çubuğu ----------
+{
+  const { c, s, hatalar } = await oturum(ogrenci);
+  await senaryo("M1", "Kenar çubuğunda üç ana öğe; Ana Sayfa etkin", async () => {
+    await git(s, "/dashboard");
+    const ana = await s.locator("nav.os-gezinme .os-gezinme-ana a").evaluateAll((as) => as.filter((a) => a.checkVisibility()).map((a) => a.getAttribute("href")));
+    const e = await etkin(s);
+    kayit("M1", "Kenar çubuğunda üç ana öğe; Ana Sayfa etkin", "/dashboard, /dashboard/editor, /dashboard/literature; etkin Ana Sayfa", `${ana.join(", ")} · etkin ${e.join("|")}`,
+      JSON.stringify(ana) === JSON.stringify(["/dashboard", "/dashboard/editor", "/dashboard/literature"]) && e.length === 1 && /Ana Sayfa/.test(e[0]));
+  });
+  for (const [kimlik, grup, kimlikId, ogeler] of [
+    ["M2", "Araçlar", "araclar", [["Analiz Merkezi", "/dashboard/analysis"], ["Belge Kontrol", "/dashboard/documents"]]],
+    ["M3", "Yardım", "yardim", [["Kullanım Kılavuzu", "/dashboard/yardim"], ["Destek", "/dashboard/expert-requests"]]],
+  ]) {
+    await senaryo(kimlik, `${grup} grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret`, async () => {
+      await git(s, "/dashboard");
+      const bas = s.locator("nav.os-gezinme .os-gezinme-takim-bas", { hasText: grup });
+      const once = await bas.getAttribute("aria-expanded");
+      await bas.focus(); await s.keyboard.press("Enter");
+      const acik = await bas.getAttribute("aria-expanded");
+      const liste = s.locator(`#os-gezinme-takim-${kimlikId}`);
+      const gorunen = [];
+      for (const [ad] of ogeler) if (await liste.getByRole("link", { name: ad, exact: true }).isVisible()) gorunen.push(ad);
+      await s.keyboard.press("Space");
+      const kapali = await bas.getAttribute("aria-expanded");
+      const sayfalar = [];
+      for (const [ad, href] of ogeler) {
+        await git(s, href);
+        const e = await etkin(s);
+        const ok = e.length === 1 && e[0].includes(ad) && (await liste.isVisible()) && !hatalar.length;
+        sayfalar.push(`${href}: etkin ${e.join("|")} başlık "${await h1(s)}"${ok ? "" : " ✗"}`);
+      }
+      kayit(kimlik, `${grup} grubu klavyeyle açılır; sayfaları açılır ve kenar çubuğunda tek etkin işaret`, "kapalı→Enter açık→Space kapalı; iki sayfa açılır, grup açık, tek etkin", `${once}→${acik}→${kapali}; görünen ${gorunen.join(", ")}; ${sayfalar.join(" · ")}`,
+        once === "false" && acik === "true" && kapali === "false" && gorunen.length === ogeler.length && !sayfalar.some((x) => x.endsWith("✗")));
+    });
+  }
+  await senaryo("M4", "Ayarlar kenar çubuğunun altında; hesap menüsünde Ayarlar, Abonelik ve Kredi, Destek", async () => {
+    await git(s, "/dashboard");
+    const alt = await s.locator("nav.os-gezinme .os-gezinme-alt-bolge a[href='/dashboard/settings']").isVisible();
+    await s.locator("nav.os-gezinme .os-kullanici > summary").click();
+    const menu = s.locator("nav.os-gezinme .os-kullanici-menu");
+    const hesapAdlari = await menu.locator("nav[aria-label='Hesap'] a").allInnerTexts();
+    await s.keyboard.press("Escape");
+    await git(s, "/dashboard/settings");
+    const e = await etkin(s);
+    kayit("M4", "Ayarlar kenar çubuğunun altında; hesap menüsünde Ayarlar, Abonelik ve Kredi, Destek", "alt bölgede Ayarlar; hesap: Ayarlar, Abonelik ve Kredi, Destek; Ayarlar sayfası etkin", `alt ${alt}; hesap ${hesapAdlari.map((x) => x.trim()).join(", ")}; etkin ${e.join("|")}`,
+      alt && JSON.stringify(hesapAdlari.map((x) => x.trim())) === JSON.stringify(["Ayarlar", "Abonelik ve Kredi", "Destek"]) && e.length === 1 && /Ayarlar/.test(e[0]));
+  });
+  await senaryo("M5", "Öğrencide personel araçları gezinmede ve hesap menüsünde yok", async () => {
+    await git(s, "/dashboard");
+    const metin = await s.locator("nav.os-gezinme").innerText();
+    await s.locator("nav.os-gezinme .os-kullanici > summary").click();
+    const personel = await s.locator("details.os-kullanici[open] nav[aria-label='Personel Araçları']").count();
+    await s.keyboard.press("Escape");
+    const sizan = ["Ekip Yönetimi", "Asistan Kayıtları", "Doçentlik Puanı"].filter((a) => metin.includes(a));
+    kayit("M5", "Öğrencide personel araçları gezinmede ve hesap menüsünde yok", "personel bölümü 0, adlar yok", `bölüm ${personel}; görünen ${sizan.join(", ") || "yok"}`, personel === 0 && !sizan.length);
+  });
+
+  // ---------- Editör: taşınan araçlar ----------
+  await senaryo("E1", "Kontroller menüsü: üç işlem; panel adlı grup; inceleme paneli aç/kapat çalışır", async () => {
+    await git(s, `/dashboard/editor/${PROJE}/write`);
+    await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 90000 });
+    const dugme = s.getByRole("button", { name: /^Kontroller/ }).first();
+    await dugme.click();
+    const panel = s.locator(`#${await dugme.getAttribute("aria-controls")}`);
+    const rol = await panel.getAttribute("role"), ad = await panel.getAttribute("aria-label");
+    const ogeler = (await panel.locator("button").allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim());
+    const once = await s.locator(".manuscript-layout").getAttribute("data-inceleme");
+    await panel.getByRole("button", { name: /İnceleme panelini (aç|kapat)/ }).click();
+    await s.waitForTimeout(500);
+    const sonra = await s.locator(".manuscript-layout").getAttribute("data-inceleme");
+    kayit("E1", "Kontroller menüsü: üç işlem; panel adlı grup; inceleme paneli aç/kapat çalışır", "role=group + ad; Teslim kontrolü, Kılavuz ve kaynakça kontrolü, İnceleme paneli; data-inceleme değişir", `role=${rol} ad="${ad}"; öğeler: ${ogeler.join(" | ")}; data-inceleme ${once}→${sonra}`,
+      rol === "group" && !!ad && ogeler.length === 3 && /Teslim kontrolü/.test(ogeler[0]) && /Kılavuz ve kaynakça kontrolü/.test(ogeler[1]) && /İnceleme panelini/.test(ogeler[2]) && once !== sonra);
+    // Tercihi geri al (sonraki senaryolar varsayılanla koşsun).
+    await s.getByRole("button", { name: /^Kontroller/ }).first().click();
+    await s.locator(`#${await dugme.getAttribute("aria-controls")}`).getByRole("button", { name: /İnceleme panelini (aç|kapat)/ }).click();
+  });
+  await senaryo("E2", "Kontroller → Teslim kontrolü penceresini açar; Esc kapatır", async () => {
+    await git(s, `/dashboard/editor/${PROJE}/write`);
+    await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 90000 });
+    const dugme = s.getByRole("button", { name: /^Kontroller/ }).first();
+    await dugme.click();
+    await s.locator(`#${await dugme.getAttribute("aria-controls")}`).getByRole("button", { name: /Teslim kontrolü/ }).click();
+    const pencere = s.locator("[role=dialog]:visible").first();
+    await pencere.waitFor({ state: "visible", timeout: 10000 });
+    const baslik = (await pencere.innerText()).split("\n")[0];
+    await s.keyboard.press("Escape"); await s.waitForTimeout(400);
+    const kapandi = (await s.locator("[role=dialog]:visible").count()) === 0;
+    kayit("E2", "Kontroller → Teslim kontrolü penceresini açar; Esc kapatır", "pencere açılır, Esc kapatır", `başlık "${baslik}"; kapandı ${kapandi}`, kapandi);
+  });
+  await senaryo("E3", "Belge menüsünde Bul ve Odak modu; Bul arama çubuğunu açar; Ctrl+F aynı", async () => {
+    await git(s, `/dashboard/editor/${PROJE}/write`);
+    await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 90000 });
+    const dugme = s.getByRole("button", { name: /^Bul, odak modu/ }).first() /* RC06o: Belge menüsü etiketiGizle — erişilebilir ad açıklamadır */;
+    await dugme.click();
+    const panel = s.locator(`#${await dugme.getAttribute("aria-controls")}`);
+    const ogeler = (await panel.locator("button").allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim());
+    await panel.getByRole("button", { name: /^Bul/ }).click();
+    const bulAcik = await s.locator(".manuscript-ust input").first().waitFor({ state: "visible", timeout: 3000 }).then(() => true, () => false); /* RC06o: Ctrl+F dalı gibi çizimi bekler; ölçüt aynı */
+    await s.keyboard.press("Escape"); await s.waitForTimeout(300);
+    await s.locator(".ProseMirror").first().click();
+    await s.keyboard.press("Control+f"); await s.waitForTimeout(300);
+    const kisayol = await s.locator(".manuscript-ust input").first().isVisible().catch(() => false);
+    kayit("E3", "Belge menüsünde Bul ve Odak modu; Bul arama çubuğunu açar; Ctrl+F aynı", "Bul ve Odak modu menüde; ikisi de arama kutusunu açar", `öğeler: ${ogeler.join(" | ")}; menüden ${bulAcik}; Ctrl+F ${kisayol}`,
+      ogeler.some((o) => /^Bul/.test(o)) && ogeler.some((o) => /Odak modu/.test(o)) && bulAcik && kisayol);
+  });
+  await senaryo("E4", "Çalışma sekmeleri yazım ekranında: dört bölüm, Yazım etkin, araçlar bu çalışmaya süzülü; Kanıt matrisi açılır", async () => {
+    await git(s, `/dashboard/editor/${PROJE}/write`);
+    const nav = s.locator("nav.calisma-sekmeleri").first();
+    const bolumler = await nav.locator("a:not(.calisma-sekmeleri-arac)").evaluateAll((as) => as.map((a) => [a.textContent.trim(), a.getAttribute("aria-current")]));
+    const araclar = await nav.locator("a.calisma-sekmeleri-arac").evaluateAll((as) => as.map((a) => [a.textContent.trim(), a.getAttribute("href")]));
+    await nav.getByRole("link", { name: "Kanıt matrisi" }).click();
+    await s.waitForURL(/\/kanit/, { timeout: 60000 }); await s.waitForLoadState("networkidle").catch(() => {});
+    const kanitEtkin = await s.locator('nav.calisma-sekmeleri a[aria-current="page"]').first().innerText();
+    kayit("E4", "Çalışma sekmeleri yazım ekranında: dört bölüm, Yazım etkin, araçlar bu çalışmaya süzülü; Kanıt matrisi açılır", "Özet, Yazım, Kanıt matrisi, Etik kurul; Kaynaklar, Analiz, Belge Kontrol ?calisma=ID", `${JSON.stringify(bolumler)} · ${JSON.stringify(araclar)} · kanıt etkin "${kanitEtkin}"`,
+      JSON.stringify(bolumler.map((b) => b[0])) === JSON.stringify(["Özet", "Yazım", "Kanıt matrisi", "Etik kurul"]) && bolumler.filter((b) => b[1] === "page").map((b) => b[0]).join() === "Yazım"
+        && JSON.stringify(araclar.map((a) => a[0])) === JSON.stringify(["Kaynaklar", "Analiz", "Belge Kontrol"]) && araclar.every((a) => a[1].includes(`calisma=${PROJE}`)) && kanitEtkin.trim() === "Kanıt matrisi");
+  });
+
+  // ---------- Kaynaklar ve Kaynakça ----------
+  await senaryo("K1", "Kaynak ekle menüsü klavyeyle açılır; üç yol; DOI ile ekle kutuyu açar; varsayılanda kutu kapalı", async () => {
+    await git(s, `/dashboard/literature?calisma=${PROJE}`);
+    const varsayilanKutu = await s.locator(".doi-kutusu input").count();
+    const ozet = s.locator("details.kaynak-ekle > summary");
+    await ozet.focus(); await s.keyboard.press("Enter");
+    const menu = s.locator("details.kaynak-ekle[open]");
+    const yollar = (await menu.locator(".kaynak-ekle-oge").allInnerTexts()).map((x) => x.split("\n")[0].trim());
+    await s.keyboard.press("Escape"); await s.waitForTimeout(200);
+    const esc = (await s.locator("details.kaynak-ekle[open]").count()) === 0;
+    await ozet.click();
+    await menu.getByRole("link", { name: /DOI/ }).click();
+    await s.waitForURL(/ekle=1/, { timeout: 30000 });
+    const kutu = await s.locator(".doi-kutusu input").waitFor({ state: "visible", timeout: 30000 }).then(() => true, () => false);
+    kayit("K1", "Kaynak ekle menüsü klavyeyle açılır; üç yol; DOI ile ekle kutuyu açar; varsayılanda kutu kapalı", "kutu 0; DOI / içe aktar / dizinlerde ara; Esc kapatır; ?ekle=1 kutu görünür", `kutu ${varsayilanKutu}; yollar ${yollar.join(" | ")}; Esc ${esc}; DOI kutusu ${kutu}`,
+      varsayilanKutu === 0 && yollar.length === 3 && /DOI/.test(yollar[0]) && esc && kutu);
+  });
+  await senaryo("K2", "Kaynakça sekmesi: etkin işaret, içerik ve denetim düğmesi", async () => {
+    await git(s, `/dashboard/literature?calisma=${PROJE}`);
+    const once = await s.locator('nav.kaynak-sekmeleri a[aria-current="page"]').innerText();
+    await s.locator("nav.kaynak-sekmeleri").getByRole("link", { name: /^Kaynakça$/ }).click();
+    await s.waitForURL(/sekme=kaynakca/, { timeout: 30000 }); await s.waitForLoadState("networkidle").catch(() => {});
+    const sonra = await s.locator('nav.kaynak-sekmeleri a[aria-current="page"]').innerText();
+    const baslik = await s.getByRole("heading", { name: /^Kaynakça$/ }).first().isVisible();
+    const dugme = await s.getByRole("button", { name: /Kaynakçamı denetle|Sonuçları aç/ }).first().isVisible();
+    const liste = await s.locator(".kaynak-suzgec").count();
+    await s.screenshot({ path: `${CIKTI}/k2-kaynakca-masaustu.png` });
+    kayit("K2", "Kaynakça sekmesi: etkin işaret, içerik ve denetim düğmesi", "önce Kaynaklar etkin; sonra Kaynakça etkin, başlık + düğme görünür, kaynak listesi yok", `önce "${once.trim()}"; sonra "${sonra.trim()}"; başlık ${baslik}; düğme ${dugme}; liste ${liste}`,
+      /^Kaynaklar/.test(once.trim()) && sonra.trim() === "Kaynakça" && baslik && dugme && liste === 0);
+  });
+  await senaryo("K3", "Eski /dashboard/citations bağlantısı Kaynakça sekmesine gider", async () => {
+    await git(s, `/dashboard/citations?calisma=${PROJE}`);
+    const url = s.url();
+    const sonra = await s.locator('nav.kaynak-sekmeleri a[aria-current="page"]').innerText().catch(() => "");
+    kayit("K3", "Eski /dashboard/citations bağlantısı Kaynakça sekmesine gider", "…/literature?calisma=ID&sekme=kaynakca, Kaynakça etkin", `${url.replace(UYGULAMA, "")} · etkin "${sonra.trim()}"`, url.includes(`/dashboard/literature?calisma=${PROJE}&sekme=kaynakca`) && sonra.trim() === "Kaynakça");
+  });
+  await senaryo("K4", "Çalışma özetinin Kaynakça adımı/düğmesi Kaynakça sekmesine bağlanır", async () => {
+    await git(s, `/dashboard/editor?sec=${PROJE}`);
+    const baglantilar = await s.locator(`main a[href*="/dashboard/literature?calisma=${PROJE}&sekme=kaynakca"]`).count();
+    const eski = await s.locator('main a[href*="/dashboard/citations"]').count();
+    kayit("K4", "Çalışma özetinin Kaynakça adımı/düğmesi Kaynakça sekmesine bağlanır", "≥1 bağlantı sekme=kaynakca; /dashboard/citations bağlantısı 0", `sekme=kaynakca ${baglantilar}; citations ${eski}`, baglantilar >= 1 && eski === 0);
+  });
+  kayit("H0", "Masaüstü turunda sayfa hatası yok", "0 pageerror", hatalar.join(" | ") || "0", hatalar.length === 0);
+  await c.close();
+}
+
+// ---------- Tablet ve telefon ----------
+{
+  const { c, s } = await oturum(ogrenci, { viewport: { width: 1024, height: 768 } });
+  await senaryo("R1", "Tablet rayı: gruplar çizilmez; Daha fazla tüm taşınan sayfaları taşır", async () => {
+    await git(s, "/dashboard");
+    const takim = await s.locator("nav.os-gezinme .os-gezinme-takim").evaluateAll((xs) => xs.filter((x) => x.checkVisibility()).length);
+    await s.locator(".os-gezinme-daha").click();
+    const p = s.locator("dialog.os-daha[open]");
+    await p.waitFor({ state: "visible", timeout: 5000 });
+    const adlar = await p.locator(".os-daha-liste a").evaluateAll((as) => as.map((a) => a.textContent.trim()));
+    kayit("R1", "Tablet rayı: gruplar çizilmez; Daha fazla tüm taşınan sayfaları taşır", "görünen grup 0; Analiz Merkezi, Belge Kontrol, Destek, Ayarlar, Kullanım Kılavuzu, Abonelik ve Kredi", `grup ${takim}; ${adlar.join(", ")}`,
+      takim === 0 && JSON.stringify(adlar) === JSON.stringify(["Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"]));
+  });
+  await c.close();
+}
+{
+  const { c, s } = await oturum(ogrenci, { ...devices["iPhone 13"] });
+  await senaryo("T1", "Telefon: alt çubukta üç uygulama + Daha fazla; pencerede adlı bağlantılar; Analiz Merkezi açılır", async () => {
+    await git(s, "/dashboard");
+    const cubuk = await s.locator("nav.os-gezinme .os-gezinme-kisa").evaluateAll((xs) => xs.filter((x) => x.checkVisibility()).map((x) => x.textContent.trim()));
+    await s.locator(".os-gezinme-daha").click();
+    const p = s.locator("dialog.os-daha[open]");
+    await p.waitFor({ state: "visible", timeout: 5000 });
+    const adlar = [];
+    for (const a of await p.locator(".os-daha-liste a").all()) adlar.push((await a.getAttribute("aria-label")) ?? (await a.evaluate((el) => el.innerText.trim())));
+    await s.screenshot({ path: `${CIKTI}/t1-daha-fazla-telefon.png` });
+    await p.getByRole("link", { name: "Analiz Merkezi", exact: true }).click();
+    await s.waitForURL(/\/dashboard\/analysis/, { timeout: 60000 });
+    kayit("T1", "Telefon: alt çubukta üç uygulama + Daha fazla; pencerede adlı bağlantılar; Analiz Merkezi açılır", "Ana Sayfa, Çalışmalar, Kaynaklar, Daha fazla; 6 adlı bağlantı; analiz sayfası", `${cubuk.join(", ")} · ${adlar.join(", ")} · ${s.url().replace(UYGULAMA, "")}`,
+      JSON.stringify(cubuk) === JSON.stringify(["Ana Sayfa", "Çalışmalar", "Kaynaklar", "Daha fazla"]) && adlar.length === 6 && adlar.every(Boolean));
+  });
+  await senaryo("T2", "Telefon: Kaynakça sekmesi etkin ve içerik görünür", async () => {
+    await git(s, `/dashboard/literature?calisma=${PROJE}&sekme=kaynakca`);
+    const sonra = await s.locator('nav.kaynak-sekmeleri a[aria-current="page"]').innerText();
+    const baslik = await s.getByRole("heading", { name: /^Kaynakça$/ }).first().isVisible();
+    await s.screenshot({ path: `${CIKTI}/t2-kaynakca-telefon.png` });
+    kayit("T2", "Telefon: Kaynakça sekmesi etkin ve içerik görünür", "Kaynakça etkin, başlık görünür", `etkin "${sonra.trim()}"; başlık ${baslik}`, sonra.trim() === "Kaynakça" && baslik);
+  });
+  await c.close();
+}
+
+// ---------- Personel ve yönetici: hesap menüsünde Personel Araçları ----------
+for (const [rol, beklenen] of [["employee", ["Doçentlik Puanı"]], ["system_admin", ["Doçentlik Puanı", "Asistan Kayıtları", "Ekip Yönetimi"]]]) {
+  const h = await hesap(`erisim-${rol}`, rol);
+  await senaryo(`P-${rol}`, `${rol}: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider`, async () => {
+    const { c, s, hatalar } = await oturum(h);
+    await git(s, "/dashboard");
+    const kenar = await s.locator("nav.os-gezinme").evaluate((n) => [...n.querySelectorAll("a")].filter((a) => !a.closest(".os-kullanici") && a.checkVisibility()).map((a) => a.textContent.trim()).join("|"));
+    await s.locator("nav.os-gezinme .os-kullanici > summary").click();
+    const personel = await s.locator("details.os-kullanici[open] nav[aria-label='Personel Araçları'] a").evaluateAll((as) => as.map((a) => [a.textContent.trim(), a.getAttribute("href")]));
+    const [ad, href] = personel.at(-1) ?? ["", ""];
+    if (href) { await s.locator("details.os-kullanici[open] nav[aria-label='Personel Araçları']").getByRole("link", { name: ad }).click(); await s.waitForURL((u) => u.pathname === href, { timeout: 60000 }); }
+    const vardi = beklenen.filter((b) => kenar.includes(b));
+    kayit(`P-${rol}`, `${rol}: Personel Araçları yalnızca hesap menüsünde; gezinmede ve Daha fazla'da yok; son bağlantı sayfaya gider`, beklenen.join(", "), `hesap: ${personel.map((p) => p[0]).join(", ")}; kenarda ${vardi.join(", ") || "yok"}; ${href} açıldı; hata ${hatalar.length}`,
+      JSON.stringify(personel.map((p) => p[0])) === JSON.stringify(beklenen) && !vardi.length && hatalar.length === 0);
+    await c.close();
+  });
+}
+
+await tarayici.close();
+fs.writeFileSync(`${CIKTI}/erisim-kabul.json`, JSON.stringify({ uygulama: UYGULAMA, zaman: new Date().toISOString(), sonuclar }, null, 2));
+const d = sonuclar.filter((x) => x.sonuc === "FAIL").length;
+console.log(`\n${sonuclar.length - d} PASS · ${d} FAIL`);
+process.exit(d ? 1 : 0);

@@ -1,0 +1,478 @@
+[
+  {
+    "kimlik": "G1",
+    "ad": "Oturumsuz PDF isteği reddedilir",
+    "beklenen": "401, gövde PDF değil",
+    "gozlenen": "401 Unaut",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G2",
+    "ad": "Başka kullanıcının PDF'i reddedilir (B → A'nın PDF'i)",
+    "beklenen": "404 (var/yok ayırt edilmez), bayt yok",
+    "gozlenen": "404 9 bayt",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G2b",
+    "ad": "Geçersiz kimlik",
+    "beklenen": "404",
+    "gozlenen": "404",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G2c",
+    "ad": "B depodan A'nın dosyasını doğrudan indiremez",
+    "beklenen": "4xx",
+    "gozlenen": "400",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G2d",
+    "ad": "Kova herkese açık değil (public adres)",
+    "beklenen": "4xx",
+    "gozlenen": "400",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G3",
+    "ad": "Sahibi PDF'i alır; önbelleğe girmez",
+    "beklenen": "200 %PDF- · Cache-Control private, no-store",
+    "gozlenen": "200 %PDF- · private, no-store · application/pdf",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M1",
+    "ad": "Masaüstü: editör ve gerçek PDF sayfası yan yana",
+    "beklenen": "editör solda ≥420px, panel sağda ≥360px, kanvas çizildi",
+    "gozlenen": "editör x=273 w=588 · panel x=888 w=520 · kanvas 306×396",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M1b",
+    "ad": "Sayfa sayısı gösterilir",
+    "beklenen": "/ 3",
+    "gozlenen": "/ 3",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M1c",
+    "ad": "Masaüstünde yatay taşma yok",
+    "beklenen": "0",
+    "gozlenen": "0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M2",
+    "ad": "Sayfa gezinme (sonraki, numara yaz, önceki)",
+    "beklenen": "2 → 3 → 2, metin katmanı sayfayla değişir",
+    "gozlenen": "2 → 3 → 2",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M3",
+    "ad": "Yakınlaştırma; metin katmanı kanvasla hizalı kalır",
+    "beklenen": "kanvas büyür, yüzde artar, katman/kanvas farkı ≤2px",
+    "gozlenen": "81%→106% · 495→648px · fark 0.0px",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M3b",
+    "ad": "Genişliğe sığdır",
+    "beklenen": "kanvas eni ≤ alan eni",
+    "gozlenen": "495 ≤ 518",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M4",
+    "ad": "PDF içinde arama",
+    "beklenen": "3. sayfaya gider ve eşleşmeyi vurgular",
+    "gozlenen": "sayfa 3 · 1 sayfada",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M4b",
+    "ad": "Bulunamayan arama",
+    "beklenen": "'bulunamadı' bildirilir, sayfa değişmez",
+    "gozlenen": "Bulunamadı",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M5",
+    "ad": "Panel genişliği sınırlar içinde ayarlanır (klavye + sürükleme)",
+    "beklenen": "←×4 büyütür; Home ≤960 ve editör ≥420; End =360; sürükleme büyütür; tercih saklanır",
+    "gozlenen": "520→616 · Home 690 (editör 420) · End 360 · sürükle 528 · saklanan 528",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "M6",
+    "ad": "AI paneliyle çakışma yok (biri açılınca öteki kapanır)",
+    "beklenen": "asistan açılınca PDF gizli; PDF açılınca asistan gizli; seçili kaynak korunur",
+    "gozlenen": "asistan açıkken PDF görünür=false, asistan=true · PDF açıkken asistan=false · seçili aynı",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S1",
+    "ad": "Görsel seçim sunucuda kaynak metne karşı doğrulanır (iki satır)",
+    "beklenen": "'1. sayfasında doğrulandı'; kanonik metin iki cümleyi içerir",
+    "gozlenen": "tarayıcı seçimi \"Remote learning increased reported isolation among first-yea\"… · panel: Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without ",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S2",
+    "ad": "DOI ile kesin eşleşme (büyük harf/https farkı normalleşir)",
+    "beklenen": "eşleşen kaynağın başlığı, aday listesi yok",
+    "gozlenen": "Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without weekly live sessions.” Kaynak DOI ile Li",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S3a",
+    "ad": "Kesin eşleşmede ekleme düğmesi etkin",
+    "beklenen": "etkin",
+    "gozlenen": "true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S3",
+    "ad": "Doğrulanmış alıntı + atıf kullanıcının düğmesiyle imlece eklenir",
+    "beklenen": "“…isolation among first-year students…” ve (Kaya, 2021, s. 203) benzeri atıf; PDF sayfası (1) atıfta yok",
+    "gozlenen": "“Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without weekly live sessions.” (Kaya, 2021, s. 203)Giris paragrafi. Kaynakça Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synt",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S4",
+    "ad": "Otomatik kayıt bütünlüğü (yeniden yükleme + veritabanı)",
+    "beklenen": "veritabanındaki düz metin ve yeniden açılan editör alıntıyı ve atfı içerir",
+    "gozlenen": "db: “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without  · editör: “Remote learning increased reported isolation among first-year students. The effect was strongest in programmes without ",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5",
+    "ad": "Uydurma alıntı (PDF'te yok) sunucuda reddedilir",
+    "beklenen": "{hata}, metin yok",
+    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir; tek sütundan daha kısa bir pasaj seçin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5b",
+    "ad": "Doğru cümle yanlış sayfa numarasıyla reddedilir",
+    "beklenen": "{hata}",
+    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir; tek sütundan daha kısa bir pasaj seçin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5c",
+    "ad": "Çok kısa seçim reddedilir",
+    "beklenen": "{hata}",
+    "gozlenen": "{\"hata\":\"Seçim çok kısa; en az birkaç kelimelik bir pasaj seçin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5d",
+    "ad": "Var olmayan sayfa reddedilir",
+    "beklenen": "{hata}",
+    "gozlenen": "{\"hata\":\"Seçilen sayfa PDF'te bulunamadı.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5e",
+    "ad": "Boşluk farkı olan gerçek alıntı kabul edilir, sunucunun metni döner",
+    "beklenen": "metin = Remote learning increased reported isolation among first-year students.",
+    "gozlenen": "{\"sayfa\":1,\"metin\":\"Remote learning increased reported isolation among first-year students.\",\"sonrakiSayfaya\":false}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5g",
+    "ad": "Sayfa sonundan sonraki sayfaya taşan seçim kabul edilir ve işaretlenir",
+    "beklenen": "sayfa 1, sonrakiSayfaya true",
+    "gozlenen": "{\"sayfa\":1,\"metin\":\"We surveyed 412 students across three faculties in autumn 2020. Method Participants completed\",\"sonrakiSayfaya\":true}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S5f",
+    "ad": "Uydurma seçimle asistan çağrısı modele gitmeden reddedilir",
+    "beklenen": "secimReddi; modele istek yok; yeni asistan kaydı yok",
+    "gozlenen": "{\"hata\":\"Seçtiğiniz metin PDF'in metin katmanında birebir bulunamadı. İki sütunlu sayfada sütunlar arası seçim ya da taranmış sayfa olabilir · modele istek 0→0 · kayıt 0→0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S6",
+    "ad": "Başka kullanıcı A'nın PDF'inden seçim doğrulatamaz / listeyi göremez",
+    "beklenen": "iki çağrıda {hata}; liste boş",
+    "gozlenen": "{\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"} · {\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"} · liste {\"satirlar\":[]}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S7",
+    "ad": "Belirsiz eşleşme kullanıcıya bildirilir; açık seçim + onay olmadan ekleme yok",
+    "beklenen": "≥2 aday, düğme başta kapalı, yalnızca seçimle kapalı, onayla açık",
+    "gozlenen": "aday 2 · başta kapalı true · yalnız seçim false · onayla true · Alıntı PDF'in 1. sayfasında doğrulandı. “Students who joined peer study groups reported lower isolation scores.” Kaynak ",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S8",
+    "ad": "Kütüphanede karşılığı olmayan PDF'e atıf eklenmez",
+    "beklenen": "eşleşme yok mesajı; ekleme düğmesi yok ya da kapalı",
+    "gozlenen": "Alıntı PDF'in 1. sayfasında doğrulandı. “Remote learning increased reported isolation among first-year students.” Bu PDF'in kaynağı Literatür kütüphanenizde bul · düğme yok",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S9",
+    "ad": "Seçili pasaj Arvo AI ile analiz edilir (aynı kapı, istem, doğrulama, kayıt); editöre kendiliğinden girmez",
+    "beklenen": "cevap + 'PDF s. 1' alıntısı; istemde seçili pasaj ve yalnızca s.1–2; asistan kaydı +1; editör değişmez",
+    "gozlenen": "Bu pasajın ana iddiasını ve dayandığı kanıtı açıkla. Okunan sayfalarda yazarların belirttiği bir sınırlılık varsa alıntıyla göster; yoksa yazılı olmad · istem sayfaları 1,2 · pasaj istemde true · modele istek 0→1 · kayıt 0→1 · editör değişmedi true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S9a",
+    "ad": "Çalışma ai_assistant_runs'a 'kaynak' yeteneğiyle yazılır",
+    "beklenen": "kaynak",
+    "gozlenen": "kaynak · completed",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S9b",
+    "ad": "Cevaptaki alıntının 'PDF s. N' bağlantısı PDF'te o sayfayı açar",
+    "beklenen": "3 → 1",
+    "gozlenen": "3 → 1 (girdi sayısı 1)",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "S9c",
+    "ad": "Modelin uydurma alıntısı düşer; cevap gösterilmez",
+    "beklenen": "hata mesajı, 'eliminated isolation' görünmez",
+    "gozlenen": "UYDUR: bu pasaj ne diyor? Asistanın gösterdiği alıntı kaynakta birebir bulunamadığı için cevap gösterilmedi. Soruyu farklı sorup tekrar deneyin.",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "D1",
+    "ad": "PDF/Yazdır çıktısı alıntıyı ve atfı içerir; iz/öneri sızmaz",
+    "beklenen": "“…first-year students…” + Kaya",
+    "gozlenen": "Editöre dön Yazdır / PDF olarak kaydet Yazdırma penceresinde hedef olarak “PDF olarak kaydet”i seçin. “Remote learning increased reported isolation among first-year students. The effect was strongest ",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "D2",
+    "ad": "Word çıktısı alıntıyı ve atfı içerir",
+    "beklenen": "document.xml: first-year students + Kaya",
+    "gozlenen": "9.7 KB · ning increased reported isolation among first-year students. The effect was strongest in programmes without we",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "P1",
+    "ad": "Büyük PDF (300 sayfa): yalnızca görünen sayfa çizilir; açılış ve gidiş makul",
+    "beklenen": "/ 300, tek kanvas, açılış < 15 sn, 250. sayfaya gidiş < 5 sn",
+    "gozlenen": "1259 KB · / 300 · açılış 423 ms · gidiş 46 ms · kanvas 1 · JS yığını 24.8→24.8 MB",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "P1b",
+    "ad": "Büyük PDF'te arama (300 sayfa metni)",
+    "beklenen": "299. sayfaya gider",
+    "gozlenen": "sayfa 299 · 500 ms",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "G4",
+    "ad": "20 MB üstü PDF depoya yüklenemez",
+    "beklenen": "4xx",
+    "gozlenen": "400",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1",
+    "ad": "PDF işlem sınırı: saatte 12 yeni PDF, sonraki reddedilir",
+    "beklenen": "12 kabul, 13. 'sınıra ulaştınız'",
+    "gozlenen": "12/12 kabul · fazla: {\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimler etkilenmez; yeni b · sayaç 13",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1b",
+    "ad": "Sınır dolduktan sonra önbellekteki PDF'te seçim çalışır, sayaç artmaz",
+    "beklenen": "metin döner, sayaç sabit",
+    "gozlenen": "{\"sayfa\":1,\"metin\":\"Remote learning increased reported isolation among first-yea · sayaç 13→13",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R1c",
+    "ad": "Sınır dolunca kaynak sohbeti modele gitmez; asistan hakkı ve kaydı oluşmaz",
+    "beklenen": "sınır hatası; model isteği yok; ai-asistan sayacı 0; kayıt 0",
+    "gozlenen": "{\"hata\":\"Bir saatte en çok 12 PDF işlenebiliyor; bu sınıra ulaştınız. Aynı PDF'te yaptığınız seçimle · model 2→2 · ai-asistan 0 · kayıt 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R2",
+    "ad": "Sayaç çalışmazsa pahalı işlem yapılmaz (arızada kapalı), anlaşılır hata",
+    "beklenen": "'sayaca ulaşılamıyor… işlenmedi'",
+    "gozlenen": "{\"hata\":\"PDF işleme sayacına şu anda ulaşılamıyor; güvenlik için PDF işlenmedi. Biraz sonra tekrar deneyin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3",
+    "ad": "19 MB / 300 sayfa: 10 eşzamanlı seçim tek çözümlemeye iner; önbellekten sıcak yanıt hızlı",
+    "beklenen": "10/10 doğrulanır; sayaç +1; sıcak < 1000 ms",
+    "gozlenen": "19.0 MB · eşzamanlı 10/10 · süre en az 1421 / en çok 1794 ms · sayaç 0→1 · sıcak 210 ms (doğrulandı)",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3b",
+    "ad": "Önbellek kullanıcılar arasında sızmaz (A, C'nin önbellekteki PDF'ini okuyamaz)",
+    "beklenen": "iki çağrıda {hata}, metin yok",
+    "gozlenen": "{\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"} · {\"hata\":\"Bu kaynağın PDF'i yok; önce PDF'i bulun ya da yükleyin.\"}",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "R3c",
+    "ad": "19 MB PDF tarayıcıda açılır; tek sayfa çizilir",
+    "beklenen": "açılış < 20 sn, 280. sayfa < 5 sn, tek kanvas",
+    "gozlenen": "açılış 1001 ms · gidiş 54 ms · kanvas 1",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U1",
+    "ad": "PDF paneli yeniden açılınca son sayfa ve yakınlaştırma korunur",
+    "beklenen": "sayfa 3, 132%",
+    "gozlenen": "sayfa 3, 132%",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U1b",
+    "ad": "PDF değişince önceki PDF'in konumu yeni belgeye taşınmaz; geri dönünce korunur",
+    "beklenen": "öteki: 1 ve ≠ 132%; geri: 3, 132%",
+    "gozlenen": "öteki: 1, 82% · geri: 3, 132%",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1440",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1440 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "21 düğme, erişilemeyen [] · editör 738 px (sağ 1011 < panel 1024) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1280",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1280 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "21 düğme, erişilemeyen [] · editör 578 px (sağ 851 < panel 864) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U2-1200",
+    "ad": "Asistan açıkken araç çubuğu ve metin örtülmez (1200 px)",
+    "beklenen": "tüm düğmeler tıklanabilir, editör ≥ 420 px ve panelin solunda, taşma 0",
+    "gozlenen": "21 düğme, erişilemeyen [] · editör 498 px (sağ 771 < panel 784) · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3-1024",
+    "ad": "1024 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "tıklama sonrası kaydırma 0 · 21 düğme, erişilemeyen [] · panel üst 353 eni 1024 · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3-telefon",
+    "ad": "390 px: asistan alttan açılır, araç çubuğu erişilebilir, taşma yok",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "tıklama sonrası kaydırma 0 · 21 düğme, erişilemeyen [] · panel üst 207 eni 390 · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3K-1024",
+    "ad": "1024 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "kurulum {\"kaydirma\":314,\"yaprakUst\":230} · 21 düğme, erişilemeyen [] · panel üst 353 eni 1024 · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U3K-telefon",
+    "ad": "390 px: sayfa 314 px aşağıdayken açık yaprak, yukarı dönüşte araç çubuğu erişilebilir",
+    "beklenen": "erişilemeyen 0, panel tam genişlik, taşma 0",
+    "gozlenen": "kurulum {\"kaydirma\":314,\"yaprakUst\":199} · 21 düğme, erişilemeyen [] · panel üst 207 eni 390 · taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "T1",
+    "ad": "Telefon: tek odak tam ekran PDF, yatay taşma yok, erişilemeyen denetim yok",
+    "beklenen": "panel 390 genişlikte, sayfa/panel taşması 0, ekran dışında denetim yok",
+    "gozlenen": "panel 0,0,390,664 · sayfa taşma 0 · panel taşma 0 · ekran dışı []",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "T1b",
+    "ad": "Telefon: sayfa değişir, panel kapanır, editöre dönülür",
+    "beklenen": "panel kapalı, editör görünür",
+    "gozlenen": "kapandı true · editör true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "K0",
+    "ad": "Sayfa hatası (pageerror) yok",
+    "beklenen": "0",
+    "gozlenen": "0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U4-1440",
+    "ad": "1440 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
+    "beklenen": "her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px",
+    "gozlenen": "yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/21 erişilemez, taşma 0, editör 738 · küçültme: 0/21 erişilemez, taşma 0, editör 618 · geri büyütme: 0/21 erişilemez, taşma 0, editör 738 · kapat/aç: 0/21 erişilemez, taşma 0, editör 738",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U4-1280",
+    "ad": "1280 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
+    "beklenen": "her adımda erişilemeyen 0, taşma 0, editör ≥ 420 px",
+    "gozlenen": "yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 1) · kaydırılmış açılış → yukarı: 0/21 erişilemez, taşma 0, editör 578 · küçültme: 0/21 erişilemez, taşma 0, editör 978 · geri büyütme: 0/21 erişilemez, taşma 0, editör 578 · kapat/aç: 0/21 erişilemez, taşma 0, editör 578",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U4-1024",
+    "ad": "1024 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
+    "beklenen": "her adımda erişilemeyen 0, taşma 0",
+    "gozlenen": "yaprak açılırken kaydırma 420 px (tıklamanın kendi kaydırması 0 px, deneme 2) · kaydırılmış açılış → yukarı: 0/21 erişilemez, taşma 0 · küçültme: 0/21 erişilemez, taşma 0 · geri büyütme: 0/21 erişilemez, taşma 0 · kapat/aç: 0/21 erişilemez, taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U4-telefon",
+    "ad": "390 px: kaydırılmış açılış, yukarı dönüş, boyut değişimi ve kapat/aç sonrası araç çubuğu erişilebilir",
+    "beklenen": "her adımda erişilemeyen 0, taşma 0",
+    "gozlenen": "yaprak açılırken kaydırma 485 px (tıklamanın kendi kaydırması 65 px, deneme 1) · kaydırılmış açılış → yukarı: 0/21 erişilemez, taşma 0 · küçültme: 0/21 erişilemez, taşma 0 · geri büyütme: 0/21 erişilemez, taşma 0 · kapat/aç: 0/21 erişilemez, taşma 0",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U5-1024-tekerlek",
+    "ad": "tekerlek: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
+    "beklenen": "örtük kare 0, isabet evet",
+    "gozlenen": "7 kare örneklendi, örtük 0 · fare \"Geri al (Ctrl+Z)\" → isabet true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U5-1024-klavye",
+    "ad": "klavye: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
+    "beklenen": "örtük kare 0, isabet evet",
+    "gozlenen": "15 kare örneklendi, örtük 0 · fare \"Geri al (Ctrl+Z)\" → isabet true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U5-telefon-tekerlek",
+    "ad": "tekerlek: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
+    "beklenen": "örtük kare 0, isabet evet",
+    "gozlenen": "7 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U5-telefon-klavye",
+    "ad": "klavye: yukarı dönüşte hiçbir çizilmiş karede araç çubuğu yaprağın altında kalmaz, fare düğmeye isabet eder",
+    "beklenen": "örtük kare 0, isabet evet",
+    "gozlenen": "15 kare örneklendi, örtük 0 · fare \"Numaralı liste (Ctrl+Shi\" → isabet true",
+    "sonuc": "PASS"
+  },
+  {
+    "kimlik": "U5-dokunma",
+    "ad": "Telefonda parmakla kaydırırken görünür örtüşme",
+    "beklenen": "örtük kare 0",
+    "gozlenen": "dokunmatik kaydırma başsız tarayıcıda üretilemedi; kompozitör kareleri görülmüyor",
+    "sonuc": "UNVERIFIED"
+  }
+]
