@@ -12,6 +12,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
 import { calistir, saltOkunurFetch } from "../../scripts/depo-envanteri.mjs";
 
 const require = createRequire(import.meta.url);
@@ -147,6 +148,8 @@ await senaryo("E1", "Uçtan uca envanter: sınıflar ve sebepler beklendiği gib
   if (fark.length) return fark.join("; ");
   if (rapor.aday_kayip !== 2) return `aday kayıp ${rapor.aday_kayip} ≠ 2 (kaynak PDF + metindeki görsel)`;
   if (rapor.toplam_dosya !== 14 + 2500) return `toplam ${rapor.toplam_dosya}`;
+  // P52b-2D: değişiklik olmayan taramada rapor kesin, tekrar ve kayan klasör yok.
+  if (!rapor.kesin || rapor.tekrar_ayiklanan !== 0 || rapor.degisen_klasor !== 0) return `kesinlik: ${JSON.stringify({ kesin: rapor.kesin, nedenler: rapor.kesin_degil_cunku, tekrar: rapor.tekrar_ayiklanan, degisen: rapor.degisen_klasor })}`;
   const metin = JSON.stringify({ rapor, ayrinti });
   for (const id of [U1, U2, U_SIL, P1, P_BUYUK, P_SIL]) if (metin.includes(id)) return "rapor kimlik/yol içeriyor";
 });
@@ -226,6 +229,95 @@ await senaryo("E8", "Uzak adres reddedilir; komut çıktısında yol/kimlik yok"
   if (cikti.status !== 0) return `komut çıkış kodu ${cikti.status}: ${cikti.stderr.slice(0, 200)}`;
   for (const id of [U1, U2, U_SIL, P1, P_BUYUK, P_SIL]) if ((cikti.stdout + cikti.stderr).includes(id)) return "komut çıktısı kimlik içeriyor";
   JSON.parse(cikti.stdout);
+});
+
+/* ---------- P52b-2D: tarama sırasında eşzamanlı değişiklik (gerçek Storage API) ----------
+   Eşzamanlı "yazar", 2500 nesnelik klasörün listeleme isteklerinden (ofset > 0)
+   hemen ÖNCE storage.objects'e sentetik satır ekler ya da siler. Yazar düzeneğin
+   kendisidir, tarayıcı değil; senaryo sonunda her şeyi geri koyar, böylece
+   koşu öncesi/sonrası özet yine aynı çıkmalıdır. Silinen ya da eklenen yalnızca
+   bu düzeneğin kendi oluşturduğu sentetik satırlardır. */
+const BUYUK = `${P_BUYUK}/editor-images`;
+const buyukSatiri = (ad, gun = 3) =>
+  `insert into storage.objects (bucket_id, name, owner, metadata, created_at) values ('project-files', '${BUYUK}/${ad}', '${U1}', '{"size": 7, "mimetype": "image/png"}'::jsonb, now() - interval '${gun} days')`;
+const yolOzeti = (y) => createHash("sha256").update(y).digest("hex").slice(0, 16);
+const eszamanli = (yazar) => async (url, o) => {
+  if (String(url).includes("/object/list/") && o?.body) {
+    const b = JSON.parse(o.body);
+    if (b.prefix === BUYUK && (b.offset ?? 0) > 0 && !b.search) yazar();
+  }
+  return fetch(url, o);
+};
+const tumAdlar = Array.from({ length: 2500 }, (_, i) => `g${String(i + 1).padStart(5, "0")}.png`);
+/** Yol düzeyinde: aynı yol iki kez sayıldı mı, verilen (tarama boyunca var olan) adlardan görülmeyen var mı? */
+function yolDuzeyi(ayrinti, hepVar) {
+  const oz = ayrinti.map((x) => x.ozet);
+  const gorulen = new Set(oz);
+  return { iki_kez: oz.length - gorulen.size, gorulmeyen: hepVar.filter((a) => !gorulen.has(yolOzeti(`${BUYUK}/${a}`))).length };
+}
+
+await senaryo("E9", "Tarama sırasında TEK ekleme (2. sayfadan önce, sınırın önüne): klasör yeniden listelenir, her yol bir kez, rapor kesin", async (k) => {
+  let yapildi = false;
+  const yazar = () => { if (!yapildi) { yapildi = true; psql(buyukSatiri("g00000a.png")); } };
+  try {
+    const { rapor, ayrinti } = await calistir({ url: GECIT, anahtar: SERVIS, ayar: temelAyar, icFetch: eszamanli(yazar) });
+    const y = yolDuzeyi(ayrinti, tumAdlar);
+    Object.assign(k, { toplam: rapor.toplam_dosya, ...y, degisen: rapor.degisen_klasor, tekrar: rapor.tekrar_ayiklanan, kesin: rapor.kesin });
+    if (!yapildi) return "eşzamanlı ekleme tetiklenmedi";
+    if (y.iki_kez) return `${y.iki_kez} yol iki kez sayıldı`;
+    if (y.gorulmeyen) return `${y.gorulmeyen} var olan yol görülmedi`;
+    if (rapor.toplam_dosya !== 14 + 2501) return `toplam ${rapor.toplam_dosya} ≠ 2515`;
+    if (rapor.degisen_klasor !== 0 || !rapor.kesin) return "yeniden listeleme kararlı olmalıydı";
+    if (rapor.tekrar_ayiklanan < 1) return "kayan sayfadaki tekrar ayıklanmadı (ekleme etkisizdi)";
+  } finally {
+    psql(`delete from storage.objects where bucket_id='project-files' and name = '${BUYUK}/g00000a.png'`);
+  }
+});
+
+await senaryo("E10", "Tarama sırasında SÜREKLİ silme (her ara sayfadan önce baştan bir nesne): görülen her yol bir kez, kalanların hepsi görüldü, rapor KESİN DEĞİL", async (k) => {
+  const kurbanlar = tumAdlar.slice(0, 40);
+  const silinen = [];
+  const yazar = () => {
+    const ad = kurbanlar[silinen.length];
+    if (!ad) return;
+    psql(`delete from storage.objects where bucket_id='project-files' and name = '${BUYUK}/${ad}'`);
+    silinen.push(ad);
+  };
+  try {
+    const { rapor, ayrinti } = await calistir({ url: GECIT, anahtar: SERVIS, ayar: temelAyar, icFetch: eszamanli(yazar) });
+    const kalan = tumAdlar.filter((a) => !silinen.includes(a));
+    const y = yolDuzeyi(ayrinti, kalan);
+    Object.assign(k, { silinen: silinen.length, toplam: rapor.toplam_dosya, ...y, degisen: rapor.degisen_klasor, kesin: rapor.kesin, nedenler: rapor.kesin_degil_cunku });
+    if (!silinen.length) return "eşzamanlı silme tetiklenmedi";
+    if (y.iki_kez) return `${y.iki_kez} yol iki kez sayıldı`;
+    if (y.gorulmeyen) return `${y.gorulmeyen} hep var olan yol görülmedi`;
+    if (rapor.kesin || rapor.degisen_klasor < 1) return "kayan klasör raporu kesin göstermemeliydi";
+    if (!rapor.kesin_degil_cunku.includes("tarama_sirasinda_degisen_klasor")) return "neden yazılmadı";
+  } finally {
+    for (const ad of silinen) psql(buyukSatiri(ad));
+  }
+});
+
+await senaryo("E11", "Tarama sırasında SÜREKLİ ekleme (her ara sayfadan önce önde yeni nesne): aynı yol iki kez sayılmaz, başlangıçtakilerin hepsi görüldü, rapor KESİN DEĞİL", async (k) => {
+  const eklenen = [];
+  const yazar = () => {
+    if (eklenen.length >= 40) return;
+    const ad = `g00000-${String(eklenen.length).padStart(2, "0")}.png`;
+    psql(buyukSatiri(ad));
+    eklenen.push(ad);
+  };
+  try {
+    const { rapor, ayrinti } = await calistir({ url: GECIT, anahtar: SERVIS, ayar: temelAyar, icFetch: eszamanli(yazar) });
+    const y = yolDuzeyi(ayrinti, tumAdlar);
+    Object.assign(k, { eklenen: eklenen.length, toplam: rapor.toplam_dosya, ...y, degisen: rapor.degisen_klasor, tekrar: rapor.tekrar_ayiklanan, kesin: rapor.kesin });
+    if (!eklenen.length) return "eşzamanlı ekleme tetiklenmedi";
+    if (y.iki_kez) return `${y.iki_kez} yol iki kez sayıldı`;
+    if (y.gorulmeyen) return `${y.gorulmeyen} başlangıçtaki yol görülmedi`;
+    if (rapor.toplam_dosya > 14 + 2500 + eklenen.length) return "sayım var olan nesne sayısını aştı";
+    if (rapor.kesin || rapor.degisen_klasor < 1) return "kayan klasör raporu kesin göstermemeliydi";
+  } finally {
+    for (const ad of eklenen) psql(`delete from storage.objects where bucket_id='project-files' and name = '${BUYUK}/${ad}'`);
+  }
 });
 
 const fail = sonuclar.filter((s) => s.sonuc !== "PASS").length;

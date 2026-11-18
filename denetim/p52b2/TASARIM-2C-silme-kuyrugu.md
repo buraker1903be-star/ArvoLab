@@ -1,5 +1,7 @@
 # P52b-2C — Kalıcı silme kuyruğu: tasarım (UYGULANMADI)
 
+> **16.11.2026 — bu belge düzeltildi:** [`TASARIM-2BC-sertlestirme.md`](TASARIM-2BC-sertlestirme.md). İlk tasarımın iki açığı (kuyruk satırı yokken FOR UPDATE ile bağlama yarışı; kira dolunca iptal edilebilen yol ve geç Storage isteği) gerçek PostgreSQL'de gösterildi ve kapatıldı. Uyuşmazlıkta yeni belge geçerlidir.
+
 Bu belge bir öneri. Kod yok, migration dosyası yok. Kalıcı veri silme mekanizması ayrıca onay gerektiriyor.
 
 ## Temel kabul

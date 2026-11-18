@@ -10,6 +10,7 @@ import { saveNamedVersion } from "@/app/actions/manuscript-versions";
 import type { DocxImportStats } from "@/lib/docx-import";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { Cevirici } from "@/lib/dil";
+import { benzersizDosyaAdi, guvenliAd } from "@/lib/depo-dosya-adi";
 
 export type ImportMode = "append" | "replace";
 
@@ -88,7 +89,7 @@ export default function ImportDialog({ open, onClose, projectId, documentEmpty, 
         showToast("error", t({ tr: "Oturumunuz sona erdi. Yeniden giriş yapın.", en: "Your session has expired. Please sign in again." }));
         return;
       }
-      const path = `${user.id}/imports/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const path = `${user.id}/imports/${benzersizDosyaAdi(guvenliAd(file.name))}`;
       const { error: uploadError } = await supabase.storage.from("project-files").upload(path, file, {
         contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         upsert: false,
