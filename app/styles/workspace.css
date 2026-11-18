@@ -1267,6 +1267,24 @@
 .yazim-paneli-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
 .yazim-paneli-bas > span { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-ink); }
 .yazim-paneli-bas b { color: var(--ink); }
+/* Sohbet | Kayıtlı (19.11.2026): panelin iki görünümü; seçili sekme altı çizgili. */
+.yazim-sekmeler { display: flex; gap: 4px; padding: 0 14px; border-bottom: 1px solid var(--line-soft); }
+.yazim-sekmeler button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted);
+  font: inherit; font-size: var(--os5-fs-meta); font-weight: 600; cursor: pointer;
+}
+.yazim-sekmeler button[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--ink); }
+.yazim-sekmeler button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.yazim-kayitli { display: grid; gap: 10px; }
+.yazim-kayitli-not, .yazim-kayitli-bos { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.5; }
+.yazim-kayitli-liste { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.yazim-kayitli-kart { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
+.yazim-kayitli-kart header { display: grid; gap: 2px; }
+.yazim-kayitli-kart time { color: var(--muted); font-size: var(--fs-micro); }
+.yazim-kayitli-kart header b { color: var(--ink); font-size: var(--os5-fs-meta); }
+.yazim-kayitli-yanit { margin: 0; color: var(--ink-soft); font-size: var(--os5-fs-meta); }
+.yazim-kayitli-hata { margin: 0; padding: 8px 10px; border-left: 3px solid var(--danger); border-radius: var(--r-xs); background: var(--danger-soft); color: var(--ink); font-size: var(--os5-fs-meta); }
 .yazim-ikon {
   display: inline-grid;
   place-items: center;

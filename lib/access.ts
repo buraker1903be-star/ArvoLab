@@ -166,6 +166,10 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    pdfKaynaginiBagla (PDF'i kendi kaynak kaydına bağlama/bağı kaldırma,
  *    K2-A) ve kaynakKunyeDurumlari (atıf kartının künye satırı) da kapısız:
  *    mevcut kaydın güncellenmesi ve okuma, dış maliyet yok.
+ *    Kayıtlı AI cevapları (ai-yazim-kayitlari.ts: kayitliYazimCevaplari,
+ *    kayitliCevabiDenetle) da kapısız: kullanıcının kendi asistan kayıtlarını
+ *    okur ve eklemeden önce güncel kütüphaneye karşı denetler; model
+ *    çağrılmaz, hak tüketilmez, satır yazılmaz.
  *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller

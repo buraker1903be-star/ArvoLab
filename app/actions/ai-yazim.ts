@@ -168,7 +168,12 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
       };
     }
 
-    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: { gorev } });
+    /*
+      İstek de bulgulara yazılır (19.11.2026): Kayıtlı sekme cevabın neye
+      verildiğini gösterebilsin. Eskiden yalnızca istem metninin (context)
+      içindeydi ve oradan güvenle ayıklanamıyordu. Yeni sütun yok; jsonb.
+    */
+    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: { gorev, istek: istek.slice(0, 300) } });
     return { yanit: sonuc.yanit, metin: sonuc.metin, kayitId, krediUyarisi: kapi.uyari ?? undefined };
   } catch (hata) {
     const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });
