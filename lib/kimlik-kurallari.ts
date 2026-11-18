@@ -22,15 +22,19 @@ import { tekKarakterTekrariMi, yayginSifreMi } from "./yaygin-sifreler";
 */
 
 /*
-  ŞİFRE POLİTİKASI (G1-D D1, 11.11.2026; ürün kararı). En az EN_KISA_SIFRE (bugün 12), en fazla 64
+  ŞİFRE POLİTİKASI (G1-D D1, 11.11.2026; ürün kararı). En az EN_KISA_SIFRE (bugün 8), en fazla 64
   karakter; büyük harf, rakam ya da sembol ZORUNLULUĞU YOK; yaygın şifreler
   reddedilir. İlk şifre, kurtarma ve Ayarlar'daki değişiklik aynı kuralı
   kullanır (hepsi applyNewPassword'den geçiyor).
 
-  Supabase'teki "Minimum password length" bu değerden KÜÇÜK ya da EŞİT
-  olmalı (Test'te 6): uygulama daha sıkıysa Supabase hiçbir zaman "kısa"
-  demez. Tersi olursa kullanıcı uygulamanın kabul ettiği şifre için
-  Supabase'ten ret alır.
+  Supabase'teki "Minimum password length" bu değerden BÜYÜK olmamalı:
+  tersi olursa kullanıcı uygulamanın kabul ettiği şifre için Supabase'ten
+  ret alır. 18.11.2026'dan beri ikisi EŞİT (Production'da 8; yerel yığın da
+  8, scripts/yerel-yigin/kur.sh): uygulama "en az 8" der, doğrudan Auth
+  API'sine giden de 8'in altında 422 weak_password alır
+  (scripts/yerel-yigin/sifre-api-kabul.mjs, A1). Eskiden uygulama 12
+  diyordu, Supabase 8: kural yalnızca uygulamanın formunda vardı ve Auth
+  API'si 8–11 karakterlik şifreyi kabul ediyordu.
 
   Uzunluk JavaScript'in .length'i (UTF-16 birimi) ile ölçülür; tarayıcının
   minLength denetimi de aynı birimi sayar, form ve sunucu aynı sonucu verir.
@@ -49,14 +53,15 @@ import { tekKarakterTekrariMi, yayginSifreMi } from "./yaygin-sifreler";
   gösterir (password-form.tsx), sunucu yine kendisi denetler.
 */
 /*
-  EN AZ 12 (16.11.2026, RELEASE CLOSURE 03; ürün kararı). G1-C'de (089ef54)
-  12 idi, G1-D'de (518e9a3) 8'e indirildi; ürün sahibi 16.11.2026'da 12'ye
-  geri aldı. Yalnızca YENİ belirlenen şifreye uygulanır: mevcut kullanıcının
-  8–11 karakterlik şifresi girişte reddedilmez (giriş bu kuralı hiç
-  çağırmıyor, Supabase'in kendi sınırı 6), yani kimse kilitlenmez; şifresini
-  değiştirdiği gün 12'ye uyar.
+  EN AZ 8 (18.11.2026, Auth A1; ürün kararı). Geçmiş: G1-C'de (089ef54) 12,
+  G1-D'de (518e9a3) 8, RELEASE CLOSURE 03'te (16.11.2026) yine 12. 12 yalnızca
+  uygulamada yazılıydı; Production'daki Supabase sınırı 8 kaldığı için kural
+  iki yerde iki ayrı değerdi ve Auth API'sine doğrudan gelen için 8 geçerliydi.
+  Ürün sahibi Supabase'teki değerde birleştirdi: kayıt sonrası ilk şifre,
+  sıfırlama ve Ayarlar aynı 8'i kullanır, Supabase de aynısını uygular.
+  Giriş bu kuralı hiç çağırmaz; mevcut şifreler etkilenmez.
 */
-export const EN_KISA_SIFRE = 12;
+export const EN_KISA_SIFRE = 8;
 export const EN_UZUN_SIFRE = 64;
 export const SIFRE_BAYT_SINIRI = 72;
 

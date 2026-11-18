@@ -447,7 +447,7 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
   const t = await ceviri();
 
   /*
-    Şifre politikası tek yerde (lib/kimlik-kurallari.ts): 12–64 karakter, 72 bayt,
+    Şifre politikası tek yerde (lib/kimlik-kurallari.ts): 8–64 karakter, 72 bayt,
     yaygın şifre yok. Form aynı fonksiyonu tarayıcıda da gösterir; burası
     atlatılamayan denetim (tarayıcı denetimi kapatılsa da Supabase'e gitmeden ret).
   */
@@ -470,8 +470,9 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
     };
   }
 
+  let mevcut = "";
   if (baglam === "ayarlar") {
-    const mevcut = String(formData.get("currentPassword") ?? "");
+    mevcut = String(formData.get("currentPassword") ?? "");
     if (!mevcut) return { error: t({ tr: "Mevcut şifrenizi girin.", en: "Enter your current password." }) };
     const sonuc = await mevcutSifreyiDogrula(user, mevcut);
     if (sonuc === "yanlis") return { error: t({ tr: "Mevcut şifre yanlış.", en: "The current password is incorrect." }) };
@@ -513,7 +514,19 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
     }
   }
 
-  const { error } = await supabase.auth.updateUser({ password });
+  /*
+    MEVCUT ŞİFRE GoTrue'YA DA GİDER (18.11.2026, Auth A1). Yukarıdaki
+    doğrulama kullanıcıya anlaşılır mesaj ve girişle ortak hata sayacı için;
+    koruma değil: oturum belirteci tarayıcıda, PUT /auth/v1/user bu işleme
+    uğramadan çağrılabiliyor ve eskiden mevcut şifreyi bilmeden yeni şifre
+    koyuyordu (scripts/yerel-yigin/sifre-api-kabul.mjs, A2). Kuralı artık
+    Supabase'in "Require current password when updating" ayarı uygular; o
+    ayar açıkken current_password'süz istek "current_password_required" ile
+    düşer. Sıfırlama ve ilk şifre yolları alanı göndermez: GoTrue e-posta
+    bağlantısıyla açılmış oturumu ve şifresi olmayan kullanıcıyı bu kuraldan
+    kendisi muaf tutar (v2.198.0, api/user.go; kabulde B1 ve C1).
+  */
+  const { error } = await supabase.auth.updateUser(baglam === "ayarlar" ? { password, current_password: mevcut } : { password });
   if (error) {
     // Yalnızca kod ve durum: hata nesnesinin tamamı günlüğe gitmesin (oturum ayrıntısı taşımamalı).
     console.error("[sifre] güncellenemedi", error.code, error.status);

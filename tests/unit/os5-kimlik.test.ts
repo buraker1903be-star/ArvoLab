@@ -102,12 +102,13 @@ describe("formlar aynı eylemlere, aynı alan adlarıyla gidiyor", () => {
 
 describe("şifre kuralı ve bağlantı süresi tek kaynaktan", () => {
   /*
-    16.11.2026 (RELEASE CLOSURE 03): kurum sahibinin "en az 12 karakter"
-    kararı uygulandı. Kural lib/kimlik-kurallari.ts'te; form, sunucu ve
-    metinler oradan okur. Elle yazılmış "8"/"12" kalmamalı.
+    18.11.2026 (Auth A1): kurum sahibinin "en az 8 karakter" kararı
+    (16.11.2026'daki 12'nin yerine; Supabase'teki sınırla aynı). Kural
+    lib/kimlik-kurallari.ts'te; form, sunucu ve metinler oradan okur.
+    Elle yazılmış "8"/"12" kalmamalı.
   */
-  test("en kısa şifre 12 ve formun iki görünümü aynı sabiti kullanıyor", () => {
-    assert.equal(EN_KISA_SIFRE, 12);
+  test("en kısa şifre 8 ve formun iki görünümü aynı sabiti kullanıyor", () => {
+    assert.equal(EN_KISA_SIFRE, 8);
     const k = oku("app/dashboard/settings/password-form.tsx");
     assert.equal(k.match(/minLength=\{EN_KISA_SIFRE\}/g)?.length, 4);
     assert.doesNotMatch(k, /minLength=\{\d+\}/);

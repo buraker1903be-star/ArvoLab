@@ -4,8 +4,10 @@
 # Kullanım: scripts/yerel-yigin/kur.sh [hariç-tutulacak-migration-dosyası ...]
 #   MEVCUT_SIFRE_ZORUNLU=true|false — GoTrue'nun "Require current password when
 #   updating" ayarı (GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD).
-#   Varsayılan Production'daki değerdir; ikisi ayrı düşerse yerel kabul
-#   Production'da olmayan bir korumayı sınar (Auth A1, 18.11.2026).
+#   Varsayılan true: uygulama 18.11.2026'dan (Auth A1) beri Ayarlar'da
+#   current_password gönderiyor ve korumayı bu ayara bırakıyor. Production'da
+#   ayar açılana kadar yerel kabul Production'da OLMAYAN korumayı sınar;
+#   bugünkü Production'ı yeniden üretmek için MEVCUT_SIFRE_ZORUNLU=false.
 #   GoTrue sürümü (v2.198.0) ve en kısa şifre (8) de Production'la aynı
 #   (18.11.2026, /auth/v1/health ve Auth ayarları). Eskiden v2.197.0 ve 6 idi.
 #   Hariç tutma, bir düzeltmenin migration'ı OLMADAN eski davranışı yeniden
@@ -27,7 +29,7 @@ docker run -d --name p52auth --network p52ag -p 127.0.0.1:59998:9999 \
  -e GOTRUE_JWT_SECRET="$SIR" -e GOTRUE_JWT_EXP=3600 -e GOTRUE_JWT_AUD=authenticated \
  -e GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated -e GOTRUE_JWT_ADMIN_ROLES=service_role \
  -e GOTRUE_EXTERNAL_EMAIL_ENABLED=true -e GOTRUE_MAILER_AUTOCONFIRM=true -e GOTRUE_PASSWORD_MIN_LENGTH=8 \
- -e GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD="${MEVCUT_SIFRE_ZORUNLU:-false}" \
+ -e GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD="${MEVCUT_SIFRE_ZORUNLU:-true}" \
  supabase/gotrue:v2.198.0 >/dev/null
 for i in $(seq 1 60); do curl -s --noproxy '*' http://127.0.0.1:59998/health | grep -q version && break; sleep 1; done
 "${PSQL[@]}" -f "$KOK/scripts/yerel-yigin/kabuk.sql"

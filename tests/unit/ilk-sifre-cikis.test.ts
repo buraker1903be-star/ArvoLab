@@ -72,7 +72,8 @@ test("şifre güncellemesi bağlamı doğru geçirir: sıfırlama 'sifirlama', A
   assert.match(govde(AUTH, "changePassword"), /applyNewPassword\(formData, "ayarlar"\)/);
   // Başarı yolu değişmedi: çerez yazılır, sıfırlama panele gider.
   const uygula = govde(AUTH, "applyNewPassword");
-  assert.match(uygula, /updateUser\(\{ password \}\)/);
+  // Sıfırlama ve ilk şifre yalnızca şifreyi gönderir; current_password yalnızca Ayarlar'da (18.11.2026, Auth A1).
+  assert.match(uygula, /updateUser\(baglam === "ayarlar" \? \{ password, current_password: mevcut \} : \{ password \}\)/);
   assert.match(uygula, /set\(SIFRE_VAR_CEREZI, user\.id/);
   assert.match(uygula, /if \(!user\)/);
   assert.match(govde(AUTH, "resetPassword"), /redirect\("\/dashboard"\)/);

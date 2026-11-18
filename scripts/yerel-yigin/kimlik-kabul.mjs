@@ -179,21 +179,28 @@ const profilSilmeTalebi = (id) => psql(`select coalesce(silme_talebi_at::text,''
 const sifreVarMi = (id) => psql(`select coalesce(encrypted_password,'') <> '' from auth.users where id='${id}'`) === "t";
 
 try {
-  /* ---------- K1 mevcut kullanıcı (10 karakterlik eski şifre) kilitlenmez ---------- */
+  /* ---------- K1 mevcut kullanıcı (7 karakterlik eski şifre) kilitlenmez ---------- */
   await senaryo("K1", async () => {
     const adres = eposta("mevcut");
-    const eski = "eskisifre1"; // 10 karakter: yeni politikanın altında, G1-D'de geçerliydi
-    const id = await kullaniciAc(adres, eski);
+    /*
+      7 karakter: politikanın (8) altında; Supabase'in sınırı eskiden 6 idi.
+      GoTrue bugün 8'in altını yönetici API'sinden de koydurmadığı için şifre
+      özeti doğrudan yazılır (yerel yığın; GoTrue bcrypt, pgcrypto bf).
+      Eskiden burada 10 karakter vardı (politika 12 iken).
+    */
+    const eski = "eskisif";
+    const id = await kullaniciAc(adres, sifre());
+    psql(`update auth.users set encrypted_password = extensions.crypt('${eski}', extensions.gen_salt('bf', 10)) where id = '${id}'`);
     const b = await yeniBaglam();
     const s = await b.newPage();
     await girisYap(s, adres, eski);
     await s.goto("/dashboard/settings");
     const yol = new URL(s.url()).pathname;
-    kayit("K1", "Mevcut kullanıcı (12 altı eski şifre) giriş yapar, kapıya takılmaz", "/dashboard/settings açılır", yol, yol === "/dashboard/settings" && sifreVarMi(id));
+    kayit("K1", "Mevcut kullanıcı (8 altı eski şifre) giriş yapar, kapıya takılmaz", "/dashboard/settings açılır", yol, yol === "/dashboard/settings" && sifreVarMi(id));
     await b.close();
   });
 
-  /* ---------- K2–K5 Ayarlar: mevcut şifre, 12 karakter, diğer oturumlar ---------- */
+  /* ---------- K2–K5 Ayarlar: mevcut şifre, 8 karakter, diğer oturumlar ---------- */
   await senaryo("K2–K5", async () => {
     const adres = eposta("ayarlar");
     const eski = sifre();
@@ -213,14 +220,14 @@ try {
     const k2 = await bekleMetin(s, /Mevcut şifre yanlış/);
     kayit("K2", "Yanlış mevcut şifre reddedilir, şifre değişmez", "'Mevcut şifre yanlış.' + eski şifre geçerli", `mesaj=${k2}, eski geçerli=${await sifreGecerli(adres, eski)}`, k2 && (await sifreGecerli(adres, eski)) && !(await sifreGecerli(adres, yeni)));
 
-    // K3 12 karakter altı: tarayıcı engeller, sunucu da reddeder
+    // K3 8 karakter altı: tarayıcı engeller, sunucu da reddeder
     await sifreCekmecesiniAc(s);
     await s.fill('input[name="currentPassword"]', eski);
-    await s.fill('input[name="password"]', "Kq7!mZ2xab1"); // 11 karakter
+    await s.fill('input[name="password"]', "Kq7!mZ2"); // 7 karakter
     const tarayiciMesaji = await s.locator('input[name="password"]').evaluate((k) => k.validationMessage);
-    await sunucuyaGonder(s, 'form[data-sifre-formu="ayarlar"]', { currentPassword: eski, password: "Kq7!mZ2xab1", passwordConfirm: "Kq7!mZ2xab1" });
-    const k3 = await bekleMetin(s, /en az 12 karakter/);
-    kayit("K3", "12 karakter altı: tarayıcı uyarır, sunucu da reddeder", "tarayıcı mesajı dolu + sunucu 'en az 12'", `tarayıcı='${tarayiciMesaji.slice(0, 40)}', sunucu=${k3}`, Boolean(tarayiciMesaji) && k3 && (await sifreGecerli(adres, eski)));
+    await sunucuyaGonder(s, 'form[data-sifre-formu="ayarlar"]', { currentPassword: eski, password: "Kq7!mZ2", passwordConfirm: "Kq7!mZ2" });
+    const k3 = await bekleMetin(s, /en az 8 karakter/);
+    kayit("K3", "8 karakter altı: tarayıcı uyarır, sunucu da reddeder", "tarayıcı mesajı dolu + sunucu 'en az 8'", `tarayıcı='${tarayiciMesaji.slice(0, 40)}', sunucu=${k3}`, Boolean(tarayiciMesaji) && k3 && (await sifreGecerli(adres, eski)));
 
     // K4 doğru mevcut şifre → değişir, bu oturum kalır, öteki cihaz düşer
     await sifreCekmecesiniAc(s);
@@ -284,9 +291,9 @@ try {
     const s = await b.newPage();
     await baglantiyiAc(s, belirtec, "recovery");
     const sayfa = new URL(s.url()).pathname;
-    // 11 karakter sunucuya zorla
-    await sunucuyaGonder(s, "form.os5-kimlik-formu", { password: "Kq7!mZ2xab1", passwordConfirm: "Kq7!mZ2xab1" });
-    const kisaRed = await bekleMetin(s, /en az 12 karakter/);
+    // 7 karakter sunucuya zorla
+    await sunucuyaGonder(s, "form.os5-kimlik-formu", { password: "Kq7!mZ2", passwordConfirm: "Kq7!mZ2" });
+    const kisaRed = await bekleMetin(s, /en az 8 karakter/);
     await s.fill('input[name="password"]', yeni);
     await s.fill('input[name="passwordConfirm"]', yeni);
     await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 30000 }).catch(() => null), s.locator('form.os5-kimlik-formu button[type="submit"]').click()]);
@@ -294,7 +301,7 @@ try {
     const oteki = digerCihaz ? await oturumDurumu(digerCihaz) : null;
     kayit(
       "K7",
-      "Şifre kurtarma: bağlantı /reset-password'e iner, 12 altı reddedilir, yeni şifre kaydedilir, öteki oturum düşer",
+      "Şifre kurtarma: bağlantı /reset-password'e iner, 8 altı reddedilir, yeni şifre kaydedilir, öteki oturum düşer",
       "sayfa=/reset-password, kısa red, panel, yeni geçerli, eski geçersiz, öteki oturum geçersiz",
       `sayfa=${sayfa}, kısa red=${kisaRed}, panel=${panel}, yeni=${await sifreGecerli(adres, yeni)}, eski=${await sifreGecerli(adres, eski)}, öteki=${JSON.stringify(oteki)}`,
       sayfa === "/reset-password" && kisaRed && panel && (await sifreGecerli(adres, yeni)) && !(await sifreGecerli(adres, eski)) && oteki && oteki.kullanici >= 401 && oteki.yenile >= 400,
@@ -365,8 +372,8 @@ try {
     // K10 ilk şifre belirleme
     const yeni = sifre();
     await s.goto("/reset-password?ilk=1");
-    await sunucuyaGonder(s, "form.os5-kimlik-formu", { password: "kisa-sifre1", passwordConfirm: "kisa-sifre1" });
-    const kisa = await bekleMetin(s, /en az 12 karakter/);
+    await sunucuyaGonder(s, "form.os5-kimlik-formu", { password: "kisa-s1", passwordConfirm: "kisa-s1" });
+    const kisa = await bekleMetin(s, /en az 8 karakter/);
     await s.fill('input[name="password"]', yeni);
     await s.fill('input[name="passwordConfirm"]', yeni);
     await Promise.all([s.waitForURL(/\/dashboard/, { timeout: 30000 }).catch(() => null), s.locator('form.os5-kimlik-formu button[type="submit"]').click()]);
@@ -374,7 +381,7 @@ try {
     const sonra = new URL(s.url()).pathname;
     kayit(
       "K10",
-      "Davetli ilk şifreyi belirler (12 altı reddedilir), sonra panel açılır",
+      "Davetli ilk şifreyi belirler (8 altı reddedilir), sonra panel açılır",
       "kısa red + şifre kaydı + /dashboard/settings",
       `kısa red=${kisa}, şifre var=${sifreVarMi(id)}, yeni giriş=${await sifreGecerli(adres, yeni)}, sonra=${sonra}`,
       kisa && sifreVarMi(id) && (await sifreGecerli(adres, yeni)) && sonra === "/dashboard/settings",
