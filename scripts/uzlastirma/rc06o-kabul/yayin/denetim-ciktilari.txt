@@ -1,0 +1,16 @@
+adım 01 | toplam uretim 1520 beklenen 1520 -> EŞİT
+ilgili nesneler: EŞİT
+istisna uygulanan satır: ['fonksiyon_yetki|public.metin_surum_damgasi()|336d5ebc5436534e61d16e63ddfca327']
+adım 03 | toplam uretim 1525 beklenen 1525 -> EŞİT
+ilgili nesneler: EŞİT
+istisna uygulanan satır: ['fonksiyon_yetki|public.metin_surum_damgasi()|336d5ebc5436534e61d16e63ddfca327']
+adım 04 | toplam uretim 1525 beklenen 1525 -> EŞİT
+ilgili nesneler: EŞİT
+istisna uygulanan satır: ['fonksiyon_yetki|public.metin_surum_damgasi()|336d5ebc5436534e61d16e63ddfca327']
+adım 05 | toplam uretim 1528 beklenen 1528 -> EŞİT
+ilgili nesneler: EŞİT
+istisna uygulanan satır: ['fonksiyon_yetki|public.eposta_onayinda_profili_kur()|336d5ebc5436534e61d16e63ddfca327', 'fonksiyon_yetki|public.eposta_onayinda_sifreyi_temizle()|336d5ebc5436534e61d16e63ddfca327', 'fonksiyon_yetki|public.metin_surum_damgasi()|336d5ebc5436534e61d16e63ddfca327']
+adım 06 | toplam uretim 1536 beklenen 1536 -> EŞİT
+ilgili nesneler: FARKLI
+  fark: uretim fonksiyon_yetki|public.ilk_sifre_gerekli()|700633a1b0f65fa8456a18bd6053193c
+  fark: yerel fonksiyon_yetki|public.ilk_sifre_gerekli()|792f2bd218ee8cc05f407e7edd77d5ba
