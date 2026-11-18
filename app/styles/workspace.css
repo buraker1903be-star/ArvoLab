@@ -1848,3 +1848,9 @@
 .secim-islemleri button:hover { background: var(--surface-2); color: var(--ink); }
 .secim-islemleri button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 @media print { .atif-karti, .secim-islemleri { display: none !important; } }
+/* Telefonda dokunma hedefi en az 44 px: sol araçlar, PDF bağ satırı ve atıf kartı. */
+@media (max-width: 760px) {
+  .os-sol-alan :is(button, a, input, select), .atif-karti :is(button, a), .pdf-bag :is(button, select), .pdf-arac .yazim-ikon { min-height: 44px; }
+  .pdf-arac .yazim-ikon { min-width: 44px; }
+  .sol-bolum-listesi button { min-height: 44px; }
+}

@@ -1804,11 +1804,8 @@ export default function ManuscriptEditor({
   useEffect(() => {
     if (!editor) return;
     const dom = editor.view.dom as HTMLElement;
-    const tikla = (olay: MouseEvent) => {
-      if (!editor.state.selection.empty || olay.button !== 0 || olay.detail > 1) return;
-      const yer = editor.view.posAtCoords({ left: olay.clientX, top: olay.clientY });
-      if (!yer) return;
-      const $pos = editor.state.doc.resolve(yer.pos);
+    const kartiAc = (pos: number) => {
+      const $pos = editor.state.doc.resolve(pos);
       if (!$pos.parent.isTextblock) {
         setAtifKarti(null);
         return;
@@ -1858,6 +1855,26 @@ export default function ManuscriptEditor({
         setAtifKarti((d) => (d && d.isabet === isabet ? hesapla(veri) : d));
       });
     };
+    const tikla = (olay: MouseEvent) => {
+      if (!editor.state.selection.empty || olay.button !== 0 || olay.detail > 1) return;
+      const yer = editor.view.posAtCoords({ left: olay.clientX, top: olay.clientY });
+      if (yer) kartiAc(yer.pos);
+    };
+    /*
+      Klavye: imleç bir atfın içindeyken Alt+Enter kartı açar, Esc kapatır.
+      Fareyle tıklamak tek yol olsaydı klavye kullanan öğrenci karta ulaşamazdı.
+      Kart açılınca odak kartın ilk düğmesine geçer; Esc odağı belgeye geri verir.
+    */
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key === "Enter" && olay.altKey && editor.state.selection.empty) {
+        olay.preventDefault();
+        kartiAc(editor.state.selection.from);
+        window.setTimeout(() => document.querySelector<HTMLElement>(".atif-karti button, .atif-karti a")?.focus(), 0);
+      } else if (olay.key === "Escape") {
+        setAtifKarti(null);
+      }
+    };
+    dom.addEventListener("keydown", tus);
     dom.addEventListener("click", tikla);
     /* Kart ekrana sabit: belge kayınca satırdan kopmasın diye kapanır. */
     const kaydirildi = () => setAtifKarti(null);
@@ -1868,6 +1885,7 @@ export default function ManuscriptEditor({
     editor.on("transaction", kapat);
     return () => {
       dom.removeEventListener("click", tikla);
+      dom.removeEventListener("keydown", tus);
       window.removeEventListener("scroll", kaydirildi);
       editor.off("transaction", kapat);
     };
@@ -3670,7 +3688,10 @@ export default function ManuscriptEditor({
           pasajlar={dogrulanmisPasajlar}
           yukleniyor={kartYukleniyor}
           onSec={(id) => setAtifKarti((d) => (d ? { ...d, secilen: id } : d))}
-          onKapat={() => setAtifKarti(null)}
+          onKapat={() => {
+            setAtifKarti(null);
+            editor.commands.focus();
+          }}
           onPdfAc={(id) => {
             setAcilacakPdf({ id, anahtar: Date.now() });
             sagAc("pdf");

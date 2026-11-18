@@ -19,6 +19,7 @@ const GRUPLAR: { baslik: Metin; satirlar: Kisayol[] }[] = [
       [["Mod", "S"], { tr: "Şimdi kaydet (zaten otomatik kaydedilir)", en: "Save now (it already saves automatically)" }],
       [["Mod", "P"], { tr: "Yazdır / PDF (kılavuz düzeninde, sayfalı)", en: "Print / PDF (in guideline layout, paginated)" }],
       [["Mod", "F"], { tr: "Bul ve değiştir", en: "Find and replace" }],
+      [["Alt", "Enter"], { tr: "İmleç bir atfın içindeyken atıf kartını aç (Esc kapatır)", en: "Open the citation card when the cursor is in a citation (Esc closes)" }],
       [["Mod", "Z"], { tr: "Geri al", en: "Undo" }],
       [["Mod", "Y"], { tr: "Yinele (Ctrl+Shift+Z de olur)", en: "Redo (Ctrl+Shift+Z also works)" }],
     ],

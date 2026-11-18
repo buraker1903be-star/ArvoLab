@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal, LocateFixed } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { pasajParcalari } from "@/lib/pdf-pasaj";
@@ -174,6 +174,8 @@ export default function PdfGoruntuleyici({
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
     // Yeni gidiş eski pasaj vurgusunu düşürür; pasaj yoksa vurgu da yok.
     setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj } : null);
+    /* Telefonda pasaj okunur ölçekte açılır (2. tur, madde 4): sığdırılmış sayfa dar ekranda okunmuyordu. Görüntüleyici yalnızca tarayıcıda çizilir (ssr: false). */
+    if (gidilecekSayfa.pasaj && window.innerWidth <= 760 && (olcek === "sigdir" || olcek < 1.6)) setOlcek(1.6);
     setSayfaNo(n);
     setSayfaGirdi(String(n));
   }
@@ -198,7 +200,7 @@ export default function PdfGoruntuleyici({
     if (pasaj && katman.dataset.sayfa === String(pasaj.sayfa)) {
       const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
       kapsanan?.forEach((i) => parcalar[i].classList.add("pdf-pasaj"));
-      if (kapsanan) parcalar[kapsanan[0]].scrollIntoView({ block: "center", behavior: "smooth" });
+      if (kapsanan) parcalar[kapsanan[0]].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
       onPasajRef.current?.(Boolean(kapsanan));
     }
   }, []);
@@ -352,6 +354,28 @@ export default function PdfGoruntuleyici({
           <button type="button" className="yazim-ikon" onClick={() => setOlcek("sigdir")} disabled={!belge} aria-pressed={olcek === "sigdir"} aria-label={t({ tr: "Genişliğe sığdır", en: "Fit to width" })}>
             <StretchHorizontal size={16} aria-hidden="true" />
           </button>
+          {/*
+            PASAJA ODAKLAN (2. tur tasarımı, madde 4): doğrulanmış pasaj varken
+            (atıf kartının "Dayanağa git"i) pasajın sayfasına döner, okunur bir
+            ölçeğe (en az %160, telefonda dar sütunda küçük kalmasın) getirir ve
+            vurgulu satırı ortalar. Pasaj yoksa düğme yok: işaretlenecek bir şey yok.
+          */}
+          {pasaj ? (
+            <button
+              type="button"
+              className="yazim-ikon pdf-pasaja-odaklan"
+              disabled={!belge}
+              onClick={() => {
+                if (sayfaNo !== pasaj.sayfa) sayfayaGit(pasaj.sayfa);
+                if (cizilenOlcek < 1.6) setOlcek(1.6);
+                else window.requestAnimationFrame(() => katmanRef.current?.querySelector(".pdf-pasaj")?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }));
+              }}
+              aria-label={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+              title={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+            >
+              <LocateFixed size={16} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <form className="pdf-ara" onSubmit={ara} role="search">
           <label className="sr-only" htmlFor={`pdf-ara-${pdfId}`}>
