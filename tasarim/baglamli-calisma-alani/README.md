@@ -196,8 +196,13 @@ kayıtları da gösterilmiyor. "AI geçmişi tamamlandı" denemez; tamamlanan, y
 - İnceleme paneli sağ panelle aynı yuvayı paylaşır, AI/PDF açıkken gizlenir; yalnız açıkken belgeyi %85'in altına
   sıkıştırmaz (önce ray, sonra çekmece). Çekmece 3. turdan beri editör başlığının altından başlar (eskiden Kontroller
   ve Dışa aktar'ı örtüyordu); incelemeye geçmek için çekmece kapatılır.
-- Bu turda görülen, düzeltilmeyen (kapsam dışı): editördeki odak modunun Esc kontrolü de kapalı pencereleri sayan
-  aynı seçiciyi kullanıyor (`manuscript-editor.tsx`, `setOdak(false)`); büyük olasılıkla Esc odak modundan çıkarmıyor.
-  Ölçülmedi.
+- Odak modu Esc (son kabul turu, düzeltildi): 2ff370d'de Esc odak modundan çıkarmıyordu; tarayıcıda yeniden
+  üretildi (S18 FAIL, `sonuclar/calisma-alani-kabul-2ff370d.json` sonrası ölçüm). Üç neden vardı, üçü ayrı commit:
+  (1) açık pencere denetimi `[role=dialog]` ile 18 KAPALI pencereyi sayıyordu (204e6f0; S18 hâlâ FAIL,
+  `calisma-alani-kabul-204e6f0.json`); (2) ProseMirror Esc'i her zaman `preventDefault` ediyor, imleç belgedeyken
+  kabarcık dinleyicisi işlenmiş sayıp çıkmıyordu — aynı neden 1280'de PDF çekmecesinin Esc'le kapanmasını da
+  engelliyordu, S16 bu turda bunu da ölçüyor (7315cdb, karar `lib/editor-esc.ts`); (3) Kısayollar penceresi kendi
+  Esc'iyle kapanınca aynı Esc odak modundan da çıkıyordu (7b05256, yakalama aşamasındaki durum kaydediliyor).
+  7b05256'da 21/21 PASS (`calisma-alani-kabul-7b05256.json`); S19 1200–1560 arası ara genişlikleri tek sayfada tarar.
 - Prototipin koyu tema ve İngilizce kareleri karşılaştırmaya alınmadı (açık/TR karşılaştırıldı); koyu tema PDF
   denetimleri S14'te ölçülüyor.
