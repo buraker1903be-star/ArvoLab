@@ -77,7 +77,6 @@ import {
   TableCellsSplit,
   Sparkles,
   FileText,
-  Info,
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -2357,6 +2356,15 @@ export default function ManuscriptEditor({
       ? (citationStyle as CitationStyle)
       : "apa7";
   /*
+    Kaynakça ve Kılavuz araçlarının verisi: yeni bir hesap değil, canlı yapı
+    denetiminin (liveIssues) ve başlık listesinin süzülmüş hâli. Kaynakça
+    başlığı checkStructure'ın tanıdığı adlarla aranır (Kaynakça/Kaynaklar/
+    References/Bibliography), aynı sözcükler orada da geçiyor.
+  */
+  const kaynakcaBasligi = stats.headings.find((h) => /^\s*(\d+(\.\d+)*\.?\s*)?(kaynakça|kaynaklar|references|bibliography)\s*$/i.test(h.text)) ?? null;
+  const kaynakcaSorunlari = (liveIssues ?? []).filter((issue) => issue.kategori === "kaynakca");
+  const kilavuzSorunlari = (liveIssues ?? []).filter((issue) => issue.kategori !== "kaynakca");
+  /*
     Analiz sonucu satır satır paragraf olarak eklenir: sonuç metni tablo
     satırlarını da taşıyor, tek paragrafa sığdırmak satırları birbirine
     yapıştırırdı. Boş satırlar atlanır.
@@ -2529,6 +2537,162 @@ export default function ManuscriptEditor({
               {acilanAraclar.includes("arama") ? (
                 <div className="sol-arac" hidden={solArac !== "arama"}>
                   <SolArama projectId={projectId} projeAdi={projectDefaults?.title ?? ""} gorunur={solArac === "arama"} />
+                </div>
+              ) : null}
+              {/*
+                KAYNAKÇA ve KILAVUZ VE BİÇİM (19.11.2026, kabul turu 2; onaylı
+                prototipin "Kontrol et" grubu). Eskiden ikisi de yalnızca "Özet ve
+                teslim"in, Kontroller menüsünün ve inceleme panelinin içindeydi;
+                kılavuzun durumu ise belgenin üstünde KALICI bir şeritti ("Bu
+                çalışmaya bağlı kılavuz yok · Kılavuzumu yükle · Kurumu seç").
+                Şerit kalktı, içeriği ve iki bağlantısı burada. Hiçbir işlev
+                kaldırılmadı: Kontroller menüsü ve inceleme paneli aynen duruyor,
+                buradaki düğmeler aynı işleyicileri çağırıyor.
+              */}
+              {acilanAraclar.includes("kaynakca") ? (
+                <div className="sol-arac" hidden={solArac !== "kaynakca"}>
+                  <div className="sol-arac-govde">
+                    <p className="sol-arac-satir">
+                      <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
+                      <b>{stilAdi(citationStyle)}</b>
+                    </p>
+                    {kaynakcaBasligi ? (
+                      <button
+                        type="button"
+                        className="projects-filter-button button-compact"
+                        onClick={() => {
+                          handleJump(kaynakcaBasligi);
+                          solAraciKapatDarsa();
+                        }}
+                      >
+                        {t({ tr: `“${kaynakcaBasligi.text}” bölümüne git`, en: `Go to “${kaynakcaBasligi.text}”` })}
+                      </button>
+                    ) : (
+                      <p className="sol-arac-bos">
+                        {t({
+                          tr: "Belgede “Kaynakça” başlığı yok. Kaynakça bir başlık altında olmalı; atıf eklediğinizde kaynak oraya yazılır.",
+                          en: "The document has no “References” heading. The reference list should sit under a heading; cited sources are written there.",
+                        })}
+                      </p>
+                    )}
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Atıf ve kaynakça uyumu", en: "Citation and reference match" })}>
+                      <h3>{t({ tr: "Atıf ve kaynakça uyumu", en: "Citation and reference match" })}</h3>
+                      {kaynakcaSorunlari.length === 0 ? (
+                        <p className="sol-arac-bos">
+                          {liveIssues
+                            ? t({ tr: "Yazarken yapılan denetimde atıf–kaynakça sorunu yok.", en: "The live check found no citation–reference issues." })
+                            : t({ tr: "Denetim yazmaya başlayınca çalışır.", en: "The check runs once you start writing." })}
+                        </p>
+                      ) : (
+                        <ul className="sol-sorun-listesi">
+                          {kaynakcaSorunlari.map((issue, i) => (
+                            <li key={`${issue.message}-${i}`} data-ton={issue.tone}>
+                              <span>{issue.message}</span>
+                              {sorunEylemi(issue, solAraciKapatDarsa)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Atıf yapılmamış kaynaklar", en: "Sources not cited yet" })}>
+                      <BekleyenKaynaklarKarti
+                        projectId={projectId}
+                        govdeMetni={govdeMetni}
+                        numarali={NUMERIC_STYLES.includes(style)}
+                        belgeDili={belgeDili}
+                        onCite={(source) => void handleCite(source)}
+                      />
+                    </section>
+                    <div className="sol-arac-eylem">
+                      <button type="button" className="projects-filter-button button-compact" onClick={handleCheck} disabled={checking}>
+                        {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {acilanAraclar.includes("kilavuz") ? (
+                <div className="sol-arac" hidden={solArac !== "kilavuz"}>
+                  <div className="sol-arac-govde">
+                    {guideline ? (
+                      <>
+                        <p className="sol-arac-kilavuz">
+                          <b>{kilavuzGorunenAdi(guideline.label, dil)}</b>
+                          <span>
+                            {stilAdi(guideline.citationStyle)}
+                            {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
+                            {formatDate(guideline.version)
+                              ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
+                              : ""}
+                          </span>
+                          {!guideline.dogrulandi ? <small>{t({ tr: "Kendi yüklediğiniz kılavuz", en: "A guideline you uploaded" })}</small> : null}
+                        </p>
+                        <div className="sol-arac-eylem">
+                          <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
+                            {t({ tr: "Kuralları gör", en: "View rules" })}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="sol-arac-bos">
+                          {t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}{" "}
+                          {t({
+                            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
+                            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
+                          })}
+                        </p>
+                        <div className="sol-arac-eylem">
+                          <Link className="projects-filter-button button-compact" href={calismaAdresi(projectId, { kilavuz: true })}>
+                            {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
+                          </Link>
+                          <Link className="projects-filter-button button-compact" href={editHref}>
+                            {t({ tr: "Kurumu seç", en: "Select institution" })}
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Biçim", en: "Format" })}>
+                      <h3>{t({ tr: "Biçim", en: "Format" })}</h3>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Kenar boşlukları", en: "Margins" })}</span>
+                        <b>{t({ tr: `üst ${margins.top} · alt ${margins.bottom} · sol ${margins.left} · sağ ${margins.right} cm`, en: `top ${margins.top} · bottom ${margins.bottom} · left ${margins.left} · right ${margins.right} cm` })}</b>
+                      </p>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Başlık numaraları", en: "Heading numbers" })}</span>
+                        <b>{headingNumbering ? t({ tr: "Açık", en: "On" }) : t({ tr: "Kapalı", en: "Off" })}</b>
+                      </p>
+                      <p className="sol-arac-satir">
+                        <span>{t({ tr: "Sayfa numarası", en: "Page numbers" })}</span>
+                        <b>{showPageNumbers ? t({ tr: "Açık", en: "On" }) : t({ tr: "Kapalı", en: "Off" })}</b>
+                      </p>
+                      {guideline?.settings.margins || guideline?.settings.pageSize ? (
+                        <button type="button" className="projects-filter-button button-compact" onClick={() => handleChecklistAction("apply-page-setup")}>
+                          {t({ tr: "Sayfa düzenini kılavuza göre ayarla", en: "Set the page layout from the guideline" })}
+                        </button>
+                      ) : null}
+                    </section>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Yapı uyarıları", en: "Structure warnings" })}>
+                      <h3>{t({ tr: "Yapı uyarıları", en: "Structure warnings" })}</h3>
+                      {kilavuzSorunlari.length === 0 ? (
+                        <p className="sol-arac-bos">{t({ tr: "Yazarken yapılan denetimde yapı sorunu yok.", en: "The live check found no structure issues." })}</p>
+                      ) : (
+                        <ul className="sol-sorun-listesi">
+                          {kilavuzSorunlari.map((issue, i) => (
+                            <li key={`${issue.message}-${i}`} data-ton={issue.tone}>
+                              <span>{issue.message}</span>
+                              {sorunEylemi(issue, solAraciKapatDarsa)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                    <div className="sol-arac-eylem">
+                      <button type="button" className="projects-filter-button button-compact" onClick={handleCheck} disabled={checking}>
+                        {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </>,
@@ -3322,36 +3486,12 @@ export default function ManuscriptEditor({
             </button>
           </div>
         </div>
-      ) : !guideline && isThesis ? (
-        /*
-          KOMPAKT KILAVUZ BİLGİSİ (17.11.2026, onaylı tasarım): eskiden iki
-          satır açıklama ve iki büyük düğmeyle belgenin üstünde ~150 px'lik
-          bir kutuydu; telefonda belge metnini ilk ekranın altına itiyordu.
-          Şimdi tek satır: durum + iki bağlantı. Açıklama title'da ve
-          ekran okuyucuya açık (role=status). Asıl yol hâlâ kendi kılavuzunu
-          yüklemek; "kurumu seç" ikinci sırada (eskiden yalnızca o vardı ve
-          kataloğunda kılavuzu olmayan öğrencide bir şey değiştirmiyordu).
-        */
-        <p
-          className="kilavuz-satiri"
-          role="status"
-          title={t({
-            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
-          })}
-        >
-          <Info size={15} aria-hidden="true" />
-          {/* Telefonda kısa yazım (ikinci tur): uzun cümle iki satıra taşıyordu. Bağlantıların erişilebilir adı her ekranda tam. */}
-          <span className="kilavuz-uzun">{t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}</span>
-          <span className="kilavuz-kisa">{t({ tr: "Kılavuz yok.", en: "No guideline." })}</span>
-          <Link href={calismaAdresi(projectId, { kilavuz: true })} aria-label={t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}>
-            <span className="kilavuz-uzun">{t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}</span>
-            <span className="kilavuz-kisa">{t({ tr: "Yükle", en: "Upload" })}</span>
-          </Link>
-          <span aria-hidden="true">·</span>
-          <Link href={editHref}>{t({ tr: "Kurumu seç", en: "Select institution" })}</Link>
-        </p>
-      ) : null}
+      ) : null /*
+          KILAVUZ YOK ŞERİDİ KALKTI (19.11.2026, kabul turu 2): eskiden kılavuzu
+          olmayan tezde belgenin üstünde kalıcı bir satırdı ("Bu çalışmaya bağlı
+          kılavuz yok · Kılavuzumu yükle · Kurumu seç"). İçeriği ve iki bağlantısı
+          çalışma menüsündeki "Kılavuz ve biçim" aracında (sol=kilavuz).
+        */}
 
       {guideline && syncMode === "offer" ? (
         <div className="callout editor-notice cluster" data-tone="accent" role="status">

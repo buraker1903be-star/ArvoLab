@@ -370,12 +370,23 @@ export type CalismaBaglami = { id: string; baslik: string; tur: string };
   (bölümler, makale arama, Arvo AI) adreste `sol`/`sag` değişkeniyle
   açılır; böylece geri/ileri ve doğrudan bağlantı onları da taşır.
 */
-export type CalismaGrubu = "yaz" | "arastir" | "kontrol";
-export type CalismaIkon = "belge" | "bolumler" | "kaynaklar" | "arama" | "ai" | "kanit" | "ozet" | "etik" | "makale" | "analiz" | "kontrol";
+/*
+  GRUPLAR ONAYLI PROTOTİPTEKİ GİBİ (19.11.2026, kabul turu 2): Yaz (Belge,
+  Bölümler), Araştır (Kaynaklar, Makale bul, Arvo AI), Kontrol et
+  (Kaynakça, Kılavuz ve biçim, Özet ve teslim). İlk uygulamada Kanıt
+  matrisi, Etik kurul, Makale, Analiz ve Belge kontrolü bu üç grubun
+  içindeydi, Kaynakça ve Kılavuz ise hiç yoktu (yalnızca "Özet ve teslim"in
+  altında bulunabiliyordu); kurum sahibi menüyü yoğun buldu. O beş araç
+  kaldırılmadı: "Diğer araçlar" grubunda, yetkileri aynı.
+*/
+export type CalismaGrubu = "yaz" | "arastir" | "kontrol" | "diger";
+export type CalismaIkon =
+  | "belge" | "bolumler" | "kaynaklar" | "arama" | "ai" | "kanit" | "ozet" | "etik" | "makale" | "analiz" | "kontrol"
+  | "kaynakca" | "kilavuz";
 export type BaglamBaglantisi = { key: string; label: string; href: string; grup: CalismaGrubu; ikon: CalismaIkon };
 
 /** Yazım ekranının sol araçları; adres değişkeni `sol`. */
-export const SOL_ARACLAR = ["bolumler", "kaynaklar", "arama"] as const;
+export const SOL_ARACLAR = ["bolumler", "kaynaklar", "arama", "kaynakca", "kilavuz"] as const;
 export type SolArac = (typeof SOL_ARACLAR)[number];
 /** Yazım ekranının sağ paneli; adres değişkeni `sag`. */
 export const SAG_PANELLER = ["ai", "pdf"] as const;
@@ -389,6 +400,7 @@ export const sagPanelOku = (deger: string | null | undefined): SagPanel | null =
 export function calismaGrupAdi(grup: CalismaGrubu, t: Cevirici = ceviriciKur("tr")): string {
   if (grup === "yaz") return t({ tr: "Yaz", en: "Write" });
   if (grup === "arastir") return t({ tr: "Araştır", en: "Research" });
+  if (grup === "diger") return t({ tr: "Diğer araçlar", en: "More tools" });
   return t({ tr: "Kontrol et", en: "Review" });
 }
 
@@ -401,14 +413,16 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
     { key: "kaynaklar", label: t({ tr: "Kaynaklar", en: "Sources" }), href: `${yazim}?sol=kaynaklar`, grup: "arastir", ikon: "kaynaklar" },
     { key: "arama", label: t({ tr: "Makale bul", en: "Find papers" }), href: `${yazim}?sol=arama`, grup: "arastir", ikon: "arama" },
     { key: "ai", label: "Arvo AI", href: `${yazim}?sag=ai`, grup: "arastir", ikon: "ai" },
-    { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "arastir", ikon: "kanit" },
+    { key: "kaynakca", label: t({ tr: "Kaynakça", en: "References" }), href: `${yazim}?sol=kaynakca`, grup: "kontrol", ikon: "kaynakca" },
+    { key: "kilavuz", label: t({ tr: "Kılavuz ve biçim", en: "Guideline and format" }), href: `${yazim}?sol=kilavuz`, grup: "kontrol", ikon: "kilavuz" },
     { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" },
-    { key: "etik", label: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${id}/etik`, grup: "kontrol", ikon: "etik" },
+    { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "diger", ikon: "kanit" },
     ...(calisma.tur === "article"
-      ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "kontrol" as const, ikon: "makale" as const }]
+      ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "diger" as const, ikon: "makale" as const }]
       : []),
-    { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "kontrol", ikon: "analiz" },
-    { key: "belge", label: t({ tr: "Belge kontrolü", en: "Document check" }), href: `/dashboard/documents?calisma=${id}`, grup: "kontrol", ikon: "kontrol" },
+    { key: "etik", label: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${id}/etik`, grup: "diger", ikon: "etik" },
+    { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "diger", ikon: "analiz" },
+    { key: "belge", label: t({ tr: "Belge kontrolü", en: "Document check" }), href: `/dashboard/documents?calisma=${id}`, grup: "diger", ikon: "kontrol" },
   ];
 }
 

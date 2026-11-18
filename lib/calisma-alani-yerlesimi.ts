@@ -44,7 +44,7 @@ export const BELGE_OKUNUR_EN_AZ = 0.85;
 export const KENAR_GENIS = 240;
 export const KENAR_RAY = 64;
 /** Sol araçların genişliği (talimattaki aralıkların içinde: liste 280–320, arama 340–400). */
-export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372 };
+export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372, kaynakca: 300, kilavuz: 300 };
 
 /** Sağ panelin sınırları (talimat: AI 360–420, PDF 440–600). */
 export const SAG_PANEL_SINIRI: Record<SagPanel, { enAz: number; varsayilan: number; enCok: number }> = {

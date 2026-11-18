@@ -27,12 +27,17 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     assert.equal(editor.match(/tercihYaz\(INCELEME_TERCIHI, !incelemeAcik\)/g)?.length, 1);
     assert.match(editor, /className="save-status yazma-kayit"/);
   });
-  test("kılavuz yoksa tek satırlık bilgi; iki yol da duruyor", () => {
-    const blok = editor.slice(editor.indexOf('className="kilavuz-satiri"'), editor.indexOf('className="kilavuz-satiri"') + 1200);
-    assert.match(blok, /role="status"/);
-    assert.match(blok, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
-    assert.match(blok, /href=\{editHref\}/);
-    assert.doesNotMatch(editor, /data-tone="muted" role="status">\s*<div>\s*<strong>\{t\(\{ tr: "Bu çalışmaya bağlı kılavuz yok"/);
+  /*
+    19.11.2026 (kabul turu 2): kalıcı "kılavuz yok" şeridi editörden kalktı;
+    durumu ve iki yolu (Kılavuzumu yükle, Kurumu seç) çalışma menüsündeki
+    "Kılavuz ve biçim" aracında. İki yolun da kaybolmadığını sabitler.
+  */
+  test("kılavuz yok şeridi editörde yok; iki yol Kılavuz ve biçim aracında", () => {
+    assert.doesNotMatch(editor, /className="kilavuz-satiri"/);
+    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kilavuz")'), editor.indexOf('acilanAraclar.includes("kilavuz")') + 6000);
+    assert.match(arac, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
+    assert.match(arac, /href=\{editHref\}/);
+    assert.match(arac, /setGuidelineOpen\(true\)/);
   });
   test("Bul ve Odak modu kaldırılmadı: Belge menüsünde", () => {
     const menu = editor.slice(editor.indexOf('etiket={t({ tr: "Belge", en: "Document" })}'), editor.indexOf("</AracMenusu>", editor.indexOf('etiket={t({ tr: "Belge", en: "Document" })}')));
@@ -43,9 +48,11 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     const portal = editor.slice(editor.indexOf("createPortal("), editor.indexOf("eylemHedefi,", editor.indexOf("createPortal(")));
     assert.doesNotMatch(portal, /projects-primary-button/);
   });
-  test("telefonda kılavuz satırı kısa yazımla; bağlantının erişilebilir adı tam", () => {
-    assert.match(editor, /aria-label=\{t\(\{ tr: "Kılavuzumu yükle", en: "Upload my guideline" \}\)\}/);
-    assert.match(calisma, /\.kilavuz-satiri \.kilavuz-kisa \{ display: inline; \}/);
+  test("Kaynakça aracı: canlı atıf–kaynakça denetimi, atıf yapılmamış kaynaklar ve kontrol düğmesi", () => {
+    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kaynakca")'), editor.indexOf('acilanAraclar.includes("kilavuz")'));
+    assert.match(arac, /kaynakcaSorunlari/);
+    assert.match(arac, /<BekleyenKaynaklarKarti/);
+    assert.match(arac, /onClick=\{handleCheck\}/);
   });
   test("araç çubuğu dar ekranda sarar", () => {
     // 19.11.2026: çalışma sekme satırı kalktı (gezinme iki düzeyli); onu gizleyen kural da gereksiz.

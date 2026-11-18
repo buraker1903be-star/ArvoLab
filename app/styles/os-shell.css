@@ -60,6 +60,9 @@
 .os-gezinme-takim, .os-gezinme-alt-bolge { display: none; }
 .os-gezinme-takim-ok { flex: none; margin-left: auto; transition: transform var(--os5-sure-orta) var(--os5-egri); }
 .os-gezinme-takim-bas[aria-expanded="false"] .os-gezinme-takim-ok { transform: rotate(-90deg); }
+.os-calisma-ikincil-bas[aria-expanded="false"] .os-gezinme-takim-ok { transform: rotate(-90deg); }
+/* "Diğer araçlar": ikincil araçların başlığı bir düğme; grup başlıkları gibi soluk, açılınca öğeler normal. */
+.os-calisma-ikincil-bas { width: 100%; border: 0; background: transparent; font: inherit; color: var(--os5-kenar-yazi); cursor: pointer; }
 
 /* ---------- Masaüstü: koyu lacivert kenar çubuğu ---------- */
 @media (min-width: 1200px) {
@@ -516,7 +519,9 @@
 @media (min-width: 1200px) {
   .os-sol-alan { top: var(--topbar-height); left: 0; bottom: 0; width: var(--os5-kenar-genis); border-right: 1px solid var(--os5-kenar-cizgi); border-top: 1px solid var(--os5-kenar-cizgi); }
   .os-root:has(> .os-sol-alan[data-acik="bolumler"]),
-  .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]) { --os5-kenar-genis: 300px; }
+  .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]),
+  .os-root:has(> .os-sol-alan[data-acik="kaynakca"]),
+  .os-root:has(> .os-sol-alan[data-acik="kilavuz"]) { --os5-kenar-genis: 300px; }
   .os-root:has(> .os-sol-alan[data-acik="arama"]) { --os5-kenar-genis: 372px; }
   /* Kullanıcı kenar çubuğunu daraltmış olsa da araç kendi genişliğinde açılır; içerik onunla kayar. */
   html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .os-gezinme { width: var(--os5-kenar-genis); }

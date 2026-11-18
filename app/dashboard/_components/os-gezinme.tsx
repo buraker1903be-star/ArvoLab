@@ -13,10 +13,12 @@ import {
   FileText,
   Library,
   LifeBuoy,
+  ListChecks,
   ListTree,
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
+  Quote,
   Scale,
   Search,
   ShieldCheck,
@@ -62,8 +64,10 @@ const CALISMA_IKONLARI: Record<CalismaIkon, LucideIcon> = {
   makale: Newspaper,
   analiz: ChartNoAxesCombined,
   kontrol: FileCheck2,
+  kaynakca: Quote,
+  kilavuz: ListChecks,
 };
-const CALISMA_GRUPLARI: CalismaGrubu[] = ["yaz", "arastir", "kontrol"];
+const CALISMA_GRUPLARI: CalismaGrubu[] = ["yaz", "arastir", "kontrol", "diger"];
 /** Telefonda çalışmanın içindeyken alt çubuk: belge, kaynaklar, Arvo AI; geri kalanı "Çalışma" sayfasında. */
 const CALISMA_ALT_CUBUK = ["yazim", "kaynaklar", "ai"];
 
@@ -246,11 +250,39 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
       </span>
     </Link>
   );
-  const calismaGruplari = (sinif: string) =>
+  /*
+    "Diğer araçlar" kenar çubuğunda kapalı başlar (prototipteki yoğunluk);
+    etkin sayfa o gruptaysa açık gelir, kullanıcının açıp kapatması oturum
+    boyunca hatırlanır. Telefonun "Çalışma" sayfasında her grup açık.
+  */
+  const ikincilEtkin = calismaEtkin?.grup === "diger";
+  const [ikincilAcikSecim, setIkincilAcikSecim] = useState<boolean | null>(null);
+  const ikincilAcik = ikincilAcikSecim ?? ikincilEtkin;
+  const calismaGruplari = (sinif: string, katlanir = false) =>
     CALISMA_GRUPLARI.map((grup) => {
       const uyeler = calismaOgeleri.filter((b) => b.grup === grup);
       if (!uyeler.length) return null;
       const ad = calismaGrupAdi(grup, t);
+      if (grup === "diger" && katlanir) {
+        return (
+          <div className={`${sinif} os-calisma-ikincil`} key={grup}>
+            <button
+              type="button"
+              className="os-gezinme-oge os-calisma-ikincil-bas"
+              aria-expanded={ikincilAcik}
+              aria-controls="os-calisma-ikincil-liste"
+              onClick={() => setIkincilAcikSecim(!ikincilAcik)}
+            >
+              <Ellipsis size={20} aria-hidden="true" />
+              <span className="os-gezinme-ad">{ad}</span>
+              <ChevronDown size={16} aria-hidden="true" className="os-gezinme-takim-ok" />
+            </button>
+            <ul id="os-calisma-ikincil-liste" className="os-gezinme-liste" aria-label={ad} hidden={!ikincilAcik}>
+              {uyeler.map((b) => calismaOgesi(b))}
+            </ul>
+          </div>
+        );
+      }
       return (
         <div className={sinif} key={grup}>
           <h2 className="os-calisma-grup-ad">{ad}</h2>
@@ -327,7 +359,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
                   </strong>
                 </div>
               </div>
-              {calismaGruplari("os-calisma-grup")}
+              {calismaGruplari("os-calisma-grup", true)}
             </div>
             <ul className="os-gezinme-liste os-calisma-telefon">
               <li data-alt-cubuk="">{geriBaglantisi}</li>

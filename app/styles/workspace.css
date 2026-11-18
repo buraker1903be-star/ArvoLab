@@ -1789,6 +1789,19 @@
 .sol-kaynak-kunye span { color: var(--ink-soft); display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .sol-kaynak-durum, .sol-kaynak-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
 .sol-arama-govde .project-form-grid { grid-template-columns: 1fr 1fr; }
+/* Kaynakça ve Kılavuz ve biçim araçları (manuscript-editor.tsx): durum satırları, sorun listesi, eylemler. */
+.sol-arac-govde > * + * { margin-top: var(--s-2); }
+.sol-arac-satir { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--os5-fs-meta); }
+.sol-arac-satir span { color: var(--muted); }
+.sol-arac-satir b { color: var(--ink); font-weight: 600; text-align: right; }
+.sol-arac-kilavuz { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
+.sol-arac-kilavuz b { color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
+.sol-arac-kilavuz span, .sol-arac-kilavuz small { color: var(--muted); }
+.sol-arac-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
+.sol-sorun-listesi { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sol-sorun-listesi li { display: grid; gap: 6px; padding: 8px 10px; border-left: 3px solid var(--warning); border-radius: var(--r-xs); background: var(--surface-sunken); color: var(--ink-soft); font-size: var(--os5-fs-meta); line-height: 1.45; }
+.sol-sorun-listesi li[data-ton="danger"] { border-left-color: var(--danger); }
+.sol-sorun-listesi .sorun-eylem { justify-self: start; }
 
 /* Güven durumu çipleri: her biri AYRI bir kontrolü söyler (lib/kanit/durum.ts ile aynı ayrım). */
 .guven-cip {
