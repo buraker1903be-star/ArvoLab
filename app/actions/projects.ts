@@ -2,6 +2,7 @@
 
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { yeniCalismaAdresi } from "@/lib/calisma-karti";
+import { secilenBelgeDili } from "@/lib/belge-dili";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -161,6 +162,9 @@ async function calismaKaydet(
       due_date: /^\d{4}-\d{2}-\d{2}$/.test(dueDateRaw) ? dueDateRaw : null,
       priority: PRIORITIES.includes(priority) ? priority : "normal",
       notes: String(formData.get("notes") ?? "").trim() || null,
+      /* Belge dili (K1-A): yalnızca seçildiyse; seçilmezse NULL kalır ve
+         bugünkü türetme geçerli olur (lib/belge-dili.ts). */
+      belge_dili: secilenBelgeDili(formData.get("belgeDili")),
       status: "new",
     })
     .select("id, guideline_id")
@@ -273,6 +277,8 @@ export interface ProjectEditData {
   status: string;
   notes: string | null;
   progress: number;
+  /** Seçilmiş belge dili; null = seçilmedi (lib/belge-dili.ts). */
+  belge_dili: string | null;
 }
 
 /*
@@ -288,7 +294,7 @@ export async function getProjectForEdit(
   const { data, error } = await supabase
     .from("academic_projects")
     .select(
-      "id, owner_id, assignee_id, guideline_id, title, project_type, university, institute, department, university_id, academic_unit_id, department_id, citation_style, research_method, due_date, priority, status, notes, progress"
+      "id, owner_id, assignee_id, guideline_id, title, project_type, university, institute, department, university_id, academic_unit_id, department_id, citation_style, research_method, due_date, priority, status, notes, progress, belge_dili"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -461,6 +467,8 @@ export async function updateProject(projectId: string, formData: FormData): Prom
       status,
       citation_style: citationStyle,
       notes: String(formData.get("notes") ?? "").trim() || null,
+      /* Belge dili: alan formdaysa yazılır; "" seçimi kaldırır (NULL, bugünkü türetme). */
+      ...(formData.has("belgeDili") ? { belge_dili: secilenBelgeDili(formData.get("belgeDili")) } : {}),
       // Kurum değişirse kılavuz veritabanında yeniden eşleştirilir.
       ...(formData.has("universityId") ? readInstitution(formData) : {}),
       updated_at: new Date().toISOString(),

@@ -1,5 +1,6 @@
 "use client";
 
+import BelgeDiliAlani from "../belge-dili-alani";
 import { PenLine } from "lucide-react";
 import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { createProject } from "@/app/actions/projects";
@@ -62,6 +63,8 @@ export default function YeniCalismaFormu({
           <StilSecici name="citationStyle" defaultValue="apa7" />
           <small>{t({ tr: "Tezlerde onaylı kılavuz varsa ondan belirlenir.", en: "For theses, set by the approved guideline if there is one." })}</small>
         </label>
+
+        <BelgeDiliAlani yeni />
 
         {/* Liste okunamazsa form çalışmaya devam ediyor (alan serbest
             metin) ama kılavuz eşleşmesi yapılamıyor; kullanıcı sebebini

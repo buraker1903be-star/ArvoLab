@@ -102,20 +102,16 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "On Home, click \"New work\" (or the same button in My works).",
       },
       {
-        tr: "Başlığı yazın, türü seçin (Tez, Makale, Proje). Üniversite, anabilim dalı ve teslim tarihi isteğe bağlıdır; teslim tarihi verirseniz çalışma özeti kalan günü sayar.",
-        en: "Enter the title and choose the type (Thesis, Article, Project). University, department and due date are optional; if you give a due date, the work overview counts down the days left.",
+        tr: "Çalışmanın adını yazın, türünü (Tez, Makale, Proje) ve belge dilini (Türkçe ya da İngilizce) seçin. Belge dili şekil/tablo etiketlerini, içindekileri, kapağı ve atıf biçimini belirler; metniniz çevrilmez.",
+        en: "Enter the title, choose the type (Thesis, Article, Project) and the document language (Turkish or English). The document language sets figure/table captions, the table of contents, the cover and the citation format; your text is not translated.",
       },
       {
-        tr: "Kaynakça sistemini seçin (APA, IEEE vb.) ve \"Çalışmayı oluştur\"a basın.",
-        en: "Choose the citation style (APA, IEEE, etc.) and click \"Create work\".",
+        tr: "\"Oluştur ve yaz\" ile editöre geçin. Elinizde bir Word taslağı varsa \"Word dosyasından içe aktar\"ı seçin; çalışma oluşturulur ve içe aktarma penceresi açılır.",
+        en: "Click \"Create and write\" to open the editor. If you have a Word draft, choose \"Import a Word file\"; the work is created and the import window opens.",
       },
       {
-        tr: "Tezde ikinci adım tez yazım kılavuzunuzdur: üniversitenizin kılavuzunu PDF olarak yükleyin ya da adresini verin. ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
-        en: "For a thesis, the second step is your thesis writing guideline: upload your university's guideline as a PDF or give its address. ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
-      },
-      {
-        tr: "Kılavuzunuz hazır değilse \"Kılavuzu sonra eklerim, yazmaya başla\" ile devam edin; sonra çalışmanın \"Kılavuz\" penceresinden eklersiniz.",
-        en: "If your guideline isn't ready, continue with \"I'll add the guideline later, start writing\"; you can add it later from the work's \"Guideline\" window.",
+        tr: "Üniversite, anabilim dalı, teslim tarihi ve tez yazım kılavuzu başlangıçta sorulmaz; hepsini sonra çalışmanın içinden eklersiniz. Kılavuzu editördeki \"Kılavuzumu yükle\" bağlantısından yükleyin: ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
+        en: "University, department, due date and the thesis writing guideline aren't asked at the start; you add them later from inside the work. Upload your guideline from the \"Upload my guideline\" link in the editor: ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
       },
     ],
     notlar: [
@@ -124,8 +120,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Rules extracted from the guideline are there to help you; they are not an official approval. The final word belongs to your institution and your advisor.",
       },
       {
-        tr: "Makalede ikinci adım dergi bilgileridir (hedef dergi, kelime ve özet sınırları). Bu bilgiler çalışmanın \"Makale\" sekmesinde durur.",
-        en: "For an article, the second step is the journal details (target journal, word and abstract limits). They live in the work's \"Article\" tab.",
+        tr: "Makalede dergi bilgileri (hedef dergi, kelime ve özet sınırları) çalışma menüsündeki \"Makale\" bölümünde durur.",
+        en: "For an article, the journal details (target journal, word and abstract limits) live in the \"Article\" section of the work menu.",
       },
     ],
     baglanti: { href: "/dashboard/editor?yeni=1", etiket: { tr: "Yeni çalışma başlat", en: "Start a new work" } },

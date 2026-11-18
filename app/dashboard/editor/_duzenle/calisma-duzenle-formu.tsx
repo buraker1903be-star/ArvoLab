@@ -8,6 +8,7 @@ import { OVERSIGHT_ONLY_STATUSES, PROJECT_STATUSES, statusLabel } from "@/lib/pr
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import ActionForm from "../../action-form";
 import AcademicUnitFields from "../new/academic-unit-fields";
+import BelgeDiliAlani from "../belge-dili-alani";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
 export type CalismaDuzenlemeVerisi = {
@@ -91,6 +92,8 @@ export default function CalismaDuzenleFormu({ veri, iptal }: { veri: CalismaDuze
               </small>
             ) : null}
           </label>
+
+          <BelgeDiliAlani varsayilan={project.belge_dili} />
 
           <label>
             <span>{t({ tr: "Araştırma yöntemi", en: "Research method" })}</span>

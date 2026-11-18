@@ -289,6 +289,8 @@ interface ManuscriptEditorProps {
   acilacakMadde?: string | null;
   /** "?asistan=1" ile gelinirse yazım asistanı açık başlar (Ctrl+K'daki "Yazım asistanını aç", Phase 3). */
   asistanAcikBasla?: boolean;
+  /** Yeni çalışmadan "Word dosyasından içe aktar" ile gelindi: içe aktarma penceresi açık başlar. */
+  iceAktarAcikBasla?: boolean;
   /* Çalışmada kurum girili mi: teslim kontrolünde "kılavuz yok"un iki
      hâli farklı çözüm istiyor (lib/submission-checklist.ts). */
   kurumGirili?: boolean;
@@ -496,6 +498,7 @@ export default function ManuscriptEditor({
   belgeDili = "tr",
   acilacakMadde = null,
   asistanAcikBasla = false,
+  iceAktarAcikBasla = false,
   kurumGirili = false,
   initialContent,
   initialUpdatedAt,
@@ -651,7 +654,7 @@ export default function ManuscriptEditor({
   const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(iceAktarAcikBasla);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formatLossDismissed, setFormatLossDismissed] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -3502,7 +3505,15 @@ export default function ManuscriptEditor({
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}
-        onClose={() => setImportOpen(false)}
+        onClose={() => {
+          setImportOpen(false);
+          /* ?ice=1 adreste kalırsa yenilemede pencere yeniden açılırdı; Next replaceState'i izler. */
+          const adres = new URL(window.location.href);
+          if (adres.searchParams.has("ice")) {
+            adres.searchParams.delete("ice");
+            window.history.replaceState(window.history.state, "", adres.pathname + adres.search);
+          }
+        }}
         projectId={projectId}
         documentEmpty={stats.empty}
         flush={() => saveNow()}

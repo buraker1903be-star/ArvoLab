@@ -28,10 +28,10 @@ export default async function WriteManuscriptPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ teslim?: string; asistan?: string }>;
+  searchParams: Promise<{ teslim?: string; asistan?: string; ice?: string }>;
 }) {
   const { id } = await params;
-  const { teslim, asistan } = await searchParams;
+  const { teslim, asistan, ice } = await searchParams;
   const supabase = await createClient();
   const t = await ceviri();
 
@@ -145,6 +145,8 @@ export default async function WriteManuscriptPage({
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         asistanAcikBasla={asistan === "1"}
+        /* Yeni çalışma penceresinin "Word dosyasından içe aktar" çıkışı (?ice=1). */
+        iceAktarAcikBasla={ice === "1"}
         kurumGirili={Boolean(project.university)}
         initialContent={content}
         formatLoss={formatLoss?.affected ? formatLoss : null}
