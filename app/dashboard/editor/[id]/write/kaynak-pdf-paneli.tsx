@@ -121,6 +121,8 @@ export default function KaynakPdfPaneli({
     setAtif(null);
     // Önceki PDF'in cevabındaki "PDF s. N" isteği yeni belgeye taşınmasın.
     setGidilecek(null);
+    /* Eskiden PDF değiştirilince önceki PDF'in "pasaj işaretlendi" bildirimi yeni PDF'in üstünde kalıyordu. */
+    setPasajSonucu(null);
   };
 
   /*

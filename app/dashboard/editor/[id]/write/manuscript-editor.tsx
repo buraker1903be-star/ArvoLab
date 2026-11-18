@@ -766,7 +766,17 @@ export default function ManuscriptEditor({
     () => document.documentElement.getAttribute(GEZINME_OZNITELIGI) === GEZINME_DAR && !document.documentElement.hasAttribute("data-gezinme-gecici"),
     () => false,
   );
-  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar }) : null;
+  /*
+    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
+    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
+    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
+    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
+    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
+    Yerleşim kararından ÖNCE okunur: panelin sütunu belgeden yer alıyor
+    (lib/calisma-alani-yerlesimi.ts, "İNCELEME PANELİ").
+  */
+  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
+  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik }) : null;
   /*
     Gezinme yalnızca GEÇİCİ olarak raya iner (sağ panel açıkken belge
     okunabilirlik sınırının altına inecekse): tercih kaydedilmez, panel
@@ -1164,14 +1174,6 @@ export default function ManuscriptEditor({
   */
   const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
   const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
-  /*
-    İnceleme paneli varsayılan KAPALI (premium çalışma alanı, 17.11.2026,
-    onaylı tasarım: "kontroller kullanıcı istediğinde açılsın"). Eskiden
-    varsayılan açıktı ve belgenin yanında sürekli bir sütun kaplıyordu.
-    Paneli bir kez açan öğrencinin tercihi tarayıcıda kalır (aynı anahtar);
-    düğmenin adı görünür ("Kontroller"), yapı sorunu varsa rozet taşır.
-  */
-  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
   /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
@@ -2626,9 +2628,37 @@ export default function ManuscriptEditor({
                   <ShieldCheck size={16} aria-hidden="true" />
                   <span>{checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}</span>
                 </button>
-                <button type="button" className="arac-menu-oge" aria-pressed={incelemeAcik} onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}>
-                  {incelemeAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-                  <span>{incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}</span>
+                {/*
+                  Sağ yuva tek: AI ya da PDF açıkken inceleme paneli gösterilmez.
+                  Eskiden düğme o sırada "İnceleme panelini kapat" diyordu (tercih
+                  açıktı) ama panel ekranda yoktu; basmak onu kapatıyordu. Artık
+                  sağ panel açıkken düğme panele GEÇER: sağ panel kapanır,
+                  inceleme açılır. Özellik kaybolmuyor, yalnızca yer paylaşıyor.
+                */}
+                <button
+                  type="button"
+                  className="arac-menu-oge"
+                  aria-pressed={incelemeAcik && !sag}
+                  onClick={() => {
+                    if (sag) {
+                      sagAc(null);
+                      tercihYaz(INCELEME_TERCIHI, true);
+                    } else tercihYaz(INCELEME_TERCIHI, !incelemeAcik);
+                    if (!sag && incelemeAcik) return;
+                    /* Telefonda panel belgenin altında akar (önce yazma alanı); açılınca oraya kaydırılır, yoksa açıldığı görünmez. */
+                    if (window.matchMedia("(max-width: 760px)").matches) {
+                      window.setTimeout(() => document.querySelector(".manuscript-outline")?.scrollIntoView({ block: "start" }), 50);
+                    }
+                  }}
+                >
+                  {incelemeAcik && !sag ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+                  <span>
+                    {sag
+                      ? t({ tr: "İnceleme paneline geç", en: "Switch to review panel" })
+                      : incelemeAcik
+                        ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" })
+                        : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
+                  </span>
                 </button>
               </AracMenusu>
               {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
@@ -2659,6 +2689,7 @@ export default function ManuscriptEditor({
       className="manuscript-layout"
       ref={yerlesimRef}
       data-inceleme={incelemeAcik ? "" : undefined}
+      data-inceleme-yer={karar && karar.inceleme !== "yok" ? karar.inceleme : undefined}
       data-odak={odak ? "" : undefined}
       data-pdf={kaynakAcik ? "" : undefined}
       data-asistan={yazimAcik ? "" : undefined}

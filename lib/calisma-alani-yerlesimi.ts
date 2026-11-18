@@ -21,6 +21,15 @@
   Kullanıcı ölçeği her zaman kendisi seçebilir (BELGE_OLCEK_*); seçtiği ölçek
   bu kararı değiştirmez, yalnızca kâğıdın büyüklüğünü.
 
+  İNCELEME PANELİ (19.11.2026, kabul turu). Kontroller menüsünden açılan
+  inceleme paneli (teslim kontrolü, kılavuz, kaynakça, yorumlar) de sağ
+  yuvanın bir sakini: sağ panel (AI/PDF) açıkken gösterilmez, aynı anda iki
+  sağ sütun belgeyi okunmaz kılar. İlk sürüm paneli bu kararın DIŞINDA
+  bırakmıştı; sağ panel yokken 340 px'lik sütunu hesaba katılmadığı için
+  belge 1440 px'te %84'e, 1280 px'te %66'ya, sol araç da açıkken %60'a
+  iniyordu (tarayıcı ölçümü). Artık aynı sıra uygulanır: önce gezinme raya
+  iner, yetmezse panel belgenin üstüne çekmece olur.
+
   Tablet ve telefonda belge eskisi gibi akar (ekranın kendisi dar; paneller
   zaten belgenin üstünde açılıyor). Kırılımlar lib/os/kirilimlar.ts ile aynı.
 */
@@ -42,6 +51,9 @@ export const SAG_PANEL_SINIRI: Record<SagPanel, { enAz: number; varsayilan: numb
   ai: { enAz: 360, varsayilan: 396, enCok: 420 },
   pdf: { enAz: 440, varsayilan: 520, enCok: 600 },
 };
+/** İnceleme panelinin sütun genişliği ve belgeyle arası (workspace.css, .manuscript-layout). */
+export const INCELEME_GENISLIGI = 340;
+export const INCELEME_ARALIGI = 16;
 /** Ayırıcı (10 px) ve iki sütun aralığı (8 px). */
 export const AYIRICI_PAYI = 26;
 /** İçerik alanının iki yandaki boşluğu (dashboard-page). */
@@ -68,6 +80,11 @@ export type YerlesimKarari = {
   sagGenislik: number;
   /** Ayırıcıyla çekilebilecek en geniş değer: belgeyi okunabilirlik sınırının altına itmeyen genişlik. */
   sagEnCok: number;
+  /**
+   * İnceleme paneli: yok (kapalı ya da sağ panel açık), belgenin yanında sütun,
+   * belgenin üstünde çekmece ya da akış (tablet/telefon: belgenin üstünde/altında, eski yerleşim).
+   */
+  inceleme: "yok" | "sutun" | "cekmece" | "akis";
 };
 
 export function yerlesimKarari(girdi: {
@@ -77,19 +94,40 @@ export function yerlesimKarari(girdi: {
   sagGenislik: number;
   /** Kullanıcı kenar çubuğunu kendisi daraltmış mı (arvolab.gezinme.dar). */
   kenarDar: boolean;
+  /** İnceleme paneli açık mı (kullanıcının tercihi). Verilmezse kapalı sayılır. */
+  inceleme?: boolean;
 }): YerlesimKarari {
   const { ekran, solArac, sagPanel } = girdi;
+  const incelemeIstendi = Boolean(girdi.inceleme) && !sagPanel;
   const istenenSag = sagPanel ? sagPanelGenisligiSinirla(sagPanel, girdi.sagGenislik) : 0;
   if (ekran < MASAUSTU_EN_AZ) {
-    return { kenar: solArac ? "arac" : "ray", sag: sagPanel ? "cekmece" : "yok", olcek: 1, sabitKagit: false, sagGenislik: istenenSag, sagEnCok: sagPanel ? SAG_PANEL_SINIRI[sagPanel].enCok : 0 };
+    return {
+      kenar: solArac ? "arac" : "ray",
+      sag: sagPanel ? "cekmece" : "yok",
+      olcek: 1,
+      sabitKagit: false,
+      sagGenislik: istenenSag,
+      sagEnCok: sagPanel ? SAG_PANEL_SINIRI[sagPanel].enCok : 0,
+      inceleme: incelemeIstendi ? "akis" : "yok",
+    };
   }
   const olcekFor = (sol: number, sag: number) => Math.min(1, (ekran - sol - (sag ? sag + AYIRICI_PAYI : 0) - SAYFA_PAYI) / KAGIT_GENISLIGI);
   const kenar: YerlesimKarari["kenar"] = solArac ? "arac" : girdi.kenarDar ? "ray" : "tam";
   const solEn = solArac ? SOL_ARAC_GENISLIGI[solArac] : girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
 
   if (!sagPanel) {
+    if (incelemeIstendi) {
+      const olcekInceleme = (sol: number) => Math.min(1, (ekran - sol - INCELEME_GENISLIGI - INCELEME_ARALIGI - SAYFA_PAYI) / KAGIT_GENISLIGI);
+      const denemeler: [YerlesimKarari["kenar"], number][] = [[kenar, solEn], ...(kenar === "tam" ? ([["ray", KENAR_RAY]] as [YerlesimKarari["kenar"], number][]) : [])];
+      for (const [k, sol] of denemeler) {
+        const o = olcekInceleme(sol);
+        if (o >= BELGE_OKUNUR_EN_AZ) return { kenar: k, sag: "yok", olcek: yuvarla(o), sabitKagit: true, sagGenislik: 0, sagEnCok: 0, inceleme: "sutun" };
+      }
+      /* Sol araç kullanıcının seçimi, daraltılmaz (sağ panelde olduğu gibi); yer yoksa inceleme paneli çekmeceye geçer. */
+      return { kenar, sag: "yok", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: 0, sagEnCok: 0, inceleme: "cekmece" };
+    }
     /* Sağ panel yokken belge sınırın altına inebilir (ör. 1200 px'te açık arama aracı): araç kullanıcının seçimi; belge yine akmaz. */
-    return { kenar, sag: "yok", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: 0, sagEnCok: 0 };
+    return { kenar, sag: "yok", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: 0, sagEnCok: 0, inceleme: "yok" };
   }
   const enDar = SAG_PANEL_SINIRI[sagPanel].enAz;
   const sinir = SAG_PANEL_SINIRI[sagPanel];
@@ -107,10 +145,10 @@ export function yerlesimKarari(girdi: {
     const o = olcekFor(sol, sag);
     if (o >= BELGE_OKUNUR_EN_AZ) {
       const pay = Math.floor(ekran - sol - AYIRICI_PAYI - SAYFA_PAYI - BELGE_OKUNUR_EN_AZ * KAGIT_GENISLIGI);
-      return { kenar: k, sag: "sutun", olcek: yuvarla(o), sabitKagit: true, sagGenislik: sag, sagEnCok: Math.max(sinir.enAz, Math.min(sinir.enCok, pay)) };
+      return { kenar: k, sag: "sutun", olcek: yuvarla(o), sabitKagit: true, sagGenislik: sag, sagEnCok: Math.max(sinir.enAz, Math.min(sinir.enCok, pay)), inceleme: "yok" };
     }
   }
-  return { kenar, sag: "cekmece", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: istenenSag, sagEnCok: sinir.enCok };
+  return { kenar, sag: "cekmece", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: istenenSag, sagEnCok: sinir.enCok, inceleme: "yok" };
 }
 
 /* ---- Kullanıcının seçtiği ölçek ---- */

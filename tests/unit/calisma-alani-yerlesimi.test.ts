@@ -71,3 +71,48 @@ test("kullanıcı ölçeği: sınırlı, adım %10; bozuk değer Sığdır", () 
   assert.equal(olcekAdimi(0.86, -1), 0.8);
   assert.equal(olcekAdimi(2, 1), 2);
 });
+
+/*
+  İnceleme paneli (19.11.2026, kabul turu): ilk sürümde karara girmiyordu ve
+  sağ panel yokken 340 px'lik sütunu belgeyi 1440 px'te %84'e, 1280 px'te
+  %66'ya, sol araçla %60'a indiriyordu.
+*/
+const incele = (ekran: number, solArac: "bolumler" | "kaynaklar" | "arama" | null, sagPanel: "ai" | "pdf" | null = null, kenarDar = false) =>
+  yerlesimKarari({ ekran, solArac, sagPanel, sagGenislik: sagPanel === "pdf" ? 520 : 396, kenarDar, inceleme: true });
+
+test("inceleme paneli: geniş ekranda sütun, belge okunur sınırın üstünde", () => {
+  const k = incele(1920, null);
+  assert.deepEqual([k.kenar, k.inceleme, k.olcek], ["tam", "sutun", 1]);
+});
+
+test("inceleme paneli: belge %85 altına inecekse önce gezinme raya iner", () => {
+  const k = incele(1440, null);
+  assert.equal(k.inceleme, "sutun");
+  assert.equal(k.kenar, "ray");
+  assert.ok(k.olcek >= BELGE_OKUNUR_EN_AZ, `ölçek ${k.olcek}`);
+});
+
+test("inceleme paneli: ray da yetmezse çekmece; sol araç daraltılmaz", () => {
+  const ray1280 = incele(1280, null);
+  assert.deepEqual([ray1280.kenar, ray1280.inceleme], ["ray", "sutun"]);
+  assert.ok(ray1280.olcek >= BELGE_OKUNUR_EN_AZ);
+  for (const [ekran, sol] of [[1440, "kaynaklar"], [1280, "kaynaklar"], [1200, null]] as const) {
+    const k = incele(ekran, sol);
+    assert.equal(k.inceleme, "cekmece", `${ekran} ${sol}`);
+    if (sol) assert.equal(k.kenar, "arac");
+  }
+});
+
+test("inceleme paneli: sağ panel (AI/PDF) açıkken gösterilmez; kapalıyken karar eskisiyle aynı", () => {
+  assert.equal(incele(1920, null, "pdf").inceleme, "yok");
+  assert.equal(incele(1024, null, "ai").inceleme, "yok");
+  const kapali = yerlesimKarari({ ekran: 1440, solArac: null, sagPanel: null, sagGenislik: 0, kenarDar: false });
+  assert.deepEqual([kapali.kenar, kapali.inceleme, kapali.olcek], ["tam", "yok", 1]);
+});
+
+test("inceleme paneli: tablet ve telefonda akış (belgenin üstünde/altında), belge sıkışmaz", () => {
+  for (const ekran of [1024, 768, 390]) {
+    const k = incele(ekran, null);
+    assert.deepEqual([k.inceleme, k.sabitKagit, k.olcek], ["akis", false, 1]);
+  }
+});

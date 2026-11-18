@@ -97,6 +97,12 @@ export default function PdfGoruntuleyici({
   /* Vurgulanacak pasaj durumda; çizim sonrası okunabilsin diye ref'e efektte aktarılır. */
   const [pasaj, setPasaj] = useState<{ sayfa: number; metin: string } | null>(null);
   const pasajRef = useRef<{ sayfa: number; metin: string } | null>(null);
+  /*
+    Pasaj sayfada bulundu mu (null: henüz bakılmadı). "Pasaja odaklan" yalnızca
+    bulunduysa çıkar: ilk sürümde düğme pasaj İSTENİNCE çıkıyordu, bulunamayan
+    pasajda kullanıcıyı işaretsiz bir sayfaya götürüyordu (kabul S10).
+  */
+  const [pasajBulundu, setPasajBulundu] = useState<boolean | null>(null);
   const onPasajRef = useRef(onPasaj);
   useEffect(() => {
     onPasajRef.current = onPasaj;
@@ -174,6 +180,7 @@ export default function PdfGoruntuleyici({
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
     // Yeni gidiş eski pasaj vurgusunu düşürür; pasaj yoksa vurgu da yok.
     setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj } : null);
+    setPasajBulundu(null);
     /* Telefonda pasaj okunur ölçekte açılır (2. tur, madde 4): sığdırılmış sayfa dar ekranda okunmuyordu. Görüntüleyici yalnızca tarayıcıda çizilir (ssr: false). */
     if (gidilecekSayfa.pasaj && window.innerWidth <= 760 && (olcek === "sigdir" || olcek < 1.6)) setOlcek(1.6);
     setSayfaNo(n);
@@ -201,6 +208,7 @@ export default function PdfGoruntuleyici({
       const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
       kapsanan?.forEach((i) => parcalar[i].classList.add("pdf-pasaj"));
       if (kapsanan) parcalar[kapsanan[0]].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+      setPasajBulundu(Boolean(kapsanan));
       onPasajRef.current?.(Boolean(kapsanan));
     }
   }, []);
@@ -360,7 +368,7 @@ export default function PdfGoruntuleyici({
             ölçeğe (en az %160, telefonda dar sütunda küçük kalmasın) getirir ve
             vurgulu satırı ortalar. Pasaj yoksa düğme yok: işaretlenecek bir şey yok.
           */}
-          {pasaj ? (
+          {pasaj && pasajBulundu ? (
             <button
               type="button"
               className="yazim-ikon pdf-pasaja-odaklan"
