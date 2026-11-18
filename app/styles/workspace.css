@@ -1000,6 +1000,12 @@
 @media (max-width: 760px) {
   /* Telefonda önce yazma alanı: kılavuz listesi, ilerleme ve yorumlar editörün altında */
   .manuscript-outline { order: 1; }
+  /*
+    Menüden açılınca panel görünür alana kaydırılır (manuscript-editor.tsx).
+    Pay, yapışık üst çubuk (56 px) + araç çubuğu kadar: payı yokken panelin
+    başlığı ve sayı kartı araç çubuğunun altında kalıyordu (kabul S11 görseli).
+  */
+  .manuscript-outline { scroll-margin-top: calc(56px + env(safe-area-inset-top) + 72px); }
 }
 
 /* ---------- Editör alt çubuğu: sayfa hedefi ve kayıt onayı ---------- */
