@@ -66,7 +66,7 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
   --bg: #f6f7f9; --yuzey: #ffffff; --yuzey-2: #f1f3f6; --yuzey-3: #e9edf2; --cizgi: #e2e6ec; --cizgi-g: #d3d9e2;
   --yazi: #141b2b; --yazi-2: #3c4557; --soluk: #5d6677; --vurgu: #1f3d6e; --vurgu-hover: #183257; --vurgu-zemin: #e8eef8; --vurgu-yazi: #ffffff;
   --basari: #4e7a32; --basari-zemin: #e6f0de; --uyari: #8a5a0b; --uyari-zemin: #fbf0dc; --hata: #a3322b;
-  --vurgu-sari: #fbe58a; --kagit: #ffffff; --kagit-yazi: #1a1a1a; --golge: 0 1px 2px rgba(20, 27, 43, 0.06);
+  --vurgu-sari: #fbe58a; --lab: #6f9548; --kagit: #ffffff; --kagit-yazi: #1a1a1a; --golge: 0 1px 2px rgba(20, 27, 43, 0.06);
   --fs-govde: 14px; --fs-ikincil: 12.5px; --fs-kucuk: 12px; --fs-panel: 15px; --fs-sayfa: 26px;
   font-family: var(--yazi); font-size: var(--fs-govde); color: var(--yazi); background: var(--bg);
   width: 1440px; height: 900px; display: grid; grid-template-columns: auto minmax(0, 1fr); overflow: hidden; line-height: 1.45;
@@ -75,7 +75,7 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
   --bg: #0f1625; --yuzey: #151d2e; --yuzey-2: #121a2a; --yuzey-3: #1c2639; --cizgi: #243049; --cizgi-g: #2f3c57;
   --yazi: #e7eaf0; --yazi-2: #c3c9d4; --soluk: #9aa3b3; --vurgu: #6f8fc6; --vurgu-hover: #87a3d3; --vurgu-zemin: #1d2b47; --vurgu-yazi: #0c1424;
   --basari: #95c47c; --basari-zemin: #1d3020; --uyari: #e9bf6c; --uyari-zemin: #352a14; --hata: #f08d84;
-  --vurgu-sari: #8a7a2c; --kagit: #1b2334; --kagit-yazi: #e4e6ea; --golge: none;
+  --vurgu-sari: #8a7a2c; --lab: #89ab63; --kagit: #1b2334; --kagit-yazi: #e4e6ea; --golge: none;
 }
 .app.tek { grid-template-columns: 1fr; }
 .app.telefon { width: 390px; height: 844px; display: flex; flex-direction: column; }
@@ -230,7 +230,52 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
 /* PDF */
 .pdf-arac { height: 44px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid var(--cizgi); font-size: 13px; color: var(--yazi-2); }
 .pdf-arac .sayfa-no { font-variant-numeric: tabular-nums; border: 1px solid var(--cizgi); border-radius: 5px; padding: 3px 8px; }
-.pdf-dogrulama { margin: 10px 12px 0; padding: 9px 11px; border-radius: 6px; background: var(--basari-zemin); color: var(--basari); font-size: 12.5px; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.pdf-dogrulama { margin: 10px 12px 0; padding: 8px 10px; border-radius: 6px; background: var(--yuzey-2); border: 1px solid var(--cizgi); color: var(--yazi-2); font-size: 12.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+/* Güven durumları: her biri ayrı bir kontrol; renk + simge + metin üçü birden ayrışır (1. tur geri bildirimi, nokta 5). */
+.g { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.g.erisim { background: var(--vurgu-zemin); color: var(--vurgu); }
+.g.kunye { background: transparent; color: var(--vurgu); border-color: var(--vurgu); }
+.g.alinti { background: var(--basari-zemin); color: var(--basari); }
+.g.uyari { background: var(--uyari-zemin); color: var(--uyari); }
+.g.notr { background: var(--yuzey-3); color: var(--soluk); }
+.lejant { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--k-soluk); align-items: center; }
+.lejant .app { all: unset; display: contents; }
+/* Marka imzası: çalışma bağlamında küçük resmî logo + çalışmanın akademik ilerlemesi (nokta 1). */
+.imza { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.imza .logo { width: 78px; }
+.ilerleme { display: grid; gap: 5px; }
+.ilerleme .cubuk { margin: 0; height: 3px; max-width: none; }
+.ilerleme .cubuk i { background: var(--lab); }
+.ilerleme span { font-size: 12px; color: var(--soluk); font-variant-numeric: tabular-nums; }
+/* Belge kenarı: seçim işlemleri ve atıf kartı kâğıdın DIŞINDA, ilgili satırın hizasında (nokta 2). */
+.kenar { position: absolute; font-family: var(--yazi); }
+.kenar-islem { width: 176px; display: grid; gap: 2px; padding: 4px; background: var(--yuzey); border: 1px solid var(--cizgi-g); border-radius: 8px; box-shadow: 0 6px 18px rgba(10, 16, 30, 0.10); }
+.kenar-islem button { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; padding: 7px 8px; border-radius: 5px; font-size: 13px; color: var(--yazi-2); cursor: pointer; }
+.kenar-islem button:hover { background: var(--yuzey-2); }
+.kenar-baslik { font-size: 11.5px; color: var(--soluk); padding: 4px 8px 2px; }
+.kenar-kart { width: 184px; display: grid; gap: 8px; padding: 10px 11px; background: var(--yuzey); border: 1px solid var(--cizgi-g); border-radius: 8px; box-shadow: 0 6px 18px rgba(10, 16, 30, 0.10); font-size: 12.5px; }
+.kenar-kart b { font-size: 13px; font-weight: 600; }
+.kenar-kart .satir-d { display: grid; gap: 3px; }
+.kenar-kart .satir-d span:first-child { font-size: 11.5px; color: var(--soluk); }
+.kenar-kart .not-k { font-size: 11.5px; color: var(--soluk); line-height: 1.4; }
+.kenar-kart .eylemler { display: grid; gap: 6px; }
+.kenar-bag { position: absolute; height: 1px; background: var(--vurgu); opacity: .5; }
+.atif.secili { background: var(--vurgu-zemin); border-bottom-style: solid; }
+/* Belge ölçeği: dar alanda kâğıt yeniden akmaz, oranıyla küçülür; satır sonları ve yaslama aynı kalır (nokta 3). */
+.kagit-olcekli { margin: 0 auto; transform-origin: top center; }
+.olcek-k { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--cizgi); border-radius: 6px; padding: 0 2px; height: 30px; font-size: 12.5px; color: var(--yazi-2); font-variant-numeric: tabular-nums; }
+.olcek-k button { border: 0; background: transparent; width: 26px; height: 26px; border-radius: 4px; cursor: pointer; color: var(--yazi-2); display: grid; place-items: center; }
+.olcek-k .sigdir { width: auto; padding: 0 6px; font-size: 12.5px; }
+.ray { width: 56px; background: var(--yuzey); border-right: 1px solid var(--cizgi); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0; }
+.ray button { width: 40px; height: 40px; border-radius: 6px; border: 0; background: transparent; color: var(--yazi-2); display: grid; place-items: center; }
+.ray button[aria-current="page"] { background: var(--vurgu-zemin); color: var(--vurgu); }
+.ray .r-logo { width: 48px; height: auto; aspect-ratio: 4.22; object-fit: cover; object-position: center; margin: 6px 0 8px; }
+.alt-durum { display: inline-flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.alt-durum button { border: 1px solid var(--k-cizgi); background: var(--k-yuzey); color: var(--k-yazi); font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.alt-durum button[aria-pressed="true"] { border-color: var(--k-vurgu); box-shadow: inset 0 0 0 1px var(--k-vurgu); font-weight: 600; }
+.tel-pdf-arac { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--yuzey); border-bottom: 1px solid var(--cizgi); font-size: 13px; }
+.tel-pdf-arac .ikon-d { width: 40px; height: 40px; }
+.kaydir { font-size: 11.5px; color: var(--soluk); text-align: center; padding: 4px; }
 .pdf-alan { flex: 1; min-height: 0; overflow: auto; background: var(--yuzey-3); padding: 16px; }
 .pdf-sayfa-k { background: #ffffff; color: #1d1d1d; width: 100%; aspect-ratio: 0.72; padding: 36px 34px; font-family: Georgia, "Times New Roman", serif; font-size: 11.5px; line-height: 1.6; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); }
 .pdf-sayfa-k h4 { font-size: 15px; margin: 0 0 4px; } .pdf-sayfa-k .yazar { font-size: 11px; color: #555; margin-bottom: 14px; }
@@ -287,7 +332,7 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
 
 <script>
 (() => {
-  const durum = { ekran: 1, cihaz: "masa", tema: "acik", dil: "tr", aramaSecili: 0, kaynakSecili: 0, aiSekme: "sohbet" };
+  const durum = { ekran: 1, alt5: "secim", alt7: "1440", cihaz: "masa", tema: "acik", dil: "tr", aramaSecili: 0, kaynakSecili: 0, aiSekme: "sohbet" };
   try { const kayit = JSON.parse(localStorage.getItem("arvolab-prototip") || "{}"); Object.assign(durum, kayit); } catch {}
   try { if (!JSON.parse(localStorage.getItem("arvolab-prototip") || "null") && matchMedia("(prefers-color-scheme: dark)").matches) durum.tema = "koyu"; } catch {}
   const h = location.hash.match(/^#ekran-(\d+)$/); if (h) durum.ekran = Math.min(10, Math.max(1, +h[1]));
@@ -312,6 +357,9 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
     arti: '<path d="M12 5v14M5 12h14"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     tik: '<path d="m5 12 4 4 10-10"/>',
+    kalkan: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
+    eksi: '<path d="M5 12h14"/>',
+    hedef: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
     cizgi: '<path d="M4 6h16M4 12h10M4 18h7"/>',
     disari: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     tema: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
@@ -349,11 +397,19 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
       { t: "Loneliness scales for student populations", m: "Ak, E.; Şahin, C. · 2018 · Synthetic Journal of Psychology", d: "erisilemedi", k: true },
     ],
   };
-  const durumEt = (d) => ({
-    pdf: `<span class="durum ok">${ic("pdf", 12)}${L("PDF açılabilir", "PDF available")}</span>`,
-    kunye: `<span class="durum yok">${L("Yalnızca künye · DOI", "Record only · DOI")}</span>`,
-    erisilemedi: `<span class="durum olasi">${L("PDF erişilemedi", "PDF not accessible")}</span>`,
-  })[d];
+  /* Üç ayrı soru, üç ayrı cevap: PDF'e ERİŞİM var mı · KÜNYE bir dizinde doğrulandı mı · ALINTI PDF metninde birebir geçiyor mu.
+     Hiçbiri "iddia destekleniyor" demek değil (lib/kanit/durum.ts ile aynı ayrım). */
+  const G = {
+    erisim: () => `<span class="g erisim">${ic("pdf", 12)}${L("PDF açılabilir", "PDF available")}</span>`,
+    erisilemedi: () => `<span class="g uyari">${ic("pdf", 12)}${L("PDF erişilemedi", "PDF not accessible")}</span>`,
+    yalnizKunye: () => `<span class="g notr">${L("Yalnızca künye · PDF yok", "Record only · no PDF")}</span>`,
+    kunye: () => `<span class="g kunye">${ic("kalkan", 12)}${L("Künye doğrulandı · Crossref", "Record verified · Crossref")}</span>`,
+    alinti: (sayfa) => `<span class="g alinti">${ic("tirnak", 12)}${L(`Alıntı birebir eşleşti · s. ${sayfa}`, `Quote matched verbatim · p. ${sayfa}`)}</span>`,
+    olasi: () => `<span class="g uyari">${L("Olası eşleşme · onay bekliyor", "Possible match · needs review")}</span>`,
+    yok: () => `<span class="g notr">${L("Eşleşme yok · vurgu yapılmadı", "No match · nothing highlighted")}</span>`,
+  };
+  const durumEt = (d) => ({ pdf: G.erisim(), kunye: G.yalnizKunye(), erisilemedi: G.erisilemedi() })[d];
+  const lejant = () => `<div class="lejant">${L("Ayrı durumlar:", "Separate states:")} ${G.erisim()} ${G.kunye()} ${G.alinti(1)} ${G.olasi()} ${G.yok()} ${G.erisilemedi()}</div>`;
 
   /* ── Parçalar ── */
   const genelGezinme = (etkin, yeni = false) => `
@@ -377,8 +433,10 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
   const calismaGezinme = (etkin) => `
     <aside class="sol dar" aria-label="${L("Çalışma gezinmesi", "Work navigation")}">
       <div class="sol-bas">
+        <div class="imza">${logo()}</div>
         <button class="don" data-git="2">${ic("sol", 14)}${L("Çalışmalarıma dön", "Back to my works")}</button>
         <div><div class="calisma-ad">${VERI.calisma()}</div><div class="calisma-ust">${L("Tez · APA 7 · Türkçe belge", "Thesis · APA 7 · Turkish document")}</div></div>
+        <div class="ilerleme"><div class="cubuk"><i style="width:56%"></i></div><span>${L("8.420 / 15.000 kelime · 34 sayfa", "8,420 / 15,000 words · 34 pages")}</span></div>
       </div>
       <div class="sol-govde">
         <div class="grup">${L("Yaz", "Write")}</div>
@@ -406,9 +464,10 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
       <button class="ikon-d" aria-label="${L("Tema", "Theme")}">${ic("tema")}</button>
     </header>`;
 
-  const edBas = (bolum) => `
+  const edBas = (bolum, olcek = 0) => `
     <header class="ed-bas">
       <span class="bolum">${bolum}</span><span class="yol">· ${L("1. Giriş", "1. Introduction")}</span>
+      ${olcek ? `<span class="olcek-k" title="${L("Belge ölçeği: biçim değişmez", "Document scale: format unchanged")}"><button aria-label="${L("Küçült", "Zoom out")}">${ic("eksi", 13)}</button>${Math.round(olcek * 100)}%<button aria-label="${L("Büyüt", "Zoom in")}">${ic("arti", 13)}</button><button class="sigdir">${L("Sığdır", "Fit")}</button></span><span class="yol">${L("Biçim değişmedi", "Format unchanged")}</span>` : ""}
       <span class="kayit"><i></i>${L("Kaydedildi · 14:32", "Saved · 14:32")}</span>
       <button class="d s">${ic("kontrol", 14)}${L("Kontroller · 2/5", "Checks · 2/5")}</button>
       <button class="d s">${ic("disa", 14)}${L("Dışa aktar", "Export")}</button>
@@ -429,23 +488,28 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
     </div>`;
 
   // Belge DİLİ arayüzden bağımsız: İngilizce arayüzde de belge Türkçe kalır (lib/belge-dili.ts).
-  const belge = (secimli = false, atifKarti = false) => `
+  const belge = (mod = "", olcek = 1) => `
     <div class="belge-kap" style="position:relative">
+      <div class="kagit-olcekli" style="width:760px;zoom:${olcek}">
       <article class="kagit" aria-label="${L("Belge", "Document")}">
         <h2>1. GİRİŞ</h2>
         <p>Uzaktan öğrenme, pandemi döneminde yükseköğretimin varsayılan biçimi hâline geldi. Bu çalışma, birinci sınıf öğrencilerinin yalnızlık algısının ders biçimine göre nasıl değiştiğini inceliyor.</p>
-        <p>${secimli ? '<span class="secim">Önceki araştırmalar, haftalık canlı oturum içermeyen programlarda yalnızlık puanlarının daha yüksek olduğunu gösteriyor</span>' : "Önceki araştırmalar, haftalık canlı oturum içermeyen programlarda yalnızlık puanlarının daha yüksek olduğunu gösteriyor"} <span class="atif">(Kaya, 2021)</span>. Akran çalışma gruplarının bu etkiyi azalttığı da bildiriliyor <span class="atif">(Demir, 2019)</span>.</p>
+        <p>${mod.startsWith("secim") ? '<span class="secim">Önceki araştırmalar, haftalık canlı oturum içermeyen programlarda yalnızlık puanlarının daha yüksek olduğunu gösteriyor</span>' : "Önceki araştırmalar, haftalık canlı oturum içermeyen programlarda yalnızlık puanlarının daha yüksek olduğunu gösteriyor"} <span class="atif${mod === "atif" ? " secili" : ""}">(Kaya, 2021)</span>. Akran çalışma gruplarının bu etkiyi azalttığı da bildiriliyor <span class="atif">(Demir, 2019)</span>.</p>
         <h3>1.1. Araştırmanın Amacı</h3>
         <p>Çalışmanın amacı, yapılandırılmış akran temasının uzaktan öğrenmedeki yalnızlık üzerindeki etkisini nicel olarak değerlendirmektir. Bu doğrultuda iki dalgalı bir anket deseni kullanılmıştır.</p>
         <h3>1.2. Önemi</h3>
         <p>Bulgular, ilk yıl öğrencilerine yönelik ders planlamasında eşzamanlı oturumların yerine dair somut bir dayanak sunmayı amaçlar.</p>
-      </article>
-      ${secimli ? `<div class="yuzen" style="left:calc(50% - 300px);top:174px" role="toolbar" aria-label="${L("Seçim işlemleri", "Selection actions")}">
+      </article></div>
+      ${mod === "secim" ? `<div class="kenar kenar-islem" style="left:calc(50% + 392px);top:196px" role="toolbar" aria-label="${L("Seçim işlemleri", "Selection actions")}">
+        <span class="kenar-baslik">${L("Seçili cümle", "Selected sentence")}</span>
         <button>${ic("ai", 14)}${L("Arvo AI'a sor", "Ask Arvo AI")}</button><button>${ic("ara", 14)}${L("Dayanak bul", "Find support")}</button><button>${ic("tirnak", 14)}${L("Atıf ekle", "Add citation")}</button></div>` : ""}
-      ${atifKarti ? `<div class="atif-kart" style="left:calc(50% + 40px);top:236px" role="dialog" aria-label="${L("Atıf", "Citation")}">
-        <b>Kaya, A. (2021)</b><span>Remote learning and student wellbeing. <i>Journal of Synthetic Studies</i>, 12(3), 201–219.</span>
-        <span>${durumEt("pdf")} <span class="durum ok">${ic("tik", 12)}${L("Alıntı s. 1'de doğrulandı", "Quote verified on p. 1")}</span></span>
-        <span class="eylemler"><button class="d s b">${ic("pdf", 14)}${L("Dayanağa git", "Go to support")}</button><button class="d s">${L("Kaynak kaydı", "Source record")}</button></span></div>` : ""}
+      ${mod === "atif" ? `<span class="kenar-bag" style="left:calc(50% + 352px);width:40px;top:258px"></span><div class="kenar kenar-kart" style="left:calc(50% + 392px);top:236px" role="dialog" aria-label="${L("Atıf: Kaya, 2021", "Citation: Kaya, 2021")}">
+        <b>Kaya, A. (2021)</b><span>Remote learning and student wellbeing. <i>J. Synthetic Studies</i>, 12(3).</span>
+        <span class="satir-d"><span>${L("Künye", "Record")}</span><span class="g kunye">${ic("kalkan", 12)}${L("Doğrulandı · Crossref", "Verified · Crossref")}</span></span>
+        <span class="satir-d"><span>PDF</span><span class="g erisim">${ic("pdf", 12)}${L("Açılabilir", "Available")}</span></span>
+        <span class="satir-d"><span>${L("Bu cümledeki alıntı", "Quote in this sentence")}</span><span class="g alinti">${ic("tirnak", 12)}${L("Birebir eşleşti · s. 1", "Verbatim match · p. 1")}</span></span>
+        <span class="not-k">${L("Üçü ayrı kontroldür; hiçbiri iddianın desteklendiği anlamına gelmez.", "These are separate checks; none means the claim is supported.")}</span>
+        <span class="eylemler"><button class="d s b">${ic("hedef", 14)}${L("Dayanağa git", "Go to support")}</button><button class="d s">${L("Kaynak kaydı", "Source record")}</button></span></div>` : ""}
     </div>`;
 
   const cerceve = (ic_, sinif = "") => `<div class="app ${sinif}" data-tema="${durum.tema}" lang="${durum.dil}">${ic_}</div>`;
@@ -496,15 +560,17 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
       etiket: [["gelistir", L("Bugün editörde genel menü değişmiyor (333e76e)", "Today the main menu stays in the editor (333e76e)")], ["mevcut", L("Çalışma sekmeleri ve bağlam yayını yeniden kullanılır", "Work tabs and context publisher reused")]],
       ozel: true },
     { ad: () => L("Dar çalışma gezinmesi + belge", "Narrow work navigation + document"),
-      ne: () => L("Varsayılan yazma düzeni. Sol: çalışma adı, geri dönüş, Yaz / Araştır / Kontrol et grupları. Orta: belge ana odak. Sağ panel kapalı. Seçili pasajın üstünde bağlamsal işlemler; atıfa tıklayınca kaynak kartı.", "Default writing layout. Left: work title, back control, Write / Research / Check groups. Centre: the document is the focus. Right panel closed. Contextual actions above the selected passage; clicking a citation opens a source card."),
-      etiket: [["mevcut", L("Kayıt durumu, araç çubuğu, Ctrl K", "Save status, toolbar, Ctrl K")], ["gelistir", L("Atıf düğümü yok: tıklayınca kart açılmıyor", "No citation node: click opens nothing today")], ["gelistir", L("Seçim araç çubuğu", "Selection toolbar")]],
-      ciz: () => cerceve(calismaGezinme("yazim") + `<main class="ana">${edBas(L("Belge", "Document"))}${aracCubugu()}<div class="calisma-alan">${belge(true, true)}</div></main>`) },
+      ne: () => L("Varsayılan yazma düzeni. Sol: küçük resmî logo, geri dönüş, çalışma adı ve ilerlemesi, Yaz / Araştır / Kontrol et grupları. Seçim işlemleri ve atıf kartı AYRI durumlardır ve kâğıdın dışında, ilgili satırın hizasında açılır; okunan cümle örtülmez. Kenar boşluğu yetmeyen düzende (sağ panel açık) kart satırın altında açılır.", "Default writing layout. Left: small official logo, back control, work title and progress, Write / Research / Check groups. Selection actions and the citation card are SEPARATE states and open outside the page, level with the line; the sentence being read is never covered. Where the margin is too narrow (right panel open) the card opens below the line."),
+      altlar: () => [["alt5", "secim", L("Durum A: metin seçildi", "State A: text selected")], ["alt5", "atif", L("Durum B: atıfa tıklandı", "State B: citation clicked")]],
+      lejant: () => durum.alt5 === "atif" ? lejant() : "",
+      etiket: [["mevcut", L("Kayıt durumu, araç çubuğu, Ctrl K", "Save status, toolbar, Ctrl K")], ["gelistir", L("Atıf kartı ve dayanağa gitme (ayrı karar: KARARLAR.md)", "Citation card and go-to-support (separate decision: KARARLAR.md)")], ["gelistir", L("Kenar seçim işlemleri", "Margin selection actions")]],
+      ciz: () => cerceve(calismaGezinme("yazim") + `<main class="ana">${edBas(L("Belge", "Document"))}${aracCubugu()}<div class="calisma-alan">${belge(durum.alt5)}</div></main>`) },
     { ad: () => L("Geniş makale arama alanı + belge", "Wide paper search + document"),
       ne: () => L("'Makale bul' seçilince sol alan genişler ve arama çalışma alanına dönüşür; ikinci bir kenar çubuğu açılmaz. Başlık ve arama sabit, liste kendi içinde kayar. Sorgu, süzgeçler ve seçili sonuç geri dönünce korunur. 'Geri' dar çalışma gezinmesine döner.", "Choosing 'Find papers' widens the left area into a search workspace; no second sidebar opens. Header and search stay fixed, the list scrolls inside. Query, filters and selection survive going back. 'Back' returns to the narrow work navigation."),
       etiket: [["mevcut", L("OpenAlex + Crossref araması, açık erişim süzgeci", "OpenAlex + Crossref search, open-access filter")], ["taklit", L("Sonuçlar sentetik", "Results are synthetic")], ["gelistir", L("Sol alanda genişleyen yerleşim", "Expanding left-area layout")]],
       ciz: () => { const s = VERI.arama[durum.aramaSecili]; return cerceve(`
         <aside class="sol genis" aria-label="${L("Makale bul", "Find papers")}">
-          <div class="alan-bas"><div class="ust-satir"><button class="don" data-git="5">${ic("sol", 14)}${L("Geri", "Back")}</button><span class="calisma-ust">${L("Tez · Uzaktan öğrenme…", "Thesis · Remote learning…")}</span></div>
+          <div class="alan-bas"><div class="imza">${logo()}<span class="calisma-ust">${L("Tez · Uzaktan öğrenme…", "Thesis · Remote learning…")}</span></div><div class="ust-satir"><button class="don" data-git="5">${ic("sol", 14)}${L("Geri: çalışma menüsü", "Back: work menu")}</button></div>
             <h2>${L("Makale bul", "Find papers")}</h2>
             <div class="girdi odak">${ic("ara", 15)}peer study groups loneliness</div>
             <div class="filtreler"><span class="filtre acik">${ic("tik", 12)}${L("Açık erişim", "Open access")}</span><span class="filtre">${L("2018–2025", "2018–2025")}</span><span class="filtre">${L("Tür: makale", "Type: article")}</span></div></div>
@@ -515,28 +581,23 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
             ${s.d !== "pdf" ? `<span class="not">${L("DOI bulunması PDF'e erişim olduğu anlamına gelmez; PDF'i sen yükleyebilirsin.", "Having a DOI does not mean the PDF is accessible; you can upload it.")}</span>` : ""}</div>
         </aside><main class="ana">${edBas(L("Belge", "Document"))}${aracCubugu()}<div class="calisma-alan">${belge()}</div></main>`); } },
     { ad: () => L("Kaynak listesi ve sağda PDF", "Source list with PDF on the right"),
-      ne: () => L("Üç sütun yalnızca geniş ekranda: kaynak listesi + belge + PDF. Doğrulanmış alıntıdan açılınca PDF ilgili sayfaya gider ve eşleşen pasaj sarıyla vurgulanır. Eşleşme yoksa açıkça söylenir; tahmin edilen metin vurgulanmaz. Panel kenarından boyutlandırılır (klavyeyle de).", "Three columns only on wide screens: source list + document + PDF. Opened from a verified quote, the PDF jumps to the page and highlights the passage in yellow. Without a match it says so; no guessed text is highlighted. Resizable from its edge (keyboard too)."),
-      etiket: [["mevcut", L("PDF paneli, sayfaya gitme, sürükle/klavye boyutlandırma", "PDF panel, go to page, drag/keyboard resize")], ["gelistir", L("Eşleşen pasajın sarı vurgusu", "Yellow highlight of matched passage")], ["gelistir", L("Kaynak kaydı ↔ PDF ↔ atıf bağı", "Source record ↔ PDF ↔ citation link")]],
-      ciz: () => cerceve(`
+      ne: () => L("PDF açılınca belge yeniden akmaz: kâğıt aynı satır sonları ve yaslamayla ölçeklenir (üstte %, Sığdır). Sıra: önce PDF paneli 520'den 440 px'e daralır (1440 px'te belge %86), sonra sol alan raya iner (1280 px'te belge %96), en son belge ölçeği en çok %70'e iner; daha dar ekranda PDF belgenin üstünde çekmece olur. Alıntı PDF'te birebir bulunduysa pasaj sarı; bulunamazsa 'Eşleşme yok' yazar ve hiçbir şey vurgulanmaz.", "Opening the PDF never reflows the document: the page scales with the same line breaks and justification (% and Fit at the top). Order: first the PDF panel narrows from 520 to 440 px (document 86% at 1440 px), then the left area collapses to a rail (document 96% at 1280 px), last the document scale drops to at most 70%; narrower screens show the PDF as a drawer over the document. A verbatim quote match is highlighted yellow; without a match it says 'No match' and highlights nothing."),
+      altlar: () => [["alt7", "1440", L("1440 px", "1440 px")], ["alt7", "1280", L("1280 px: sol alan raya iner", "1280 px: left area becomes a rail")]],
+      lejant: () => lejant(),
+      etiket: [["mevcut", L("PDF paneli, sayfaya gitme, sürükle/klavye boyutlandırma", "PDF panel, go to page, drag/keyboard resize")], ["gelistir", L("Belge ölçeği ve daralma sırası", "Document scale and collapse order")], ["gelistir", L("Eşleşen pasajın sarı vurgusu", "Yellow highlight of matched passage")], ["gelistir", L("Kaynak kaydı ↔ PDF bağı (veri modeli kararı bekliyor)", "Source record ↔ PDF link (data model decision pending)")]],
+      ciz: () => durum.alt7 === "1280" ? ciz7dar() : cerceve(`
         <aside class="sol liste" aria-label="${L("Bu çalışmanın kaynakları", "Sources for this work")}">
-          <div class="alan-bas"><div class="ust-satir"><button class="don" data-git="5">${ic("sol", 14)}${L("Geri", "Back")}</button><button class="d s">${ic("arti", 14)}${L("Ekle", "Add")}</button></div><h2>${L("Bu çalışmanın kaynakları", "Sources for this work")}</h2>
+          <div class="alan-bas"><div class="imza">${logo()}<span class="calisma-ust">${L("Tez · Uzaktan öğrenme…", "Thesis · Remote learning…")}</span></div><div class="ust-satir"><button class="don" data-git="5">${ic("sol", 14)}${L("Geri: çalışma menüsü", "Back: work menu")}</button><button class="d s">${ic("arti", 14)}${L("Ekle", "Add")}</button></div><h2>${L("Bu çalışmanın kaynakları", "Sources for this work")}</h2>
             <div class="girdi">${ic("ara", 15)}<span style="color:var(--soluk)">${L("Kaynaklarda ara", "Search sources")}</span></div></div>
-          <div class="sol-govde">${VERI.kaynaklar.map((k, i) => `<div class="sonuc" aria-selected="${i === durum.kaynakSecili}" data-kaynak="${i}"><b>${k.t}</b><span class="m">${k.m}</span><span class="s">${durumEt(k.d)}</span></div>`).join("")}
+          <div class="sol-govde">${VERI.kaynaklar.map((k, i) => `<div class="sonuc" aria-selected="${i === durum.kaynakSecili}" data-kaynak="${i}"><b>${k.t}</b><span class="m">${k.m}</span><span class="s">${k.d !== "erisilemedi" ? G.kunye() : ""}${durumEt(k.d)}</span></div>`).join("")}
             <div class="liste-bolum" style="padding-top:16px">${L("Genel kütüphane", "General library")}</div><button class="ogre">${ic("kitap")}${L("Kütüphaneden ekle (23)", "Add from library (23)")}</button></div>
-        </aside><main class="ana">${edBas(L("Belge", "Document"))}<div class="calisma-alan">${belge()}
-          <section class="sag pdf" aria-label="${L("Kaynak PDF", "Source PDF")}" style="position:relative"><span class="tutamac" role="separator" aria-orientation="vertical" aria-label="${L("Panel genişliği", "Panel width")}" tabindex="0"></span>
-            <div class="panel-bas"><h2>Kaya, 2021</h2><span class="durum ok" style="margin-left:4px">${L("PDF", "PDF")}</span><span style="margin-left:auto"></span><button class="ikon-d" aria-label="Arvo AI">${ic("ai")}</button><button class="ikon-d" aria-label="${L("Kapat", "Close")}">${ic("x")}</button></div>
-            <div class="pdf-arac"><button class="ikon-d" aria-label="${L("Önceki sayfa", "Previous page")}">${ic("sol", 14)}</button><span class="sayfa-no">1 / 14</span><button class="ikon-d" aria-label="${L("Sonraki sayfa", "Next page")}">${ic("sag", 14)}</button><span style="margin-left:auto">100%</span><span class="ara" style="width:150px;margin-left:8px">${ic("ara", 14)}${L("PDF'te ara", "Search PDF")}</span></div>
-            <div class="pdf-dogrulama">${ic("tik", 14)}${L("Alıntı 1. sayfada doğrulandı · belgede 1. Giriş, 2. paragraf", "Quote verified on page 1 · document 1. Introduction, para. 2")}</div>
-            <div class="pdf-alan"><div class="pdf-sayfa-k"><h4>Remote learning and student wellbeing</h4><div class="yazar">Kaya, A. · Journal of Synthetic Studies 12(3)</div>
-              <p>Remote learning increased reported isolation among first-year students. <span class="vurgu-sari">The effect was strongest in programmes without weekly live sessions.</span></p>
-              <p>Students who joined peer study groups reported lower isolation scores. We surveyed 412 students across three faculties in autumn 2020.</p>
-              <p>Participants completed the Synthetic Isolation Scale at two time points. The scale has twelve items rated on a five point agreement format.</p></div></div>
-          </section></div></main>`) },
+        </aside><main class="ana">${edBas(L("Belge", "Document"), 0.86)}<div class="calisma-alan">${belge("", 0.86)}
+          ${pdfPanel()}</div></main>`) },
+
     { ad: () => L("Sağ Arvo AI paneli", "Right Arvo AI panel"),
       ne: () => L("AI sağ alanı PDF ile paylaşır; yeni sütun açılmaz. Paneli açmak ya da kayıtlı bir cevaba bakmak ücretli istek göndermez. Seçili pasaj bağlam olarak görünür. Cevap belgeye kendiliğinden girmez: Ekle, Düzenle, Kapat kullanıcının düğmeleri.", "AI shares the right area with the PDF; no new column. Opening the panel or viewing a saved answer sends no paid request. The selected passage shows as context. Answers never enter the document on their own: Insert, Edit, Dismiss are the user's buttons."),
       etiket: [["mevcut", L("Yazım asistanı, İmlece ekle / Yerine koy", "Writing assistant, Insert / Replace")], ["mevcut", L("Açmak istek göndermez", "Opening sends no request")], ["gelistir", L("Kayıtlı cevaplar (bugün sohbet kapanınca kayboluyor)", "Saved answers (lost when panel closes today)")]],
-      ciz: () => cerceve(calismaGezinme("ai") + `<main class="ana">${edBas(L("Belge", "Document"))}${aracCubugu()}<div class="calisma-alan">${belge(true)}
+      ciz: () => cerceve(calismaGezinme("ai") + `<main class="ana">${edBas(L("Belge", "Document"))}${aracCubugu()}<div class="calisma-alan">${belge("secim-yalin")}
         <section class="sag ai" aria-label="Arvo AI" style="position:relative"><span class="tutamac" role="separator" aria-orientation="vertical" tabindex="0" aria-label="${L("Panel genişliği", "Panel width")}"></span>
           <div class="panel-bas"><h2>Arvo AI</h2><span style="margin-left:auto"></span><button class="ikon-d" aria-label="${L("Kapat", "Close")}">${ic("x")}</button></div>
           <div class="sekmeler" role="tablist"><button role="tab" aria-selected="${durum.aiSekme === "sohbet"}" data-ai="sohbet">${L("Sohbet", "Chat")}</button><button role="tab" aria-selected="${durum.aiSekme === "kayitli"}" data-ai="kayitli">${L("Kayıtlı cevaplar", "Saved answers")}</button></div>
@@ -560,6 +621,20 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
       etiket: [["mevcut", L("Mevcut değerler ölçüldü (a076d9d)", "Current values measured (a076d9d)")], ["gelistir", L("Önerilen değerler prototipte doğrulanacak", "Proposed values to be validated")]],
       ozel: true },
   ];
+
+  const pdfPanel = (gen = 440) => `<section class="sag pdf" aria-label="${L("Kaynak PDF", "Source PDF")}" style="position:relative;width:${gen}px"><span class="tutamac" role="separator" aria-orientation="vertical" aria-label="${L("Panel genişliği", "Panel width")}" tabindex="0"></span>
+            <div class="panel-bas"><h2>Kaya, 2021</h2><span style="margin-left:4px">${G.erisim()}</span><span style="margin-left:auto"></span><button class="ikon-d" aria-label="Arvo AI">${ic("ai")}</button><button class="ikon-d" aria-label="${L("Kapat", "Close")}">${ic("x")}</button></div>
+            <div class="pdf-arac"><button class="ikon-d" aria-label="${L("Önceki sayfa", "Previous page")}">${ic("sol", 14)}</button><span class="sayfa-no">1 / 14</span><button class="ikon-d" aria-label="${L("Sonraki sayfa", "Next page")}">${ic("sag", 14)}</button><span style="margin-left:auto">100%</span><span class="ara" style="width:150px;margin-left:8px">${ic("ara", 14)}${L("PDF'te ara", "Search PDF")}</span></div>
+            <div class="pdf-dogrulama">${G.alinti(1)}<span>${L("belgede 1. Giriş, 2. paragraf", "document 1. Introduction, para. 2")}</span></div>
+            <div class="pdf-alan"><div class="pdf-sayfa-k"><h4>Remote learning and student wellbeing</h4><div class="yazar">Kaya, A. · Journal of Synthetic Studies 12(3)</div>
+              <p>Remote learning increased reported isolation among first-year students. <span class="vurgu-sari">The effect was strongest in programmes without weekly live sessions.</span></p>
+              <p>Students who joined peer study groups reported lower isolation scores. We surveyed 412 students across three faculties in autumn 2020.</p>
+              <p>Participants completed the Synthetic Isolation Scale at two time points. The scale has twelve items rated on a five point agreement format.</p></div></div>
+          </section>`;
+  const ciz7dar = () => `<div class="app" data-tema="${durum.tema}" lang="${durum.dil}" style="grid-template-columns:auto minmax(0,1fr)">
+        <nav class="ray" aria-label="${L("Çalışma gezinmesi (daraltılmış)", "Work navigation (collapsed)")}"><img class="r-logo logo-a" src="logo/arvolab-logo.png" alt="ArvoLAB"><img class="r-logo logo-k" src="logo/arvolab-logo-koyu.png" alt="ArvoLAB">
+          <button aria-label="${L("Çalışmalarıma dön", "Back to my works")}">${ic("sol")}</button><button aria-label="${L("Belge", "Document")}">${ic("kalem")}</button><button aria-label="${L("Kaynaklar", "Sources")}" aria-current="page">${ic("kitap")}</button><button aria-label="${L("Makale bul", "Find papers")}">${ic("ara")}</button><button aria-label="Arvo AI">${ic("ai")}</button></nav>
+        <main class="ana">${edBas(L("Belge", "Document"), 0.96)}<div class="calisma-alan">${belge("", 0.96)}${pdfPanel()}</div></main></div>`;
 
   /* Ekran 4: iki durum yan yana */
   const ciz4 = () => {
@@ -615,10 +690,12 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
       <div class="tel-govde"><div class="tel-arama"><div class="girdi odak">${ic("ara", 16)}peer study groups</div><div class="filtreler"><span class="filtre acik">${L("Açık erişim", "Open access")}</span><span class="filtre">2018–2025</span></div></div>
       <div class="tel-sonuclar">${VERI.arama.slice(0, 4).map((r, i) => `<div class="sonuc" aria-selected="${i === 0}"><b>${r.t}</b><span class="m">${r.m}</span><span class="s">${durumEt(r.d)}</span></div>`).join("")}</div></div>
       ${telAltCalisma("arastir")}`, "telefon");
-  const telPdf = () => cerceve(`<header class="tel-ust"><button class="don">${ic("sol", 16)}${L("Sonuçlar", "Results")}</button><span class="bas">Yıldız & Ortega, 2022</span></header>
-      <div class="tel-govde" style="display:grid;grid-template-rows:auto auto 1fr"><div class="pdf-arac" style="background:var(--yuzey)"><span class="sayfa-no">3 / 18</span><span style="margin-left:auto">${L("Genişliğe sığdır", "Fit width")}</span></div>
-      <div class="pdf-dogrulama" style="margin:8px">${ic("tik", 14)}${L("Pasaj 3. sayfada bulundu", "Passage found on page 3")}</div>
-      <div class="pdf-alan" style="padding:10px"><div class="pdf-sayfa-k" style="padding:22px 18px;font-size:11px"><h4 style="font-size:13px">Results</h4><p>Peer support was associated with lower loneliness at both waves. <span class="vurgu-sari">Students in weekly study groups reported the smallest increase in isolation.</span></p><p>The association held after adjusting for programme type.</p></div></div></div>
+  const telPdf = () => cerceve(`<header class="tel-ust"><button class="don">${ic("sol", 16)}${L("Sonuçlar", "Results")}</button><span class="bas">Yıldız & Ortega, 2022</span>${G.erisim()}</header>
+      <div class="tel-pdf-arac"><span class="sayfa-no">3 / 18</span><span style="margin-left:auto"></span><button class="ikon-d" aria-label="${L("Küçült", "Zoom out")}">${ic("eksi")}</button><span style="font-variant-numeric:tabular-nums">160%</span><button class="ikon-d" aria-label="${L("Büyüt", "Zoom in")}">${ic("arti")}</button><button class="d s" style="height:40px">${L("Sığdır", "Fit")}</button></div>
+      <div class="tel-govde" style="display:grid;grid-template-rows:auto 1fr auto">
+        <div class="pdf-dogrulama" style="margin:8px">${G.alinti(3)}<button class="d s b" style="height:36px;margin-left:auto">${ic("hedef", 14)}${L("Pasaja odaklan", "Focus passage")}</button></div>
+        <div class="pdf-alan" style="padding:0;overflow:hidden"><div class="pdf-sayfa-k" style="width:560px;aspect-ratio:auto;min-height:100%;padding:24px 22px;font-size:15.5px;line-height:1.6"><p style="color:#666">…the association held across all three faculties and both survey waves.</p><p>Peer support was associated with lower loneliness at both waves. <span class="vurgu-sari">Students in weekly study groups reported the smallest increase in isolation.</span></p><p>The association held after adjusting for programme type and prior online experience.</p></div></div>
+        <div class="kaydir">${L("Sayfa 160% · iki parmakla yakınlaştır, kaydırarak gez", "Page 160% · pinch to zoom, drag to pan")}</div></div>
       <nav class="tel-alt" style="grid-template-columns:1fr 1fr"><button>${ic("arti")}${L("Bu çalışmaya ekle", "Add to this work")}</button><button>${ic("tirnak")}${L("Alıntı ekle", "Add quote")}</button></nav>`, "telefon");
   const telBelge = () => cerceve(`<header class="tel-ust"><button class="don">${ic("sol", 16)}${L("Çalışmalarım", "My works")}</button><span class="bas">${L("Belge", "Document")}</span></header>
       <div class="tel-govde"><div class="tel-durum"><span class="kayit" style="margin:0"><i></i>${L("Kaydedildi · 14:36", "Saved · 14:36")}</span><span style="margin-left:auto">${L("1. Giriş", "1. Introduction")}</span></div>
@@ -659,7 +736,7 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
     3: [() => telYeni(), () => L("Tam ekran; girdiler 16 px, birincil düğme altta, klavyeyle çakışmaz.", "Full screen; inputs 16 px, primary button at the bottom, clear of the keyboard.")],
     5: [() => telCalismaMenu(), () => L("Çalışma gezinmesi telefonda alttaki 'Çalışma' sekmesinden açılan yaprak; genel menüyle yığılmaz.", "On the phone, work navigation is a sheet from the 'Work' tab; never stacked with the main menu.")],
     6: [() => telArama(), () => L("Arama tam ekran. Geri 'Belge' — sorgu ve süzgeç saklanır.", "Search full screen. Back 'Document' — query and filters kept.")],
-    7: [() => telPdf(), () => L("PDF tam ekran, pasaj vurgulu. Geri 'Sonuçlar'.", "PDF full screen, passage highlighted. Back 'Results'.")],
+    7: [() => telPdf(), () => L("PDF tam ekran; yakınlaştırma, Sığdır ve 'Pasaja odaklan'. Varsayılan açılış eşleşen pasajda, okunur ölçekte (160%).", "PDF full screen; zoom, Fit and 'Focus passage'. Opens on the matched passage at a readable scale (160%).")],
     8: [() => telAi(), () => L("AI tam ekran; cevap yalnızca kullanıcının düğmesiyle belgeye girer.", "AI full screen; the answer enters the document only by the user's button.")],
   };
   const olcekli = (html, g, y) => `<div class="cerceve-dis" style="aspect-ratio:${g}/${y}" data-g="${g}"><div class="cerceve" style="width:${g}px;height:${y}px">${html.replace('class="app', `style="width:${g}px;height:${y}px" class="app`)}</div></div>`;
@@ -668,12 +745,14 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
   function ciz() {
     const e = ekranlar[durum.ekran];
     document.getElementById("ekranlar").innerHTML = ekranlar.slice(1).map((x, i) => `<button type="button" data-ekran="${i + 1}" aria-current="${durum.ekran === i + 1}"><b>${i + 1}</b>${x.ad()}</button>`).join("");
-    document.getElementById("aciklama").innerHTML = `<div><h2>${durum.ekran}. ${e.ad()}</h2><p>${e.ne()}</p></div><div class="etiketler">${e.etiket.map(([s, y]) => `<span class="etiket ${s}">${{ mevcut: L("Mevcut", "Exists"), gelistir: L("Geliştirme", "To build"), taklit: L("Taklit", "Mock") }[s]} · ${y}</span>`).join("")}</div>`;
+    const altlar = e.altlar ? `<div class="alt-durum" role="group">${e.altlar().map(([k, v, y]) => `<button type="button" data-alt="${k}:${v}" aria-pressed="${durum[k] === v}">${y}</button>`).join("")}</div>` : "";
+    document.getElementById("aciklama").innerHTML = `<div><h2>${durum.ekran}. ${e.ad()}</h2><p>${e.ne()}</p>${altlar}${e.lejant ? `<div class="app" data-tema="${durum.tema}" style="all:unset;display:block">${e.lejant()}</div>` : ""}</div><div class="etiketler">${e.etiket.map(([s, y]) => `<span class="etiket ${s}">${{ mevcut: L("Mevcut", "Exists"), gelistir: L("Geliştirme", "To build"), taklit: L("Taklit", "Mock") }[s]} · ${y}</span>`).join("")}</div>`;
     const sahne = document.getElementById("sahne");
     const tel = TELEFON[durum.ekran];
+    const genislik = durum.ekran === 7 && durum.alt7 === "1280" ? [1280, 800] : [1440, 900];
     sahne.innerHTML = durum.ekran === 4 ? ciz4() : durum.ekran === 9 ? ciz9() : durum.ekran === 10 ? ciz10()
       : durum.cihaz === "tel" && tel ? `<div class="telefonlar"><figure class="telefon-sutun">${olcekli(tel[0](), 390, 844)}<figcaption>${tel[1]()}</figcaption></figure></div>`
-      : olcekli(e.ciz(), 1440, 900);
+      : olcekli(e.ciz(), genislik[0], genislik[1]);
     document.querySelectorAll("[data-cihaz]").forEach((b) => { b.setAttribute("aria-pressed", String(b.dataset.cihaz === durum.cihaz)); b.disabled = !TELEFON[durum.ekran] && [4, 10].includes(durum.ekran); });
     document.querySelectorAll("[data-tema]").forEach((b) => b.tagName === "BUTTON" && b.setAttribute("aria-pressed", String(b.dataset.tema === durum.tema)));
     document.querySelectorAll("[data-dil]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dil === durum.dil)));
@@ -681,9 +760,10 @@ body { background: var(--k-zemin); color: var(--k-yazi); font-family: var(--yazi
     olcekle();
   }
   document.addEventListener("click", (ev) => {
-    const b = ev.target.closest("[data-ekran],[data-tema],[data-dil],[data-cihaz],[data-git],[data-arama],[data-kaynak],[data-ai]");
+    const b = ev.target.closest("[data-ekran],[data-alt],[data-tema],[data-dil],[data-cihaz],[data-git],[data-arama],[data-kaynak],[data-ai]");
     if (!b) return;
     if (b.dataset.ekran) durum.ekran = +b.dataset.ekran;
+    else if (b.dataset.alt) { const [k, v] = b.dataset.alt.split(":"); durum[k] = v; }
     else if (b.tagName === "BUTTON" && b.dataset.tema && b.closest(".secici")) { durum.tema = b.dataset.tema; kaydet(); }
     else if (b.dataset.dil) { durum.dil = b.dataset.dil; kaydet(); }
     else if (b.dataset.cihaz) { durum.cihaz = b.dataset.cihaz; kaydet(); }

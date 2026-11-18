@@ -63,6 +63,14 @@ Mevcut token katmanı yeniden kullanılır, ama görünüm sürdürülmez.
 | Yeni çalışma | İki sütunlu pencere, üniversite/bölüm/tarih, tezde kılavuz adımı | Ad + tür + belge dili; geri kalanı çalışmanın içinden |
 | Paneller | Üç ayrı mekanizma, yalnızca PDF boyutlanıyor | Tek sağ yuva (AI ya da PDF), ortak ayırıcı |
 
+## 3a. İnceleme sonrası düzeltmeler (18.11.2026, 2. tur)
+
+1. **Marka imzası:** çalışma gezinmesinin, makale aramanın ve kaynak listesinin başında küçük resmî logo (78 px), dar ekran rayında tam logo (48 px, kırpılmadan). Ayırt edici öğe olarak çalışmanın akademik ilerlemesi (kelime/hedef, sayfa) logonun LAB yeşiliyle gösteriliyor; yeşil başka yerde yalnızca başarı durumu.
+2. **Ayrı etkileşim durumları:** seçim işlemleri (A) ve atıf kartı (B) aynı anda açılmaz; ikisi de kâğıdın dışında, ilgili satırın hizasında. Okunan cümle örtülmez. Sağ panel açıkken kenar boşluğu yetmez; kart satırın altında açılır.
+3. **PDF açılınca belge:** kâğıt yeniden akmaz, oranıyla ölçeklenir; satır sonları ve iki yana yaslama aynı kalır (üstte yüzde, −/+ ve Sığdır; "Biçim değişmedi"). Daralma sırası: PDF 520 → 440 px (1440 px'te belge %86) → sol alan raya iner (1280 px'te %96) → belge en çok %70'e iner → daha dar ekranda PDF belgenin üstünde çekmece.
+4. **Telefonda PDF:** varsayılan açılış eşleşen pasajda, okunur ölçekte (%160); −/+, Sığdır ve "Pasaja odaklan" her zaman görünür; sayfa kaydırılarak gezilir.
+5. **Güven durumları ayrı:** "PDF açılabilir" (erişim, lacivert dolgu), "Künye doğrulandı · Crossref" (dizin, çerçeveli kalkan), "Alıntı birebir eşleşti · s. N" (metin eşleşmesi, yeşil tırnak), "Olası eşleşme", "Eşleşme yok", "PDF erişilemedi". Atıf kartı üçünü ayrı satırlarda gösterir ve hiçbirinin iddianın desteklendiği anlamına gelmediğini yazar (`lib/kanit/durum.ts` ile aynı ayrım).
+
 ## 4. Mevcut yetenekler ve geliştirme gerektiren eksikler
 
 | Alan | Bugün çalışan | Geliştirme gerekir | Veri modeli |
@@ -70,18 +78,17 @@ Mevcut token katmanı yeniden kullanılır, ama görünüm sürdürülmez.
 | Çalışma gezinmesi | Bağlam yayıncısı, öğe listesi | Sol yuvanın genel/çalışma geçişi, geri dönüşte liste konumu ve süzgeç | Yok (URL + oturum belleği) |
 | Bölümler | `collectHeadings` / `jumpToHeading`, İçindekiler | Sol alanda bölüm listesi | Yok |
 | Makale arama | OpenAlex + Crossref, açık erişim süzgeci, ekle | Sol alanda genişleyen yerleşim, durum koruma | Yok |
-| PDF | Panel, sayfa, boyutlandırma, seçim doğrulama, telefonda tam ekran | Eşleşen pasajın sarı vurgusu; "eşleşme yok" durumu; kaynak kaydı ↔ PDF ↔ atıf dönüşü | Pasaj vurgusu yok. Kaynak–PDF bağı için `kaynak_pdfleri` → `literature_sources` bağı önerilecek (ayrı onay) |
-| Atıf kartı | — | Atıfa tıklayınca kart, "Dayanağa git" | **Atıf düğümü** gerekir: belge şeması değişir; editör, yazdırma ve Word yolları birlikte sınanır (`cikti-yollari.test.ts`). Bu turda önerilmiyor; ayrı kapsam |
+| PDF | Panel, sayfa, boyutlandırma, seçim doğrulama, telefonda tam ekran | Eşleşen pasajın sarı vurgusu; "eşleşme yok" durumu; belge ölçeği ve daralma sırası; telefonda yakınlaştırma ve "Pasaja odaklan" | Kaynak–PDF bağı `KARARLAR.md` K2 (onay bekliyor) |
+| Atıf kartı | — | Atıfa tıklayınca kart, "Dayanağa git" | Üç seçenek ve çıktı etkileri `KARARLAR.md` K3'te; tasarımda korunuyor |
 | Arvo AI | Sohbet, ekleme kuralları, kaynakla sohbet | Kayıtlı cevaplar sekmesi | Okuma `ai_assistant_runs`'tan; şema değişikliği beklenmiyor, RLS doğrulanacak |
-| Yeni çalışma | Ad + tür, Word içe aktarma (editörde) | Üniversite/bölüm/tarih alanlarını ve kılavuz adımını başlangıçtan çıkarmak; içe aktarmayı başlangıca bağlamak | **Çalışma başına belge dili** için alan gerekir (bugün yok). Geçiş etkisi: mevcut çalışmalar bugünkü kuralla (makale profili → arayüz dili) doldurulur |
+| Yeni çalışma | Ad + tür, Word içe aktarma (editörde) | Üniversite/bölüm/tarih alanlarını ve kılavuz adımını başlangıçtan çıkarmak; içe aktarmayı başlangıca bağlamak | **Çalışma başına belge dili** için alan gerekir (bugün yok); `KARARLAR.md` K1. Mevcut çalışmalar topluca doldurulmaz |
 | Kılavuz uyarısı | Kılavuz penceresi, teslim listesi maddesi | Kalıcı satırı kaldırıp "Kılavuz ve biçim" altına almak | Yok |
 | Tipografi ve tema | Token katmanı (`tokens.css`, `os5-tokens.css`) | Yeni değerler, açık temanın beyaz/gri olması | Yok |
 | Panel boyutlandırma | Yalnızca PDF | AI ve sol alanın aynı ayırıcıya geçmesi | Yok |
 
-**Onay gerektiren veri modeli kararları** (uygulamadan önce ayrıca sunulacak): çalışma başına belge dili; isteğe bağlı kaynak–PDF bağı. Atıf düğümü bu işin dışında önerildi.
+**Onay gerektiren kararlar:** `KARARLAR.md` — K1 belge dili, K2 kaynak–PDF bağı, K3 atıf kartı ve dayanağa gitme. Hiçbiri onaylanmadı.
 
 ## Kapsam dışı kalan ve ayrı listeye alınan talepler
 
-- Atıf düğümü ve atıftan dayanağa gitme (belge şeması değişikliği).
 - Otomatik açık erişim PDF getirme (bugün yalnızca kaynakça kontrolündeki "PDF'leri bul" ile).
 - Personel/kurum ekranlarının yeni kimliğe geçişi (bu teslim öğrenci akışını kapsıyor).

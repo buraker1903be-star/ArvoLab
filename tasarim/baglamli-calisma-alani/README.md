@@ -5,10 +5,11 @@ Dal `tasarim/baglamli-calisma-alani`, taban `main` = `a076d9d` (18.11.2026).
 
 | Yol | Ne |
 |---|---|
-| `INCELEME.md` | Mevcut sorunlar, korunacaklar, önerilen düzen, mevcut/geliştirme ayrımı |
+| `INCELEME.md` | Mevcut sorunlar, korunacaklar, önerilen düzen, 2. tur düzeltmeleri, mevcut/geliştirme ayrımı |
+| `KARARLAR.md` | Onay bekleyen kararlar: belge dili, kaynak–PDF bağı, atıf kartı (seçenekler ve çıktı etkileri) |
 | `prototip/index.html` | Etkileşimli prototip. Tarayıcıda açılır (bağımlılık yok; yalnızca Google Fonts). Ekran, tema ve dil seçilir; `#ekran-1` … `#ekran-10` doğrudan bağlantı |
 | `prototip/logo/` | `public/arvolab-logo*.png`'nin bayt bayt kopyası (SHA-256 aynı); prototip uygulamadan bağımsız açılsın diye |
-| `gorseller/` | Prototipin ekran görüntüleri. Masaüstü `NN-tema-dil.png` (10 ekran açık/TR; seçilenler koyu ve EN), telefon `tel-NN-tema-dil.png` (ekran 1, 2, 3, 5, 6, 7, 8) |
+| `gorseller/` | Prototipin ekran görüntüleri. Masaüstü `NN-tema-dil.png` (10 ekran açık/TR; seçilenler koyu ve EN), telefon `tel-NN-tema-dil.png` (ekran 1, 2, 3, 5, 6, 7, 8). 2. turda eklenen durumlar: `05secim-*`, `05atif-*` (ekran 5, A ve B), `071440-*`, `071280-*` (ekran 7, iki genişlik) |
 | `once/` | Mevcut uygulama (a076d9d, temiz üretim derlemesi, gerçek depolamalı yerel yığın, sentetik içerik) |
 
 Prototipte içerik sentetik ve davranışlar taklittir: arama sonuçları, PDF sayfası, AI cevabı, kayıtlı cevaplar,
@@ -31,6 +32,8 @@ kelime sayıları ve atıf kartı gerçek veriye bağlı değildir. Prototip sun
 - Seçili pasaj üstünde bağlamsal araç çubuğu
 - Çalışma başına belge dili; yeni çalışmadan Word içe aktarma bağlantısı
 - Telefonda arama sayfası ve "Çalışma" yaprağı
+- Belge ölçeği denetimi (−/+/Sığdır) ve PDF açılınca daralma sırası; telefonda PDF yakınlaştırma ve "Pasaja odaklan"
+- Ayrı güven durumları (PDF açılabilir / künye doğrulandı / alıntı birebir eşleşti) tek görünümde
 
 ## Başlangıç genişlikleri (prototipte)
 
