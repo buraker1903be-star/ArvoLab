@@ -35,6 +35,8 @@ export type KaynakPdfSatiri = {
   kaynak_adres: string | null;
   baslik_eslesti: boolean | null;
   bakildi: string;
+  /** Literatür kaydına açık bağ (K2-A, 4/5); eski satırlarda ve bağlanmamışlarda yok. */
+  kaynak_id?: string | null;
 };
 
 /** Depolama kovasının sınırı (project-files, migration 20260924100000) ile aynı. */

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -37,6 +37,7 @@ import {
   dahaFazlasi,
   etkinBaglanti,
   etkinUygulama,
+  solAracOku,
   yardimUygulamalari,
   type BaglamBaglantisi,
   type CalismaGrubu,
@@ -123,6 +124,20 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     : null;
   const calismaOgeleri = calisma ? calismaBaglantilari(calisma, t) : [];
   const calismaEtkin = calisma ? etkinBaglanti(calismaOgeleri, yol, sorgu) : null;
+
+  /*
+    SOL ARAÇ (yalnızca yazım ekranında, adreste ?sol=). Araç açıkken yuva
+    göreve göre genişler ve çalışma menüsünün yerini araç alır; başında
+    "Geri: çalışma menüsü" (prototip, ekran 6). Geri, aynı adresi `sol`
+    olmadan açar: sağ panel (?sag=) ve belge yerinde kalır. Esc de aynı yere.
+  */
+  const router = useRouter();
+  const yazimEkrani = Boolean(calismaId && /\/write\/?$/.test(yol));
+  const solArac = yazimEkrani ? solAracOku(sorgu.get("sol")) : null;
+  const solsuz = new URLSearchParams(sorgu.toString());
+  solsuz.delete("sol");
+  const solGeriAdresi = solsuz.toString() ? `${yol}?${solsuz.toString()}` : yol;
+  const solAracAdi = solArac ? calismaOgeleri.find((b) => b.key === solArac)?.label ?? "" : "";
 
   /*
     Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
@@ -251,7 +266,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
 
   return (
     <>
-      <nav id="os-ana-gezinme" className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
+      <nav id="os-ana-gezinme" className="os-gezinme" data-sol={solArac ?? undefined} aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
         <div className="os-gezinme-bas">
           <Link href="/dashboard" className="os-gezinme-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
             <ArvoLabLogosu alt="" />
@@ -293,8 +308,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               </div>
               {calismaGruplari("os-calisma-grup")}
             </div>
-            {/* Yazım ekranının sol araçları buraya yerleşir (manuscript-editor.tsx, createPortal). */}
-            <div id="sol-alan-yuva" className="os-sol-alan-yuva" />
             <ul className="os-gezinme-liste os-calisma-telefon">
               <li data-alt-cubuk="">{geriBaglantisi}</li>
               {calismaOgeleri.filter((b) => CALISMA_ALT_CUBUK.includes(b.key)).map((b) => calismaOgesi(b, true))}
@@ -335,6 +348,39 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
         {/* Hesap menüsü (sunucu bileşeni, layout'tan gelir): yalnızca masaüstünde; tablet ve telefonda üst çubukta. */}
         {hesap ? <div className="os-gezinme-hesap">{hesap}</div> : null}
       </nav>
+
+      {/*
+        SOL ARAÇ ALANI. Nav'ın İÇİNDE değil, kardeşi: nav telefonda bulanık
+        (backdrop-filter) bir alt çubuk ve klavye açılınca aşağı kayıyor
+        (transform); içindeki sabit konumlu bir kutu ekrana göre değil nav'a
+        göre yerleşirdi (AGENTS.md, ArvoOS mobil menü hatası). Araçların
+        içeriği editörden portal ile gelir (manuscript-editor.tsx) ve araç
+        kapalıyken de söküLMEZ: arama ve liste konumu korunur.
+      */}
+      {calisma ? (
+        <section
+          className="os-sol-alan"
+          data-acik={solArac ?? undefined}
+          aria-label={solAracAdi || undefined}
+          hidden={!solArac}
+          onKeyDown={(olay) => {
+            if (olay.key === "Escape" && solArac && !olay.defaultPrevented) {
+              olay.preventDefault();
+              router.push(solGeriAdresi, { scroll: false });
+            }
+          }}
+        >
+          <div className="os-sol-alan-bas">
+            <Link href={solGeriAdresi} scroll={false} className="os-sol-geri">
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span>{t({ tr: "Geri: çalışma menüsü", en: "Back: work menu" })}</span>
+            </Link>
+            <h2 className="os-sol-alan-ad">{solAracAdi}</h2>
+          </div>
+          {/* Yazım ekranının sol araçları buraya yerleşir (manuscript-editor.tsx, createPortal). */}
+          <div id="sol-alan-yuva" className="os-sol-alan-yuva" />
+        </section>
+      ) : null}
 
       {/* "Daha fazla": telefonda alt çubukta, tablette rayda olmayan her şey. Esc ve dışarı dokunuş kapatır. */}
       <dialog

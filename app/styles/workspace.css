@@ -1364,16 +1364,13 @@
   panelle aradaki boşluk. 1180 px ve altında yan yana yer yok: panel alttan
   açılan yaprak olur (telefondaki gibi), araç çubuğu üstte erişilebilir kalır.
 */
-@media (min-width: 1181px) {
-  .manuscript-layout[data-asistan]:not([data-odak]) {
-    grid-template-columns: minmax(0, 1fr);
-    margin-right: calc(400px + 16px + 12px - 32px);
-  }
-  .manuscript-layout[data-asistan] .manuscript-outline { display: none; }
-  /* Daralan çubukta etiketler simgeye iner (1180 px altındaki gibi); kalan düğmeler çubukta yatay kayar. */
-  .manuscript-layout[data-asistan] .arac-grup-asistan .arac-metin { display: none; }
-}
-@media (max-width: 1180px) {
+/*
+  19.11.2026: asistan paneli artık sağ yuvanın sütunu ya da çekmecesi
+  (aşağıda "SAĞ YUVA"). Eskiden 1181 px üstünde yerleşimi sağdan 400 px
+  daraltan bir boşluk, altında alttan açılan bir yaprak vardı; yaprak artık
+  yalnızca telefonda.
+*/
+@media (max-width: 760px) {
   /* --yaprak-ust: araç çubuğunun alt kenarı (yazim-paneli.tsx); yoksa eski %30. */
   .yazim-paneli { top: var(--yaprak-ust, 30dvh); right: 0; bottom: 0; left: 0; width: 100%; height: auto; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 }
@@ -1474,11 +1471,8 @@
    ayarlanır (--pdf-panel-genislik, pdf-panel-ayirici.tsx; sınırlar
    lib/pdf-goruntu.ts). 1180 px ve altında tek odak: panel tam ekran açılır,
    "kapat" ile yazdığı yere döner; yatay taşma yok. */
-.manuscript-layout[data-pdf]:not([data-odak]) {
-  grid-template-columns: minmax(0, 1fr) 10px var(--pdf-panel-genislik, 520px);
-  gap: 0 8px;
-}
-.manuscript-layout[data-pdf] .manuscript-outline { display: none; }
+/* Sağ yuvanın sütun/çekmece kuralları aşağıda ("SAĞ YUVA"). İnceleme paneli sağ panel açıkken gizlenir. */
+.manuscript-layout[data-sag] .manuscript-outline { display: none; }
 .pdf-panel-ayirici {
   align-self: stretch;
   position: sticky;
@@ -1563,8 +1557,7 @@
 @keyframes kaynak-don { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .kaynak-pdf-paneli .spin { animation: none; } }
 
-@media (max-width: 1180px) {
-  .manuscript-layout[data-pdf]:not([data-odak]) { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 760px) {
   .pdf-panel-ayirici { display: none; }
   .kaynak-pdf-paneli {
     position: fixed;
@@ -1666,4 +1659,138 @@
   .kilavuz-satiri .kilavuz-uzun { display: none; }
   .kilavuz-satiri .kilavuz-kisa { display: inline; }
   .manuscript-editor-content { padding-top: 16px; }
+}
+
+/* ============================================================
+   SAĞ YUVA (19.11.2026, bağlamlı çalışma alanı). Arvo AI ve Kaynak PDF
+   aynı yerde, aynı ayırıcıyla. İki biçim, kararı lib/calisma-alani-
+   yerlesimi.ts verir:
+     sütun   belgenin yanında: belge | ayırıcı | panel (masaüstü, yer varsa)
+     çekmece belgenin üstünde sağdan (yer yoksa ve tablette); belge tam boy.
+   Telefonda PDF tam ekran, asistan alttan yaprak (yukarıda).
+   ============================================================ */
+.manuscript-layout[data-sag]:not([data-sag-cekmece]):not([data-odak]) {
+  grid-template-columns: minmax(0, 1fr) 10px var(--sag-panel-genislik, 396px);
+  gap: 16px 8px;
+}
+.manuscript-layout[data-sag]:not([data-sag-cekmece]) > .manuscript-main { grid-column: 1; grid-row: 2; }
+.manuscript-layout[data-sag]:not([data-sag-cekmece]) > .pdf-panel-ayirici { grid-column: 2; grid-row: 2; }
+.manuscript-layout[data-sag]:not([data-sag-cekmece]) > :is(.kaynak-pdf-paneli, .yazim-paneli) { grid-column: 3; grid-row: 2; }
+@media (min-width: 761px) {
+  /* Sütunda asistan da PDF gibi yapışık bir sütun: eskiden ekranın sağına sabit yüzen bir kutuydu. */
+  .manuscript-layout[data-sag]:not([data-sag-cekmece]) .yazim-paneli {
+    position: sticky; top: 72px; right: auto; bottom: auto;
+    width: auto; height: calc(100dvh - 88px); box-shadow: none;
+  }
+  /* Çekmece: belgenin üstünde, sağdan; gölgeyle ayrışır. */
+  .manuscript-layout[data-sag-cekmece] { grid-template-columns: minmax(0, 1fr); }
+  .manuscript-layout[data-sag-cekmece] :is(.kaynak-pdf-paneli, .yazim-paneli) {
+    position: fixed; top: calc(var(--topbar-height) + 8px); right: 8px; bottom: 8px; left: auto;
+    z-index: var(--z-panel);
+    width: min(var(--sag-panel-genislik, 440px), calc(100vw - 16px - var(--os5-kenar-ray)));
+    height: auto; border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+  }
+}
+
+/* ============================================================
+   SABİT KÂĞIT VE BELGE ÖLÇEĞİ (19.11.2026). Masaüstünde kâğıt doğal
+   genişliğinde durur (860 px yazı sütunu + 32 px kenar = 924 px;
+   lib/calisma-alani-yerlesimi.ts KAGIT_GENISLIGI) ve sütun daralınca
+   görsel olarak ölçeklenir (--belge-olcek). Satır sonları, punto ve sayfa
+   biçimi değişmez; baskı ve Word bu kuralları görmez (yalnızca ekran).
+   Eskiden kâğıt sütunla birlikte akıyordu: PDF açılınca satırlar daralıp
+   iki yana yaslı metinde boşluklar açılıyordu.
+   ============================================================ */
+@media screen and (min-width: 1200px) {
+  .manuscript-layout[data-sabit-kagit] .manuscript-editor-shell { overflow-x: auto; }
+  .manuscript-layout[data-sabit-kagit] .manuscript-editor-content {
+    box-sizing: border-box;
+    width: 924px;
+    margin-inline: auto;
+    padding-inline: 32px;
+    zoom: var(--belge-olcek, 1);
+  }
+}
+.belge-olcek {
+  display: inline-flex; align-items: center; gap: 2px; height: var(--os5-kontrol-h-sik);
+  padding: 0 2px; border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); background: var(--surface);
+}
+.belge-olcek-dugme, .belge-olcek-sigdir {
+  display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px;
+  border: 0; border-radius: var(--r-xs); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--os5-fs-meta); font-weight: 600; cursor: pointer;
+}
+.belge-olcek-dugme:hover, .belge-olcek-sigdir:hover { background: var(--surface-2); color: var(--ink); }
+.belge-olcek-sigdir[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary-ink); }
+.belge-olcek :is(button):focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.belge-olcek-deger { min-width: 3.2em; color: var(--ink); font-size: var(--os5-fs-meta); font-variant-numeric: tabular-nums; text-align: center; }
+
+/* ============================================================
+   SOL ARAÇLAR (sol-araclar.tsx): gezinmenin yuvasında (os-shell.css).
+   ============================================================ */
+.sol-arac { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.sol-arac[hidden] { display: none; }
+.sol-arac-ust { flex: none; padding: var(--s-3) var(--s-3) var(--s-2); }
+.sol-arac-govde { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s-2) var(--s-3) var(--s-4); }
+.sol-arac-alt { flex: none; padding: var(--s-2) var(--s-3); border-top: 1px solid var(--line-soft); font-size: var(--os5-fs-meta); }
+.sol-arac-alt .link-button { display: inline-flex; align-items: center; gap: 6px; }
+.sol-arac-bos { margin: var(--s-2) 0; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.5; }
+.sol-arama { display: flex; align-items: center; gap: 8px; height: var(--os5-kontrol-h-sik); padding: 0 10px; border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); background: var(--surface); color: var(--muted); }
+.sol-arama input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: var(--os5-fs-govde); }
+.sol-arama:focus-within { border-color: var(--primary); box-shadow: var(--odak-halkasi); }
+.sol-bolum-listesi { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.sol-bolum-listesi button {
+  display: block; width: 100%; min-height: 32px; padding: 6px 8px; overflow: hidden;
+  border: 0; border-radius: var(--r-xs); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--os5-fs-govde); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+}
+.sol-bolum-listesi [data-duzey="1"] button { color: var(--ink); font-weight: 600; }
+.sol-bolum-listesi [data-duzey="2"] button { padding-left: 20px; }
+.sol-bolum-listesi [data-duzey="3"] button { padding-left: 32px; font-size: var(--os5-fs-meta); }
+.sol-bolum-listesi button:hover { background: var(--surface-sunken); color: var(--ink); }
+.sol-bolum-listesi button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.sol-arac-bolum { display: grid; gap: 8px; margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+.sol-arac-bolum h3 { margin: 0; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.sol-zorunlu { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: var(--os5-fs-meta); color: var(--muted); }
+.sol-zorunlu li { display: flex; align-items: center; gap: 6px; }
+.sol-zorunlu li[data-tamam] { color: var(--ink-soft); }
+.sol-zorunlu li[data-tamam] > svg { color: var(--success); }
+.sol-kaynak-listesi { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sol-kaynak { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
+.sol-kaynak-kunye { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
+.sol-kaynak-kunye b { color: var(--ink); font-weight: 600; }
+.sol-kaynak-kunye span { color: var(--ink-soft); display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.sol-kaynak-durum, .sol-kaynak-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
+.sol-arama-govde .project-form-grid { grid-template-columns: 1fr 1fr; }
+
+/* Güven durumu çipleri: her biri AYRI bir kontrolü söyler (lib/kanit/durum.ts ile aynı ayrım). */
+.guven-cip {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 0 8px;
+  border: 1px solid transparent; border-radius: var(--r-pill);
+  font-size: var(--fs-micro); font-weight: 600; white-space: nowrap;
+}
+.guven-cip[data-tur="erisim"] { background: var(--primary-soft); color: var(--primary-ink); }
+.guven-cip[data-tur="kunye"] { border-color: color-mix(in srgb, var(--primary-ink) 45%, transparent); color: var(--primary-ink); }
+.guven-cip[data-tur="alinti"] { background: var(--success-soft); color: var(--success); }
+.guven-cip[data-tur="uyari"] { background: var(--warning-soft); color: var(--warning); }
+.guven-cip[data-tur="notr"] { background: var(--surface-sunken); color: var(--muted); }
+/*
+  Makale bul dar yuvada: literatur-bulucu.tsx'in "gömülü" düzeni iki
+  kartı (arama | sonuçlar) yan yana dizer; 372 px'lik yuvada alt alta,
+  kart çerçevesi olmadan durur. Sonuç satırının eylemleri alta iner.
+*/
+.sol-arama-govde .pencere-iki-kart { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+.sol-arama-govde .pencere-kart { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.sol-arama-govde .pencere-kart-baslik { font-size: var(--fs-body); }
+.sol-arama-govde .bulgu-satiri { flex-direction: column; align-items: stretch; }
+.sol-arama-govde .bulgu-eylemler { justify-content: flex-start; }
+/*
+  Sabit kâğıt geçici rayla birlikte: kenar çubuğu daraltıldığında yerleşimi
+  176 px daraltan eski kural (os-shell.css, "KÂĞIT GEOMETRİSİ SABİT", Phase
+  5.1c) kâğıt akarken satır uzunluğunu korumak içindi. Kâğıt artık sabit
+  genişlikte ve ölçekleniyor; o daraltma yalnızca belgeyi küçültürdü
+  (1440 px + PDF'te %72 ölçüldü). Sabit kâğıtta yerleşim tam genişlik.
+*/
+@media (min-width: 1200px) {
+  html[data-gezinme="dar"] .os-root .manuscript-layout[data-sabit-kagit] { max-width: none; }
 }

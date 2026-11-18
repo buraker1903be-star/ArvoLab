@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import type { Editor } from "@tiptap/react";
 import { BookOpenCheck, FileText, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 import { goruntuleyiciKaynaklari, kaynakSecimiDogrula } from "@/app/actions/kaynak-pdf";
 import { kaynaklaSohbet, type KaynakSohbetYaniti } from "@/app/actions/ai-kaynak-sohbeti";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
@@ -50,19 +51,29 @@ export default function KaynakPdfPaneli({
   editor,
   projectId,
   acik,
+  acilacak = null,
   onKapat,
   onCite,
 }: {
   editor: Editor;
   projectId: string;
   acik: boolean;
+  /** Kaynaklar aracından "PDF'i aç" (sol-araclar.tsx): panel bu PDF'le açılır. */
+  acilacak?: { id: string; anahtar: number } | null;
   onKapat: () => void;
   onCite: (source: LiteratureSource, secenek: { sayfa?: string | null }) => Promise<void>;
 }) {
   const t = useCeviri();
   const [liste, setListe] = useState<KaynakPdfSatiri[] | null>(null);
   const [listeHatasi, setListeHatasi] = useState<string | null>(null);
-  const [pdfId, setPdfId] = useState<string>("");
+  /*
+    Seçili PDF ve okuma konumu SEKME OTURUMUNDA (19.11.2026): başka bir
+    çalışma sayfasına gidip dönen ya da sayfayı yenileyen öğrenci aynı PDF'in
+    aynı sayfasına döner. Eskiden konum yalnızca bellekteydi; editörden
+    çıkmak PDF'i ilk kaynağın ilk sayfasına döndürüyordu.
+  */
+  const [pdfId, setPdfId] = useOturumDurumu<string>(`arvolab.pdf.${projectId}.secili`, "");
+  const [konumlar, setKonumlar] = useOturumDurumu<Record<string, OkumaKonumu>>(`arvolab.pdf.${projectId}.konumlar`, {});
   const [secim, setSecim] = useState<PdfSecimi | null>(null);
   const [gidilecek, setGidilecek] = useState<{ sayfa: number; anahtar: number } | null>(null);
   const [soru, setSoru] = useState("");
@@ -85,12 +96,13 @@ export default function KaynakPdfPaneli({
         return;
       }
       setListe(sonuc.satirlar);
-      if (sonuc.satirlar.length) setPdfId((onceki) => onceki || sonuc.satirlar[0].id);
+      // Saklanan seçim artık listede yoksa (PDF silindi) ilk kaynağa düşülür.
+      if (sonuc.satirlar.length) setPdfId((onceki) => (onceki && sonuc.satirlar.some((r) => r.id === onceki) ? onceki : sonuc.satirlar[0].id));
     });
     return () => {
       iptal = true;
     };
-  }, [acik, liste, projectId]);
+  }, [acik, liste, projectId, setPdfId]);
 
   const pdf = useMemo(() => liste?.find((r) => r.id === pdfId) ?? null, [liste, pdfId]);
 
@@ -110,11 +122,30 @@ export default function KaynakPdfPaneli({
     yakınlaştırma PDF BAŞINA burada tutulur (panel bileşeni kapalıyken de
     yaşıyor): bir PDF'in konumu başka bir PDF'e taşınmaz.
   */
-  const konumlarRef = useRef(new Map<string, OkumaKonumu>());
-  const konumDegisti = useCallback((id: string, konum: OkumaKonumu) => {
-    konumlarRef.current.set(id, konum);
-  }, []);
-  const konumAl = useCallback((id: string) => konumlarRef.current.get(id) ?? null, []);
+  const konumlarRef = useRef(konumlar);
+  useEffect(() => {
+    konumlarRef.current = konumlar;
+  }, [konumlar]);
+  const konumDegisti = useCallback(
+    (id: string, konum: OkumaKonumu) => {
+      setKonumlar((onceki) => ({ ...onceki, [id]: konum }));
+    },
+    [setKonumlar],
+  );
+  const konumAl = useCallback((id: string) => konumlarRef.current[id] ?? null, []);
+
+  /* Dışarıdan istenen PDF (Kaynaklar aracı): anahtar her istekte değişir, aynı PDF'e ikinci basış da işler. */
+  const [islenenAcilis, setIslenenAcilis] = useState<number | null>(null);
+  if (acilacak && acilacak.anahtar !== islenenAcilis && liste) {
+    setIslenenAcilis(acilacak.anahtar);
+    if (liste.some((r) => r.id === acilacak.id) && acilacak.id !== pdfId) {
+      setPdfId(acilacak.id);
+      setSecim(null);
+      setAnalizler([]);
+      setAtif(null);
+      setGidilecek(null);
+    }
+  }
 
   /* Görüntüleyici seçim bildirdiğinde: yeni seçim önceki atıf adımını sıfırlar. */
   const secimGeldi = useCallback((yeni: PdfSecimi | null) => {
@@ -175,8 +206,8 @@ export default function KaynakPdfPaneli({
       setAtif(null);
       setSecim(null);
       window.getSelection()?.removeAllRanges();
-      // Dar ekranda panel tam ekran: ekleme bitince öğrenci yazdığı yere döner.
-      if (window.matchMedia("(max-width: 1180px)").matches) onKapat();
+      // Panel belgenin üstündeyse (çekmece ya da telefonda tam ekran): ekleme bitince öğrenci yazdığı yere döner.
+      if (document.querySelector(".manuscript-layout[data-sag-cekmece]") || window.matchMedia("(max-width: 760px)").matches) onKapat();
     } finally {
       setEkleniyor(false);
     }

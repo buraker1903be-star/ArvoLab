@@ -426,7 +426,6 @@
    ============================================================ */
 /* Telefon dışında çalışma alt çubuğu çizilmez; telefonda gruplar çizilmez. */
 .os-calisma-telefon { display: none; }
-.os-sol-alan-yuva:empty { display: none; }
 .os-calisma-ust { display: flex; flex-direction: column; gap: var(--s-2); }
 .os-calisma-kimlik { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--s-1) var(--os5-gezinme-ic) 0; }
 .os-calisma-etiket { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
@@ -442,7 +441,7 @@
 .os-calisma-geri { color: var(--muted); }
 
 @media (max-width: 760px) {
-  .os-calisma-govde, .os-sol-alan-yuva { display: none; }
+  .os-calisma-govde { display: none; }
   .os-calisma-telefon { display: contents; }
   .os-calisma-telefon > li { flex: 1 1 0; min-width: 0; display: flex; }
 }
@@ -485,3 +484,52 @@
 /* Telefon kuralı (.os-gezinme-liste satır yönü) alt çubuk içindir; pencerede liste dikey. */
 .os-daha-grup .os-gezinme-liste { flex-direction: column; }
 .os-daha-grup .os-gezinme-oge { min-height: 48px; }
+
+/* ============================================================
+   SOL ARAÇ ALANI (19.11.2026): Bölümler, Kaynaklar, Makale bul.
+   Gezinmenin KARDEŞİ, sabit konumlu (os-gezinme.tsx'teki gerekçe).
+   Masaüstünde gezinmenin logo satırının altını kaplar ve yuvanın
+   genişliğini göreve göre büyütür (--os5-kenar-genis; içerik de
+   aynı değişkenle kayar). Tablette içeriğin üstünde açılan bir yaprak,
+   telefonda üst çubukla alt çubuk arasında tam ekran. Genişlikler
+   lib/calisma-alani-yerlesimi.ts (SOL_ARAC_GENISLIGI) ile aynı.
+   ============================================================ */
+.os-sol-alan {
+  position: fixed; z-index: calc(var(--z-gezinme) + 1);
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--os5-kenar-zemin); color: var(--ink);
+  font-family: var(--os5-font-govde);
+}
+.os-sol-alan:not([data-acik]) { display: none; }
+.os-sol-alan-bas { display: flex; flex: none; flex-direction: column; gap: 2px; padding: var(--s-2) var(--s-3) var(--s-2); border-bottom: 1px solid var(--os5-kenar-cizgi); }
+.os-sol-geri {
+  display: inline-flex; align-items: center; gap: var(--s-2); align-self: flex-start;
+  min-height: 32px; padding: 0 var(--s-2); margin-left: calc(-1 * var(--s-2));
+  border-radius: var(--os5-kontrol-r); color: var(--muted); font-size: var(--os5-fs-meta); font-weight: 500; text-decoration: none;
+}
+.os-sol-geri:hover { background: var(--os5-kenar-hover); color: var(--ink); }
+.os-sol-geri:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-sol-alan-ad { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 600; }
+.os-sol-alan-yuva { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.os-sol-alan-yuva > [hidden] { display: none; }
+
+@media (min-width: 1200px) {
+  .os-sol-alan { top: var(--topbar-height); left: 0; bottom: 0; width: var(--os5-kenar-genis); border-right: 1px solid var(--os5-kenar-cizgi); border-top: 1px solid var(--os5-kenar-cizgi); }
+  .os-root:has(> .os-sol-alan[data-acik="bolumler"]),
+  .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]) { --os5-kenar-genis: 300px; }
+  .os-root:has(> .os-sol-alan[data-acik="arama"]) { --os5-kenar-genis: 372px; }
+  /* Kullanıcı kenar çubuğunu daraltmış olsa da araç kendi genişliğinde açılır; içerik onunla kayar. */
+  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .os-gezinme { width: var(--os5-kenar-genis); }
+  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .dashboard-content-shell { margin-left: var(--os5-kenar-genis); }
+}
+@media (min-width: 761px) and (max-width: 1199px) {
+  .os-sol-alan {
+    top: var(--topbar-height); left: 0; bottom: 0; width: min(372px, calc(100vw - var(--os5-kenar-ray)));
+    border-right: 1px solid var(--line); box-shadow: var(--shadow-lg);
+  }
+}
+@media (max-width: 760px) {
+  .os-sol-alan { top: var(--topbar-height); right: 0; bottom: var(--dock-alani); left: 0; }
+  .os-sol-alan input, .os-sol-alan select, .os-sol-alan textarea { font-size: 16px; }
+}
+@media print { .os-sol-alan { display: none !important; } }

@@ -193,7 +193,7 @@ export default function YazimPaneli({
 
   /*
     ALTTAN AÇILAN YAPRAK ARAÇ ÇUBUĞUNU ÖRTMEZ (17.11.2026, RELEASE CLOSURE 05).
-    1180 px ve altında panel alttan açılan bir yaprak; eskiden yüksekliği
+    Telefonda (760 px ve altı; 19.11.2026'ya kadar 1180 px ve altı) panel alttan açılan bir yaprak; eskiden yüksekliği
     sabit %70'ti ve sayfa en üstteyken araç çubuğu (1024 px'te 255–313, 390
     px'te 279–337) yaprağın altında kalıyordu (studyo-kabul.mjs U3). Yaprağın
     üst kenarı açılışta ve yeniden boyutlanınca araç çubuğunun altına
@@ -210,7 +210,7 @@ export default function YazimPaneli({
     const hizala = () => {
       const panel = panelRef.current;
       if (!panel) return;
-      if (!window.matchMedia("(max-width: 1180px)").matches) {
+      if (!window.matchMedia("(max-width: 760px)").matches) {
         if (son !== "") panel.style.removeProperty("--yaprak-ust");
         son = "";
         return;

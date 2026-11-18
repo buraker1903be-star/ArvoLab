@@ -5,6 +5,7 @@ import { BookOpenCheck, Check, ExternalLink, Plus, Search, Unlock } from "lucide
 import { aramaKaydiniEkle, literaturAramasiYap, type AramaYaniti } from "@/app/actions/literatur-arama";
 import { showToast } from "../_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 
 type Proje = { id: string; title: string };
 type Kayit = NonNullable<AramaYaniti["kayitlar"]>[number];
@@ -27,6 +28,7 @@ export default function LiteraturBulucu({
   onSorguDegis,
   gomulu = false,
   aramaYaninda,
+  durumAnahtari = null,
 }: {
   projeler: Proje[];
   secilenCalisma?: string | null;
@@ -37,13 +39,20 @@ export default function LiteraturBulucu({
   gomulu?: boolean;
   /** Penceredeki "Dizinlerde ara" düğmesinin yanına ("Manuel kaynak ekle"). */
   aramaYaninda?: ReactNode;
+  /**
+   * Verilirse süzgeçler ve sonuçlar sekme oturumunda saklanır (19.11.2026,
+   * yazım ekranının sol "Makale bul" aracı): araç değiştirip dönen ya da
+   * başka bir çalışma sayfasına gidip gelen öğrenci aramasını kaybetmesin.
+   */
+  durumAnahtari?: string | null;
 }) {
   const t = useCeviri();
-  const [yilDan, setYilDan] = useState("");
-  const [yilaKadar, setYilaKadar] = useState("");
-  const [acikErisim, setAcikErisim] = useState(false);
+  const anahtar = (ek: string) => (durumAnahtari ? `${durumAnahtari}.${ek}` : null);
+  const [yilDan, setYilDan] = useOturumDurumu(anahtar("yilDan"), "");
+  const [yilaKadar, setYilaKadar] = useOturumDurumu(anahtar("yilaKadar"), "");
+  const [acikErisim, setAcikErisim] = useOturumDurumu(anahtar("acikErisim"), false);
   const [projeId, setProjeId] = useState(secilenCalisma ?? "");
-  const [yanit, setYanit] = useState<AramaYaniti | null>(null);
+  const [yanit, setYanit] = useOturumDurumu<AramaYaniti | null>(anahtar("yanit"), null);
   const [eklenen, setEklenen] = useState<Set<string>>(new Set());
   const [aranıyor, aramayaBasla] = useTransition();
   const [eklenenKimlik, setEklenenKimlik] = useState<string | null>(null);
