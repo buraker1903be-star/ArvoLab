@@ -1,0 +1,61 @@
+{
+  "durum": "paketsiz",
+  "uygulama": "http://localhost:3125",
+  "tarih": "2026-11-18T07:07:43.436Z",
+  "sonuc": [
+    {
+      "id": "K1",
+      "ad": "Kayıt formu gönderilir, doğrulama e-postası gider",
+      "durum": "PASS",
+      "gozlenen": "posta \"ArvoLab hesabınızı doğrulayın\"; hesap açıldı; onaysız t; onaydan önce parola t"
+    },
+    {
+      "id": "K2",
+      "ad": "E-postadaki bağlantı → onay düğmesi → oturum açık panel",
+      "durum": "PASS",
+      "gozlenen": "son yol /dashboard; onaylı t; onaydan sonra parola t; profil rolü employee"
+    },
+    {
+      "id": "K3",
+      "ad": "Yeni hesap, kayıtta seçtiği parolayla yeniden giriş yapar",
+      "durum": "PASS",
+      "gozlenen": "son yol /dashboard; ekrandaki uyarı \"Ana Sayfa · ArvoLab\""
+    },
+    {
+      "id": "S1",
+      "ad": "Şifremi unuttum → e-posta → bağlantı → yeni şifre → panel",
+      "durum": "PASS",
+      "gozlenen": "posta \"ArvoLab şifre sıfırlama\"; son yol /dashboard; parola t"
+    },
+    {
+      "id": "S2",
+      "ad": "Sıfırlanan şifreyle yeniden giriş",
+      "durum": "PASS",
+      "gozlenen": "son yol /dashboard"
+    },
+    {
+      "id": "M1",
+      "ad": "Mevcut hesap şifresiyle giriş yapar",
+      "durum": "PASS",
+      "gozlenen": "son yol /dashboard"
+    },
+    {
+      "id": "M2",
+      "ad": "Mevcut belge açılır ve içeriği görünür",
+      "durum": "PASS",
+      "gozlenen": "editörde \"Mevcut paragraf 2bd221.\""
+    },
+    {
+      "id": "M3",
+      "ad": "Belgeye yazılan metin kaydedilir (veritabanı) ve yenilemede geri gelir",
+      "durum": "PASS",
+      "gozlenen": "veritabanında true; yenilemeden sonra true; metin_surumu -"
+    },
+    {
+      "id": "H0",
+      "ad": "Turda sayfa hatası yok",
+      "durum": "PASS",
+      "gozlenen": "0"
+    }
+  ]
+}

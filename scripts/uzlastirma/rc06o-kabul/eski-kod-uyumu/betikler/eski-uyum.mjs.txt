@@ -1,0 +1,164 @@
+// RC06p TEST DÜZENEĞİ — uygulama kodu DEĞİL. Eski Production kodu (b62bfcf) üretim derlemesine karşı,
+// gerçek yerel Postgres + GoTrue üzerinde kimlik ve belge yolları. Aynı betik iki şema durumunda koşulur:
+// "paketsiz" (Production taklidi = bugünkü Production) ve "paketli" (+ P1–P6, P8). Bir adım yalnızca
+// paketli durumda düşüyorsa YENİ (paketlerin eski koda etkisi), iki durumda da düşüyorsa ÖNCEDEN VAR.
+// Kullanım: node eski-uyum.mjs <uygulama> <çıktı-klasörü> <durum-adı> <posta-kaydı>
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { chromium } = require("playwright");
+
+const [UYG, CIKTI, DURUM, POSTA] = process.argv.slice(2);
+fs.mkdirSync(CIKTI, { recursive: true });
+const SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
+const imzala = (y) => { const b = (o) => Buffer.from(JSON.stringify(o)).toString("base64url"); const g = `${b({ alg: "HS256", typ: "JWT" })}.${b({ iss: "yerel-yigin", iat: 1763200000, exp: 2079000000, ...y })}`; return `${g}.${crypto.createHmac("sha256", SIR).update(g).digest("base64url")}`; };
+const SERVIS = imzala({ role: "service_role" });
+const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+const gotrue = async (yol, g, m = "POST") => (await fetch(`http://127.0.0.1:54401/auth/v1${yol}`, { method: m, headers: { apikey: SERVIS, Authorization: `Bearer ${SERVIS}`, "Content-Type": "application/json" }, body: JSON.stringify(g) })).json();
+const ek = crypto.randomBytes(3).toString("hex");
+const parolaUret = () => `Kq7!${crypto.randomBytes(9).toString("base64url")}`;
+const surum = fs.readFileSync("/home/user/arvolab-rc06p-eski/lib/sozlesme/kullanim-sozlesmesi.ts", "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+const sonuc = [];
+const kayit = (id, ad, gecti, gozlenen) => { sonuc.push({ id, ad, durum: gecti ? "PASS" : "FAIL", gozlenen }); console.log(`${gecti ? "PASS" : "FAIL"}  ${id}  ${ad}\n      gözlenen: ${gozlenen}`); };
+const postalar = () => (fs.existsSync(POSTA) ? fs.readFileSync(POSTA, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
+const postaBekle = async (adres, konuDeseni, onceki) => {
+  for (let i = 0; i < 40; i++) {
+    const p = postalar().filter((x) => JSON.stringify(x.to).includes(adres) && konuDeseni.test(x.subject ?? "")).slice(onceki);
+    if (p.length) return p[0];
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return null;
+};
+const baglanti = (html) => (html.match(/href="([^"]*\/auth\/confirm\?[^"]+)"/) ?? [])[1]?.replace(/&amp;/g, "&");
+const parolaVarMi = (id) => psql(`select encrypted_password is not null and encrypted_password <> '' from auth.users where id='${id}'`);
+
+const tarayici = await chromium.launch();
+const yeniBaglam = () => tarayici.newContext({ baseURL: UYG, viewport: { width: 1280, height: 900 } });
+const giris = async (s, adres, parola) => {
+  await s.goto("/");
+  await s.fill('input[name="email"]', adres);
+  await s.fill('input[name="password"]', parola);
+  await s.press('input[name="password"]', "Enter");
+  await s.waitForURL((u) => !/\/$|\/\?/.test(u.pathname + u.search) || /dashboard/.test(u.pathname), { timeout: 20000 }).catch(() => {});
+  await s.waitForTimeout(1500);
+  return new URL(s.url()).pathname;
+};
+const senaryo = async (id, ad, fn) => { try { await fn(); } catch (e) { kayit(id, ad, false, `hata: ${String(e.message).split("\n")[0]}`); } };
+
+// ---------- Yeni kayıt: form → e-posta → onay → yeniden giriş ----------
+const yeniAdres = `kayit-${DURUM}-${ek}@yerel.test`;
+const yeniParola = parolaUret();
+let yeniId = null;
+{
+  const c = await yeniBaglam(); const s = await c.newPage();
+  await senaryo("K1", "Kayıt formu gönderilir, doğrulama e-postası gider", async () => {
+    await s.goto("/kayit");
+    await s.fill('input[name="fullName"]', "Uyum Deneme");
+    await s.fill('input[name="email"]', yeniAdres);
+    await s.fill('input[name="phone"]', "5551112233").catch(() => {});
+    await s.fill('input[name="password"]', yeniParola);
+    await s.fill('input[name="passwordRepeat"]', yeniParola);
+    await s.locator('input[name="sozlesme"]').click({ force: true });
+    const kutu = s.locator(".kayit-okuyucu-metin");
+    await kutu.waitFor({ timeout: 10000 });
+    for (let i = 0; i < 60; i++) { await kutu.evaluate((k) => { k.scrollTop = k.scrollHeight; k.dispatchEvent(new Event("scroll")); }); await s.waitForTimeout(100); if (await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).isEnabled()) break; }
+    await s.getByRole("button", { name: /Okudum ve onaylıyorum/ }).click();
+    if (!(await s.locator('input[name="sozlesme"]').isChecked())) await s.locator('input[name="sozlesme"]').check({ force: true });
+    await s.locator('input[name="kvkk"]').check({ force: true });
+    await s.locator('button[type="submit"].login-button').click();
+    const posta = await postaBekle(yeniAdres, /./, 0);
+    yeniId = psql(`select id from auth.users where email='${yeniAdres}'`) || null;
+    kayit("K1", "Kayıt formu gönderilir, doğrulama e-postası gider", Boolean(posta && baglanti(posta.html) && yeniId),
+      `posta ${posta ? `"${posta.subject}"` : "yok"}; hesap ${yeniId ? "açıldı" : "yok"}; onaysız ${yeniId ? psql(`select email_confirmed_at is null from auth.users where id='${yeniId}'`) : "-"}; onaydan önce parola ${yeniId ? parolaVarMi(yeniId) : "-"}`);
+  });
+  await senaryo("K2", "E-postadaki bağlantı → onay düğmesi → oturum açık panel", async () => {
+    const posta = await postaBekle(yeniAdres, /./, 0);
+    await s.goto(baglanti(posta.html));
+    await s.locator("form button.login-button[type=submit]").click();
+    await s.waitForURL(/dashboard/, { timeout: 20000 }).catch(() => {});
+    const yol = new URL(s.url()).pathname;
+    kayit("K2", "E-postadaki bağlantı → onay düğmesi → oturum açık panel", /dashboard/.test(yol),
+      `son yol ${yol}; onaylı ${psql(`select email_confirmed_at is not null from auth.users where id='${yeniId}'`)}; onaydan sonra parola ${parolaVarMi(yeniId)}; profil rolü ${psql(`select role from public.profiles where id='${yeniId}'`) || "yok"}`);
+  });
+  await c.close();
+}
+await senaryo("K3", "Yeni hesap, kayıtta seçtiği parolayla yeniden giriş yapar", async () => {
+  const c = await yeniBaglam(); const s = await c.newPage();
+  const yol = await giris(s, yeniAdres, yeniParola);
+  const hata = (await s.locator(".login-error, [role=alert]").allInnerTexts().catch(() => [])).join(" | ").slice(0, 160);
+  kayit("K3", "Yeni hesap, kayıtta seçtiği parolayla yeniden giriş yapar", /dashboard/.test(yol), `son yol ${yol}${hata ? `; ekrandaki uyarı "${hata}"` : ""}`);
+  await c.close();
+});
+
+// ---------- Şifre sıfırlama (yeni hesap üzerinde: K3 düşse bile kurtarma yolu sınanır) ----------
+const sifirParola = parolaUret();
+await senaryo("S1", "Şifremi unuttum → e-posta → bağlantı → yeni şifre → panel", async () => {
+  const c = await yeniBaglam(); const s = await c.newPage();
+  const onceki = postalar().filter((x) => JSON.stringify(x.to).includes(yeniAdres)).length;
+  await s.goto("/forgot-password");
+  await s.fill('input[name="email"]', yeniAdres);
+  await s.locator('button[type="submit"]').first().click();
+  let posta = null;
+  for (let i = 0; i < 40 && !posta; i++) { posta = postalar().filter((x) => JSON.stringify(x.to).includes(yeniAdres))[onceki] ?? null; if (!posta) await s.waitForTimeout(500); }
+  if (!posta) throw new Error("sıfırlama postası gelmedi");
+  await s.goto(baglanti(posta.html));
+  await s.locator("form button.login-button[type=submit]").click();
+  await s.waitForURL(/reset-password/, { timeout: 20000 });
+  await s.fill('input[name="password"]', sifirParola);
+  await s.fill('input[name="passwordConfirm"]', sifirParola);
+  await s.locator('button[type="submit"]').first().click();
+  await s.waitForURL(/dashboard/, { timeout: 20000 }).catch(() => {});
+  const yol = new URL(s.url()).pathname;
+  kayit("S1", "Şifremi unuttum → e-posta → bağlantı → yeni şifre → panel", /dashboard/.test(yol), `posta "${posta.subject}"; son yol ${yol}; parola ${parolaVarMi(yeniId)}`);
+  await c.close();
+});
+await senaryo("S2", "Sıfırlanan şifreyle yeniden giriş", async () => {
+  const c = await yeniBaglam(); const s = await c.newPage();
+  const yol = await giris(s, yeniAdres, sifirParola);
+  kayit("S2", "Sıfırlanan şifreyle yeniden giriş", /dashboard/.test(yol), `son yol ${yol}`);
+  await c.close();
+});
+
+// ---------- Mevcut hesap ve mevcut belge ----------
+const mevcutAdres = `mevcut-${DURUM}-${ek}@yerel.test`, mevcutParola = parolaUret();
+const u = await gotrue("/admin/users", { email: mevcutAdres, email_confirm: true, user_metadata: { full_name: "Mevcut Kullanici" } });
+await gotrue(`/admin/users/${u.id}`, { password: mevcutParola }, "PUT");
+psql(`insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi) values ('${u.id}', 'kullanim_sozlesmesi', '${surum}', 'tr', '${"0".repeat(64)}', 'giris', true)`);
+const P = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${u.id}', 'thesis', 'Uyum ${ek}') returning id`).split("\n")[0];
+const ilkMetin = `Mevcut paragraf ${ek}.`;
+psql(`insert into public.project_manuscripts (project_id, content) values ('${P}', '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"${ilkMetin}"}]}]}'::jsonb)`);
+{
+  const c = await yeniBaglam(); const s = await c.newPage();
+  const hatalar = []; s.on("pageerror", (e) => hatalar.push(String(e.message).slice(0, 120)));
+  await senaryo("M1", "Mevcut hesap şifresiyle giriş yapar", async () => {
+    const yol = await giris(s, mevcutAdres, mevcutParola);
+    kayit("M1", "Mevcut hesap şifresiyle giriş yapar", /dashboard/.test(yol), `son yol ${yol}`);
+  });
+  await senaryo("M2", "Mevcut belge açılır ve içeriği görünür", async () => {
+    await s.goto(`/dashboard/editor/${P}/write`);
+    const ed = s.locator(".ProseMirror").first();
+    await ed.waitFor({ state: "visible", timeout: 60000 });
+    const metin = await ed.innerText();
+    kayit("M2", "Mevcut belge açılır ve içeriği görünür", metin.includes(ilkMetin), `editörde "${metin.slice(0, 60)}"`);
+  });
+  const ekMetin = ` Eklenen cümle ${ek}.`;
+  await senaryo("M3", "Belgeye yazılan metin kaydedilir (veritabanı) ve yenilemede geri gelir", async () => {
+    const ed = s.locator(".ProseMirror").first();
+    await ed.click(); await s.keyboard.press("Control+End"); await s.keyboard.type(ekMetin, { delay: 15 });
+    let kaydedildi = false;
+    for (let i = 0; i < 40 && !kaydedildi; i++) { await s.waitForTimeout(500); kaydedildi = psql(`select content::text like '%Eklenen cümle ${ek}%' from public.project_manuscripts where project_id='${P}'`) === "t"; }
+    const surumNo = psql(`select coalesce(to_jsonb(m)->>'metin_surumu', '-') from public.project_manuscripts m where project_id='${P}'`);
+    await s.reload(); await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+    const sonra = await s.locator(".ProseMirror").first().innerText();
+    kayit("M3", "Belgeye yazılan metin kaydedilir (veritabanı) ve yenilemede geri gelir", kaydedildi && sonra.includes(`Eklenen cümle ${ek}`),
+      `veritabanında ${kaydedildi}; yenilemeden sonra ${sonra.includes(`Eklenen cümle ${ek}`)}; metin_surumu ${surumNo}`);
+  });
+  kayit("H0", "Turda sayfa hatası yok", hatalar.length === 0, hatalar.length ? hatalar.join(" | ") : "0");
+  await c.close();
+}
+await tarayici.close();
+const p = sonuc.filter((x) => x.durum === "PASS").length;
+fs.writeFileSync(`${CIKTI}/eski-uyum-${DURUM}.json`, JSON.stringify({ durum: DURUM, uygulama: UYG, tarih: new Date().toISOString(), sonuc }, null, 2));
+console.log(`\n${DURUM}: ${p} PASS · ${sonuc.length - p} FAIL`);

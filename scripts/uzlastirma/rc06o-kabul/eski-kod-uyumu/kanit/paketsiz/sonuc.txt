@@ -1,0 +1,20 @@
+PASS  K1  Kayıt formu gönderilir, doğrulama e-postası gider
+      gözlenen: posta "ArvoLab hesabınızı doğrulayın"; hesap açıldı; onaysız t; onaydan önce parola t
+PASS  K2  E-postadaki bağlantı → onay düğmesi → oturum açık panel
+      gözlenen: son yol /dashboard; onaylı t; onaydan sonra parola t; profil rolü employee
+PASS  K3  Yeni hesap, kayıtta seçtiği parolayla yeniden giriş yapar
+      gözlenen: son yol /dashboard; ekrandaki uyarı "Ana Sayfa · ArvoLab"
+PASS  S1  Şifremi unuttum → e-posta → bağlantı → yeni şifre → panel
+      gözlenen: posta "ArvoLab şifre sıfırlama"; son yol /dashboard; parola t
+PASS  S2  Sıfırlanan şifreyle yeniden giriş
+      gözlenen: son yol /dashboard
+PASS  M1  Mevcut hesap şifresiyle giriş yapar
+      gözlenen: son yol /dashboard
+PASS  M2  Mevcut belge açılır ve içeriği görünür
+      gözlenen: editörde "Mevcut paragraf 2bd221."
+PASS  M3  Belgeye yazılan metin kaydedilir (veritabanı) ve yenilemede geri gelir
+      gözlenen: veritabanında true; yenilemeden sonra true; metin_surumu -
+PASS  H0  Turda sayfa hatası yok
+      gözlenen: 0
+
+paketsiz: 9 PASS · 0 FAIL

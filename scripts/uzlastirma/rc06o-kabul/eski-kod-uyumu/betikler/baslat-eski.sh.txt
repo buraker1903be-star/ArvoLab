@@ -1,0 +1,11 @@
+#!/bin/bash
+# RC06p: b62bfcf (eski Production kodu) üretim derlemesi + next start. E-posta yerel yakalayıcıya; gerçek sağlayıcı yok, AI yok.
+set -euo pipefail
+S=/tmp/claude-0/-home-user/222306a4-3182-58d4-a2c9-d7c5715a80b4/scratchpad
+cd /home/user/arvolab-rc06p-eski
+set -a; . $S/prova/anahtar.env; set +a
+unset ARVOLAB_KABUL_AI_ANAHTAR AI_ANAHTAR OPENAI_API_KEY ANTHROPIC_API_KEY AI_TABAN_URL AI_MODEL || true
+export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54401 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON" SUPABASE_SERVICE_ROLE_KEY="$SERVIS"
+unset ANON SERVIS
+export RESEND_API_KEY=yerel-yakalayici-sahte YAKALAYICI_KAYIT="${YAKALAYICI_KAYIT:?}" NODE_OPTIONS="--import $S/rc06k2/yerel-yakalayici.mjs"
+exec npx next start -p 3125

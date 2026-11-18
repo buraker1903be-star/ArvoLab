@@ -1,6 +1,6 @@
 # Yayın planı — aday `a08b61d5c7404f305b2e4c4a8e8dedd8e2b056f7` (RC06o)
 
-18.11.2026 · **Karar: HOLD** (gerekçeler §6). Bu belge `RAPOR-RC06c.md` §6'daki yayın planının
+18.11.2026 (RC06p güncellemesi: eski kod uyumu ölçüldü, tek yayın onayı §7, dal temizliği §8) · **Karar: HOLD** (gerekçeler §6). Bu belge `RAPOR-RC06c.md` §6'daki yayın planının
 yerini alır; çelişkide bu geçerli. Hazırlık sırasında Production'a ve paylaşılan Test'e hiçbir
 şey yazılmadı. Migration repair, paket uygulaması, Auth değişikliği, main birleştirmesi,
 Production dağıtımı ve restore YAPILMADI. Production'da bu turda sorgu da çalıştırılmadı.
@@ -45,8 +45,9 @@ Adayın değişmesi (yeni birleştirme) bu planı ve §1'deki kabulü geçersiz 
 
 ## 3. Uygulanabilir kontrol listesi
 
-Kurallar: her satır ayrı Production onayıdır; bir satırın beklenen sonucu tutmazsa **dur**, sonraki
-satıra geçme. "Özet" = Production'da `sema-ozeti.sql` (salt okunur) ↔ provanın aynı adımındaki özet
+Kurallar: Production'a yazan bütün satırlar (A.1, K.1, B.1–B.8, M.1) **tek yayın onayıyla** (§7) yürür;
+satır başına ayrıca onay istenmez. Onay verilmeden hiçbir satır uygulanmaz. Bir satırın beklenen
+sonucu tutmazsa **dur**, sonraki satıra geçme; durulan noktadan devam yeni bir onay ister. "Özet" = Production'da `sema-ozeti.sql` (salt okunur) ↔ provanın aynı adımındaki özet
 (`sonuclar/prova-gecmis-rc06d.txt`, `ozet-*.txt`). Production proje kimliği Latin harfli
 `zpfpocyajnxcketdjbxm`; Kiril `х`'li kopya hiçbir komuta yapıştırılmaz (RC06c §8).
 
@@ -60,7 +61,7 @@ satıra geçme. "Özet" = Production'da `sema-ozeti.sql` (salt okunur) ↔ prova
 | 0.4 | **İzole geri yükleme provası** (§2) | 0.3 | kopya açılır, özet ve sayımlar tutar, süre kayıtlı | kopya açılmaz ya da özet tutmaz | kopyayı sil |
 | 0.5 | Production geçmiş tablosu ve katalog farkı (salt okunur) | 0.1 | geçmişte yalnızca eski 12 kayıt; özet 17.11 Production özetiyle aynı | yeni kayıt ya da şema sapması | yok |
 | 0.6 | P5 ön koşul sorgusu (`P5_g1_kimlik.sql` başlığı) ve P3/P7 ön koşulları | 0.5 | P5 veri adımı 0 satır (17.11: 0) | 0 değilse: kimlik listesini depo DIŞINDA kaydet, P5'i bu pencerede yeniden değerlendir | yok |
-| 0.7 | Bakım penceresi: 0.3'teki yedeğe yakın; Dalga A → main birleştirmesi aynı pencerede (§5 R1) | 0.1–0.6 | pencere ve geri dönüş sorumlusu belli | — | — |
+| 0.7 | Bakım penceresi: 0.3'teki yedeğe yakın; B.6 (P5) → B.7 → B.8 → M.1 → M.2 arka arkaya, arada bekleme yok (ölçülen ara dönem etkisi §5 R1) | 0.1–0.6 | pencere ve geri dönüş sorumlusu belli; P5 uygulama anı kaydedilecek | — | — |
 
 ### Dalga A — yalnızca geçmiş, şema değişmez (97 sürüm)
 
@@ -88,7 +89,7 @@ karşılaştırması, sonra o paketin `gecmis/dalga-B-<P>.txt` sürümleri `repa
 | B.3 | P6 destek/danışmanlık koruması | B.2 | 2 tetikleyici; repair 1 | tetikleyici yok | R6 |
 | B.4 | P4 kılavuz seçimi | B.3 | fonksiyon derlenir; repair 1 | derlenmez | R4 |
 | B.5 | P3 KVKK + deneme işareti | B.4 | 2 sütun NULL eklenir, `handle_new_user` derlenir, satıra veri yazılmaz; repair 2 | sütun yok ya da fonksiyon derlenmez | R3 (varsayılan kip; **`tam=1` kullanılmaz** — KVKK onay zamanlarını siler) |
-| B.6 | P5 G1 kimlik (ayrı alt pencere) | B.5 + 0.6 bu pencerede yeniden ölçüldü | `auth.users` üzerinde 2 tetikleyici; veri adımı beklenen satır (0); repair 3 (NET-EŞDEĞER dahil) | tetikleyici eklenemezse ya da veri adımı beklenenden fazla satır | şema: R5, **yalnızca yeni kod geri alındıktan sonra**; veri adımı: yalnızca 0.6'da kaydedilen listeden elle |
+| B.6 | P5 G1 kimlik | B.5 + 0.6 bu pencerede yeniden ölçüldü; M.1 hazır (CI yeşil PR) | `auth.users` üzerinde 2 tetikleyici; veri adımı beklenen satır (0); repair 3 (NET-EŞDEĞER dahil); **uygulama anı kaydedilir** | tetikleyici eklenemezse ya da veri adımı beklenenden fazla satır | şema: R5, **yalnızca yeni kod geri alındıktan sonra**; veri adımı: yalnızca 0.6'da kaydedilen listeden elle |
 | B.7 | P8 rol varsayılanı → `client` | B.6 + P8 kararı (§4.1) | `profiles.role` varsayılanı `client`; **hiçbir satır güncellenmez** | satır güncellenirse | R8 (varsayılan `employee`; arada açılan hesapların rolü değişmez) |
 | B.8 | Son durum | B.7 | `db push --dry-run` bekleyen **0** (Onay K varsa); özet = prova son durum; depo hedefine fark 142 satır (kabul edilen liste, RC06c §2) | bekleyen ≠ 0 ya da fark listesi dışında satır | ters sıra R8 → R1 |
 | (B.9) | P9 — **bu yayından ertelenebilir** (§4.5) | ayrı onay + 0.4 kapalı | `service_role` DELETE true, `authenticated` false | authenticated/anon yetkisi değişirse | R9 (yalnızca yetki; silinen veri yalnızca yedekten döner) |
@@ -99,7 +100,8 @@ karşılaştırması, sonra o paketin `gecmis/dalga-B-<P>.txt` sürümleri `repa
 |---|---|---|---|---|---|
 | M.1 | `design/os5` (`a08b61d`) → `main` birleştirmesi (PR) | 0.1 kapalı, B.8 tamam, Onay K verilmiş, CI yeşil | merge commit ağacı = `a08b61d` ağacı | aday SHA değişmişse ya da CI kırmızı | merge'i geri alan commit (`git revert -m 1`) — yalnızca kod |
 | M.2 | Vercel Production dağıtımı READY | M.1 | `target: production`, kaynak `main` merge commit'i | derleme düşerse (önceki Production çalışmaya devam eder) | Vercel'de önceki Production dağıtımına anında geri dönüş (`b62bfcf` dağıtımı) |
-| M.3 | Duman: giriş sayfası, oturum açma (iç ekip hesabı), Ana Sayfa, editör açılışı, Kaynaklar/Kaynakça, Ayarlar; Vercel çalışma zamanı hataları | M.2 | sayfa hatası yok; çalışma zamanı hatası yok | 5xx ya da hata sınırı ekranı | Vercel geri dönüşü; şema paketleri yerinde kalabilir (eski kod paketli şemada — bkz. §5 R1) |
+| M.3 | Duman: giriş sayfası, oturum açma (iç ekip hesabı), Ana Sayfa, editör açılışı, Kaynaklar/Kaynakça, Ayarlar; Vercel çalışma zamanı hataları | M.2 | sayfa hatası yok; çalışma zamanı hatası yok | 5xx ya da hata sınırı ekranı | Vercel geri dönüşü; şema paketleri yerinde kalabilir: eski kod paketli şemada yerelde sınandı, 8/9 — tek fark yeni kayıtların şifresi (§5 R1) |
+| M.5 | Ara dönemde onaylanıp şifresi silinen hesap sayısı (`eski-kod-uyumu/RAPOR.md` sorgusu, P5 anı → M.2 anı; salt okunur, yalnızca sayı) | M.2 | 0 ya da küçük, kayıtlı sayı | — (durma değil) | kişiler "Şifremi unuttum" yoluyla şifre belirler (yerelde S1/S2 PASS); gerekirse destek bildirimi |
 | M.4 | Cron'lar (`vercel.json`: hesap-silme, deneme-hatirlatma, kaynak-onbellegi-temizle, academic-directory-refresh) ilk koşu günlüğü | M.2 | hata yok; hesap silmede yetim dal "ertelendi" (P9 yoksa beklenen) | hata | ilgili cron'u Vercel'de durdurma kararı |
 
 **Geri alma sırası:** önce kod (Vercel geri dönüşü / revert), sonra gerekiyorsa şema (R8 → R1). R1 ve
@@ -147,13 +149,17 @@ Hangisi seçilirse seçilsin, G1 metinlerde "uygulama içinden yapılan değişi
 
 ## 5. Kalan riskler ve dar kontroller
 
-**R1 — ara dönem (eski kod + paketli şema).** Dalga B ile M.2 arasında Production'da `main`
-(`b62bfcf`) kodu P1–P8 uygulanmış şemada çalışır. Paketler ekleyici (yeni fonksiyon/tetikleyici/sütun,
-varsayılan), ama P3 (`handle_new_user`) ve P5 (`auth.users` tetikleyicileri) eski kodun kayıt ve e-posta
-onayı yoluna da dokunuyor ve **bu birleşim hiç sınanmadı** (provalar yeni kodla koşuldu). Kapatma:
-- dar kontrol (yerel, Production'a dokunmaz): `b62bfcf` üretim derlemesi + P1–P6, P8 uygulanmış yerel
-  şema üzerinde `kayit-butunlugu.mjs` ve `kimlik-kabul.mjs` (yeni kayıt → onay → giriş, şifre sıfırlama);
-- ve/veya Dalga B ile M.1–M.2'yi aynı bakım penceresinde, arka arkaya yapmak.
+**R1 — ara dönem (eski kod + paketli şema) — ÖLÇÜLDÜ (RC06p, `eski-kod-uyumu/RAPOR.md`).**
+`b62bfcf` üretim derlemesi, gerçek yerel Postgres + GoTrue; aynı betik paketsiz (bugünkü Production
+karşılığı) ve paketli şemada koşuldu. Paketsiz 9/9, paketli 8/9. Kayıt, e-posta onayı, şifre sıfırlama,
+mevcut hesapla giriş, mevcut belgeyi açma ve kaydetme iki durumda da PASS; önceden var olan bir hata
+çıkmadı. **Tek yeni etki (K3):** ara dönemde eski kodla kaydolup e-postasını onaylayan kişi ilk
+oturumda panele girer, oturum kapandıktan sonra kayıtta seçtiği şifreyle giremez — P5 onaydan önce
+konmuş şifreyi bilerek siliyor. Kurtarma yolu çalışıyor ("Şifremi unuttum", S1/S2 PASS); veri kaybı yok.
+Ters sıra (önce yeni kod, sonra P5) aynı etkiyi yeni kodla üretir (kod okunarak; koşulmadı), yani
+etkiyi sıfırlayan sıra yok. Etki ara dönemin süresiyle sınırlı: plan bu yüzden B.6 → M.2'yi arka arkaya
+yürütür (0.7) ve dağıtımdan sonra etkilenen hesapları sayar (M.5). Bu etkinin kabulü tek yayın
+onayının parçasıdır (§7).
 
 **R2 — dokunmatik kaydırma (Stüdyo U5-dokunma, UNVERIFIED).** Başsız tarayıcıda üretilemiyor.
 Dar kontrol: gerçek bir telefonda (iOS Safari ve Android Chrome) yazım ekranı açıkken asistan yaprağı
@@ -186,14 +192,62 @@ istenerek doğrulanabilir (gerçek kullanıcıya gönderim yok).
 | P8 | **GO** (karar) / uygulama onayı bekliyor | hedef `client` kararlaştırıldı, satır güncellemez | B.7 için Production uygulama onayı |
 | Mevcut 2 `employee` hesabı | **GO** | P8 dokunmaz; yayını engellemez | §4.2'de (a)/(b) kararı — yayından bağımsız |
 | **Auth A1** | **HOLD** | açık karar maddesi; "eski davranışla aynı" maddeyi kapatmaz | §4.4: (a), (b) ya da (c) seçimi (önerilen b) |
-| **Ara dönem uyumu (R1)** | **HOLD** | eski kod + P3/P5'li şema birleşimi sınanmadı | §5 R1 yerel dar kontrol ya da Dalga B + main'i tek pencerede yapma kararı |
+| Ara dönem uyumu (R1) | **GO** (ölçüldü; etkinin kabulü onayda) | eski kod paketli şemada 8/9; tek yeni etki: ara dönemde kaydolanlar şifre sıfırlamayla girer; önceden var hata yok | §7 onayında K3 etkisinin kabulü; M.5 ölçümü |
 | Dokunmatik kaydırma (R2) | **HOLD** (dar) | UNVERIFIED; başsız tarayıcıda üretilemez | §5 R2: gerçek telefonda kontrol (kullanıcı) ya da riskin kabulü |
 | Preview çalışma anı (R3) | **HOLD** (dar) | bağlanılan projenin Test olduğu UNVERIFIED | §5 R3: CSP okuma (yazmasız; paylaşım bağlantısı için onay) ya da riskin kabulü. Uygulama kabulü yerel üretim derlemesinde yapıldığı için yayın kodunu doğrudan etkilemez |
 | P9 | **ERTELENDİ** (öneri) | geri yükleme provası yok; R9 veri getirmez | yayından sonra: 0.4 kapalı + ayrı onay |
 | Hak iadesi | **ERTELENDİ** (öneri) | politika değişikliği, yayın riski değil | ayrı iş |
-| Production'a uygulama (Dalga A, K, B, main) | **HOLD** | yukarıdaki HOLD'lar açık | HOLD satırlarının hepsi kapandıktan sonra §3 sırasıyla, her satır ayrı onay |
+| Production'a uygulama (Dalga A, K, B, main) | **HOLD** | yukarıdaki HOLD'lar açık | HOLD satırları kapandıktan sonra §7'deki **tek yayın onayı**; onay yoksa uygulama yok |
 
-**Sonuç:** kod tarafı hazır (GO). Yayın, Production tarafında dört karar/kanıt yüzünden **HOLD**:
-geri yükleme provası, güncel yedek okuması, Onay K ve Auth A1 kararı; ayrıca ara dönem uyumu için
-bir yerel kontrol ya da tek pencere kararı. Dokunma ve Preview maddeleri dar ve kullanıcının
-kabulüyle kapanabilir.
+**Sonuç:** kod tarafı hazır (GO); eski kod–yeni şema uyumu ölçüldü (8/9, tek sınırlı yeni etki).
+Yayın, Production tarafında dört karar/kanıt yüzünden **HOLD**: geri yükleme provası, güncel yedek
+okuması, Onay K ve Auth A1 kararı. Dokunma ve Preview maddeleri dar ve kullanıcının kabulüyle
+kapanabilir. Hepsi kapanınca tek onay (§7) yeterli.
+
+## 7. Tek yayın onayı (önerilen metin)
+
+Aşağıdaki onay verilene kadar Production'a hiçbir şey uygulanmaz. Onay yalnızca burada sayılanları
+kapsar; durma koşullarından biri gerçekleşirse yayın o noktada durur ve devam yeni onay ister.
+
+**Ön koşullar (onayın geçerli olması için hepsi):** 0.1 ve 0.2 yeniden okundu ve aynı; 0.3 uygulama
+günü yedeği kayıtlı; 0.4 izole geri yükleme provası PASS; Onay K = evet; Auth A1 için seçim yapıldı;
+aday hâlâ `a08b61d` ve CI yeşil.
+
+**Onaylanan işlemler (bu sırayla, tek pencerede):**
+1. Dalga A — `gecmis/dalga-A.txt`, 97 sürüm, `migration repair --status applied` (şema değişmez).
+2. Onay K — `gecmis/dalga-A-kismi.txt`, 3 sürüm, aynı komut (şema değişmez).
+3. Paketler, her biri tek işlem ve ardından kendi `dalga-B-<P>.txt` repair'i:
+   P1 `rate_limit_take` → P2 metin sürüm damgası → P6 destek/danışmanlık koruması → P4 kılavuz seçimi →
+   P3 KVKK + deneme işareti (varsayılan kip) → P5 G1 kimlik → P8 rol varsayılanı `client`.
+4. `design/os5` @ `a08b61d` → `main` birleştirmesi ve Vercel Production dağıtımı (M.1–M.2), ardından M.3–M.5.
+
+**Durma koşulları (biri gerçekleşirse dur, sonraki adıma geçme):**
+- herhangi bir adımdan sonra Production şema özeti provanın aynı adımıyla eşleşmiyor;
+- Dalga A sonrası bekleyen ≠ 12, Onay K sonrası ≠ 9, B.8'de ≠ 0;
+- bir paketin başlığındaki DURDURMA koşulu (P1: anon/authenticated EXECUTE; P2: örnek UPDATE hatası;
+  P3/P4/P6: nesne oluşmuyor; P5: tetikleyici eklenemiyor ya da veri adımı 0.6'daki sayıdan fazla satır;
+  P8: herhangi bir satır güncelleniyor);
+- P5 ön koşul sorgusu pencerede 0 değil ve kimlik listesi kaydedilmedi;
+- M.1'de aday SHA değişmiş ya da CI kırmızı; M.2 derlemesi düşüyor; M.3'te 5xx ya da hata sınırı ekranı.
+
+**Durunca geri alma:** önce kod (Vercel önceki dağıtım), sonra gerekirse şema R8 → R1
+(`paketler/GERI_DONUS.md`; R1 ve R5 yeni kod çalışırken uygulanmaz). Geçmiş satırları şemayı
+değiştirmediği için yerinde kalabilir. P5 veri adımı yalnızca kaydedilen listeden elle döner.
+
+**Onayla kabul edilen bilinen etki:** P5 uygulandığı andan yeni kod dağıtılana kadar eski kodla
+kaydolup onaylayan kişiler kendi şifreleriyle yeniden giremez, "Şifremi unuttum" ile girer (§5 R1);
+M.5 sayısı rapora yazılır.
+
+**Kapsam DIŞI (bu onay vermez):** P7, P9, Auth ayarı değişikliği (A1), hak iadesi politikası, mevcut
+`employee` hesaplarına dokunma, Production'da restore, PITR/ücret ayarı, ArvoOS, PR #96.
+
+## 8. Uzak dal temizliği (18.11.2026)
+
+Kural ve listeler: `dal-temizligi/` (silmeden önce dal adı + tam SHA, rapor dalına `bbaf1d7` ile
+kaydedildi). 153 uzak dal tarandı: **32 dal silme ölçütünü karşılıyor** (birleşmiş PR head'i = dal
+HEAD'i ve `design/os5` @ `a08b61d`'nin atası), **121 dal korunuyor** (2 ana dal, 4 açık PR dalı,
+5 kabul raporu dalı, oturumun geliştirme dalı, 49 PR'sız dal, 59 birleşmiş ama `design/os5`'in atası
+olmayan — squash/rebase olasılığı incelenmedi, 1 PR'dan sonra commit almış dal).
+**Silinen: 0.** Uzak dal silme bu oturumda izin katmanınca engellendi; 32 dal `dal-temizligi/silme-sonucu.tsv`'de
+"SİLİNMEDİ" olarak duruyor. Aday `a08b61d`, `main` ve ayrışan dallar değişmedi.
+

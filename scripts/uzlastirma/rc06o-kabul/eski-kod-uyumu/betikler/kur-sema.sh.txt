@@ -1,0 +1,17 @@
+#!/bin/bash
+# RC06p: RC06o tarifi; PAKETSIZ=1 ise yalnızca Production taklidi (paket yok) — eski kodun bugünkü Production karşılığı.
+set -euo pipefail
+KOK="$1"; CIKTI="$2"
+export PGPASSWORD=yerel-yigin
+PSQL=(psql -h 127.0.0.1 -p 56432 -U postgres -v ON_ERROR_STOP=1 -q)
+HARIC=(20260924100026_kvkk_onayi_kaydi.sql 20260924100027_deneme_hatirlatma_isareti.sql 20260926131150_kilavuz_secimi_kararli.sql
+  20261106184046_eposta_onayi_kimlik_sabitleme.sql 20261107113542_sifre_durumum.sql 20261107120542_ilk_sifre_gerekli.sql
+  20261112195236_rate_limit_take.sql 20261115203504_metin_surum_damgasi.sql)
+bash "$KOK/scripts/yerel-yigin/kur-depo.sh" "${HARIC[@]}" > "$CIKTI/kur-depo.log" 2>&1
+grep -c "hariç:" "$CIKTI/kur-depo.log" | xargs -I{} echo "atlanan migration: {}"
+"${PSQL[@]}" -f "$KOK/scripts/uzlastirma/prova/00-production-taklidi.sql" > /dev/null
+[ "${PAKETSIZ:-}" = 1 ] || for p in P1_rate_limit_take P2_metin_surum_damgasi P6_destek_danismanlik_guard P4_kilavuz_secimi P3_kvkk_ve_deneme_isareti P5_g1_kimlik P8_profil_rol_varsayilani; do
+  "${PSQL[@]}" -f "$KOK/scripts/uzlastirma/paketler/$p.sql" > /dev/null && echo "uygulandı: $p"
+done
+"${PSQL[@]}" -At -F '|' -f "$KOK/scripts/uzlastirma/sema-ozeti.sql" > "$CIKTI/sema-ozeti.txt"
+echo "sema-ozeti satır: $(wc -l < "$CIKTI/sema-ozeti.txt") · md5(sıralı): $(sort "$CIKTI/sema-ozeti.txt" | md5sum | cut -d' ' -f1) · md5(ham): $(md5sum < "$CIKTI/sema-ozeti.txt" | cut -d' ' -f1)"
