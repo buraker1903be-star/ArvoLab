@@ -1,0 +1,76 @@
+{
+  "tarih": "2026-11-18T10:50:38.725Z",
+  "gotrue": "v2.198.0",
+  "sonuclar": [
+    {
+      "kimlik": "A1",
+      "ad": "7 karakterlik şifre Auth API'sinde de reddedilir",
+      "beklenen": "422 weak_password",
+      "gozlenen": "422 weak_password",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "A2",
+      "ad": "mevcut şifre olmadan doğrudan PUT /user reddedilir",
+      "beklenen": "400 current_password_required, şifre değişmez",
+      "gozlenen": "400 current_password_required, eski şifre geçerli",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "A3",
+      "ad": "yanlış mevcut şifreyle reddedilir",
+      "beklenen": "400 current_password_invalid",
+      "gozlenen": "400 current_password_invalid",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "A4",
+      "ad": "8 karakter + doğru mevcut şifre kabul edilir",
+      "beklenen": "200, yeni şifreyle giriş",
+      "gozlenen": "200, giriş var",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "A5",
+      "ad": "şifre değişince öteki oturum kapanır",
+      "beklenen": "yenileme 400",
+      "gozlenen": "400",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "A6",
+      "ad": "değiştiren oturum açık kalır",
+      "beklenen": "yenileme 200",
+      "gozlenen": "200",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "B1",
+      "ad": "sıfırlama bağlantısının oturumu mevcut şifresiz şifre koyar",
+      "beklenen": "200, yeni şifreyle giriş",
+      "gozlenen": "200, giriş var",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "B2",
+      "ad": "sıfırlamadan sonra önceki oturum kapanır",
+      "beklenen": "yenileme 400",
+      "gozlenen": "400",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "C1",
+      "ad": "e-posta onayından sonra ilk şifre mevcut şifresiz konur",
+      "beklenen": "200, ilk şifreyle giriş",
+      "gozlenen": "200, giriş var",
+      "sonuc": "PASS"
+    },
+    {
+      "kimlik": "C2",
+      "ad": "ilk şifreden sonra şifreyle açılan oturum mevcut şifre ister",
+      "beklenen": "400 current_password_required",
+      "gozlenen": "400 current_password_required",
+      "sonuc": "PASS"
+    }
+  ]
+}
