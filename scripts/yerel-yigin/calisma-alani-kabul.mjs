@@ -40,6 +40,25 @@ const ANON = imzala({ role: "anon" }), SERVIS = imzala({ role: "service_role" })
 const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
+/*
+  Sınanan derleme kayda geçer (studyo-kabul.mjs ile aynı yöntem): .next/BUILD_ID
+  sunucunun döndürdüğü HTML'de geçmek ZORUNDA, yoksa sunucu bu dizinin
+  derlemesini çalıştırmıyor ve koşu başlamaz. git HEAD ve çalışma ağacının
+  temizliği de yazılır: kabulün hangi içeriğe ait olduğu sonradan sorulabilsin.
+*/
+const BUILD_ID = fs.existsSync(path.join(KOK, ".next/BUILD_ID")) ? fs.readFileSync(path.join(KOK, ".next/BUILD_ID"), "utf8").trim() : null;
+const HEAD = execFileSync("git", ["rev-parse", "HEAD"], { cwd: KOK, encoding: "utf8" }).trim();
+const KIRLI = execFileSync("git", ["status", "--porcelain", "--", "app", "lib", "proxy.ts", "next.config.ts", "package.json"], { cwd: KOK, encoding: "utf8" }).trim();
+try {
+  const html = await (await fetch(`${UYG}/`)).text();
+  if (!BUILD_ID || !html.includes(BUILD_ID)) {
+    console.error(`Ön koşul yok: sunucu .next/BUILD_ID (${BUILD_ID ?? "yok"}) derlemesini çalıştırmıyor (next build + next start bu dizinden mi?)`);
+    process.exit(2);
+  }
+} catch (e) {
+  console.error("Ön koşul yok (uygulama):", e.message);
+  process.exit(2);
+}
 try {
   if ((await fetch(`${GECIT}/auth/v1/health`)).status !== 200) throw new Error("geçit");
   if (!(await fetch(UYG)).ok) throw new Error("uygulama");
@@ -83,6 +102,21 @@ const BELGE = { type: "doc", content: [
 const ESKI = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${A.id}','thesis','Eski Tez: Akran Teması ve Yalnızlık') returning id`).split("\n")[0];
 psql(`insert into public.project_manuscripts (project_id, content, plain_text, include_toc) values ('${ESKI}', ${q(JSON.stringify(BELGE))}::jsonb, 'x', true)`);
 const IKINCI = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${A.id}','article','İkinci Çalışma') returning id`).split("\n")[0];
+// S8 dışa aktarma: içeriği bilinen bir belge (başlık, atıflar, tablo etiketi, kaynakça; içindekiler açık).
+const CIKTI_METINLERI = {
+  paragraf1: "Uzaktan öğrenme birinci sınıf öğrencilerinde yalnızlığı artırdı (Kaya, 2021).",
+  paragraf2: "Akran çalışma grupları bu etkiyi azaltıyor (Demir, 2019).",
+  tablo: "Katılımcıların fakültelere göre dağılımı",
+  kaynak1: "Demir, B. (2019). Peer study groups in higher education. Synthetic Review, 4(1), 10–22.",
+  kaynak2: "Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201–219.",
+};
+const CIKTI_BELGESI = { type: "doc", content: [
+  h(1, "Giriş"), p(CIKTI_METINLERI.paragraf1), p(CIKTI_METINLERI.paragraf2),
+  { type: "paragraph", attrs: { caption: "table" }, content: [{ type: "text", text: CIKTI_METINLERI.tablo }] },
+  h(1, "Kaynakça"), p(CIKTI_METINLERI.kaynak1), p(CIKTI_METINLERI.kaynak2),
+] };
+const CIKTI = psql(`insert into public.academic_projects (owner_id, project_type, title, belge_dili) values ('${A.id}','thesis','Çıktı Sınaması','en') returning id`).split("\n")[0];
+psql(`insert into public.project_manuscripts (project_id, content, plain_text, include_toc) values ('${CIKTI}', ${q(JSON.stringify(CIKTI_BELGESI))}::jsonb, 'x', true)`);
 const BASKA_TEZ = psql(`insert into public.academic_projects (owner_id, project_type, title) values ('${B.id}','thesis','Başkasının Tezi') returning id`).split("\n")[0];
 const K_KAYA = psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, doi_or_url) values ('${A.id}','${ESKI}','Remote learning and student wellbeing','Kaya, A.','2021','https://doi.org/10.5555/kabul.2021.001') returning id`).split("\n")[0];
 const K_DEMIR = psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year) values ('${A.id}','${ESKI}','Peer study groups in higher education','Demir, B.','2019') returning id`).split("\n")[0];
@@ -93,6 +127,7 @@ const yol = `${ESKI}/kaynak-pdf/kaya-${ek}.pdf`;
 await fetch(`${GECIT}/storage/v1/object/project-files/${yol}`, { method: "POST", headers: { apikey: ANON, Authorization: `Bearer ${A.erisim}`, "Content-Type": "application/pdf", "x-upsert": "true" }, body: pdf });
 const kunye = "Kaya, A. (2021). Remote learning and student wellbeing. Journal of Synthetic Studies, 12(3), 201-219.";
 const PDF = psql(`insert into public.kaynak_pdfleri (project_id, olusturan, kunye, kunye_anahtari, doi, durum, depo_yolu) values ('${ESKI}','${A.id}',${q(kunye)},${q("kaya 2021 kabul " + ek)},'10.5555/kabul.2021.001','yuklendi',${q(yol)}) returning id`).split("\n")[0];
+const pdfDegisik = sentetikPdf([["Remote learning and student wellbeing", "Kaya, A. Journal of Synthetic Studies 12(3)", "", "Remote learning increased reported isolation among first-year students.", "Students who joined peer study groups reported lower isolation scores."], ["Method", "The effect was strongest in programmes without weekly live sessions.", "Participants completed the Synthetic Isolation Scale at two time points."]]);
 
 /* ---------- Kayıt ---------- */
 const sonuclar = [];
@@ -100,11 +135,16 @@ const kaydet = (no, ad, durum, ayrinti) => {
   sonuclar.push({ no, ad, durum, ayrinti });
   console.log(`${durum.padEnd(10)} ${no} ${ad}${ayrinti ? ` — ${ayrinti}` : ""}`);
 };
+// KABUL_SADECE=S10,S11: yalnızca bu senaryolar (hata ayıklama için; teslimdeki koşu filtresizdir).
+const SADECE = process.env.KABUL_SADECE ? new Set(process.env.KABUL_SADECE.split(",")) : null;
 const dene = async (no, ad, fn) => {
+  if (SADECE && !SADECE.has(no)) return;
   try {
     const r = await fn();
     kaydet(no, ad, r?.durum ?? "PASS", r?.ayrinti ?? "");
   } catch (e) {
+    // Düşen senaryonun son sayfası görüntülenir (hata ayıklama; GORSEL verildiyse).
+    if (GORSEL && sonSayfa && !sonSayfa.isClosed()) await sonSayfa.screenshot({ path: `${GORSEL}/hata-${no}.png` }).catch(() => {});
     kaydet(no, ad, "FAIL", String(e.message ?? e).split("\n")[0].slice(0, 300));
   }
 };
@@ -114,10 +154,13 @@ const beklenen = (kosul, mesaj) => {
 
 const b = await chromium.launch();
 const hatalar = [];
+let sonSayfa = null;
 async function oturum(k, { genislik = 1440, yukseklik = 900, dil = "tr", tema = "light", mobil = false } = {}) {
   const c = await b.newContext({ baseURL: UYG, viewport: { width: genislik, height: yukseklik }, colorScheme: tema, isMobile: mobil, hasTouch: mobil, acceptDownloads: true });
   await c.addCookies([{ name: "arvolab_dil", value: dil, url: UYG }]);
   const s = await c.newPage();
+  sonSayfa = s;
+  if (process.env.KABUL_AYIKLA) s.on("response", (r) => { if (r.request().method() === "POST" && !String(r.headers()["content-type"]).includes("x-component")) console.log("AYIKLA", r.status(), r.url(), r.headers()["content-type"], r.request().headers()["next-action"]); });
   s.on("pageerror", (e) => hatalar.push(`${e.message} @ ${s.url().replace(UYG, "")}`));
   await s.goto("/"); await s.fill('input[name="email"]', k.adres); await s.fill('input[name="password"]', k.parola);
   await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
@@ -334,9 +377,78 @@ try {
     beklenen(vurgu >= 1 && /işaretlendi/.test(await s.locator(".pdf-pasaj-durum").innerText()), `vurgu: ${vurgu}`);
     await goruntu(s, "s6-dayanak");
     await c.close();
-    return { ayrinti: "bulunamayan pasajın işaretlenmemesi birimde (tests/unit/pdf-pasaj.test.ts); arayüz mesajı yolu ayrıca UNVERIFIED (S6b)" };
+    return { ayrinti: "bulunamayan pasaj: S10" };
   });
-  kaydet("S6b", "dayanağa git: pasaj sayfada bulunamazsa arayüz mesajı", "UNVERIFIED", "doğrulanmış pasaj her zaman sayfadan geldiği için tarayıcıda üretilemedi; karar mantığı birim testinde (null → hiçbir parça işaretlenmez)");
+
+  /* ---------- S10 ---------- */
+  /*
+    Bulunamayan pasaj, kontrollü düzenek: pasaj gerçek PDF'e karşı doğrulanıp
+    eklenir ve "Dayanağa git" onu işaretler (önceki vurgu). Sonra tarayıcıya
+    aynı PDF'in DEĞİŞİK bir kopyası verilir (Playwright route): cümle 1. sayfada
+    yok, 2. sayfada var. Beklenen: hiçbir parça işaretlenmez (ne önceki vurgu
+    ne 2. sayfadaki aynı cümle), kullanıcıya "bulunamadı" denir, "Pasaja
+    odaklan" çıkmaz.
+  */
+  let PDF2 = null;
+  await dene("S10", "bulunamayan pasaj: önceki ya da yanlış yer vurgulanmaz, kullanıcıya söylenir", async () => {
+    // S10 için ikinci PDF (yalnızca seçici değiştirmek için) ve tarayıcıya verilecek DEĞİŞİK bir kopya:
+    // doğrulanan cümle 1. sayfada YOK, 2. sayfada VAR. Sunucunun doğrulaması depodaki asıl dosyaya bakar.
+    const pdf2 = sentetikPdf([["Peer study groups in higher education", "Demir, B. Synthetic Review 4(1)", "", "Peer groups met weekly during the term."]]);
+    const yol2 = `${ESKI}/kaynak-pdf/demir-${ek}.pdf`;
+    await fetch(`${GECIT}/storage/v1/object/project-files/${yol2}`, { method: "POST", headers: { apikey: ANON, Authorization: `Bearer ${A.erisim}`, "Content-Type": "application/pdf", "x-upsert": "true" }, body: pdf2 });
+    PDF2 = psql(`insert into public.kaynak_pdfleri (project_id, olusturan, kunye, kunye_anahtari, durum, depo_yolu) values ('${ESKI}','${A.id}',${q("Demir, B. (2019). Peer study groups in higher education.")},${q("demir 2019 kabul " + ek)},'yuklendi',${q(yol2)}) returning id`).split("\n")[0];
+    const { c, s } = await oturum(A, { genislik: 1920, yukseklik: 1080 });
+    await editorAc(s, "?sag=pdf");
+    if ((await s.locator(".kaynak-pdf-paneli select").first().inputValue()) !== PDF) {
+      await s.locator(".kaynak-pdf-paneli select").first().selectOption(PDF);
+    }
+    await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 });
+    await s.locator(".ProseMirror p").nth(2).click(); await s.keyboard.press("End");
+    await s.locator(".pdf-sayfa").first().click({ position: { x: 5, y: 5 } });
+    await s.evaluate(() => {
+      const hedef = Array.from(document.querySelectorAll(".pdf-sayfa .textLayer span")).find((x) => x.textContent.includes("The effect was strongest"));
+      const r = document.createRange(); r.selectNodeContents(hedef);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      hedef.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+    await s.getByRole("button", { name: /Alıntı ve atıf ekle/ }).click();
+    await s.waitForSelector(".kaynak-dogrulandi", { timeout: 60000 });
+    await s.locator('input[name="kaynak-aday"]').first().check().catch(() => {});
+    await s.locator(".kaynak-onay input[type=checkbox]").first().check().catch(() => {});
+    await s.getByRole("button", { name: /^İmlece ekle$/ }).click(); await s.waitForTimeout(2500);
+    const kartiAc = async () => {
+      const k = await s.evaluate(() => { const y = document.createTreeWalker(document.querySelector(".ProseMirror"), NodeFilter.SHOW_TEXT); let n, son = null; while ((n = y.nextNode())) { const j = n.data.lastIndexOf("sessions.” (Kaya"); if (j >= 0) son = { n, j: j + 12 }; } const r = document.createRange(); r.setStart(son.n, son.j); r.setEnd(son.n, son.j + 1); const d = r.getBoundingClientRect(); return { x: d.left + d.width / 2, y: d.top + d.height / 2 }; });
+      await s.mouse.click(k.x, k.y); await s.waitForTimeout(1200);
+      if (await s.locator(".atif-karti-aday", { hasText: "Remote learning" }).count()) await s.locator(".atif-karti-aday", { hasText: "Remote learning" }).click();
+    };
+    await kartiAc();
+    await s.getByRole("button", { name: /Dayanağa git/ }).first().click(); await s.waitForTimeout(3000);
+    const once = await s.locator(".pdf-sayfa .textLayer span.pdf-pasaj").count();
+    beklenen(once >= 1, `ön koşul: önceki vurgu yok (${once})`);
+    // Düzenek: bu PDF'in baytları artık değişik kopyadan gelir; başka PDF'e geçip dönmek yeniden yüklemeyi tetikler.
+    await s.route(new RegExp(`/api/kaynak-pdf/${PDF}`), (r) => r.fulfill({ status: 200, contentType: "application/pdf", body: Buffer.from(pdfDegisik) }));
+    await s.locator(".kaynak-pdf-paneli select").first().selectOption(PDF2);
+    await s.waitForTimeout(2500);
+    beklenen((await s.locator(".pdf-pasaj-durum").count()) === 0, "PDF değişince önceki 'işaretlendi' bildirimi kaldı");
+    await kartiAc();
+    await s.getByRole("button", { name: /Dayanağa git/ }).first().click(); await s.waitForTimeout(3500);
+    const sayfa = await s.locator(".pdf-sayfa-girdi input").inputValue();
+    const vurgu1 = await s.locator(".pdf-sayfa .textLayer span.pdf-pasaj").count();
+    const durum = await s.locator(".pdf-pasaj-durum").innerText().catch(() => "");
+    const odakla = await s.locator(".pdf-pasaja-odaklan").count();
+    await goruntu(s, "s10-pasaj-bulunamadi");
+    beklenen(sayfa === "1", `kayıtlı sayfaya gidilmedi: ${sayfa}`);
+    beklenen(vurgu1 === 0, `1. sayfada ${vurgu1} parça işaretli`);
+    beklenen(/bulunamadı/.test(durum), `bildirim: ${durum}`);
+    beklenen(odakla === 0, "Pasaja odaklan düğmesi çıktı");
+    await s.getByRole("button", { name: /^Sonraki sayfa$/ }).click(); await s.waitForTimeout(1500);
+    const metin2 = await s.locator(".pdf-sayfa .textLayer").innerText();
+    const vurgu2 = await s.locator(".pdf-sayfa .textLayer span.pdf-pasaj").count();
+    beklenen(/The effect was strongest/.test(metin2), "düzenek: cümle 2. sayfada değil");
+    beklenen(vurgu2 === 0, `2. sayfadaki aynı cümle işaretlendi (${vurgu2})`);
+    await c.close();
+    return { ayrinti: `önceki vurgu ${once} parça → değişik kopyada 1. sayfa 0, 2. sayfa 0; bildirim "${durum.slice(0, 60)}…"` };
+  });
 
   /* ---------- S7 ---------- */
   await dene("S7", "belge dili arayüz dilinden bağımsız (Word içindekiler başlığı)", async () => {
@@ -362,16 +474,64 @@ try {
   });
 
   /* ---------- S8 ---------- */
-  await dene("S8", "dışa aktarma ve atıf regresyonu: Word/yazdırma 200; kart açmak belgeyi değiştirmez", async () => {
-    const once = psql(`select md5(content::text) from public.project_manuscripts where project_id='${YENI}'`);
+  /*
+    Dışa aktarma İÇERİĞİ: yalnızca HTTP 200 değil. Word'ün document.xml'i ve
+    yazdırma sayfasının metni okunur; her paragraf, iki atıf, tablo etiketi ve
+    iki kaynakça girdisi birebir aranır. Belge dili iki yönde: EN belge + TR
+    arayüz → "TABLE OF CONTENTS" ve "Table 1"; TR belge + EN arayüz →
+    "İÇİNDEKİLER" ve "Tablo 1". Son olarak editörü açıp tıklamak saklı içeriği
+    değiştirmemeli (kart ve vurgular belgeye yazılmaz).
+  */
+  await dene("S8", "dışa aktarma içeriği: Word ve yazdırmada metin, atıflar, tablo etiketi, kaynakça ve belge dili korunur", async () => {
+    const docxMetni = async (s) => {
+      const r = await s.request.get(`/api/manuscripts/${CIKTI}/export`);
+      beklenen(r.status() === 200, `Word ${r.status()}`);
+      const tmp = path.join(KOK, `.kabul-${crypto.randomBytes(3).toString("hex")}.docx`);
+      fs.writeFileSync(tmp, Buffer.from(await r.body()));
+      const xml = execFileSync("unzip", ["-p", tmp, "word/document.xml"], { encoding: "utf8" });
+      fs.unlinkSync(tmp);
+      // Paragraf paragraf w:t birleştirilir (bir cümle birden çok koşuya bölünmüş olabilir).
+      return xml.split("</w:p>").map((par) => [...par.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("")).join("\n")
+        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+    };
+    const yazdirmaMetni = async (s) => {
+      const r = await s.goto(`/print/manuscript/${CIKTI}`);
+      beklenen(r.status() === 200, `yazdırma ${r.status()}`);
+      await s.waitForSelector(".print-sheet");
+      return s.locator(".print-sheet").innerText();
+    };
+    const icerikEksigi = (metin) => Object.entries(CIKTI_METINLERI).filter(([, v]) => !metin.includes(v)).map(([k]) => k);
+    const sonuc = {};
+    for (const [belge, arayuz] of [["en", "tr"], ["tr", "en"]]) {
+      psql(`update public.academic_projects set belge_dili='${belge}' where id='${CIKTI}'`);
+      const { c, s } = await oturum(A, { dil: arayuz });
+      const word = await docxMetni(s);
+      const baski = await yazdirmaMetni(s);
+      await c.close();
+      for (const [ad, metin] of [["Word", word], ["yazdırma", baski]]) {
+        const eksik = icerikEksigi(metin);
+        beklenen(eksik.length === 0, `${ad} (${belge} belge, ${arayuz} arayüz) eksik: ${eksik.join(", ")}`);
+        const toc = belge === "en" ? "TABLE OF CONTENTS" : "İÇİNDEKİLER";
+        const yanlisToc = belge === "en" ? "İÇİNDEKİLER" : "TABLE OF CONTENTS";
+        // Word'de tablo numarası bir SEQ alanı (metinde yok): "Table . <başlık>"; yazdırmada "Table 1. <başlık>".
+        const etiket = (ad) => new RegExp(`${ad}\\s*\\d*\\s*\\.\\s*${CIKTI_METINLERI.tablo}`);
+        const tablo = etiket(belge === "en" ? "Table" : "Tablo");
+        const yanlisTablo = etiket(belge === "en" ? "Tablo" : "Table");
+        beklenen(metin.toLocaleUpperCase(belge === "en" ? "en" : "tr").includes(toc) && !metin.includes(yanlisToc), `${ad} içindekiler başlığı ${belge} değil`);
+        beklenen(tablo.test(metin) && !yanlisTablo.test(metin), `${ad} tablo etiketi ${belge} değil`);
+        sonuc[`${ad}-${belge}`] = "metin+atıf+tablo+kaynakça+dil";
+      }
+    }
+    psql(`update public.academic_projects set belge_dili='en' where id='${CIKTI}'`);
+    // Editörde kart açmak/tıklamak saklı içeriği değiştirmez.
+    const once = psql(`select md5(content::text) from public.project_manuscripts where project_id='${CIKTI}'`);
     const { c, s } = await oturum(A);
-    beklenen((await s.request.get(`/api/manuscripts/${ESKI}/export`)).status() === 200, "Word");
-    beklenen((await s.goto(`/print/manuscript/${ESKI}`)).status() === 200, "yazdırma");
-    await s.goto(`/dashboard/editor/${YENI}/write`); await s.waitForSelector(".ProseMirror"); await s.waitForTimeout(2000);
-    await s.locator(".ProseMirror").click(); await s.waitForTimeout(2500);
+    await s.goto(`/dashboard/editor/${CIKTI}/write`); await s.waitForSelector(".ProseMirror"); await s.waitForTimeout(1500);
+    const n = await kelimeKonumu(s, "Kaya, 2021", 2);
+    await s.mouse.click(n.x, n.y); await s.waitForTimeout(2500);
     await c.close();
-    beklenen(psql(`select md5(content::text) from public.project_manuscripts where project_id='${YENI}'`) === once, "belge içeriği değişti");
-    return { ayrinti: "çıktı yolları ayrıca test:editor (cikti-yollari) ile" };
+    beklenen(psql(`select md5(content::text) from public.project_manuscripts where project_id='${CIKTI}'`) === once, "belge içeriği değişti");
+    return { ayrinti: `${Object.keys(sonuc).join(", ")}; kart açmak içeriği değiştirmedi. LaTeX ve paylaşım: test:editor (latex-*, cikti-yollari)` };
   });
 
   /* ---------- S9 ---------- */
@@ -396,6 +556,99 @@ try {
     beklenen(kucuk.length === 0, `44 px altı: ${kucuk.join(", ")}`);
     await goruntu(m.s, "s9-telefon-bolumler");
     await m.c.close();
+  });
+
+  /* ---------- S11 ---------- */
+  /*
+    İnceleme paneli (teslim kontrolü, kılavuz, kaynakça, yorumlar). Sağ yuvanın
+    sakini: AI/PDF ile aynı anda gösterilmez (iki sağ sütun olmaz, örtüşmez).
+    Yalnız açıkken belgeyi %85 altına sıkıştırmaz: önce gezinme raya iner,
+    yetmezse panel belgenin üstünde çekmece olur (Esc kapatır). AI/PDF açıkken
+    Kontroller menüsü "İnceleme paneline geç" der ve geçer. Telefonda aynı
+    menüden açılır ve panel görünür alana kaydırılır.
+  */
+  await dene("S11", "inceleme paneli: belgeyi sıkıştırmaz, AI/PDF ile örtüşmez, geçiş ve telefon erişimi", async () => {
+    const olc = (s) => s.evaluate(() => {
+      const kutu = (q) => { const e = document.querySelector(q); if (!e) return null; const st = getComputedStyle(e); if (st.display === "none" || e.hidden) return null; const d = e.getBoundingClientRect(); return d.width && d.height ? { x: d.left, y: d.top, w: d.width, h: d.height } : null; };
+      const ust = (a, b2) => Boolean(a && b2 && a.x < b2.x + b2.w - 1 && b2.x < a.x + a.w - 1 && a.y < b2.y + b2.h - 1 && b2.y < a.y + a.h - 1);
+      const inc = kutu(".manuscript-outline"), sag = kutu(".kaynak-pdf-paneli") || kutu(".yazim-paneli"), kagit = kutu(".manuscript-editor-content");
+      return {
+        olcek: Number(getComputedStyle(document.querySelector(".manuscript-editor-content")).zoom || 1),
+        yer: document.querySelector(".manuscript-layout").getAttribute("data-inceleme-yer"),
+        inceleme: Boolean(inc), sag: Boolean(sag), incSag: ust(inc, sag), incKagit: ust(inc, kagit),
+        incGorunur: inc ? inc.y < innerHeight && inc.y + inc.h > 0 : false,
+        tasma: document.documentElement.scrollWidth > innerWidth + 1,
+      };
+    });
+    const kontroller = async (s) => {
+      await s.locator('button[aria-label^="Kontroller"], button[aria-label^="Checks"]').first().click();
+      return s.locator(".arac-menu-pencere:not([hidden]) .arac-menu-oge", { hasText: /İnceleme panel/ }).first();
+    };
+    const sonuc = [];
+    for (const [g, y] of [[1920, 1080], [1440, 900], [1280, 800]]) {
+      const { c, s } = await oturum(A, { genislik: g, yukseklik: y });
+      await c.addInitScript(() => { try { localStorage.setItem("arvolab:inceleme-paneli", "1"); } catch {} });
+      for (const ek of ["", "?sol=kaynaklar"]) {
+        await editorAc(s, ek); await s.waitForTimeout(1500);
+        const r = await olc(s);
+        sonuc.push(`${g}${ek ? "+araç" : ""}: ${r.yer} %${Math.round(r.olcek * 100)}`);
+        beklenen(r.inceleme && !r.tasma, `${g}${ek}: panel yok ya da yatay taşma ${JSON.stringify(r)}`);
+        if (r.yer === "sutun") beklenen(r.olcek >= 0.85 && !r.incKagit, `${g}${ek}: sütunda belge ${r.olcek} / örtüşme`);
+        else beklenen(r.yer === "cekmece" && r.olcek >= 0.85, `${g}${ek}: ${JSON.stringify(r)}`);
+        if (r.yer === "cekmece") {
+          await goruntu(s, `s11-cekmece-${g}`);
+          await s.locator(".manuscript-outline button").first().focus();
+          await s.keyboard.press("Escape"); await s.waitForTimeout(500);
+          beklenen(!(await olc(s)).inceleme, `${g}${ek}: çekmece Esc ile kapanmadı`);
+          await s.evaluate(() => { localStorage.setItem("arvolab:inceleme-paneli", "1"); window.dispatchEvent(new Event("arvolab:editor-tercihi")); });
+        }
+      }
+      for (const sag of ["pdf", "ai"]) {
+        await editorAc(s, `?sag=${sag}`); await s.waitForTimeout(1500);
+        const r = await olc(s);
+        beklenen(!r.inceleme && r.sag && !r.incSag, `${g} ${sag}: inceleme ile sağ panel aynı anda ${JSON.stringify(r)}`);
+      }
+      /*
+        AI açıkken incelemeye ulaşmak. Sütun yerleşiminde Kontroller menüsü
+        görünür: "İnceleme paneline geç". Çekmece yerleşiminde (dar masaüstü)
+        çekmece başlık satırını örter; yol paneli kapatmaktır, inceleme
+        tercihi açık olduğu için panel kendiliğinden geri gelir.
+      */
+      const cekmece = await s.locator(".manuscript-layout[data-sag-cekmece]").count();
+      if (!cekmece) {
+        const oge = await kontroller(s);
+        beklenen(/İnceleme paneline geç/.test(await oge.innerText()), "AI açıkken menü 'geç' demiyor");
+        await oge.click(); await s.waitForTimeout(1200);
+        sonuc.push(`${g} AI sütun → menüden geçiş`);
+      } else {
+        await s.getByRole("button", { name: /^Paneli kapat$/ }).click(); await s.waitForTimeout(1200);
+        sonuc.push(`${g} AI çekmece → kapat, inceleme geri gelir`);
+      }
+      const g2 = await olc(s);
+      beklenen(g2.inceleme && !g2.sag && !s.url().includes("sag="), `${g}: geçiş çalışmadı ${JSON.stringify(g2)}`);
+      if (g === 1440) await goruntu(s, "s11-gecis-1440");
+      await c.close();
+    }
+    // Telefon: menüden açılır ve panel görünür alana kaydırılır; PDF tam ekranken kapatınca inceleme geri gelir.
+    const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
+    await editorAc(m.s);
+    await m.s.evaluate(() => { localStorage.setItem("arvolab:inceleme-paneli", "0"); window.dispatchEvent(new Event("arvolab:editor-tercihi")); });
+    await m.s.waitForTimeout(600);
+    beklenen(!(await olc(m.s)).inceleme, "telefon: tercih kapalıyken panel açık");
+    const ac = await kontroller(m.s);
+    beklenen(/İnceleme panelini aç/.test(await ac.innerText()), "telefon: menüde 'aç' yok");
+    await ac.click(); await m.s.waitForTimeout(1500);
+    const t1 = await olc(m.s);
+    beklenen(t1.inceleme && t1.incGorunur && !t1.tasma, `telefon: panel görünür değil ${JSON.stringify(t1)}`);
+    await goruntu(m.s, "s11-telefon-inceleme");
+    await editorAc(m.s, "?sag=pdf"); await m.s.waitForTimeout(1500);
+    const t2 = await olc(m.s);
+    beklenen(!t2.inceleme && t2.sag, `telefon PDF: ${JSON.stringify(t2)}`);
+    await m.s.getByRole("button", { name: /^Kaynak panelini kapat$/ }).click(); await m.s.waitForTimeout(1200);
+    const t3 = await olc(m.s);
+    beklenen(t3.inceleme && !t3.sag && !t3.tasma, `telefon: PDF kapanınca inceleme yok ${JSON.stringify(t3)}`);
+    await m.c.close();
+    return { ayrinti: sonuc.join("; ") + "; AI/PDF açıkken gizli (örtüşme yok); telefon menüden açılır ve görünür alana gelir" };
   });
 
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
@@ -429,7 +682,7 @@ try {
 if (hatalar.length) kaydet("S0", "sayfa hataları (pageerror)", "FAIL", [...new Set(hatalar)].slice(0, 5).join(" | "));
 else kaydet("S0", "sayfa hataları (pageerror)", "PASS", "yok");
 const cikti = path.join(KOK, "scripts/yerel-yigin/sonuclar/calisma-alani-kabul.json");
-fs.writeFileSync(cikti, JSON.stringify({ tarih: new Date().toISOString(), uygulama: UYG, sonuclar }, null, 2));
+fs.writeFileSync(cikti, JSON.stringify({ tarih: new Date().toISOString(), uygulama: UYG, derleme: { gitHead: HEAD, buildId: BUILD_ID, uygulamaKoduTemiz: KIRLI === "", kirliDosyalar: KIRLI ? KIRLI.split("\n") : [] }, sonuclar }, null, 2));
 const fail = sonuclar.filter((r) => r.durum === "FAIL").length;
 console.log(`\n${sonuclar.filter((r) => r.durum === "PASS").length} PASS, ${fail} FAIL, ${sonuclar.filter((r) => r.durum === "UNVERIFIED").length} UNVERIFIED → ${path.relative(KOK, cikti)}`);
 process.exit(fail ? 1 : 0);

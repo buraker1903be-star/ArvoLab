@@ -95,7 +95,13 @@ export default function PdfGoruntuleyici({
   const metinlerRef = useRef<Map<number, string>>(new Map());
   const aramaTerimiRef = useRef("");
   /* Vurgulanacak pasaj durumda; çizim sonrası okunabilsin diye ref'e efektte aktarılır. */
-  const [pasaj, setPasaj] = useState<{ sayfa: number; metin: string } | null>(null);
+  /*
+    Pasaj hangi PDF için istendiyse onunla birlikte tutulur. Eskiden yalnızca
+    sayfa ve metin tutuluyordu: başka bir PDF'e geçilince görüntüleyici aynı
+    pasajı YENİ PDF'in o sayfasında arıyor ve "bulunamadı" diyordu (kabul S10).
+  */
+  const [pasajIstegi, setPasaj] = useState<{ sayfa: number; metin: string; pdfId: string } | null>(null);
+  const pasaj = pasajIstegi && pasajIstegi.pdfId === pdfId ? pasajIstegi : null;
   const pasajRef = useRef<{ sayfa: number; metin: string } | null>(null);
   /*
     Pasaj sayfada bulundu mu (null: henüz bakılmadı). "Pasaja odaklan" yalnızca
@@ -179,7 +185,7 @@ export default function PdfGoruntuleyici({
     setUygulananGidis(gidilecekSayfa.anahtar);
     const n = Math.min(Math.max(1, gidilecekSayfa.sayfa), belge.numPages);
     // Yeni gidiş eski pasaj vurgusunu düşürür; pasaj yoksa vurgu da yok.
-    setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj } : null);
+    setPasaj(gidilecekSayfa.pasaj ? { sayfa: n, metin: gidilecekSayfa.pasaj, pdfId } : null);
     setPasajBulundu(null);
     /* Telefonda pasaj okunur ölçekte açılır (2. tur, madde 4): sığdırılmış sayfa dar ekranda okunmuyordu. Görüntüleyici yalnızca tarayıcıda çizilir (ssr: false). */
     if (gidilecekSayfa.pasaj && window.innerWidth <= 760 && (olcek === "sigdir" || olcek < 1.6)) setOlcek(1.6);
