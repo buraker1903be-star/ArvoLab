@@ -681,7 +681,13 @@ try {
 
 if (hatalar.length) kaydet("S0", "sayfa hataları (pageerror)", "FAIL", [...new Set(hatalar)].slice(0, 5).join(" | "));
 else kaydet("S0", "sayfa hataları (pageerror)", "PASS", "yok");
-const cikti = path.join(KOK, "scripts/yerel-yigin/sonuclar/calisma-alani-kabul.json");
+/*
+  Her tam koşu sınanan commit'in adıyla AYRI dosyaya yazılır; eski sonuç yeni
+  HEAD'in kanıtı gibi görünmesin, tarihsel kanıt da üzerine yazılmasın.
+  calisma-alani-kabul.json 23e927c derlemesinin (ilk teslim) sonucudur.
+  Filtreli (KABUL_SADECE) koşu kanıt değildir: "-kismi" ekiyle yazılır.
+*/
+const cikti = path.join(KOK, `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-${HEAD.slice(0, 7)}${SADECE ? "-kismi" : ""}.json`);
 fs.writeFileSync(cikti, JSON.stringify({ tarih: new Date().toISOString(), uygulama: UYG, derleme: { gitHead: HEAD, buildId: BUILD_ID, uygulamaKoduTemiz: KIRLI === "", kirliDosyalar: KIRLI ? KIRLI.split("\n") : [] }, sonuclar }, null, 2));
 const fail = sonuclar.filter((r) => r.durum === "FAIL").length;
 console.log(`\n${sonuclar.filter((r) => r.durum === "PASS").length} PASS, ${fail} FAIL, ${sonuclar.filter((r) => r.durum === "UNVERIFIED").length} UNVERIFIED → ${path.relative(KOK, cikti)}`);
