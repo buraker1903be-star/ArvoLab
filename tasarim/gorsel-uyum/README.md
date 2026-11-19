@@ -36,8 +36,8 @@ tasarımıyla karşılaştırıldı ve görselde böyle yazar. `pdfd` = kaynakla
 | Araç çubuğu (1280, kaynak listesi açık) | 1 satır | 2 satır (82 px) | **1 satır (46 px)** |
 | 1440 + AI: gezinme / belge ölçeği / AI | 236 / ~%100 / 396 | 64 (ray) / %77 / 396 | **240 / %85 / 360** |
 | 1280 + AI | — (tanımsız) | çekmece, metni örter | **ray + yan yana, %87** |
-| 1440 + PDF (liste açık) | liste 300 + belge + PDF 440 | ray + %87 | **ray + %87, PDF 520** |
-| Gezinme yazısı / en küçük arayüz yazısı | 14 / 11 | 14 / 11 | 14 / 11 |
+| 1440 + PDF (liste açık) | liste 300 + belge + PDF 440 | ray + %87 | ilk teslim: ray + %87, PDF 520 → **2. tur: liste 246 + belge %85 + PDF 360** |
+| Gezinme yazısı / en küçük arayüz yazısı | 14 / 12 | 14 / 11 | 14 / **12** (2. tur; ilk teslimde 11 idi) |
 | Telefon: belgenin başladığı y | 64 | 216 | **138** |
 | Telefon üst bandı | 52 | 61 | 55 |
 
@@ -71,14 +71,14 @@ gizlenmedi.
 
 | Durum | Neden | Bugünkü davranış |
 |---|---|---|
-| **1280 px + PDF yan yana** | Ray 64 + en dar PDF 440 + paylar 46 → belgeye 730 px = %79 (< %85). %85 için en az **1336 px** ekran gerekir. | PDF geçici çekmece (belge %100; "Geçici görünüm · Esc ile kapatın") |
+| ~~1280 px + PDF yan yana~~ | 2. turda çözüldü: en dar PDF 440 → 360. | Ray + PDF 382 + belge %85 |
 | 1200–1255 px + AI | Ray 64 + en dar AI 360 + paylar 46 → 1200'de belgeye 730 px = %79. Yan yana %85 için en az **1256 px**. | AI çekmece |
 | 1440 + AI genişliği | AI 396'da gezinme açıkken belge %82 olurdu (758 px). | AI en dar genişliğinde (360); kullanıcı ayırıcıyla genişletirse sınırı aşmayacak kadar |
 | Prototipin kâğıdı 760 px | Uygulamanın kâğıdı 924 px (860 metin sütunu); değiştirmek satır sonlarını değiştirir. | Kâğıt aynı; ferahlık çevre paylarından |
-| 1200–1279 px + sol araç açık | Araç çubuğu içeriği ~954 px; alan ~876 px (hesap, ölçülmedi). | Tek satır, yatay kayar (satır sarmaz) |
+| ~~1200–1279 px + sol araç açık~~ | 2. turda tarayıcıda ölçüldü ve çözüldü (aşağıda). | Tek satır, kaymadan sığar |
 | Telefon üst bandı | Dokunma hedefleri 44 px; arama simgesi editörde gizli (sekiz düğme 390 px'e sığmıyordu); dönüş yalnızca simge. | 55 px bant; arama editör dışındaki ekranlarda |
 
-## Kontroller (19.11.2026)
+## Kontroller (ilk teslim, 19.11.2026)
 
 `npx tsc --noEmit` ✓ · `npm run lint` ✓ (2 eski uyarı, bu değişiklikte değil) · `check:css` ✓ · `check:migrations` ✓ ·
 `check:rakamlar` ✓ · `test:unit` 2358/2358 · `test:editor` 112/112 · `test:db` 362/362.
@@ -86,3 +86,118 @@ Tarayıcı kabulü (`calisma-alani-kabul.mjs`, üretim derlemesi): **21 PASS, 0 
 dizin düzeneği verilmedi) → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-5f2b732.json`. Güncellenen testler
 yeni kararları sabitler: yerleşim kararı (AI 1440 gezinme açık, PDF 1440 520), seçim kartı konumu, kâğıt
 tokenı, ana sayfa tablosu.
+
+---
+
+# 2. tur (19.11.2026) — PDF yerleşimi, AI yazma alanı, okunurluk, eksik kabul
+
+Uygulama commit'i **`4b4d665`** (sonrakiler yalnızca kabul/karşılaştırma betikleri ve sonuç dosyaları).
+Etiket: **Yerel üretim derlemesi · 4b4d665 uygulama kodu**, BUILD_ID `w4s0PW_VUbnb3EaHr-NRR`
+(`rm -rf .next && next build`, `next start`). Görseller ve ölçümler: `teslim/tur2/` (yalnızca etkilenen ekranlar).
+`teslim/tur2/derleme.json` `gitHead 4983980` ve `uygulamaKoduTemiz: false` yazar: o anda yalnızca
+izlenmeyen sonuç/teslim dosyaları vardı; `git diff 4b4d665 4983980 -- app lib` boş. Veri yerel ve sentetik;
+**AI cevapları yerel taklit** (`model-taklidi.mjs`), gerçek model çağrılmadı.
+
+| Yol | Ne |
+|---|---|
+| `teslim/tur2/karsilastirma/pdfy-masaustu.png` | Yalnızca PDF (`?sag=pdf`), 1440/1280, açık/koyu, prototip ekran 7 ile |
+| `teslim/tur2/karsilastirma/pdfd-masaustu.png` | Kaynak listesi + PDF (`?sol=kaynaklar&sag=pdf`) |
+| `teslim/tur2/karsilastirma/pdf-masaustu.png` | Atıf kartından "Dayanağa git" (pasaj vurgulu) |
+| `teslim/tur2/karsilastirma/ai-masaustu.png` | Arvo AI paneli, istem ve Gönder görünür |
+| `teslim/tur2/karsilastirma/telefon.png` | 390: ana ekran (Yeni çalışma hizası), PDF, AI, **AI + klavye benzetimi** |
+| `teslim/tur2/olcumler/*.txt` | Aşağıdaki tabloların ham ölçümleri (üretim derlemesi, tarayıcı) |
+
+## 1. PDF yerleşimi
+
+En dar PDF genişliği **440 → 360**. Belge ölçeği alt sınırı **%85 değişmedi**, kâğıt (924 px) ve biçim aynı.
+Belgenin %85 olması için belge sütunu en az **788 px** (`ceil(0,85 × 924) + 2`).
+
+| Ekran · durum | Sol | PDF | Belge | Önce (ilk teslim) |
+|---|---|---|---|---|
+| 1280 · yalnızca PDF | ray 64 | **382** | **%85** | çekmece (belgeyi örtüyordu) |
+| 1280 · liste + PDF | şerit 64 | 382 | %85 | liste açık + çekmece |
+| 1360 · liste + PDF | şerit 64 | 462 | %85 | — |
+| 1440 · yalnızca PDF | ray 64 | 520 | %87 | aynı |
+| **1440 · liste + PDF** | **liste 246** | **360** | **%85** | şerit 64 + PDF 520 |
+| 1472 · liste + PDF | liste 246 | 392 | %85 | şerit |
+| 1560+ · liste + PDF | liste 300 | 466+ | %85 | — |
+| 1200–1257 · PDF | — | çekmece | %100 | 1200–1335 çekmeceydi |
+
+PDF denetimleri 340–440 px arasında hiçbirinde kesilmedi (`olcumler/pdf2.txt`: `pdfKesik: []`). Bedel PDF'in
+sığdır yazısında: 520 px'te metin 8,9 px, 462'de 7,8, 392'de 6,6, 382'de 6,4, 360'ta 6,0 px yüksekliğinde.
+Okumak için yakınlaştırma (+) ya da "Pasaja odaklan" gerekir; kullanıcı ayırıcıyla PDF'i genişletebilir
+(`sagEnCok` belge %85'in altına inmeyecek kadar).
+
+**Liste için en küçük kullanılabilir genişlik 246 px**: iki düğme ("Atıf ekle", "PDF'i aç") yan yana ve kesilmeden
+sığıyor. 200 px'te ikinci düğme alt satıra kırılıyor ve arama kutusunun yer tutucusu kesiliyor. 1440'ta liste
+(246) + belge %85 (788 + paylar 46) + PDF 360 = 1440: tam sığıyor, pay kalmıyor. 1439 ve altında liste şeride
+iner (1360–1439 arası şerit + PDF 462–520). Liste 300 px'te kalsın istenirse PDF ile birlikte en az **1494 px**
+gerekir.
+
+## 2. AI yazma alanı
+
+**Yerleşim hatasıydı, çekim değil.** 1440×900'de panelin altı 938 px'teydi (ekran 900); istem kutusu 923'te
+bitiyordu, Gönder düğmesi ekranın dışındaydı. Panel yapışık konumuyla görünür alanın içine alındı; başlık, Kapat
+ve istem sabit, yalnızca `.yazim-paneli-liste` kayar.
+
+| Durum | Panel (üst–alt) | Başlık | Kapat | İstem | Gönder |
+|---|---|---|---|---|---|
+| 1440×900 | 126–888 | 127–182 | 139–169 | 806–873 | 837–873 |
+| 1280×800 | 126–788 | 127–182 | 139–169 | 706–773 | 737–773 |
+| 390×844 | 0–844 | 1–66 | 13–53 | 753–829 | 785–829 |
+| 390, görünen alan 500 (klavye benzetimi) | 0–500 | 1–66 | 13–53 | 409–485 | 441–485 |
+
+Uzun sohbette ve sayfa kaydırılmışken de aynı (`olcumler/ai.txt`). **Telefon klavyesi:** panel telefonda
+`visualViewport`'un üstüne ve yüksekliğine bağlandı (klavye açılınca yalnızca görünen alan küçülür). Tarayıcıda
+klavye açılamadığı için görünen alan 844 → 500 px'e indirilerek **benzetildi**; gerçek iOS/Android cihazda
+sınanmadı. Bağlama ilk yazıldığında panel kapalıyken bağlanmıyordu (lint'in koşullu kanca hatası yakaladı);
+`4b4d665`'te her açılışta bağlanıyor.
+
+## 3. Okunurluk ve erişim
+
+- **Düzeltme:** İlk teslimde "en küçük 11 px, prototiple aynı" yazmıştım; yanlıştı. **Prototipin alt sınırı 12 px.**
+  Arayüzün en küçük yazısı 12 px'e çıkarıldı (`--fs-micro`, `--os5-fs-en-kucuk`, üç sabit 11 px; `check:css`
+  ve AGENTS.md alt sınırı 12). Belge puntosuna dokunulmadı. Tarayıcıda sekiz ekranda görünür yazı tarandı:
+  12 px'in altında görünür yazı yok (`olcumler/yazi.txt`; telefonda 0 px görünen kayıt durumu bilerek
+  görsel olarak gizli, ekran okuyucuya açık).
+- **Telefonda "Yeni çalışma":** düğmenin merkezi başlığın merkezinden 10 px aşağıdaydı; şimdi 390 ve 360'ta fark
+  **0 px** (başlık kutusu en az 44 px ve dikeyde ortalı; punto aynı).
+- **Araç çubuğu, 1200–1279 (tarayıcıda ölçüldü, 5 genişlik × 6 durum):** önce çekmeceli durumlarda çekmece araç
+  çubuğunun üstüne biniyor, sol araç açıkken çubuk yatay kayıyordu. Çekmece artık araç çubuğunun altından başlıyor;
+  çubuk 1279 px altında sıkışıyor. Ölçüm: 30 durumun **30'unda** içerik görünür alana sığıyor, 23 öğenin her biri
+  odaklanınca görünür ve tıklanabilir (`olcumler/arac.txt`; en dar: 1200 + arama, içerik 802 / alan 802).
+
+## 4. Kabul (üretim derlemesi, BUILD_ID `w4s0PW_VUbnb3EaHr-NRR`)
+
+Son tam koşu sürüyor; sonuç bu satırın yerine yazılacak. Önceki tam koşu (`0335a77`, aynı derleme): 21 PASS, 1 FAIL (S0, aşağıda "Açık kalanlar") → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-0335a77.json`.
+
+**S17** kayıtlı dizin düzeneğiyle çalıştırıldı: sunucu
+`NODE_OPTIONS="--import ./scripts/yerel-yigin/kayitli-dizin-yanitlari.mjs" KAYITLI_DIZIN_KAYDI=<dosya>` ile
+başlatıldı. OpenAlex ve Crossref aramaları **elle yazılmış sentetik yanıtlara** çevrildi; **bu gerçek dizin
+erişimi değildir** ve dizinlerin bugünkü yanıt biçimini doğrulamaz. Sonuç: OpenAlex 3 + Crossref 2 kayıt → 4
+satır (aynı DOI birleşti), taşma yok, "Listeme ekle" bu çalışmaya 1 kayıt yazdı.
+
+Değişen yerleşimde korunanlar: **S11** inceleme paneli belgeyi sıkıştırmıyor, AI/PDF ile örtüşmüyor; **S18 ve
+S20** Esc sırası (açık pencere önce kapanır, sonra çekmece; yavaş cihazda 10/10); **S1** kayıt; **S8** Word ve
+yazdırma çıktısının içeriği (belge dili dahil). Çekmece senaryoları (S14, S16, S20) 1280'den 1200'e taşındı,
+çünkü 1280'de artık çekmece oluşmuyor.
+
+Düzenek düzeltmesi: `4b4d665` üzerindeki ilk koşuda S16 düştü (`calisma-alani-kabul-4b4d665-S16-duzenek-hatasi.json`).
+Neden testteydi: her adım aynı cümlenin önüne işaret yazdığı için cümle 1200'de çekmecenin altına kaymış, tıklama
+belgeye düşmemişti. 1200 adımı artık çekmecenin örtmediği bir cümleye tıklıyor ve tıklanan noktanın belgede olduğu
+ayrıca denetleniyor (`0335a77`).
+
+## Açık kalanlar (ölçülerle)
+
+| Konu | Ölçü | Durum |
+|---|---|---|
+| PDF sığdır yazısı küçük | 360–392 px'te 6,0–6,6 px | Yakınlaştırma ya da Pasaja odaklan; ayırıcıyla genişletme |
+| PDF panelinin alt notu ("Arvo AI yalnızca bu PDF'in metnine dayanır…") | 1440'ta not 852–921, alt bölüm 887'de bitiyor; 1280'de 791–843 / 787 | Alt bölüm (`.kaynak-pdf-alt`, en çok %45) kendi içinde kayar, not kaydırınca okunur; ilk bakışta kesik görünür. Bu turda değiştirilmedi |
+| Telefon klavyesi | yalnızca görünen alan küçültülerek benzetildi | Gerçek cihazda sınanmadı |
+| 1440'ta liste 300 + PDF | 1494 px gerekir | 1440'ta liste 246'ya iner |
+| Ara sıra hidrasyon uyarısı (React #418) | `0335a77` tam koşusunda bir kez, `?sol=kaynaklar&sag=pdf` | Altı hedefli tekrarda (S20 ×2, S3, S19, S16 ×2) çıkmadı; bu commit sunucuda çizilen editör işaretlemesini değiştirmiyor. Kaynağı bulunamadı |
+
+## Kontroller (2. tur, `4b4d665`)
+
+`npx tsc --noEmit` ✓ · `npm run lint` ✓ (0 hata, 2 eski uyarı) · `check:css` ✓ · `check:migrations` ✓ ·
+`check:rakamlar` ✓ · `test:unit` 2358/2358 · `test:editor` 112/112 · `test:db` 362/362.

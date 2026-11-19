@@ -1,0 +1,2588 @@
+{
+  "ana-d1440-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 69,
+        "ustH": 52,
+        "olcek": null
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1200,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:31",
+          "14px:16"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:99",
+          "12px:55",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:23",
+          "14px:9",
+          "11px:6"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:63",
+          "12px:19",
+          "13px:10"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-d1440-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1174,
+          "cw": 1174,
+          "h": 46
+        },
+        "baslikW": 226,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1200,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:158",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:139",
+          "12px:101",
+          "15px:52",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 256,
+        "y": 127,
+        "w": 785,
+        "h": 459
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:36",
+          "12.5px:18",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:100",
+          "12px:88",
+          "15px:52",
+          "13px:10"
+        ]
+      },
+      "panel": {
+        "x": 1044,
+        "y": 96,
+        "w": 396,
+        "h": 804
+      },
+      "panel_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:136",
+          "12px:97",
+          "13px:71",
+          "13.5px:51"
+        ]
+      },
+      "panel_oge": 8,
+      "belge": {
+        "x": 260,
+        "y": 124,
+        "w": 760,
+        "h": 535
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "pdfy-d1440-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1350,
+          "cw": 1350,
+          "h": 46
+        },
+        "baslikW": 233,
+        "ustH": 52,
+        "olcek": "87%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1376,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:205",
+          "12px:95",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 79,
+        "y": 127,
+        "w": 804,
+        "h": 470
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-d1440-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1168,
+          "cw": 1168,
+          "h": 46
+        },
+        "baslikW": 220,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 246,
+        "y": 0,
+        "w": 1194,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:160",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 246,
+        "h": 848
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:269",
+          "14px:15",
+          "15px:9"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 259,
+        "y": 127,
+        "w": 785,
+        "h": 459
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-d1440-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1168,
+          "cw": 1168,
+          "h": 46
+        },
+        "baslikW": 226,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 246,
+        "y": 0,
+        "w": 1194,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:154",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 246,
+        "h": 848
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:269",
+          "14px:15",
+          "15px:9"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 259,
+        "y": 127,
+        "w": 785,
+        "h": 547
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:942",
+          "20px:23",
+          "22px:13"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 300,
+        "y": 0,
+        "w": 1140,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:51",
+          "12.5px:27",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 300,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:296",
+          "13.5px:117",
+          "14px:57",
+          "15px:24"
+        ]
+      },
+      "panel": {
+        "x": 1000,
+        "y": 52,
+        "w": 440,
+        "h": 848
+      },
+      "panel_yazi": {
+        "baskin": 11.5,
+        "en_kucuk": 11,
+        "dagilim": [
+          "11.5px:412",
+          "15px:47",
+          "11px:45",
+          "12px:43"
+        ]
+      },
+      "panel_oge": 4,
+      "belge": {
+        "x": 324,
+        "y": 80,
+        "w": 654,
+        "h": 460
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "ana-d1440-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 69,
+        "ustH": 52,
+        "olcek": null
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1200,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:31",
+          "14px:16"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:99",
+          "12px:55",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:23",
+          "14px:9",
+          "11px:6"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:63",
+          "12px:19",
+          "13px:10"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-d1440-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1174,
+          "cw": 1174,
+          "h": 46
+        },
+        "baslikW": 229,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1200,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:158",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:139",
+          "12px:101",
+          "15px:52",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 256,
+        "y": 127,
+        "w": 785,
+        "h": 459
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:36",
+          "12.5px:18",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:100",
+          "12px:88",
+          "15px:52",
+          "13px:10"
+        ]
+      },
+      "panel": {
+        "x": 1044,
+        "y": 96,
+        "w": 396,
+        "h": 804
+      },
+      "panel_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:136",
+          "12px:97",
+          "13px:71",
+          "13.5px:51"
+        ]
+      },
+      "panel_oge": 8,
+      "belge": {
+        "x": 260,
+        "y": 124,
+        "w": 760,
+        "h": 535
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "pdfy-d1440-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1350,
+          "cw": 1350,
+          "h": 46
+        },
+        "baslikW": 235,
+        "ustH": 52,
+        "olcek": "87%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1376,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:205",
+          "12px:95",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 79,
+        "y": 127,
+        "w": 804,
+        "h": 470
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-d1440-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1168,
+          "cw": 1168,
+          "h": 46
+        },
+        "baslikW": 223,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 246,
+        "y": 0,
+        "w": 1194,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:160",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 246,
+        "h": 848
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:269",
+          "14px:15",
+          "15px:9"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 259,
+        "y": 127,
+        "w": 785,
+        "h": 459
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-d1440-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1168,
+          "cw": 1168,
+          "h": 46
+        },
+        "baslikW": 223,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 246,
+        "y": 0,
+        "w": 1194,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:154",
+          "12px:61"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 246,
+        "h": 848
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:269",
+          "14px:15",
+          "15px:9"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 259,
+        "y": 127,
+        "w": 785,
+        "h": 547
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:942",
+          "20px:23",
+          "22px:13"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 300,
+        "y": 0,
+        "w": 1140,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:51",
+          "12.5px:27",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 300,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:296",
+          "13.5px:117",
+          "14px:57",
+          "15px:24"
+        ]
+      },
+      "panel": {
+        "x": 1000,
+        "y": 52,
+        "w": 440,
+        "h": 848
+      },
+      "panel_yazi": {
+        "baskin": 11.5,
+        "en_kucuk": 11,
+        "dagilim": [
+          "11.5px:412",
+          "15px:47",
+          "11px:45",
+          "12px:43"
+        ]
+      },
+      "panel_oge": 4,
+      "belge": {
+        "x": 324,
+        "y": 80,
+        "w": 654,
+        "h": 460
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "ana-d1280-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 69,
+        "ustH": 52,
+        "olcek": null
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1040,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:31",
+          "14px:16"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:99",
+          "12px:55",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:23",
+          "14px:9",
+          "11px:6"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:63",
+          "12px:19",
+          "13px:10"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-d1280-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 349,
+        "ustH": 52,
+        "olcek": "87%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:207",
+          "12px:63",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 79,
+        "y": 127,
+        "w": 804,
+        "h": 430
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:36",
+          "12.5px:18",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:100",
+          "12px:88",
+          "15px:52",
+          "13px:10"
+        ]
+      },
+      "panel": {
+        "x": 1044,
+        "y": 96,
+        "w": 396,
+        "h": 804
+      },
+      "panel_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:136",
+          "12px:97",
+          "13px:71",
+          "13.5px:51"
+        ]
+      },
+      "panel_oge": 8,
+      "belge": {
+        "x": 260,
+        "y": 124,
+        "w": 760,
+        "h": 535
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "pdfy-d1280-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 349,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:205",
+          "12px:63",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 420
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-d1280-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 454,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:160",
+          "12px:29"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 64,
+        "h": 748
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 420
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-d1280-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 454,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:154",
+          "12px:29"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 64,
+        "h": 748
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 547
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:942",
+          "20px:23",
+          "22px:13"
+        ]
+      }
+    },
+    "prototip_boyut": "1280×800",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 56,
+        "y": 0,
+        "w": 1224,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:51",
+          "12.5px:27",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 56,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": {
+        "x": 840,
+        "y": 52,
+        "w": 440,
+        "h": 748
+      },
+      "panel_yazi": {
+        "baskin": 11.5,
+        "en_kucuk": 11,
+        "dagilim": [
+          "11.5px:412",
+          "15px:47",
+          "11px:45",
+          "12px:43"
+        ]
+      },
+      "panel_oge": 4,
+      "belge": {
+        "x": 83,
+        "y": 80,
+        "w": 730,
+        "h": 513
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "ana-d1280-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 69,
+        "ustH": 52,
+        "olcek": null
+      },
+      "ust": {
+        "x": 240,
+        "y": 0,
+        "w": 1040,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:31",
+          "14px:16"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:99",
+          "12px:55",
+          "13px:13"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:23",
+          "14px:9",
+          "11px:6"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:63",
+          "12px:19",
+          "13px:10"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-d1280-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 348,
+        "ustH": 52,
+        "olcek": "87%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:207",
+          "12px:63",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 79,
+        "y": 127,
+        "w": 804,
+        "h": 430
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "1440×900",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 236,
+        "y": 0,
+        "w": 1204,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:36",
+          "12.5px:18",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 236,
+        "h": 900
+      },
+      "gezinme_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:100",
+          "12px:88",
+          "15px:52",
+          "13px:10"
+        ]
+      },
+      "panel": {
+        "x": 1044,
+        "y": 96,
+        "w": 396,
+        "h": 804
+      },
+      "panel_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:136",
+          "12px:97",
+          "13px:71",
+          "13.5px:51"
+        ]
+      },
+      "panel_oge": 8,
+      "belge": {
+        "x": 260,
+        "y": 124,
+        "w": 760,
+        "h": 535
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "pdfy-d1280-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 348,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:205",
+          "12px:63",
+          "13px:13"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:134"
+        ]
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 420
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-d1280-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 454,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:160",
+          "12px:29"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 64,
+        "h": 748
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 420
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-d1280-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1190,
+          "cw": 1190,
+          "h": 46
+        },
+        "baslikW": 454,
+        "ustH": 52,
+        "olcek": "85%"
+      },
+      "ust": {
+        "x": 64,
+        "y": 0,
+        "w": 1216,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:154",
+          "12px:29"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 52,
+        "w": 64,
+        "h": 748
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 77,
+        "y": 127,
+        "w": 785,
+        "h": 547
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:942",
+          "20px:23",
+          "22px:13"
+        ]
+      }
+    },
+    "prototip_boyut": "1280×800",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 56,
+        "y": 0,
+        "w": 1224,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 13,
+        "en_kucuk": 11,
+        "dagilim": [
+          "13px:51",
+          "12.5px:27",
+          "11px:6",
+          "14px:5"
+        ]
+      },
+      "gezinme": {
+        "x": 0,
+        "y": 0,
+        "w": 56,
+        "h": 800
+      },
+      "gezinme_yazi": {
+        "baskin": null,
+        "en_kucuk": null,
+        "dagilim": []
+      },
+      "panel": {
+        "x": 840,
+        "y": 52,
+        "w": 440,
+        "h": 748
+      },
+      "panel_yazi": {
+        "baskin": 11.5,
+        "en_kucuk": 11,
+        "dagilim": [
+          "11.5px:412",
+          "15px:47",
+          "11px:45",
+          "12px:43"
+        ]
+      },
+      "panel_oge": 4,
+      "belge": {
+        "x": 83,
+        "y": 80,
+        "w": 730,
+        "h": 513
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:749",
+          "17px:8"
+        ]
+      }
+    }
+  },
+  "ana-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 55
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:49",
+          "12px:32",
+          "13px:13"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:2"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 1,
+        "y": 1,
+        "w": 388,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:14"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 15,
+        "en_kucuk": 14,
+        "dagilim": [
+          "15px:7",
+          "14px:5"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "pdfy-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "aiklavye-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 1,
+        "y": 1,
+        "w": 388,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:14"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:401",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-t390-acik": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 987
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:801",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:21",
+          "12px:14",
+          "14px:8"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ana-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": null,
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 55
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 12,
+        "dagilim": [
+          "14px:49",
+          "12px:32",
+          "13px:13"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 12,
+        "en_kucuk": 12,
+        "dagilim": [
+          "12px:2"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "ai-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 1,
+        "y": 1,
+        "w": 388,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:14"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 15,
+        "en_kucuk": 14,
+        "dagilim": [
+          "15px:7",
+          "14px:5"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  },
+  "pdfy-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "aiklavye-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 1,
+        "y": 1,
+        "w": 388,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:14"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:401",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdfd-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 759
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:718",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    }
+  },
+  "pdf-t390-koyu": {
+    "uygulama": {
+      "ek": {
+        "arac": {
+          "sw": 1099,
+          "cw": 356,
+          "h": 58
+        },
+        "baslikW": 0,
+        "ustH": 55,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 65
+      },
+      "ust_yazi": {
+        "baskin": 14,
+        "en_kucuk": 14,
+        "dagilim": [
+          "14px:10"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "w": 356,
+        "h": 987
+      },
+      "belge_yazi": {
+        "baskin": 15,
+        "en_kucuk": 15,
+        "dagilim": [
+          "15px:801",
+          "20px:23",
+          "22px:5"
+        ]
+      }
+    },
+    "prototip_boyut": "390×844",
+    "prototip": {
+      "ek": {
+        "arac": null,
+        "baslikW": null,
+        "ustH": null,
+        "olcek": null
+      },
+      "ust": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 52
+      },
+      "ust_yazi": {
+        "baskin": 15,
+        "en_kucuk": 12,
+        "dagilim": [
+          "15px:21",
+          "12px:14",
+          "14px:8"
+        ]
+      },
+      "gezinme": null,
+      "gezinme_yazi": null,
+      "panel": null,
+      "panel_yazi": null,
+      "panel_oge": null,
+      "belge": null,
+      "belge_yazi": null
+    }
+  }
+}

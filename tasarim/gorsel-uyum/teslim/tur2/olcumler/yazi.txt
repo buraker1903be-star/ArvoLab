@@ -1,0 +1,8 @@
+ana-1440 {}
+ed-1440 {}
+ai-1440 {}
+pdf-1440 {}
+ed-1280 {}
+ana-390 {}
+ed-390 {"0px button.save-status":["Kaydedildi · 15:28"]}
+pdf-390 {"0px button.save-status":["Kaydedildi · 15:28"]}

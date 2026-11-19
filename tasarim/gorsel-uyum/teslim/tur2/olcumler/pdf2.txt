@@ -1,0 +1,6 @@
+1280 ?sag=pdf                 {"sol":64,"pdf":382,"cekmece":false,"olcek":"85%","pdfYuzde":"58%","pdfYaziPx":6.4,"arac":"1190/1190","pdfKesik":[],"listeKesik":[]}
+1280 ?sol=kaynaklar&sag=pdf   {"sol":64,"pdf":382,"cekmece":false,"olcek":"85%","pdfYuzde":"58%","pdfYaziPx":6.4,"arac":"1190/1190","pdfKesik":[],"listeKesik":[]}
+1440 ?sag=pdf                 {"sol":64,"pdf":520,"cekmece":false,"olcek":"87%","pdfYuzde":"81%","pdfYaziPx":8.9,"arac":"1350/1350","pdfKesik":[],"listeKesik":[]}
+1440 ?sol=kaynaklar&sag=pdf   {"sol":246,"pdf":360,"cekmece":false,"olcek":"85%","pdfYuzde":"55%","pdfYaziPx":6,"arac":"1168/1168","pdfKesik":[],"listeKesik":[]}
+1472 ?sol=kaynaklar&sag=pdf   {"sol":246,"pdf":392,"cekmece":false,"olcek":"85%","pdfYuzde":"60%","pdfYaziPx":6.6,"arac":"1200/1200","pdfKesik":[],"listeKesik":[]}
+1360 ?sol=kaynaklar&sag=pdf   {"sol":64,"pdf":462,"cekmece":false,"olcek":"85%","pdfYuzde":"71%","pdfYaziPx":7.8,"arac":"1270/1270","pdfKesik":[],"listeKesik":[]}

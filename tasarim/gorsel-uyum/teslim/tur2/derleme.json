@@ -1,0 +1,11 @@
+{
+  "etiket": "Yerel üretim derlemesi · 4983980",
+  "gitHead": "4983980",
+  "uygulamaKoduTemiz": false,
+  "buildId": "w4s0PW_VUbnb3EaHr-NRR",
+  "sunucu": "next start (rm -rf .next, next build)",
+  "veri": "yalnızca yerel yığın 127.0.0.1, sentetik kullanıcı ve içerik",
+  "ai": "yerel model taklidi (scripts/yerel-yigin/model-taklidi.mjs), gerçek model çağrılmadı",
+  "tarih": "2026-11-19T14:38:15.672Z",
+  "sayfaHatalari": []
+}
