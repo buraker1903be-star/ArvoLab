@@ -192,12 +192,68 @@ ayrıca denetleniyor (`0335a77`).
 | Konu | Ölçü | Durum |
 |---|---|---|
 | PDF sığdır yazısı küçük | 360–392 px'te 6,0–6,6 px | Yakınlaştırma ya da Pasaja odaklan; ayırıcıyla genişletme |
-| PDF panelinin alt notu ("Arvo AI yalnızca bu PDF'in metnine dayanır…") | 1440'ta not 852–921, alt bölüm 887'de bitiyor; 1280'de 791–843 / 787 | Alt bölüm (`.kaynak-pdf-alt`, en çok %45) kendi içinde kayar, not kaydırınca okunur; ilk bakışta kesik görünür. Bu turda değiştirilmedi |
+| ~~PDF panelinin alt notu~~ | kapanışta düzeltildi (aşağıda) | Not tamamen görünür |
 | Telefon klavyesi | yalnızca görünen alan küçültülerek benzetildi | Gerçek cihazda sınanmadı |
 | 1440'ta liste 300 + PDF | 1494 px gerekir | 1440'ta liste 246'ya iner |
-| Ara sıra hidrasyon uyarısı (React #418) | `0335a77` tam koşusunda bir kez, `?sol=kaynaklar&sag=pdf` | Altı hedefli tekrarda (S20 ×2, S3, S19, S16 ×2) çıkmadı; bu commit sunucuda çizilen editör işaretlemesini değiştirmiyor. Kaynağı bulunamadı |
+| Ara sıra hidrasyon uyarısı (React #418) | `0335a77` tam koşusunda bir kez | Kapanışta hedefli kontrol: 192 + 96 açılışta yeniden üretilemedi (aşağıda). **Açık, belirsiz** |
 
 ## Kontroller (2. tur, `4b4d665`)
 
 `npx tsc --noEmit` ✓ · `npm run lint` ✓ (0 hata, 2 eski uyarı) · `check:css` ✓ · `check:migrations` ✓ ·
 `check:rakamlar` ✓ · `test:unit` 2358/2358 · `test:editor` 112/112 · `test:db` 362/362.
+
+---
+
+# 2. tur kapanışı (19.11.2026)
+
+**Son HEAD ve kod:** uygulama commit'i **`af329b4`**; sonraki commit'ler yalnızca teslim/ölçüm dosyaları.
+**BUILD_ID `hDmEoQJubAbloP-ZWCddu`** (`rm -rf .next && next build`, `next start`, S17 kayıtlı dizin düzeneğiyle).
+**Kabul:** 22 PASS · 0 FAIL · 0 UNVERIFIED, `af329b4` HEAD'iyle bu derlemede koştu →
+`scripts/yerel-yigin/sonuclar/calisma-alani-kabul-af329b4.json` (uygulama kodu temiz). Görseller ve ölçümler aynı
+derlemeden: `teslim/tur2/karsilastirma/`, `teslim/tur2/kapanis/`, `teslim/tur2/olcumler/`. AI cevabı yerel taklit.
+
+## PDF güven notu
+Eskiden alt bölüm flex içinde içeriğinin altına küçülüyordu: not 1440'ta 852–921 (bölüm 887'de bitiyor), 1280'de
+791–843 (bölüm 787) — yarım ya da hiç görünmüyordu. Alt bölüm artık içeriği kadar yer alır (üst sınır %45), küçülen
+okuma alanıdır; not üç satırdan iki satıra kısaltıldı ("Yalnızca bu PDF'e dayanır; doğrulanamayan cevap
+gösterilmez, belgeye kendiliğinden girmez."), boş analiz listesinin boşluğu kaldırıldı. Ölçüm (`olcumler/pdf-alt-not.txt`):
+
+| Ekran | Not | Alt bölüm sonu | Kayan? | PDF okuma alanı (önce → sonra) |
+|---|---|---|---|---|
+| 1440 · liste + PDF | 830–865 | 887 | hayır | ~334 → 320 px |
+| 1280 · PDF | 730–765 | 787 | hayır | ~272 → 220 px |
+| 1200 · çekmece | 734–769 | 791 | hayır | — → 256 px |
+| 1920 · PDF | 1010–1045 | 1067 | hayır | — → 524 px |
+
+Bedel: 1280'de okuma alanı ~52 px kısaldı (yönerge, iki satırlık not ve yazma kutusu birlikte ~180 px).
+
+## Yakınlaştırma ve Pasaja odaklan (`olcumler/yakinlastirma.txt`, `kapanis/`)
+6 px yalnızca sığdır görünümünde: 1440'ta (PDF 360) sığdır %55 → 6,0 px; **+2 → %105, 11,5 px; +3 → %130, 14,3 px**.
+1280'de (PDF 382) %58 → 6,4 px; +2 → %108, 11,9 px. Doğrulanmış pasajda "Dayanağa git" pasajı %55'te vurgular ve
+görünür alanda tutar; **"Pasaja odaklan" → %160, pasaj 17,6 px, görünür alanda** (`pasaj-odaklan-1440.png`).
+Telefonda Dayanağa git doğrudan %160 açar (S15, `s15-telefon-pasaj.png`).
+Eşleşme yokken: doğrulanmış pasajı olmayan atıfta "PDF'i aç" → vurgulanan pasaj 0, düğme yok (`eslesme-yok-pdf.png`);
+pasaj başka PDF/sayfada bulunamazsa önceki ya da yanlış yer vurgulanmaz, kullanıcıya söylenir (S10, `s10-pasaj-bulunamadi.png`).
+Not: doğrulanmış pasajlar yalnızca oturum boyunca bellekte tutulur (bilinçli, K3-ek onaylı değil); sayfa yeniden
+yüklenince kart "Doğrulanmış pasaj yok" der ve hiçbir yer vurgulanmaz. Bu tur değiştirilmedi.
+
+## React #418
+**Kayıt:** tek görülme `calisma-alani-kabul-0335a77.json`, S0: "Minified React error #418 … args[]=HTML" (sunucunun
+çizdiği HTML istemciyle uyuşmadı), adres `/dashboard/editor/<ESKI>/write?sol=kaynaklar&sag=pdf`, BUILD_ID
+`w4s0PW_VUbnb3EaHr-NRR`. Kayıt hangi senaryoda/hangi düğümde olduğunu söylemiyor; sunucu günlüğünde iz yok.
+**Hedefli kontrol** (`olcumler/olc-418.mjs`, `418-*.txt`): aynı ekran, her durumda soğuk açılış (yeni bağlam, ilk
+istek) + iki yeniden yükleme; 1440/1280/1200/390 × TR/EN × açık/koyu × normal ve 6× yavaş CPU; pageerror ve
+hidrasyon console.error'ları toplandı.
+- Üretim derlemesi (`hDmEoQJubAbloP-ZWCddu`): 2 tur, **192 açılış, 0 hata**.
+- Geliştirme sunucusu (uyuşmazlığın ayrıntısını yazan mod): **96 açılış, 0 hata/uyarı**.
+- Önceki tam kabullerde (`4983980`, `af329b4`) S0 temiz; hedefli altı tekrar (S20 ×2, S3, S19, S16 ×2) temiz.
+- Kodda taranan adaylar (render sırasında `Date`, `localStorage`, `matchMedia`, `navigator`) istemciye
+  `useSyncExternalStore`/effect ile alınmış ya da sunucu ile aynı saat dilimini kullanıyor; kaynak bulunamadı.
+
+**Sonuç: yeniden üretilemedi, kapanmış sayılmıyor.** Olasılıklar (doğrulanmadı): test sürücüsünün hidrasyon
+bitmeden sayfayla etkileşmesi ya da tam kabulde peş peşe gezinmelerin sırası. Hata gizlenmedi; kabulün S0 denetimi
+her koşuda pageerror'ı FAIL sayıyor.
+
+## Kontroller (`af329b4`)
+`tsc` ✓ · `lint` 0 hata (2 eski uyarı) · `check:css` ✓ · `check:migrations` ✓ · `check:rakamlar` ✓ ·
+`test:unit` 2358/2358 · `test:editor` 112/112 · `test:db` 362/362.
