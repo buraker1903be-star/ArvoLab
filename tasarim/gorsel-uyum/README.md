@@ -269,3 +269,21 @@ her koşuda pageerror'ı FAIL sayıyor.
 Son uygulama kodu **`95f0d9b`**, BUILD_ID **`ulDWz5SEVrYzO2Ej5KFak`** (temiz derleme, S17 düzeneği):
 tam kabul **22/22 PASS, 0 FAIL, 0 UNVERIFIED** → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-95f0d9b.json`.
 CI (`kontrol`) `95f0d9b`'de başarılı. React #418 açık bulgu olarak kalıyor.
+
+## İnceleme kapanışı: son iki nokta
+
+1. **Yeni çalışma düğme sırası** → **düzeltildi** (`795b213`). Telefonda görünüm eskiden `column-reverse` ile
+   ters çevriliyordu (Tab önce alttaki Word'e gidiyordu). Sıra artık DOM'da kuruluyor: telefonda "Oluştur ve yaz",
+   Word; masaüstünde Word, "Oluştur ve yaz". Pozitif `tabindex` yok; görünüm aynı. Tarayıcıda Tab ve Shift+Tab ile
+   doğrulandı (`teslim/tur2/olcumler/yeni-calisma-sekme.txt`, `teslim/tur2/kapanis/yeni-calisma-*.png`).
+2. **Kaydırma çubuğu, 1200–1215 px** → **ölçüm kanıtıyla kabul edilen fark**, kod değişmedi. Klasik 15 px
+   çubukla, 5 durum (panelsiz, AI, PDF, liste, liste + PDF) × 10 genişlik (1195–1220): 1200–1214 px'te CSS
+   masaüstü kabuğu, yerleşim kararı tablet davranışı (belge akar %100, panel çekmece) seçiyor. Bu 25 ölçümün
+   hiçbirinde yatay taşma, belge–gezinme ya da belge–panel örtüşmesi, erişilemeyen araç çubuğu öğesi yok;
+   "Kontroller" ve dışa aktarma menüsü 50 ölçümün hepsinde tıklanabilir
+   (`teslim/tur2/olcumler/kaydirma-cubugu-1200-1215.txt`, `olc-cubuk.mjs`). Not: 1195–1199 px (her iki tarafın
+   da tablet olduğu bant) liste açıkken listenin belgeyi örtmesi tabletin mevcut davranışı, bu PR değiştirmedi.
+
+Son uygulama kodu **`795b213`**, BUILD_ID **`FODXRAzjYWENiK6Hy5dRP`** (temiz derleme, S17 düzeneği): tam kabul
+**22/22 PASS, 0 FAIL, 0 UNVERIFIED** → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-795b213.json`.
+CI (`kontrol`) `cc972dc`'de (aynı uygulama kodu) başarılı. React #418 açık bulgu olarak kalıyor.
