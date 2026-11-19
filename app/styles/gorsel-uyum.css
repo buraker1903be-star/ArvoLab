@@ -124,11 +124,12 @@
   .yeni-calisma-formu { display: flex; flex: 1; flex-direction: column; gap: 16px; }
   /*
     Birincil düğme altta, tam genişlikte; Word içe aktarma altında ikincil.
-    Sırası DOM'da aynı kalır (önce Word, sonra Oluştur): yalnızca görünüm
-    ters çevrilir, klavye sırası formun doğal akışında.
+    Sıra DOM'da kurulur (yeni-calisma-penceresi.tsx: telefonda önce
+    Oluştur, sonra Word). Eskiden burada column-reverse vardı ve klavye
+    sırası görünümün tersiydi (kod incelemesi, PR #112).
   */
   .yeni-calisma-formu .pencere-dugmeler {
-    position: sticky; bottom: 0; flex-direction: column-reverse; align-items: stretch; gap: 4px;
+    position: sticky; bottom: 0; flex-direction: column; align-items: stretch; gap: 4px;
     margin-top: auto; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--surface);
   }
   .yeni-calisma-formu .pencere-dugmeler .projects-primary-button { width: 100%; min-height: 48px; justify-content: center; }
