@@ -100,3 +100,53 @@ kartı yok, açık pencere yok. Çekmece çarpı düğmesiyle kapanıyor; veri k
 - kaynaklar `c6fc66cf-c456-4ce4-bc51-f8c58497f3d3`, `b5c98534-b5d0-4d90-ad57-3bc560737f36`
 - kaynak PDF'i `cde880db-d675-4eb9-9334-fbbe8f3a7fe5`, Storage `project-files/9ff42aa9-…/kaynak-pdf/y-6168c0ea-…-8e54f34e-….pdf`
 - Kaynakça denetiminin bıraktığı kayıt(lar) — temizlikte proje kimliğiyle aranacak
+
+---
+
+## Devam: 18.11.2026 22:35 – 19.11.2026 (C3, C7, gözlem; C6 düzeltmesi)
+
+### Canlı kabulün kalanı — `ea010ac` (Production), düzeltme ÖNCESİ
+
+| # | Sonuç | Kanıt |
+|---|---|---|
+| C3 | PASS | Yeni çalışma (`belge_dili='en'`) TR ve EN arayüzde Word'de "TABLE OF CONTENTS"; eski çalışma (NULL) TR arayüzde "İÇİNDEKİLER", EN arayüzde "TABLE OF CONTENTS" (eski kural arayüzü izler) |
+| C7 | PASS | `/api/manuscripts/<id>/export` dört kez 200, `.docx` 9,8 KB; metin ve atıf "(Deneme, 2020)" çıktıda; içindekiler başlığı belge diline göre. İçindekiler bayrağı kullanıcının kendi oturumuyla (RLS altında) açıldı |
+| C8 | PASS | 22:11:46–22:41:46 UTC: Vercel çalışma hatası yok. Görünen tek kayıt Node'un `localStorage` deneysel uyarısı; 05.11.2026'dan beri var, bu yayınla ilgisiz |
+| C6 | **FAIL (korunuyor)** | İlk canlı başarısızlık yukarıda; aşağıdaki düzeltme Production'a henüz dağıtılmadı |
+
+Not: eski çalışmanın metninde bu kabul betiklerinin yazmadığı bir "Selamlar" kelimesi görüldü (çalışmanın son
+güncellemesi 22:48:51, kabulün içindekiler isteğiyle aynı an). Hesap sentetik ve geçici şifresi kullanıcıda;
+bu kabulün dışında bir oturumun yazdığı düşünülüyor, ürün hatası belirtisi değil.
+
+### C6 kök nedeni (Production'da ölçüldü, yerelde yeniden üretildi)
+
+Çekmece görünümü (`data-sag-cekmece`, "Esc ile kapatın" ipucu) yerleşim kararı henüz yokken de çiziliyor
+(`sag && karar?.sag !== "sutun"`, karar null iken doğru). Esc dinleyicisi ise ancak karar "cekmece" deyince
+ekleniyordu. Production izi (`ea010ac`): React yerleşimi 1537 ms'de sahiplendi (çekmece çizili, karar yok), Esc
+3494 ms'de basıldı ve yalnızca Ctrl+K/Ctrl+S dinleyicileri canlıydı, karar 3661 ms'de geldi, dinleyici 3665 ms'de
+eklendi. Yerelde ara sıfıra yakın; CDP ile CPU 6× kısıtlanınca eski derlemede de aynı iz çıktı (0/5, sonra S20
+0/10). AI panelinin kendisi neden değil (aynı sekmede yenilemesiz dizi geçiyor); eski kapanım (stale closure)
+değil (`escDurumu`/`pdfKapat` bağımlılıkları doğru); olay önceliği değil (o anda Esc'i dinleyen yoktu).
+
+### Düzeltme (`duzeltme/pdf-cekmece-esc`, Production'a dağıtılmadı)
+
+Dinleyici PDF açık olduğu sürece ekli; çekmece olup olmadığı olay anında görünen durumdan okunur
+(`lib/editor-esc.ts` → `pdfCekmecesiGorunuyor`: nitelik + pencere genişliği, ≤760 telefon). Odak modu aynı karara
+bakar. Koda gecikme eklenmedi.
+
+| Doğrulama (yerel, temiz üretim derlemesi) | Düzeltmeden önce | Sonra |
+|---|---|---|
+| Yavaş cihaz (CPU 6×), ipucu görünür görünmez Esc | 0/5 (iz), S20 0/10 | 10/10 |
+| Canlıdaki dizi (önce `?sag=ai`, sonra PDF çekmecesi) | — (yerelde ara kısa) | 10/10 |
+| Aynı sekmede AI aç/kapat → PDF'i aç → 1472→1280 → belge → Esc | 3/3 | 10/10 |
+| Teslim kontrolü penceresi açıkken ilk Esc yalnızca pencereyi kapatır, ikinci Esc PDF'i | — | 10/10 |
+| Tam kabul S0–S20 | — | **22/22 PASS** (`sonuclar/calisma-alani-kabul-0f55756.json`) |
+
+Kontroller: tsc, lint (0 hata), check:css, check:rakamlar, check:migrations, test:unit 2356, test:editor 112,
+test:db 362.
+
+### Temizlik — BEKLİYOR
+
+Production'daki sentetik kayıtlar inceleme süresince korundu. Silme öncesi ilişkili kayıtları bulan salt okunur
+sorgu, araç onay sorusuna yanıt gelmediği için çalışmadı; temizlik ve test oturumlarının kapatılması kullanıcı
+onayından sonra yapılacak.
