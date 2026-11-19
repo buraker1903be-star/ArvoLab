@@ -50,7 +50,7 @@
   çubuk satır sarmaz, yatay kayar; ölçü teslim notunda.
 */
 @media (min-width: 761px) and (max-width: 1439px) {
-  .manuscript-araclar { flex-wrap: nowrap; overflow-x: auto; }
+  .manuscript-araclar { flex-wrap: nowrap; overflow-x: auto; scroll-padding-inline: 8px; }
   .arac-grup-yazi .toolbar-select { max-width: 92px; }
   .arac-grup-yazi .toolbar-select + .toolbar-select { max-width: 56px; }
   .manuscript-araclar .arac-grup-asistan .arac-metin { display: none; }
@@ -142,7 +142,8 @@
     ekran: paneldeki kapat düğmesi belgeye döner.
   */
   .manuscript-layout .yazim-paneli {
-    top: 0; bottom: 0; z-index: calc(var(--z-pencere) + 1);
+    /* Görünen alana bağlı (yazim-paneli.tsx, visualViewport): klavye açıkken de başlık ve istem ekranda. */
+    top: var(--gorunur-ust, 0px); bottom: auto; height: var(--gorunur-h, 100dvh); z-index: calc(var(--z-pencere) + 1);
     border-radius: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
   }
 }
@@ -180,4 +181,57 @@
   .kaynak-pdf-paneli .kaynak-secim { position: sticky; bottom: 0; z-index: 1; padding-block: 8px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); }
   .kaynak-pdf-paneli .kaynak-secim-eylem { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .kaynak-pdf-paneli .kaynak-secim-eylem button { min-height: 44px; justify-content: center; }
+}
+
+/* Kaynak listesi sıkı genişlik (lib/calisma-alani-yerlesimi.ts SOL_ARAC_SIK = 246): PDF açıkken liste görünür kalır. */
+@media (min-width: 1200px) {
+  html[data-sol-alan-sik] .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]) { --os5-kenar-genis: 246px; }
+}
+
+/*
+  SAĞ PANEL SÜTUNU (görsel uyum 2): açılışta panelin altı ekranın 38 px
+  dışındaydı (1440×900'de panel 126'dan başlıyor, yüksekliği 100dvh − 88 =
+  812 → alt 938); istem alanı ve Gönder kesik görünüyordu, sayfa
+  kaydırılınca yapışıp sığıyordu. Yapışma noktası panelin doğal yeri:
+  üst çubuk + sayfa payı (12) + araç çubuğu (46) + aralık (16) = 52 + 74.
+  Yükseklik oradan ekranın altına 12 px kala. Panel kaydırmada yerinden
+  oynamaz; içinde yalnızca sohbet listesi / PDF sayfası kayar.
+*/
+@media (min-width: 1200px) {
+  .manuscript-layout[data-sag]:not([data-sag-cekmece]):not([data-odak]) :is(.yazim-paneli, .kaynak-pdf-paneli, .pdf-panel-ayirici) {
+    top: calc(var(--topbar-height) + 74px);
+    height: calc(100dvh - var(--topbar-height) - 86px);
+  }
+}
+
+/*
+  Telefonda "Yeni çalışma" başlıkla aynı satırda (görsel uyum 2; prototipte
+  selamın sağında). Eskiden başlığın altında ayrı bir satırdaydı. Düğme
+  44 px dokunma hedefi; başlık uzarsa düğme yerinde kalır, başlık kırılır.
+  Hiza (2. tur, ölçüldü): düğme başlık + alt satır bloğunun tepesine dayalıydı,
+  merkezi başlığın merkezinden 10 px aşağıdaydı.
+  Başlık kutusu en az 44 px ve dikeyde ortalı: tek satırda iki merkez aynı
+  çizgide; uzun ad kırılırsa satır aralığı değişmez, punto aynı.
+*/
+@media (max-width: 760px) {
+  .os5-ana .gb-selam { flex-wrap: nowrap; align-items: flex-start; }
+  .os5-ana .gb-selam > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .os5-ana .gb-selam h1 { min-height: 44px; display: flex; align-items: center; }
+  .os5-ana .gb-selam-eylemler { flex: none; width: auto; margin-top: 0; }
+  .os5-ana .gb-selam-eylemler > * { min-height: 44px; }
+}
+
+/*
+  1200–1279 px (görsel uyum 2, tarayıcıda ölçüldü): sol araç açıkken çubuk
+  içeriği 925 px, görünür alan liste ile 874, arama ile 802 px'ti; çubuk
+  kayıyordu. Düğmeler 32 → 28, seçiciler 92/56 → 84/52, grup arası 3 → 2 px:
+  hiçbir düğme kaldırılmadı, adlar title/aria-label'da.
+*/
+@media (min-width: 761px) and (max-width: 1279px) {
+  .manuscript-araclar button { min-width: 28px; padding: 0 5px; }
+  .manuscript-araclar .arac-segment button { min-width: 26px; padding: 0 4px; }
+  .arac-grup-yazi .toolbar-select { max-width: 84px; }
+  .arac-grup-yazi .toolbar-select + .toolbar-select { max-width: 52px; }
+  .arac-grup { padding: 0 2px; }
+  .manuscript-araclar { padding-inline: 2px; }
 }

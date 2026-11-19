@@ -993,7 +993,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 .chip[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .chip[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
 /* Satır içi küçük rozet (kart meta satırları, teslim listesi) */
-:is(.project-card-meta, .resume-meta, .upcoming-list) .chip { gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); font-size: 11px; font-weight: 700; }
+:is(.project-card-meta, .resume-meta, .upcoming-list) .chip { gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; }
 
 /* Tek kaynak/öğe kartı (sonuç listelerinde) */
 .result-item {

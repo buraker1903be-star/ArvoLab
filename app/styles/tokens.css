@@ -7,7 +7,7 @@
    - Ham renk (hex/rgb) yalnızca bu dosyada tanımlanır; diğer dosyalar
      var(--…) ve color-mix() kullanır.
    - Palet değişkenleri (--brand-*, --accent-*, --n-*) yalnızca burada.
-   - En küçük yazı boyutu 11px.
+   - En küçük yazı boyutu 12px (19.11.2026'ya kadar 11px).
    Tema: <html data-theme="light|dark"> (app/layout.tsx ön-boya betiği).
 
    BELGE KÂĞIDI (Phase 4.3; 19.11.2026'da değişti, aşağıdaki GÖRSEL UYUM
@@ -330,7 +330,8 @@
   */
   --font-display: var(--font-body);
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  --fs-micro: 11px;
+  /* 11 → 12 px (görsel uyum 2, 19.11.2026): onaylı prototipte arayüzün en küçük yazısı 12 px; yardımcı metinler okunur kalsın. Belge puntosu bu değişkeni kullanmaz. */
+  --fs-micro: 12px;
   --fs-sm: 12px;
   --fs-base: 13px;
   --fs-body: 14px;

@@ -279,6 +279,39 @@ export default function YazimPaneli({
     };
   }, [acik]);
 
+  /*
+    TELEFONDA KLAVYE (görsel uyum 2, 19.11.2026). Panel telefonda tam ekran
+    (gorsel-uyum.css). Android Chrome (108+) ve iOS klavye açılınca yalnızca
+    GÖRÜNEN alanı küçültür; "bottom: 0" ile sabitlenmiş panelin altı (istem
+    ve Gönder) klavyenin arkasında kalır ya da tarayıcı istemi göstermek için
+    görünümü kaydırıp başlığı ekrandan çıkarır. Panel görünen alanın
+    (visualViewport) üstüne ve yüksekliğine bağlanır: başlık, kapat ve istem
+    görünür kalır, yalnızca sohbet listesi kayar. visualViewport yoksa CSS
+    varsayılanı (tam ekran) geçerli. Panel kapalıyken çizilmediği için etki
+    `acik`'a bağlı: her açılışta yeniden bağlanır.
+  */
+  useEffect(() => {
+    const panel = panelRef.current;
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!acik || !panel || !vv) return;
+    const uygula = () => {
+      if (!window.matchMedia("(max-width: 760px)").matches) {
+        panel.style.removeProperty("--gorunur-ust");
+        panel.style.removeProperty("--gorunur-h");
+        return;
+      }
+      panel.style.setProperty("--gorunur-ust", `${Math.round(vv.offsetTop)}px`);
+      panel.style.setProperty("--gorunur-h", `${Math.round(vv.height)}px`);
+    };
+    uygula();
+    vv.addEventListener("resize", uygula);
+    vv.addEventListener("scroll", uygula);
+    return () => {
+      vv.removeEventListener("resize", uygula);
+      vv.removeEventListener("scroll", uygula);
+    };
+  }, [acik]);
+
   if (!acik) return null;
   const hizli: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },

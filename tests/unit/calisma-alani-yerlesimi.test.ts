@@ -27,10 +27,16 @@ test("otomatik küçültme okunabilirlik sınırının altına inmez: önce ray,
   const g = karar(1920, null, "pdf", 520);
   assert.deepEqual([g.kenar, g.sag, g.sagGenislik], ["tam", "sutun", 520]);
   assert.ok(a.olcek >= BELGE_OKUNUR_EN_AZ, String(a.olcek));
-  // 1280 + PDF 520: rayla da sığmıyor → PDF çekmece, belge tam boy.
+  /*
+    1280 + PDF (görsel uyum 2): PDF'in alt sınırı 440 → 360. Ray + PDF 382 ile
+    belge sütunu 788 px (%85); eskiden çekmeceydi. 1200'de 302 px kalıyor
+    (< 360): çekmece, belge tam boy.
+  */
   const b = karar(1280, null, "pdf", 520);
-  assert.equal(b.sag, "cekmece");
-  assert.equal(b.olcek, 1);
+  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["ray", "sutun", 382]);
+  assert.ok(b.olcek >= BELGE_OKUNUR_EN_AZ, String(b.olcek));
+  const c1200 = karar(1200, null, "pdf", 520);
+  assert.deepEqual([c1200.sag, c1200.olcek], ["cekmece", 1]);
   // Hiçbir masaüstü durumunda sağ panel sütun iken ölçek sınırın altında değil.
   for (let ekran = 1200; ekran <= 2560; ekran += 40) {
     for (const panel of ["ai", "pdf"] as const) {
@@ -140,20 +146,29 @@ test("inceleme paneli: tablet ve telefonda akış (belgenin üstünde/altında),
   300 px'lik liste açıkken PDF çekmeceye düşüyordu (en dar PDF ile bile
   belge %69–%71). Önce araç şeride iner; belge ve PDF yan yana kalır.
 */
-test("kaynak listesi + PDF: 1472 ve 1440'ta araç şeride iner, belge ≥ %85 ve PDF sütun", () => {
-  const a = karar(1472, "kaynaklar", "pdf", 520);
-  assert.deepEqual([a.kenar, a.sag, a.sagGenislik], ["aracDar", "sutun", 520]);
-  assert.ok(a.olcek >= BELGE_OKUNUR_EN_AZ, String(a.olcek));
+/*
+  Görsel uyum 2 (19.11.2026): kaynak listesi PDF açıkken mümkün olduğunca
+  görünür kalır. 300 → 246 (sıkı, tarayıcıda ölçülmüş en dar kullanılabilir
+  genişlik) → şerit; her adımda PDF belgeyi %85'te tutan en geniş değeri
+  alır (en az 360).
+*/
+test("kaynak listesi + PDF: 1440'ta liste 246 + PDF 360, 1472'de liste 246 + PDF 392; belge ≥ %85", () => {
   const b = karar(1440, "kaynaklar", "pdf", 520);
-  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["aracDar", "sutun", 520]);
+  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["aracSik", "sutun", 360]);
   assert.ok(b.olcek >= BELGE_OKUNUR_EN_AZ, String(b.olcek));
-  // Geniş ekranda araç tam genişliğinde kalır.
-  assert.deepEqual([karar(1920, "kaynaklar", "pdf", 520).kenar, karar(1920, "kaynaklar", "pdf", 520).sag], ["arac", "sutun"]);
+  const a = karar(1472, "kaynaklar", "pdf", 520);
+  assert.deepEqual([a.kenar, a.sag, a.sagGenislik], ["aracSik", "sutun", 392]);
+  // Geniş ekranda liste tam genişliğinde, PDF istenen genişlikte.
+  const g = karar(1920, "kaynaklar", "pdf", 520);
+  assert.deepEqual([g.kenar, g.sag, g.sagGenislik], ["arac", "sutun", 520]);
+  // Sıkı genişlik yalnızca ölçülen kaynak listesinde; bölümler doğrudan şeride iner.
+  assert.equal(karar(1440, "bolumler", "pdf", 520).kenar, "aracDar");
 });
 
-test("kaynak listesi + PDF: şeritle de sığmıyorsa (1280) ya da kullanıcı aracı geri açtıysa çekmece", () => {
+test("kaynak listesi + PDF: 1280'de liste şeride iner, PDF 382 yanda; kullanıcı aracı geri açtıysa çekmece", () => {
   const c = karar(1280, "kaynaklar", "pdf", 520);
-  assert.deepEqual([c.kenar, c.sag], ["arac", "cekmece"]);
+  assert.deepEqual([c.kenar, c.sag, c.sagGenislik], ["aracDar", "sutun", 382]);
+  assert.ok(c.olcek >= BELGE_OKUNUR_EN_AZ, String(c.olcek));
   const d = yerlesimKarari({ ekran: 1472, solArac: "kaynaklar", sagPanel: "pdf", sagGenislik: 520, kenarDar: false, solGenisIstendi: true });
   assert.deepEqual([d.kenar, d.sag], ["arac", "cekmece"]);
   // AI panelinde araç daraltılmaz (önceki kural yerinde).

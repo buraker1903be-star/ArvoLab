@@ -96,6 +96,7 @@ import {
   sagPanelGenisligiSinirla,
   yerlesimKarari,
   SOL_ALAN_DAR_OZNITELIGI,
+  SOL_ALAN_SIK_OZNITELIGI,
   SOL_ALAN_GENISLET_OLAYI,
   type OlcekTercihi,
 } from "@/lib/calisma-alani-yerlesimi";
@@ -825,6 +826,14 @@ export default function ManuscriptEditor({
     else kok.removeAttribute(SOL_ALAN_DAR_OZNITELIGI);
   }, [solAlanDar]);
   useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_DAR_OZNITELIGI), []);
+  /* Kaynak listesi sıkı genişlikte (görsel uyum 2): PDF ile birlikte görünür kalsın diye 246 px. */
+  const solAlanSik = karar?.kenar === "aracSik";
+  useEffect(() => {
+    const kok = document.documentElement;
+    if (solAlanSik) kok.setAttribute(SOL_ALAN_SIK_OZNITELIGI, "");
+    else kok.removeAttribute(SOL_ALAN_SIK_OZNITELIGI);
+  }, [solAlanSik]);
+  useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_SIK_OZNITELIGI), []);
   /*
     Gezinme yalnızca GEÇİCİ olarak raya iner (sağ panel açıkken belge
     okunabilirlik sınırının altına inecekse): tercih kaydedilmez, panel
@@ -871,8 +880,13 @@ export default function ManuscriptEditor({
       return;
     }
     const ayarla = () => {
-      /* Başlık satırı kalktı (görsel uyum); eylemler üst çubukta. Çekmece üst çubuğun altından başlar. */
-      const baslik = document.querySelector(".dashboard-header");
+      /*
+        Çekmece ARAÇ ÇUBUĞUNUN altından başlar (görsel uyum 2). Başlık satırı
+        kalkınca önce üst çubuğun altından başlatılmıştı; 1200–1240 px'te AI/PDF
+        çekmecesi araç çubuğunun sağını (liste, alıntı, asistan, Belge menüsü)
+        örtüyor, o düğmeler tıklanamıyordu (tarayıcıda ölçüldü).
+      */
+      const baslik = document.querySelector(".manuscript-araclar") ?? document.querySelector(".dashboard-header");
       const ustCubuk = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64;
       const alt = baslik ? baslik.getBoundingClientRect().bottom : 0;
       yerlesim.style.setProperty("--cekmece-ust", `${Math.round(Math.max(ustCubuk + 8, alt + 8))}px`);

@@ -3,7 +3,8 @@
 //   1) Ham renk (hex, rgb(), hsl()) yalnızca app/styles/tokens.css'te olabilir.
 //   2) Palet değişkenleri (--brand-N, --accent-N, --n-N) yalnızca tokens.css'te tanımlanır.
 //   3) Yedeksiz var(--x) kullanımı tanımlı bir değişkene işaret etmelidir.
-//   4) En küçük yazı boyutu 11px (font-size ve font kısayolu).
+//   4) En küçük yazı boyutu 12px (font-size ve font kısayolu). 19.11.2026'ya kadar 11px; görsel uyum
+//      turunda onaylı prototipin alt sınırına (12 px) çekildi.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP_DIR = path.join(root, "app");
 const TOKENS_FILE = path.join(APP_DIR, "styles", "tokens.css");
-const MIN_FONT_PX = 11;
+const MIN_FONT_PX = 12;
 // next/font ile gövdeye eklenen değişkenler
 const KNOWN_EXTERNAL = new Set(["--font-inter", "--font-montserrat"]);
 

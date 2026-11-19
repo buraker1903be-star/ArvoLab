@@ -115,7 +115,7 @@
   --os5-fs-form-baslik: 20px;
   --os5-fs-govde: 14px;
   --os5-fs-meta: 12px;
-  --os5-fs-en-kucuk: 11px;
+  --os5-fs-en-kucuk: 12px; /* görsel uyum 2: 11 → 12 (tokens.css --fs-micro ile aynı gerekçe) */
 
   /* Gölge: kartlarda YOK (Paddle'da görünür gölge yok); yalnızca açılır katmanlarda. */
   --os5-golge-katman: 0 12px 32px -12px color-mix(in srgb, var(--brand-950) 28%, transparent);
