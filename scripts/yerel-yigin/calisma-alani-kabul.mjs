@@ -789,12 +789,16 @@ try {
     beklenen(zemin.every((z) => z.sinif && z.lum < 0.35), `koyu temada denetim zeminleri: ${JSON.stringify(zemin)}`);
     await goruntu(kd.s, "s14-pdf-koyu");
     await kd.c.close();
-    // 1280: PDF çekmece; üstü editör başlığının altında, Kontroller ve Dışa aktar tıklanabilir, kapatma görünür.
+    /*
+      1280: PDF çekmece; üstü editör başlığının altında, Kontroller ve Dışa aktar tıklanabilir, kapatma görünür.
+      Görsel uyum (19.11.2026): sayfanın başlık satırı (.yazma-basligi) kalktı; çalışmanın adı ve
+      eylemler kabuğun üst çubuğunda (.dashboard-header, #ust-cubuk-yuva). Ölçü oradan alınır.
+    */
     const d = await oturum(A, { genislik: 1280, yukseklik: 800 });
     await editorAc(d.s, "?sag=pdf"); await d.s.waitForTimeout(1500);
     const g = await d.s.evaluate(() => {
       const panel = document.querySelector(".kaynak-pdf-paneli").getBoundingClientRect();
-      const baslik = document.querySelector(".yazma-basligi").getBoundingClientRect();
+      const baslik = document.querySelector(".dashboard-header").getBoundingClientRect();
       const ust = (q) => { const e = document.querySelector(q); if (!e) return false; const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e.contains(x); };
       return { panelUst: Math.round(panel.top), baslikAlt: Math.round(baslik.bottom), kontroller: ust('button[aria-label^="Kontroller"]'), disaAktar: ust('button[aria-label^="Word"], button[aria-label^="Dışa"], .yazma-eylemleri .projects-filter-button:last-child'), kapat: ust('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]') };
     });
@@ -805,8 +809,9 @@ try {
     // kayma odaktan değil, çalışmanın geri yüklenen okuma konumundandı; temiz açılışta kayma olmamalı.)
     const ai = await oturum(A, { genislik: 1472, yukseklik: 921 });
     await editorAc(ai.s, "?sag=ai"); await ai.s.waitForTimeout(1500);
-    const a = await ai.s.evaluate(() => ({ kayma: Math.round(document.scrollingElement.scrollTop), baslikUst: Math.round(document.querySelector(".yazma-basligi").getBoundingClientRect().top), panelUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top) }));
-    beklenen(a.kayma === 0 && a.baslikUst > 0 && a.panelUst >= 0, `1472 AI açılışı: ${JSON.stringify(a)}`);
+    // Üst çubuk yapışık (top 0): başlık görünür demek üstünün 0'da ve eylemlerin tıklanır olması demek.
+    const a = await ai.s.evaluate(() => ({ kayma: Math.round(document.scrollingElement.scrollTop), baslikUst: Math.round(document.querySelector(".dashboard-header").getBoundingClientRect().top), eylem: Boolean(document.querySelector("#ust-cubuk-yuva .yazma-kayit")), panelUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top) }));
+    beklenen(a.kayma === 0 && a.baslikUst >= 0 && a.eylem && a.panelUst >= 0, `1472 AI açılışı: ${JSON.stringify(a)}`);
     await ai.c.close();
     // Telefon: PDF alt çubuğun üstünde biter; alt çubuk görünür ve tıklanır; pasaj yokken sığdır + yakınlaştırma çalışır.
     const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
