@@ -197,7 +197,8 @@ async function cek(s, ekran, gorunum, tema) {
   await s.waitForTimeout(700);
   const ad = `${ekran}-${gorunum}-${tema}`;
   await s.screenshot({ path: `${CIKTI}/uygulama/${ad}.png` });
-  const { genislik, yukseklik } = GORUNUM[gorunum];
+  // Klavye benzetiminde görünen alan değişiyor; ölçü sayfanın o anki boyutundan.
+  const { width: genislik, height: yukseklik } = s.viewportSize();
   olcumler[ad] = { ...(olcumler[ad] || {}), uygulama: await s.evaluate(`${OLC}([0,0,${genislik},${yukseklik},".ProseMirror"])`) };
   console.log("uygulama", ad);
 }
@@ -263,6 +264,19 @@ for (const gorunum of GORUNUMLER) {
       await istem.fill("Akran gruplarıyla ilgili kısa bir paragraf yaz.");
       await istem.press("Enter"); await s.waitForTimeout(4500); await enUste(s); await s.waitForTimeout(300); await cek(s, "ai", gorunum, tema);
     }
+    // 2. tur: PDF tek başına (liste kapalı) — 1280'de ray + PDF sütunu yeni yerleşim.
+    if (var_("pdfy")) { await ac(s, `${yaz}?sag=pdf`); await enUste(s); await s.waitForTimeout(2500); await cek(s, "pdfy", gorunum, tema); }
+    // 2. tur: telefon klavyesi. Gerçek klavye açılamıyor; görünen alan 844 → 500 px'e
+    // indirilerek benzetilir (klavyenin kapladığı ~344 px). Gerçek cihaz değildir.
+    if (var_("aiklavye") && tel) {
+      await ac(s, `${yaz}?sag=ai`); await enUste(s);
+      const istem = s.locator(".yazim-paneli textarea:visible").first();
+      await istem.fill("Akran gruplarıyla ilgili kısa bir paragraf yaz.");
+      await istem.press("Enter"); await s.waitForTimeout(4500);
+      await s.setViewportSize({ width: 390, height: 500 }); await istem.focus(); await s.waitForTimeout(700);
+      await cek(s, "aiklavye", gorunum, tema);
+      await s.setViewportSize({ width: 390, height: 844 });
+    }
     if (var_("pdfd")) { await ac(s, `${yaz}?sol=kaynaklar&sag=pdf`); await enUste(s); await s.waitForTimeout(2500); await cek(s, "pdfd", gorunum, tema); }
     if (var_("pdf")) {
       await alintiEkle(s);
@@ -274,7 +288,7 @@ for (const gorunum of GORUNUMLER) {
 }
 
 /* ---------- Prototip: aynı ekran, aynı ölçü, doğal boyut (ölçekleme yok) ---------- */
-const PROTO_EKRAN = { ana: 2, yeni: 3, editor: 5, ai: 8, pdf: 7 };
+const PROTO_EKRAN = Object.fromEntries(Object.entries({ ana: 2, yeni: 3, editor: 5, ai: 8, pdf: 7 }).filter(([e]) => SAHNELER.some((x) => x === e || (e === "pdf" && x.startsWith("pdf")) || (e === "ai" && x.startsWith("ai")))));
 for (const gorunum of ["d1440", "d1280", "t390"]) {
   for (const tema of ["acik", "koyu"]) {
     for (const [ekran, no] of Object.entries(PROTO_EKRAN)) {
@@ -317,8 +331,8 @@ const D = CIKTI;
   const der = JSON.parse(fs.readFileSync(`${D}/derleme.json`, "utf8"));
   fs.mkdirSync(`${D}/karsilastirma`, { recursive: true });
   const veri = (f) => `data:image/png;base64,${fs.readFileSync(f).toString("base64")}`;
-  const AD = { ana: "Ana ekran (prototip ekran 2)", yeni: "Yeni çalışma (prototip ekran 3)", editor: "Editör (prototip ekran 5, metin seçili)", pdf: "Kaynaklar + PDF (prototip ekran 7)", ai: "Arvo AI paneli (prototip ekran 8)", pdfd: "Kaynaklar + PDF, doğrudan adresle ?sol=kaynaklar&sag=pdf (prototip ekran 7)" };
-  const PK = (e) => (e === "pdfd" ? "pdf" : e);
+  const AD = { pdfy: "Yalnızca PDF, liste kapalı ?sag=pdf (prototip ekran 7)", aiklavye: "Arvo AI, klavye benzetimi: görünen alan 390×500 (prototip ekran 8, 390×844)", ana: "Ana ekran (prototip ekran 2)", yeni: "Yeni çalışma (prototip ekran 3)", editor: "Editör (prototip ekran 5, metin seçili)", pdf: "Kaynaklar + PDF (prototip ekran 7)", ai: "Arvo AI paneli (prototip ekran 8)", pdfd: "Kaynaklar + PDF, doğrudan adresle ?sol=kaynaklar&sag=pdf (prototip ekran 7)" };
+  const PK = (e) => (e.startsWith("pdf") ? "pdf" : e === "aiklavye" ? "ai" : e);
   const OLCU = { d1440: "1440×900", d1280: "1280×800", t390: "390×844" };
   const b = await chromium.launch();
   const etiketU = `Yerel üretim derlemesi · ${der.gitHead} · BUILD_ID ${der.buildId}`;
@@ -332,9 +346,10 @@ const D = CIKTI;
   const hucre = (baslik, dosya, gen) => fs.existsSync(dosya)
     ? `<figure style="margin:0;width:${gen}px"><figcaption style="padding:6px 2px;font-weight:600;font-size:14px">${baslik}</figcaption><img src="${veri(dosya)}" style="width:${gen}px;display:block;outline:1px solid #c8cdd5"></figure>`
     : `<figure style="margin:0;width:${gen}px"><figcaption style="padding:6px 2px;font-weight:600">${baslik}</figcaption><div style="padding:40px;background:#fff">Bu görünüm prototipte yok</div></figure>`;
-  for (const ekran of ["ana", "yeni", "editor", "pdf", "pdfd", "ai"]) {
+  // Yalnızca bu koşuda çekilen ekranlar birleştirilir (2. tur: etkilenen ekranlar).
+  for (const ekran of ["ana", "yeni", "editor", "pdf", "pdfd", "pdfy", "ai"].filter((e) => SAHNELER.includes(e) && GORUNUMLER.some((g) => g !== "t390"))) {
     let govde = `<h1 style="margin:16px 20px 4px;font-size:22px">${AD[ekran]} · masaüstü</h1><p style="margin:0 20px 8px">Sol: onaylı prototip (tasarim/baglamli-calisma-alani/prototip, doğal boyut). Sağ: ${etiketU}. Sentetik yerel veri${ekran === "pdf" ? "; durum: atıf kartından Dayanağa git (pasaj vurgulu)" : ""}${ekran === "ai" ? "; AI cevabı YEREL TAKLİT (model-taklidi.mjs), gerçek model değil" : ""}.</p>`;
-    for (const g of ["d1440", "d1280"]) for (const t of ["acik", "koyu"]) {
+    for (const g of ["d1440", "d1280"].filter((g) => GORUNUMLER.includes(g))) for (const t of TEMALAR) {
       const pnot = g === "d1280" && PK(ekran) !== "pdf" ? " (prototipte 1280 tanımlı değil: 1440 tasarımı)" : "";
       govde += `<div style="display:flex;gap:20px;padding:10px 20px">${hucre(`Prototip · ${t === "acik" ? "açık" : "koyu"} · ${g === "d1280" && PK(ekran) === "pdf" ? "1280×800" : "1440×900"}${pnot}`, `${D}/prototip/${PK(ekran)}-${g}-${t}.png`, 940)}${hucre(`${etiketU} · ${t === "acik" ? "açık" : "koyu"} · ${OLCU[g]}`, `${D}/uygulama/${ekran}-${g}-${t}.png`, 940)}</div>`;
     }
@@ -343,13 +358,14 @@ const D = CIKTI;
   }
   // Telefon: tek sayfa, ekran başına bir satır: P açık, U açık, P koyu, U koyu.
   let tg = `<h1 style="margin:16px 20px 4px;font-size:22px">Telefon · 390×844</h1><p style="margin:0 20px 8px">Her satırda: prototip açık · uygulama açık · prototip koyu · uygulama koyu. Uygulama: ${etiketU}. AI cevabı YEREL TAKLİT.</p>`;
-  for (const ekran of ["ana", "yeni", "editor", "pdf", "ai"]) {
+  for (const ekran of ["ana", "yeni", "editor", "pdf", "pdfd", "ai", "aiklavye"].filter((e) => SAHNELER.includes(e) && GORUNUMLER.includes("t390"))) {
     tg += `<h2 style="margin:14px 20px 0;font-size:17px">${AD[ekran]}${ekran === "editor" ? " · prototip ekran 5 telefonda 'Çalışma' yaprağıdır; uygulamada da yaprak açık" : ""}</h2><div style="display:flex;gap:16px;padding:8px 20px">`;
-    for (const t of ["acik", "koyu"]) tg += hucre(`Prototip · ${t}`, `${D}/prototip/${ekran}-t390-${t}.png`, 390) + hucre(`Uygulama 8b28897 · ${t}`, `${D}/uygulama/${ekran}-t390-${t}.png`, 390);
+    // Eskiden etiket "8b28897" olarak sabit yazılıydı; derlemenin kendi HEAD'i yazılır.
+    for (const t of TEMALAR) tg += hucre(`Prototip · ${t}`, `${D}/prototip/${PK(ekran)}-t390-${t}.png`, 390) + hucre(`Uygulama ${der.gitHead} · ${t}`, `${D}/uygulama/${ekran}-t390-${t}.png`, 390);
     tg += "</div>";
   }
-  tg += `<h2 style="margin:14px 20px 0;font-size:17px">Ek: telefonda editörün yaprak açılmadan hâli (prototipte karşılığı yok)</h2><div style="display:flex;gap:16px;padding:8px 20px">${hucre("Uygulama · açık", `${D}/uygulama/editor-duz-t390-acik.png`, 390)}${hucre("Uygulama · koyu", `${D}/uygulama/editor-duz-t390-koyu.png`, 390)}</div>`;
-  await sayfa(tg, 1700, `${D}/karsilastirma/telefon.png`);
+  if (SAHNELER.includes("editor")) tg += `<h2 style="margin:14px 20px 0;font-size:17px">Ek: telefonda editörün yaprak açılmadan hâli (prototipte karşılığı yok)</h2><div style="display:flex;gap:16px;padding:8px 20px">${hucre("Uygulama · açık", `${D}/uygulama/editor-duz-t390-acik.png`, 390)}${hucre("Uygulama · koyu", `${D}/uygulama/editor-duz-t390-koyu.png`, 390)}</div>`;
+  if (GORUNUMLER.includes("t390")) await sayfa(tg, 1700, `${D}/karsilastirma/telefon.png`);
   await b.close();
   
 }

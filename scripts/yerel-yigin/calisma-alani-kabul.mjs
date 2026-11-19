@@ -922,22 +922,30 @@ try {
       };
     });
     const durumOku = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; return { from: e.state.selection.from, odak: e.view.hasFocus(), kayma: Math.round(scrollY) }; });
-    const yazVeKaydet = async (s, isaret) => {
-      const k = await kelimeKonumu(s, "Çalışmanın amacı", 0);
+    /*
+      Tıklanan cümle verilebilir: her adım "Çalışmanın amacı"nın önüne işaret
+      yazdığı için cümle adım adım sağa kayıyor; 1200'de çekmecenin altında
+      kalıyor ve tıklama çekmeceye düşüyordu (yazılan metin belgeye gitmedi,
+      "kaydedilmedi"). 1200 adımı çekmecenin örtmediği "Üç fakülteden"i kullanır.
+    */
+    const yazVeKaydet = async (s, isaret, cumle = "Çalışmanın amacı") => {
+      const k = await kelimeKonumu(s, cumle, 0);
       beklenen(k, "paragraf bulunamadı");
+      const ortulu = await s.evaluate(([x, y]) => !document.elementFromPoint(x, y)?.closest(".ProseMirror"), [k.x - 2, k.y]);
+      beklenen(!ortulu, `"${cumle}" örtülü: tıklama belgeye düşmüyor`);
       await s.mouse.click(k.x - 2, k.y); await s.waitForTimeout(300);
       await s.keyboard.type(`${isaret} `, { delay: 15 });
       beklenen(await kayitBekle(isaret), `${isaret} kaydedilmedi`);
       return durumOku(s);
     };
-    const kapatSonrasi = async (s, once, isaret) => {
+    const kapatSonrasi = async (s, once, isaret, devam = "Çalışmanın") => {
       await s.waitForTimeout(800);
       const sonra = await durumOku(s);
       beklenen(sonra.from === once.from, `kapatınca seçim değişti: ${once.from} → ${sonra.from}`);
       beklenen(sonra.odak, "kapatınca odak belgeye dönmedi");
       beklenen(Math.abs(sonra.kayma - once.kayma) <= 4, `kapatınca belge kaydı: ${once.kayma} → ${sonra.kayma}`);
       await s.keyboard.type("+", { delay: 15 });
-      beklenen(await kayitBekle(`${isaret} +Çalışmanın`), "kaldığı yerden yazılamadı");
+      beklenen(await kayitBekle(`${isaret} +${devam}`), "kaldığı yerden yazılamadı");
     };
     const ozet = [];
     for (const [g, y] of [[1472, 921], [1440, 900]]) {
@@ -986,11 +994,11 @@ try {
       beklenen(!l.serit && l.solEn >= 290 && l.cekmece && l.ipucu && l.olcek >= 0.85, `1200 yerleşim: ${JSON.stringify(l)}`);
       await goruntu(s, "s16-1200-cekmece");
       const isaret = "KABUL-S16-1200";
-      const once = await yazVeKaydet(s, isaret);
+      const once = await yazVeKaydet(s, isaret, "Üç fakülteden");
       // İmleç belgedeyken Esc: ProseMirror Esc'i her zaman işlenmiş sayar; çekmece yine de kapanmalı.
       await s.keyboard.press("Escape"); await s.waitForTimeout(500);
       beklenen((await s.locator(".kaynak-pdf-paneli").count()) === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "1200: imleç belgedeyken Esc çekmeceyi kapatmadı");
-      await kapatSonrasi(s, once, isaret);
+      await kapatSonrasi(s, once, isaret, "Üç");
       ozet.push(`1200 liste açık, PDF geçici çekmece (belge %${Math.round(l.olcek * 100)}); çekmece açıkken yazıldı, Esc → konum ve odak korunur`);
       await c.close();
     }
