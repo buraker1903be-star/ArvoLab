@@ -84,8 +84,15 @@ async function kullanici(ad, tamAd) {
   const t = await auth("/token?grant_type=password", { email: adres, password: parola }, "POST", ANON);
   return { id: r.json.id, adres, parola, erisim: t.json.access_token };
 }
-const p = (t) => ({ type: "paragraph", content: [{ type: "text", text: t }] });
-const h = (n, t) => ({ type: "heading", attrs: { level: n }, content: [{ type: "text", text: t }] });
+/*
+  Düğümler editörün kaydettiği gibi TAM öznitelikli (19.11.2026). Eskiden
+  paragraf özniteliksiz yazılıyordu; lib/format-loss.ts bunu eski kayıt
+  hatasının izi sayıp editörde "biçim bilgileri kaybolmuş" uyarısını
+  gösteriyordu. Uyarı doğruydu, tohum yanlıştı.
+*/
+const BLOK = { textAlign: null, lineSpacing: null, firstLineIndent: false, hangingIndent: false };
+const p = (t) => ({ type: "paragraph", attrs: { ...BLOK, caption: null }, content: [{ type: "text", text: t }] });
+const h = (n, t) => ({ type: "heading", attrs: { ...BLOK, level: n }, content: [{ type: "text", text: t }] });
 
 /* ---------- Tohum ---------- */
 const A = await kullanici("kabul-elif", "Elif Aydın");

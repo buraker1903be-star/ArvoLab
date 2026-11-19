@@ -21,7 +21,8 @@ test("otomatik küçültme okunabilirlik sınırının altına inmez: önce ray,
   const a = karar(1440, null, "pdf", 520);
   assert.equal(a.kenar, "ray");
   assert.equal(a.sag, "sutun");
-  assert.equal(a.sagGenislik, 440);
+  // Görsel uyum: paylar daraldığı için PDF istenen genişliğinde kalıyor (eskiden 440'a iniyordu).
+  assert.equal(a.sagGenislik, 520);
   // 1920'de istenen genişlik korunur, gezinme açık kalır.
   const g = karar(1920, null, "pdf", 520);
   assert.deepEqual([g.kenar, g.sag, g.sagGenislik], ["tam", "sutun", 520]);
@@ -39,6 +40,22 @@ test("otomatik küçültme okunabilirlik sınırının altına inmez: önce ray,
       }
     }
   }
+});
+
+/*
+  Görsel uyum (19.11.2026): 8b28897'de AI paneli 1440 px'te gezinmeyi raya
+  indiriyordu. Prototipte gezinme açık, belge ve AI yan yana. Sınır %85'te
+  kaldı; yer paylardan ve panelin en dar genişliğinden açıldı.
+*/
+test("AI paneli: 1440'ta gezinme açık, belge yanında ve ≥ %85; 1280'de gezinme raya iner, panel örtmez", () => {
+  const a = karar(1440, null, "ai", 396);
+  assert.deepEqual([a.kenar, a.sag, a.sagGenislik], ["tam", "sutun", 360]);
+  assert.ok(a.olcek >= BELGE_OKUNUR_EN_AZ, String(a.olcek));
+  const b = karar(1280, null, "ai", 396);
+  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["ray", "sutun", 360]);
+  assert.ok(b.olcek >= BELGE_OKUNUR_EN_AZ, String(b.olcek));
+  // 1200'de ray + en dar AI ile belge %81 olurdu: çekmece (sınır gevşetilmez).
+  assert.equal(karar(1200, null, "ai", 396).sag, "cekmece");
 });
 
 test("sol araç açıkken araç daraltılmaz; yer yoksa sağ panel çekmeceye geçer", () => {
@@ -85,11 +102,12 @@ test("inceleme paneli: geniş ekranda sütun, belge okunur sınırın üstünde"
   assert.deepEqual([k.kenar, k.inceleme, k.olcek], ["tam", "sutun", 1]);
 });
 
-test("inceleme paneli: belge %85 altına inecekse önce gezinme raya iner", () => {
+test("inceleme paneli: 1440'ta gezinme açık; belge %85 altına inecekse önce gezinme raya iner", () => {
   const k = incele(1440, null);
-  assert.equal(k.inceleme, "sutun");
-  assert.equal(k.kenar, "ray");
+  assert.deepEqual([k.inceleme, k.kenar], ["sutun", "tam"]);
   assert.ok(k.olcek >= BELGE_OKUNUR_EN_AZ, `ölçek ${k.olcek}`);
+  const r = incele(1280, null);
+  assert.deepEqual([r.inceleme, r.kenar], ["sutun", "ray"]);
 });
 
 test("inceleme paneli: ray da yetmezse çekmece; sol araç daraltılmaz", () => {
@@ -127,7 +145,7 @@ test("kaynak listesi + PDF: 1472 ve 1440'ta araç şeride iner, belge ≥ %85 ve
   assert.deepEqual([a.kenar, a.sag, a.sagGenislik], ["aracDar", "sutun", 520]);
   assert.ok(a.olcek >= BELGE_OKUNUR_EN_AZ, String(a.olcek));
   const b = karar(1440, "kaynaklar", "pdf", 520);
-  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["aracDar", "sutun", 440]);
+  assert.deepEqual([b.kenar, b.sag, b.sagGenislik], ["aracDar", "sutun", 520]);
   assert.ok(b.olcek >= BELGE_OKUNUR_EN_AZ, String(b.olcek));
   // Geniş ekranda araç tam genişliğinde kalır.
   assert.deepEqual([karar(1920, "kaynaklar", "pdf", 520).kenar, karar(1920, "kaynaklar", "pdf", 520).sag], ["arac", "sutun"]);

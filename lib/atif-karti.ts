@@ -144,13 +144,21 @@ export function atifAdaylari(isabet: AtifIsabeti, kaynaklar: KartKaynagi[], kayn
   dar ekran) satırın ALTINDA. Ekranın dışına taşmaz.
 */
 export type Dikdortgen = { left: number; right: number; top: number; bottom: number };
-export function kartKonumu(girdi: { kagit: Dikdortgen; satir: Dikdortgen; ekranGenisligi: number; ekranYuksekligi: number; genislik: number; yukseklik?: number }): { yan: "sag" | "alt"; x: number; y: number } {
+/*
+  metinSagi (görsel uyum, 19.11.2026): verilirse sınır kâğıdın dış kenarı
+  değil METİN SÜTUNUNUN sağ kenarıdır. Seçim kartı 1440 px'te kâğıdın
+  dışındaki 138 px'e sığmıyor, hep seçimin altına düşüp alt satırı
+  örtüyordu; kâğıdın iç boşluğu (32 px) metin değil, orada durmak okunanı
+  örtmez. Atıf kartı (300 px) kâğıdın dışını kullanmaya devam eder.
+*/
+export function kartKonumu(girdi: { kagit: Dikdortgen; satir: Dikdortgen; ekranGenisligi: number; ekranYuksekligi: number; genislik: number; yukseklik?: number; metinSagi?: number; bosluk?: number }): { yan: "sag" | "alt"; x: number; y: number } {
   const { kagit, satir, ekranGenisligi, ekranYuksekligi, genislik } = girdi;
   const yukseklik = girdi.yukseklik ?? 220;
-  const bosluk = 12;
-  if (ekranGenisligi - kagit.right >= genislik + bosluk * 2) {
+  const bosluk = girdi.bosluk ?? 12;
+  const sinir = girdi.metinSagi ?? kagit.right;
+  if (ekranGenisligi - sinir >= genislik + bosluk * 2) {
     const y = Math.max(8, Math.min(satir.top - 8, ekranYuksekligi - yukseklik - 8));
-    return { yan: "sag", x: Math.round(kagit.right + bosluk), y: Math.round(y) };
+    return { yan: "sag", x: Math.round(sinir + bosluk), y: Math.round(y) };
   }
   const x = Math.max(8, Math.min(satir.left, ekranGenisligi - genislik - 8));
   /* Satırın altında yer yoksa üstüne: kart ekranın dışına taşıp kaydırma gerektirmesin (satır yine örtülmez). */

@@ -32,6 +32,17 @@
   Kullanıcı ölçeği her zaman kendisi seçebilir (BELGE_OLCEK_*); seçtiği ölçek
   bu kararı değiştirmez, yalnızca kâğıdın büyüklüğünü.
 
+  GÖRSEL UYUM (19.11.2026, kurum sahibinin kararı: "onaylı prototipe uydur";
+  okunurluk sınırı %85'te KALIR, metin küçültülerek yer açılmaz). Canlıdaki
+  8b28897'de AI paneli 1440 px'te gezinmeyi raya indiriyordu (belge %77
+  olacaktı); prototipte gezinme açık, belge ve AI yan yana. Yer, belgenin
+  ÇEVRESİNDEN açıldı: editör sayfasının yan payı 64 → 24 px (SAYFA_PAYI,
+  workspace.css .yazma-sayfasi), panel ile belge arası 26 → 22 px
+  (AYIRICI_PAYI). Kâğıt (924 px), punto ve satır sonları değişmedi.
+  Sığmayan durum bilerek çekmece kalır: 1280 px'te PDF belgenin yanında
+  ancak %79 ile durabilir (ray 64 + en dar PDF 440 + paylar 46 → belgeye
+  730 px), bu yüzden orada PDF yine çekmecedir.
+
   İNCELEME PANELİ (19.11.2026, kabul turu). Kontroller menüsünden açılan
   inceleme paneli (teslim kontrolü, kılavuz, kaynakça, yorumlar) de sağ
   yuvanın bir sakini: sağ panel (AI/PDF) açıkken gösterilmez, aynı anda iki
@@ -65,10 +76,10 @@ export const SAG_PANEL_SINIRI: Record<SagPanel, { enAz: number; varsayilan: numb
 /** İnceleme panelinin sütun genişliği ve belgeyle arası (workspace.css, .manuscript-layout). */
 export const INCELEME_GENISLIGI = 340;
 export const INCELEME_ARALIGI = 16;
-/** Ayırıcı (10 px) ve iki sütun aralığı (8 px). */
-export const AYIRICI_PAYI = 26;
-/** İçerik alanının iki yandaki boşluğu (dashboard-page). */
-export const SAYFA_PAYI = 64;
+/** Ayırıcı (10 px) ve iki sütun aralığı (6 px; workspace.css, sağ yuva). */
+export const AYIRICI_PAYI = 22;
+/** Editör sayfasının iki yandaki boşluğu (workspace.css, .yazma-sayfasi: 12 + 12). */
+export const SAYFA_PAYI = 24;
 
 export const MASAUSTU_EN_AZ = 1200;
 

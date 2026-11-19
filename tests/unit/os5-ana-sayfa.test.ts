@@ -53,8 +53,18 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
   test("son kaynaklar okunamazsa 'kaynak yok' çizilmez, uyarı çıkar", () => {
     assert.match(ogrenci, /\{sonKaynakHatasi \? \(/);
   });
-  test("çok çalışmalı öğrenci: en fazla üç çalışma daha, tamamı Çalışmalarım'da", () => {
-    assert.match(sayfa, /const sonrakiCalismalar = resume \? activeProjects\.filter\(\(p\) => p\.id !== resume\.id\)\.slice\(0, 3\) : \[\];/);
+  /*
+    Görsel uyum (19.11.2026, onaylı prototip): kartın altındaki üç satırlık
+    liste yerine son çalışmaların kompakt tablosu (Çalışma, Tür, Son
+    düzenleme, Kelime). Satırlar sınırlı (GENEL_BAKIS_SATIR), tamamı
+    Çalışmalarım'da; kelime gerçek veriden, ilerleme çubuğu yok.
+  */
+  test("çok çalışmalı öğrenci: son çalışmalar kompakt tabloda, tamamı Çalışmalarım'da", () => {
+    assert.match(ogrenci, /className="pw-tablo"/);
+    assert.match(ogrenci, /calismalarim\.map\(/);
+    assert.match(ogrenci, /href="\/dashboard\/editor" className="pw-bolum-baglanti"/);
+    assert.match(ogrenci, /yazim \? sayi\(yazim\.words\) : "—"/);
+    assert.doesNotMatch(yorumsuz(ogrenci), /ilerleme|progress/i);
   });
   test("Danışmanıma gönder kartı çalışma özetine taşındı (bireysel abone)", () => {
     const ozet = oku("app/dashboard/editor/page.tsx");

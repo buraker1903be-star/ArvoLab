@@ -10,14 +10,23 @@
    - En küçük yazı boyutu 11px.
    Tema: <html data-theme="light|dark"> (app/layout.tsx ön-boya betiği).
 
-   BELGE KÂĞIDI (Phase 4.3): bu blok `:root, .kagit` için yazıldı. Editörün
-   belge alanı (.kagit) koyu temada da bu AÇIK değerleri kendi üzerinde
-   yeniden kurar; akademik belgenin sayfası uygulama temasından bağımsız,
-   her zaman beyaz kâğıt ve koyu mürekkep. Değerler kopyalanmıyor: ikinci
+   BELGE KÂĞIDI (Phase 4.3; 19.11.2026'da değişti, aşağıdaki GÖRSEL UYUM
+   notu): bu blok açık temada `.kagit` için de geçerli. Phase 4.3'ten
+   19.11.2026'ya kadar kâğıt koyu temada da bu AÇIK değerleri kendi üzerinde
+   yeniden kuruyordu (her temada beyaz kâğıt). Değerler kopyalanmıyor: ikinci
    bir liste, bir gün birinin unutulduğu liste olurdu.
    ============================================================ */
 
-:root, .kagit {
+/*
+  GÖRSEL UYUM (19.11.2026, kurum sahibinin kararı: "koyu temada koyu
+  görüntüleme yüzeyi; dışa aktarmayı değiştirme"). Kâğıt artık yalnızca
+  AÇIK temada bu değerleri yeniden kuruyor; koyu temada editörün kâğıdı
+  koyu tokenları miras alır (aşağıdaki koyu blok, --kagit dahil). Eskiden
+  koyu temada da saf beyazdı: lacivert arayüzün ortasında parlayan bir
+  levha. Yazdırma/PDF (print.css, --print-*), danışman paylaşımı ve Word
+  .kagit kullanmaz; çıktıların rengi değişmedi.
+*/
+:root, html:not([data-theme="dark"]) .kagit {
   /* ---- Palet: lacivert (logo #002045 = 800) ---- */
   --brand-50: #eef2f8;
   --brand-100: #d8e1ee;
@@ -128,7 +137,7 @@
   /* ---- Anlamsal: zemin ve yüzeyler (Phase 4.3) ----
      Hiyerarşi: zemin < ikincil yüzey < kart < yükseltilmiş (menü,
      açılır pencere, modal). Çökük yüzey giriş kutusu ve iz alanı.
-     Kâğıt (--kagit) AYRI: belge sayfası her temada saf beyaz. */
+     Kâğıt (--kagit) AYRI: açık temada saf beyaz, koyu temada koyu blokta. */
   /* 19.11.2026: fildişiden sakin ölçeğe (yukarıdaki palet notu). */
   --bg: var(--sakin-50);
   --surface: var(--sakin-0);
@@ -419,7 +428,8 @@
        masaüstü ≥ 1200px  geniş kenar çubuğu */
   --alt-cubuk-h: 64px;
   --sidebar-width: 264px;
-  --topbar-height: 64px;
+  /* 64 → 52 (görsel uyum, 19.11.2026): onaylı prototipteki kompakt üst bant. */
+  --topbar-height: 52px;
   /* Sabit alt gezinmenin ekranın altında kapladığı yer: içerik,
      bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
      üstünde durur. Phase 3'ten (04.11.2026) beri yalnızca telefonda
@@ -471,11 +481,13 @@
 /*
   KOYU TEMA: SOFT MIDNIGHT (Phase 4.3). Ölçüldü: ink yüzeylerde 12,3–15,3;
   ink-soft 8,8–11,0; muted 5,9–7,3; bağlantı (primary-ink) 8,3–10,3;
-  dim 4,4–4,9. Kâğıt (.kagit) burada yeniden tanımlanmaz: belge her
-  temada açık kalır (yukarıdaki `:root, .kagit` bloğu).
+  dim 4,4–4,9. Kâğıt (.kagit) 19.11.2026'dan beri koyu temada bu değerleri
+  miras alır (görsel uyum; yukarıdaki açık bloğun notu).
 */
 html[data-theme="dark"] {
   --bg: var(--gece-900);
+  /* Belgenin ekrandaki yüzeyi (görsel uyum): zeminden bir kademe açık, kartlarla aynı. */
+  --kagit: var(--gece-800);
   --surface: var(--gece-800);
   --surface-2: var(--gece-850);
   --surface-sunken: var(--gece-950);

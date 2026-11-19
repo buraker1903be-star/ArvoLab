@@ -129,6 +129,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         */}
         <header className="dashboard-header">
           <HeaderTitle />
+          {/*
+            Sayfaya özel eylemlerin yuvası (görsel uyum, 19.11.2026). Yazım
+            ekranı ölçek, kayıt durumu, Kontroller ve Dışa aktar'ı buraya
+            portal ile koyar (manuscript-editor.tsx); prototipteki gibi tek
+            üst bant. Öteki sayfalarda boş kalır ve yer kaplamaz.
+          */}
+          <div id="ust-cubuk-yuva" className="cluster yazma-eylemleri ust-cubuk-yuva" />
           <OsAramaDugmesi />
           <div className="dashboard-header-actions">
             <NotificationBell />

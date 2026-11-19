@@ -82,3 +82,21 @@ test("kart konumu: kâğıdın sağında yer varsa yanında, yoksa satırın alt
   const dipte = kartKonumu({ kagit: { left: 300, right: 1300, top: 0, bottom: 0 }, satir: { left: 400, right: 600, top: 820, bottom: 840 }, ekranGenisligi: 1440, ekranYuksekligi: 900, genislik: 280, yukseklik: 220 });
   assert.equal(dipte.y, 820 - 220 - 8);
 });
+
+/*
+  Görsel uyum (19.11.2026): seçim kartı metin sütununun sağına sığıyorsa
+  orada açılır. 1440 px'te kâğıt sağ kenarı 1302, metin sütunu 1270:
+  kâğıdın dışına sığmayan 152 px'lik kart metni örtmeden sağda durur.
+*/
+test("kart konumu: metinSagi verilince sınır metin sütunu; kâğıt dışında yer yoksa bile sağda açılır", () => {
+  const satir = { left: 500, right: 900, top: 300, bottom: 320 };
+  const kagit = { left: 378, right: 1302, top: 0, bottom: 0 };
+  const eski = kartKonumu({ kagit, satir, ekranGenisligi: 1440, ekranYuksekligi: 900, genislik: 168, yukseklik: 120 });
+  assert.equal(eski.yan, "alt");
+  const yeni = kartKonumu({ kagit, satir, ekranGenisligi: 1440, ekranYuksekligi: 900, genislik: 152, yukseklik: 120, metinSagi: 1270, bosluk: 8 });
+  assert.deepEqual(yeni, { yan: "sag", x: 1278, y: 292 });
+  // Kart metin sütununun sağında başlar: okunan satırın hiçbir harfini örtmez.
+  assert.ok(yeni.x > 1270);
+  // Yer yoksa (sağ panel açık) yine satırın altında.
+  assert.equal(kartKonumu({ kagit: { ...kagit, right: 1000 }, satir, ekranGenisligi: 1060, ekranYuksekligi: 900, genislik: 152, metinSagi: 968, bosluk: 8 }).yan, "alt");
+});

@@ -1,0 +1,183 @@
+/* ============================================================
+   GÖRSEL UYUM (19.11.2026). Kurum sahibi canlıdaki 8b28897 görünümünü
+   onaylamadı; onaylı prototipe (tasarim/baglamli-calisma-alani/prototip)
+   uyum istendi. Bu dosya en son yüklenir ve yalnızca o farkları kapatır.
+   Belgenin biçimi, kâğıt genişliği (924 px), punto ve dışa aktarma
+   ölçüleri DEĞİŞMEZ; değişen çevre: üst bantlar, paylar, paneller.
+   Karar sayıları lib/calisma-alani-yerlesimi.ts ile birebir aynı olmalı
+   (SAYFA_PAYI 24, AYIRICI_PAYI 22).
+   ============================================================ */
+
+/* ---------- Üst çubuk: tek kompakt bant (52 px, tokens.css) ---------- */
+.dashboard-header { min-height: var(--topbar-height); padding-block: 5px; }
+.os-marka { flex: 1 1 auto; min-width: 0; }
+/*
+  Sayfaya özel eylem yuvası (layout.tsx). Yazım ekranı ölçek, kayıt durumu,
+  Kontroller ve Dışa aktar'ı buraya koyar. Boşken yer kaplamaz.
+*/
+.ust-cubuk-yuva { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.ust-cubuk-yuva:empty { display: none; }
+/* Yuva doluyken arama kutusu kompakt: büyüteç + kısayol (prototipteki gibi). */
+.dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search { flex: none; width: auto; max-width: none; margin-inline: 0; }
+.dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search-text { display: none; }
+
+/* ---------- Yazım sayfası: dar dış pay (12 + 12) ---------- */
+@media (min-width: 1200px) {
+  .dashboard-main-content:has(.yazma-sayfasi) { padding: 12px 12px 32px; }
+  /* Sağ yuva: belge | ayırıcı | panel arası 6 px (eskiden 8). */
+  .manuscript-layout[data-sag]:not([data-sag-cekmece]):not([data-odak]) { column-gap: 6px; }
+}
+/* Üst bandın içindeki öğeler 40 px; bant 52 px (6 + 40 + 6). Marka kutusunun 44 px'lik alt sınırı bandı 57'ye çıkarıyordu. */
+@media (min-width: 901px) {
+  .dashboard-header .os-marka, .dashboard-header .os-marka-logo { min-height: 40px; }
+}
+/*
+  1440 altında yuvadaki menüler simgeye iner (adları title ve aria-label'da,
+  arac-menusu.tsx); kısayol rozeti gizlenir. Eskiden 1280'de kaynak listesi
+  açıkken başlık tek harfe ("K") iniyordu.
+*/
+@media (min-width: 901px) and (max-width: 1439px) {
+  .ust-cubuk-yuva .arac-metin, .ust-cubuk-yuva .arac-menu-ok { display: none; }
+  .dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search kbd { display: none; }
+}
+
+/*
+  ARAÇ ÇUBUĞU TEK SATIR (görsel uyum: "araç çubuğu ikinci satıra taşmasın").
+  workspace.css 761–1439 px'te çubuğu iki satıra sarıyordu (1280'de kaynak
+  listesi açıkken 82 px'lik iki satır). Önce sıkışır: yazı seçicileri
+  daralır, "Asistan" simgeye iner (adı title/aria-label'da), grup araları
+  daralır. Bunlarla da sığmayan dar durumda (1200–1279 px + açık sol araç)
+  çubuk satır sarmaz, yatay kayar; ölçü teslim notunda.
+*/
+@media (min-width: 761px) and (max-width: 1439px) {
+  .manuscript-araclar { flex-wrap: nowrap; overflow-x: auto; }
+  .arac-grup-yazi .toolbar-select { max-width: 92px; }
+  .arac-grup-yazi .toolbar-select + .toolbar-select { max-width: 56px; }
+  .manuscript-araclar .arac-grup-asistan .arac-metin { display: none; }
+  .arac-grup { padding: 0 3px; }
+}
+/* Hesap düğmesi üst bantta 40 px (masaüstü/tablet). Telefonda 44 px'lik dokunma hedefi korunur. */
+@media (min-width: 901px) {
+  .dashboard-header .os-kullanici--ust > summary { width: 40px; height: 40px; }
+}
+
+/* Seçim kartı sağ boşlukta: dikey, 152 px (lib/atif-karti.ts kartKonumu ile aynı genişlik). */
+.secim-islemleri[data-yan="sag"] { width: 152px; }
+.secim-islemleri[data-yan="sag"] button { justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Ana ekran (öğrenci): prototipin hiyerarşisi ---------- */
+.os5-ana .pw-devam-ust { margin: 0; color: var(--muted); font-family: var(--os5-font-govde); font-size: var(--os5-fs-meta); font-weight: 500; line-height: 1.4; }
+.os5-ana .pw-tablo-kap { overflow-x: auto; }
+.os5-ana .pw-tablo { width: 100%; border-collapse: collapse; font-size: var(--os5-fs-govde); }
+.os5-ana .pw-tablo th { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: var(--os5-fs-meta); font-weight: 500; text-align: left; white-space: nowrap; }
+.os5-ana .pw-tablo td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap; }
+.os5-ana .pw-tablo td:first-child { max-width: 0; width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.os5-ana .pw-tablo td:first-child a { color: var(--ink); text-decoration: none; border-radius: var(--os5-kontrol-r); }
+.os5-ana .pw-tablo td:first-child a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.os5-ana .pw-tablo td:first-child a:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-ana .pw-tablo-sayi { text-align: right; font-variant-numeric: tabular-nums; }
+.os5-ana .pw-tablo tbody tr:hover { background: var(--surface-2); }
+/* Telefonda tür ve son düzenleme sütunları gizlenir; ad ve kelime kalır (kart değil, kompakt tablo). */
+@media (max-width: 760px) {
+  .os5-ana .pw-tablo :is(th, td):nth-child(2),
+  .os5-ana .pw-tablo :is(th, td):nth-child(3) { display: none; }
+  .os5-ana .pw-tablo td:first-child { width: 100%; }
+}
+
+/* ---------- Telefon: editör üst bandı ---------- */
+.os-marka-geri { display: none; }
+@media (max-width: 760px) {
+  .os-marka[data-calisma] .os-marka-geri {
+    display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px;
+    border-radius: var(--r-sm); color: var(--ink);
+  }
+  .os-marka[data-calisma] .os-marka-geri:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+  /* Çalışmanın içinde logo yerine dönüş; arama telefonda editör dışındaki ekranlarda (yer yok: 390 px'te sekiz düğme sığmıyordu). */
+  .os-marka[data-calisma] .os-marka-logo { display: none; }
+  .dashboard-header:has(.os-marka[data-calisma]) .os-search { display: none; }
+  .ust-cubuk-yuva { gap: 4px; }
+  .dashboard-header:has(.os-marka[data-calisma]) .dashboard-header-actions { gap: 4px; }
+}
+
+/* ---------- Telefon: "Çalışma" yaprağı yarım boy, tutamaçla tam boy ---------- */
+.os-daha-tutamac { display: none; }
+@media (max-width: 760px) {
+  .os-daha:has(.os-daha-calisma) { max-height: 58dvh; transition: max-height var(--sure-orta) var(--ease-spring); }
+  .os-daha:has(.os-daha-calisma)[data-tam] { max-height: calc(100dvh - 16px); }
+  .os-daha-tutamac {
+    display: grid; flex: none; place-items: center; width: 100%; height: 44px; min-height: 44px; margin-bottom: -12px; padding: 0;
+    border: 0; background: transparent; cursor: pointer;
+  }
+  .os-daha-tutamac > span { width: 40px; height: 4px; border-radius: 2px; background: var(--line); }
+  .os-daha-tutamac:focus-visible { outline: none; box-shadow: inset var(--odak-halkasi); }
+  .os-daha:has(.os-daha-tutamac) .os-daha-bas { padding-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .os-daha:has(.os-daha-calisma) { transition: none; } }
+
+/* ---------- Telefon: Yeni çalışma tam ekran, birincil düğme altta ---------- */
+@media (max-width: 760px) {
+  .drawer-root:has(.yeni-calisma-formu) { padding: 0; }
+  .drawer-root:has(.yeni-calisma-formu) .drawer { height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .drawer-root:has(.yeni-calisma-formu) .drawer-header::before { display: none; }
+  .drawer-body:has(.yeni-calisma-formu) { display: flex; flex-direction: column; padding-bottom: 0; }
+  .yeni-calisma-formu { display: flex; flex: 1; flex-direction: column; gap: 16px; }
+  /*
+    Birincil düğme altta, tam genişlikte; Word içe aktarma altında ikincil.
+    Sırası DOM'da aynı kalır (önce Word, sonra Oluştur): yalnızca görünüm
+    ters çevrilir, klavye sırası formun doğal akışında.
+  */
+  .yeni-calisma-formu .pencere-dugmeler {
+    position: sticky; bottom: 0; flex-direction: column-reverse; align-items: stretch; gap: 4px;
+    margin-top: auto; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--surface);
+  }
+  .yeni-calisma-formu .pencere-dugmeler .projects-primary-button { width: 100%; min-height: 48px; justify-content: center; }
+  .yeni-calisma-formu .pencere-dugmeler .projects-filter-button { width: 100%; min-height: 44px; justify-content: center; border-color: transparent; background: transparent; color: var(--primary-ink); }
+}
+
+/* ---------- Telefon: Arvo AI tam ekran ---------- */
+@media (max-width: 760px) {
+  /*
+    Eskiden alttan açılan bir yapraktı (üstü araç çubuğunun altından); yaprak
+    ile alt çubuk arasında belgenin metni görünüyordu. Prototipteki gibi tam
+    ekran: paneldeki kapat düğmesi belgeye döner.
+  */
+  .manuscript-layout .yazim-paneli {
+    top: 0; bottom: 0; z-index: calc(var(--z-pencere) + 1);
+    border-radius: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ---------- PDF paneli: telefonda iki kompakt satır ---------- */
+.pdf-ust-satir { display: contents; }
+.pdf-ikincil { display: contents; }
+.pdf-ikincil-dugme { display: none; }
+@media (max-width: 760px) {
+  .kaynak-pdf-paneli .pdf-ust-satir { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 14px 0; }
+  /* 1. satır: seçici (esner) + bağ çipi + "⋯". "Kaynak" etiketi ekran okuyucuda kalır. */
+  .pdf-ust-satir .kaynak-pdf-secici { flex: 1 1 0; min-width: 0; margin: 0; padding: 0; }
+  .pdf-ust-satir .kaynak-pdf-secici > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .pdf-ust-satir .kaynak-pdf-secici select { min-height: 44px; }
+  .pdf-ust-satir .pdf-ikincil { display: block; flex: none; }
+  .pdf-ust-satir .pdf-ikincil-dugme { display: inline-grid; flex: none; place-items: center; width: 44px; height: 44px; }
+  /* Kapalıyken yalnızca güven çipi görünür (künye, bağ durumu); ad ve "Bağı kaldır" "⋯" altında. */
+  .pdf-ikincil:not([data-acik]) .pdf-bag { margin: 0; }
+  .pdf-ikincil:not([data-acik]) :is(.pdf-bag-ad, .link-button, .pdf-bag-sec) { display: none; }
+  .pdf-ikincil:not([data-acik]) .pdf-bag-durum { margin: 0; }
+  .pdf-ikincil[data-acik] { order: 3; flex: 1 1 100%; }
+  /* PDF içinde arama da ikincil: "⋯" açıkken görünür. */
+  .kaynak-pdf-paneli:has(.pdf-ikincil:not([data-acik])) .pdf-ara { display: none; }
+  /* 2. satır: sayfa ve ölçek denetimleri tek satırda. */
+  .kaynak-pdf-paneli .pdf-arac { flex-wrap: nowrap; gap: 2px; }
+  .kaynak-pdf-paneli .pdf-arac-grup { flex-wrap: nowrap; gap: 2px; }
+  /* 40 px genişlik, 44 px yükseklik: altı düğme + sayfa kutusu + yüzde 390 px'te tek satıra sığar (pasaj varken de). */
+  .kaynak-pdf-paneli .pdf-arac .yazim-ikon { width: 40px; min-width: 40px; height: 44px; }
+  .kaynak-pdf-paneli .pdf-sayfa-girdi { white-space: nowrap; }
+  .kaynak-pdf-paneli .pdf-sayfa-girdi input { width: 36px; min-width: 36px; padding-inline: 4px; text-align: center; }
+  .kaynak-pdf-paneli .pdf-yuzde { min-width: 38px; text-align: center; }
+  /* "Pasaj işaretlendi" bilgisi vurgunun kendisiyle görünür; yazısı ekran okuyucuda kalır. Bulunamadı uyarısı görünür kalır. */
+  .kaynak-pdf-paneli .pdf-pasaj-durum[data-tamam] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Alıntı ekleme alt eylem: seçim yapılınca işlem düğmeleri panelin altında sabit. */
+  .kaynak-pdf-paneli .kaynak-secim { position: sticky; bottom: 0; z-index: 1; padding-block: 8px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); }
+  .kaynak-pdf-paneli .kaynak-secim-eylem { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kaynak-pdf-paneli .kaynak-secim-eylem button { min-height: 44px; justify-content: center; }
+}
