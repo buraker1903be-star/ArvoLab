@@ -1,0 +1,5 @@
+Üretim derlemesi BUILD_ID FODXRAzjYWENiK6Hy5dRP (uygulama kodu 795b213), olc-sekme.mjs.
+Yeni çalışma penceresi; formun son alanından (Belge dili) Tab ×2, sonra Shift+Tab ×2.
+telefon 390   DOM [yaz, word]  görsel (üstten alta) [yaz, word]  Tab → yaz, word   Shift+Tab → yaz, belgeDili   pozitif tabindex 0
+masaüstü 1440 DOM [word, yaz]  görsel (soldan sağa) [word, yaz]  Tab → word, yaz   Shift+Tab → word, belgeDili   pozitif tabindex 0
+yaz = "Oluştur ve yaz", word = "Word dosyasından içe aktar". Görünüm önceki onaylı hâlle aynı (kapanis/yeni-calisma-*.png).
