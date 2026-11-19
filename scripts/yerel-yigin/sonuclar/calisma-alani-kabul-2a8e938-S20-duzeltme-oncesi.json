@@ -1,0 +1,27 @@
+{
+  "tarih": "2026-11-19T04:38:16.004Z",
+  "uygulama": "http://localhost:3132",
+  "derleme": {
+    "gitHead": "2a8e938db6d0cb98ae5710e26b2e28ae7c702172",
+    "buildId": "MJDFpzk4j-SFvcB18H6U3",
+    "uygulamaKoduTemiz": false,
+    "kirliDosyalar": [
+      "M app/dashboard/editor/[id]/write/manuscript-editor.tsx",
+      " M lib/editor-esc.ts"
+    ]
+  },
+  "sonuclar": [
+    {
+      "no": "S20",
+      "ad": "PDF çekmecesi Esc: yerleşim kararından önce (yavaş cihaz) ve AI → PDF → 1472→1280 dizisi; açık pencerede ilk Esc yalnızca pencereyi kapatır",
+      "durum": "FAIL",
+      "ayrinti": "erken Esc: çekmece 0/10 kapandı"
+    },
+    {
+      "no": "S0",
+      "ad": "sayfa hataları (pageerror)",
+      "durum": "PASS",
+      "ayrinti": "yok"
+    }
+  ]
+}
