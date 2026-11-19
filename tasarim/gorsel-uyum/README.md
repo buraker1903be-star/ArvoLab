@@ -169,7 +169,7 @@ sınanmadı. Bağlama ilk yazıldığında panel kapalıyken bağlanmıyordu (li
 
 ## 4. Kabul (üretim derlemesi, BUILD_ID `w4s0PW_VUbnb3EaHr-NRR`)
 
-Son tam koşu sürüyor; sonuç bu satırın yerine yazılacak. Önceki tam koşu (`0335a77`, aynı derleme): 21 PASS, 1 FAIL (S0, aşağıda "Açık kalanlar") → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-0335a77.json`.
+**22 PASS, 0 FAIL, 0 UNVERIFIED** → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-4983980.json` (gitHead `4983980`, BUILD_ID `w4s0PW_VUbnb3EaHr-NRR`, uygulama kodu temiz; `4983980` ile `4b4d665` arasında `app/` ve `lib/` farkı yok). Aynı derlemedeki bir önceki tam koşu (`0335a77`): 21 PASS, 1 FAIL — S0'da bir kez hidrasyon uyarısı ("Açık kalanlar").
 
 **S17** kayıtlı dizin düzeneğiyle çalıştırıldı: sunucu
 `NODE_OPTIONS="--import ./scripts/yerel-yigin/kayitli-dizin-yanitlari.mjs" KAYITLI_DIZIN_KAYDI=<dosya>` ile
