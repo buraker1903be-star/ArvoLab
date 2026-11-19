@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { escIsle, type EscDurumu } from "@/lib/editor-esc";
+import { escIsle, pdfCekmecesiGorunuyor, type EscDurumu } from "@/lib/editor-esc";
 
 /*
   18.11.2026: odak modu ve PDF çekmecesi Esc'i hiç işlemiyordu. ProseMirror
@@ -28,4 +28,18 @@ test("belgenin dışından gelen Esc: yalnızca kabarcıkta ve kimse işlemediys
   assert.equal(escIsle({ ...temel, islenmis: true }), false);
   assert.equal(escIsle({ ...temel, acikPencere: true }), false);
   assert.equal(escIsle({ ...temel, atifKarti: true }), false);
+});
+
+/*
+  19.11.2026 (canlı kabul C6): çekmece, yerleşim kararı gelmeden çiziliyor
+  ama Esc dinleyicisi karar gelince ekleniyordu; canlıda ~2 saniye boyunca
+  "Esc ile kapatın" yazan çekmece Esc'le kapanmadı. Karar artık görünen
+  durumdan (nitelik + genişlik) verilir; kararın kendisine bakılmaz.
+*/
+test("PDF çekmecesi: nitelik ve genişlik yeter; telefonda çekmece yok", () => {
+  assert.equal(pdfCekmecesiGorunuyor({ pdfAcik: true, cekmeceNiteligi: true, genislik: 1280 }), true);
+  assert.equal(pdfCekmecesiGorunuyor({ pdfAcik: true, cekmeceNiteligi: false, genislik: 1472 }), false, "PDF sütundayken Esc çekmece kapatmaz");
+  assert.equal(pdfCekmecesiGorunuyor({ pdfAcik: false, cekmeceNiteligi: true, genislik: 1280 }), false, "AI çekmecesi PDF değildir");
+  assert.equal(pdfCekmecesiGorunuyor({ pdfAcik: true, cekmeceNiteligi: true, genislik: 760 }), false, "telefonda PDF tam ekran");
+  assert.equal(pdfCekmecesiGorunuyor({ pdfAcik: true, cekmeceNiteligi: true, genislik: 761 }), true);
 });

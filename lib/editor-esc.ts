@@ -37,3 +37,35 @@ export function escIsle(d: EscDurumu): boolean {
   if (d.belgeden) return d.yakalama && !d.oneri;
   return !d.yakalama && !d.islenmis;
 }
+
+/*
+  PDF ÇEKMECESİ ŞU AN GÖRÜNÜYOR MU? (19.11.2026, canlı kabul C6)
+
+  Çekmece görünümü (.manuscript-layout[data-sag-cekmece] ve "Esc ile
+  kapatın" ipucu) yerleşim kararı HENÜZ YOKKEN de çizilir: nitelik
+  `sag && karar?.sag !== "sutun"` ile yazılıyor ve karar ekran ölçülene kadar
+  null. Esc dinleyicisi ise eskiden yalnızca karar "cekmece" deyince
+  ekleniyordu. Canlıda sayfa açıldıktan sonra bu ikisinin arası ~2 saniye
+  sürdü (ölçüldü: React yerleşimi 1537 ms'de sahiplendi, karar 3661 ms'de
+  geldi, dinleyici 3665 ms'de eklendi); o arada basılan Esc'i kimse
+  işlemiyordu — çekmece "Esc ile kapatın" yazarken. Yerelde sunucu hızlı
+  olduğu için ara sıfıra yakındı ve hiçbir kabul bunu görmedi.
+
+  Kural: karar, kullanıcının GÖRDÜĞÜNDEN, olay anında verilir (nitelik +
+  pencere genişliği). Telefonda (≤760) çekmece yok: PDF tam ekran, Esc onu
+  kapatmaz (eski davranışla aynı).
+*/
+export const CEKMECE_EN_DAR = 760;
+
+export type CekmeceDurumu = {
+  /** Sağ panelde PDF açık mı (sag === "pdf"). */
+  pdfAcik: boolean;
+  /** Yerleşim çekmece niteliğini taşıyor mu (data-sag-cekmece). */
+  cekmeceNiteligi: boolean;
+  /** window.innerWidth, olay anında. */
+  genislik: number;
+};
+
+export function pdfCekmecesiGorunuyor(d: CekmeceDurumu): boolean {
+  return d.pdfAcik && d.cekmeceNiteligi && d.genislik > CEKMECE_EN_DAR;
+}

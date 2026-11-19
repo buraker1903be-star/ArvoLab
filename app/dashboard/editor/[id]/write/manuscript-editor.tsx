@@ -128,7 +128,7 @@ import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
 import { etkinOneri } from "@/lib/tiptap-satir-ici-oneri";
-import { escIsle, type EscDurumu } from "@/lib/editor-esc";
+import { escIsle, pdfCekmecesiGorunuyor, CEKMECE_EN_DAR, type EscDurumu } from "@/lib/editor-esc";
 import AracMenusu from "./arac-menusu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
@@ -856,8 +856,7 @@ export default function ManuscriptEditor({
     kadar uzar.
   */
   /* Telefonda (≤760) çekmece yok: PDF tam ekran, asistan alttan yaprak (workspace.css). */
-  const cekmeceVar = Boolean(karar && (ekran ?? 0) > 760 && (karar.sag === "cekmece" || karar.inceleme === "cekmece"));
-  const pdfCekmece = Boolean(cekmeceVar && sag === "pdf" && karar?.sag === "cekmece");
+  const cekmeceVar = Boolean(karar && (ekran ?? 0) > CEKMECE_EN_DAR && (karar.sag === "cekmece" || karar.inceleme === "cekmece"));
   useEffect(() => {
     const yerlesim = yerlesimRef.current;
     if (!yerlesim) return;
@@ -1282,10 +1281,26 @@ export default function ManuscriptEditor({
     },
     [editor],
   );
+  /*
+    Çekmece olup olmadığı OLAY ANINDA, kullanıcının gördüğünden okunur
+    (lib/editor-esc.ts, pdfCekmecesiGorunuyor). Eskiden dinleyici yalnızca
+    yerleşim kararı "cekmece" deyince ekleniyordu; karar sayfa açıldıktan
+    sonra geç geliyor, çekmece ise ondan önce çiziliyordu: canlıda ~2 saniye
+    boyunca "Esc ile kapatın" yazan çekmece Esc'le kapanmadı (C6, 18.11.2026).
+  */
+  const pdfCekmecesiAcik = useCallback(
+    () =>
+      pdfCekmecesiGorunuyor({
+        pdfAcik: kaynakAcik,
+        cekmeceNiteligi: Boolean(yerlesimRef.current?.hasAttribute("data-sag-cekmece")),
+        genislik: window.innerWidth,
+      }),
+    [kaynakAcik],
+  );
   useEffect(() => {
-    if (!pdfCekmece) return;
+    if (!kaynakAcik) return;
     const tus = (olay: KeyboardEvent) => {
-      if (olay.key === "Escape" && escIsle(escDurumu(olay))) pdfKapat();
+      if (olay.key === "Escape" && pdfCekmecesiAcik() && escIsle(escDurumu(olay))) pdfKapat();
     };
     window.addEventListener("keydown", tus, true);
     window.addEventListener("keydown", tus);
@@ -1293,7 +1308,7 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", tus, true);
       window.removeEventListener("keydown", tus);
     };
-  }, [pdfCekmece, pdfKapat, escDurumu]);
+  }, [kaynakAcik, pdfCekmecesiAcik, pdfKapat, escDurumu]);
 
   /*
     Satır içi öneri (03.11.2026): otomatik mod tarayıcıda hatırlanır,
@@ -1316,7 +1331,7 @@ export default function ManuscriptEditor({
     if (!odak) return;
     // Açık pencere, atıf kartı ve satır içi öneri Esc'i kendisi kullanır (escIsle). PDF çekmecesi açıksa önce o kapanır.
     const tus = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !pdfCekmece && escIsle(escDurumu(e))) setOdak(false);
+      if (e.key === "Escape" && !pdfCekmecesiAcik() && escIsle(escDurumu(e))) setOdak(false);
     };
     window.addEventListener("keydown", tus, true);
     window.addEventListener("keydown", tus);
@@ -1324,7 +1339,7 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", tus, true);
       window.removeEventListener("keydown", tus);
     };
-  }, [odak, pdfCekmece, escDurumu]);
+  }, [odak, pdfCekmecesiAcik, escDurumu]);
   const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
   useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
