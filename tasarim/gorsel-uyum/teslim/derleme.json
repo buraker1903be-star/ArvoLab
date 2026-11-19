@@ -1,0 +1,11 @@
+{
+  "etiket": "Yerel üretim derlemesi · 8d672a8",
+  "gitHead": "8d672a8",
+  "uygulamaKoduTemiz": true,
+  "buildId": "hR7cCBZdwCf2Ab_DF8ytl",
+  "sunucu": "next start (rm -rf .next, next build)",
+  "veri": "yalnızca yerel yığın 127.0.0.1, sentetik kullanıcı ve içerik",
+  "ai": "yerel model taklidi (scripts/yerel-yigin/model-taklidi.mjs), gerçek model çağrılmadı",
+  "tarih": "2026-11-19T13:00:11.541Z",
+  "sayfaHatalari": []
+}
