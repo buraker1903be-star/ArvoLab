@@ -39,9 +39,10 @@
   ÇEVRESİNDEN açıldı: editör sayfasının yan payı 64 → 24 px (SAYFA_PAYI,
   workspace.css .yazma-sayfasi), panel ile belge arası 26 → 22 px
   (AYIRICI_PAYI). Kâğıt (924 px), punto ve satır sonları değişmedi.
-  Sığmayan durum bilerek çekmece kalır: 1280 px'te PDF belgenin yanında
-  ancak %79 ile durabilir (ray 64 + en dar PDF 440 + paylar 46 → belgeye
-  730 px), bu yüzden orada PDF yine çekmecedir.
+  Sığmayan durum bilerek çekmece kalır. İlk turda en dar PDF 440 idi ve
+  1280 px'te PDF belgenin yanında ancak %79 ile durabildiği için orada
+  çekmeceydi; 2. turda en dar PDF 360'a indi (aşağıda SAG_PANEL_SINIRI):
+  1280'de ray 64 + PDF 382 + belge %85 yan yana, çekmece 1200–1257 px'te.
 
   İNCELEME PANELİ (19.11.2026, kabul turu). Kontroller menüsünden açılan
   inceleme paneli (teslim kontrolü, kılavuz, kaynakça, yorumlar) de sağ
@@ -68,7 +69,7 @@ export const KENAR_RAY = 64;
 /** Sol araçların genişliği (talimattaki aralıkların içinde: liste 280–320, arama 340–400). */
 export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372, kaynakca: 300, kilavuz: 300 };
 
-/** Sağ panelin sınırları (talimat: AI 360–420, PDF 440–600). */
+/** Sağ panelin sınırları (AI 360–420, PDF 360–600; ilk talimatta PDF 440–600 idi). */
 /*
   PDF'in alt sınırı 440 → 360 (görsel uyum 2, 19.11.2026; kurum sahibinin
   "360–400 aralığını dene" isteği). Panel denetimleri 360 px'te ölçüldü:

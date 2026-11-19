@@ -300,7 +300,7 @@ export default function KaynakPdfPaneli({
             </label>
 
             {pdf ? (
-              <div className="pdf-ikincil" data-acik={ikincilAcik ? "" : undefined}>
+              <div id="pdf-ikincil-islemler" className="pdf-ikincil" data-acik={ikincilAcik ? "" : undefined}>
                 <PdfBagSatiri
                   projectId={projectId}
                   pdf={pdf}
@@ -315,6 +315,8 @@ export default function KaynakPdfPaneli({
               type="button"
               className="yazim-ikon pdf-ikincil-dugme"
               aria-expanded={ikincilAcik}
+              /* Ekran okuyucu açılan bölgeyi bulsun (kod incelemesi, PR #112). */
+              aria-controls="pdf-ikincil-islemler"
               aria-label={t({ tr: "Diğer PDF işlemleri: kaynak bağı ve PDF içinde arama", en: "More PDF actions: source link and search in PDF" })}
               title={t({ tr: "Diğer PDF işlemleri", en: "More PDF actions" })}
               onClick={() => setIkincilAcik((a) => !a)}

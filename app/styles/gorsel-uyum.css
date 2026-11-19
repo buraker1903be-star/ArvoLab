@@ -46,8 +46,9 @@
   workspace.css 761–1439 px'te çubuğu iki satıra sarıyordu (1280'de kaynak
   listesi açıkken 82 px'lik iki satır). Önce sıkışır: yazı seçicileri
   daralır, "Asistan" simgeye iner (adı title/aria-label'da), grup araları
-  daralır. Bunlarla da sığmayan dar durumda (1200–1279 px + açık sol araç)
-  çubuk satır sarmaz, yatay kayar; ölçü teslim notunda.
+  daralır. 1200–1279 px'teki ek sıkışma aşağıda; 2. turda tarayıcıda
+  ölçüldü, 30 durumun hepsinde çubuk sığıyor. Yine de sığmayan bir durum
+  çıkarsa çubuk satır sarmaz, yatay kayar (ölçü: teslim/tur2/olcumler/arac.txt).
 */
 @media (min-width: 761px) and (max-width: 1439px) {
   .manuscript-araclar { flex-wrap: nowrap; overflow-x: auto; scroll-padding-inline: 8px; }
