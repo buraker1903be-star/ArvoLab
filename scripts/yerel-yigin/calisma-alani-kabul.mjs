@@ -1117,7 +1117,7 @@ try {
     yavaş cihaz CPU kısıtlamasıyla (CDP, 6×) kurulur ve Esc ipucu GÖRÜNÜR
     görünmez basılır — kullanıcının gördüğü an. Koda gecikme eklenmedi.
     (a) erken Esc, 10 tekrar; (b) aynı sekmede Arvo AI aç/kapat → Kaynaklar →
-    PDF'i aç → 1472'den 1280'e → belge → önce açık pencere (Kısayollar): ilk
+    PDF'i aç → 1472'den 1280'e → belge → önce açık pencere (Teslim kontrolü): ilk
     Esc yalnızca pencereyi kapatır, PDF kalır; ikinci Esc PDF'i kapatır,
     10 tekrar.
   */
@@ -1150,8 +1150,9 @@ try {
       await s.setViewportSize({ width: 1280, height: 860 }); await s.waitForTimeout(500);
       beklenen(await s.locator(".kaynak-pdf-cekmece-ipucu").isVisible(), `1280'de PDF çekmece değil (tur ${i + 1})`);
       await belgeyeTikla(s);
-      await s.getByRole("button", { name: /^Bul, odak modu/ }).first().click(); await s.waitForTimeout(150);
-      await s.getByRole("button", { name: /^Klavye kısayolları/ }).first().click();
+      // 1280'de çekmece açıkken araç çubuğunun Belge menüsü çekmecenin altında kalıyor; başlıktaki Kontroller erişilebilir.
+      await s.getByRole("button", { name: /^Kontroller/ }).first().click(); await s.waitForTimeout(150);
+      await s.getByRole("button", { name: /^Teslim kontrolü/ }).first().click();
       await s.locator(".drawer-root.open").waitFor({ timeout: 5000 });
       await s.keyboard.press("Escape"); await s.waitForTimeout(400);
       if ((await s.locator(".drawer-root.open").count()) === 0 && (await pdfAdreste(s))) pencere++;
@@ -1163,7 +1164,7 @@ try {
     await c.close();
     beklenen(pencere === 10, `açık pencerede ilk Esc yalnızca pencereyi kapatmalı: ${pencere}/10`);
     beklenen(dizi === 10, `AI → PDF → 1472→1280 → belge → Esc: ${dizi}/10 kapandı`);
-    return { ayrinti: `yavaş cihaz (CPU 6×) ipucu görünür görünmez Esc: ${erken}/10 kapandı; AI aç/kapat → PDF'i aç → 1472→1280 → Kısayollar açıkken ilk Esc yalnızca pencereyi kapattı ${pencere}/10, ikinci Esc PDF'i kapattı ve odak belgede ${dizi}/10` };
+    return { ayrinti: `yavaş cihaz (CPU 6×) ipucu görünür görünmez Esc: ${erken}/10 kapandı; AI aç/kapat → PDF'i aç → 1472→1280 → Teslim kontrolü penceresi açıkken ilk Esc yalnızca pencereyi kapattı ${pencere}/10, ikinci Esc PDF'i kapattı ve odak belgede ${dizi}/10` };
   });
 
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
