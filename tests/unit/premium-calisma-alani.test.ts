@@ -194,8 +194,15 @@ describe("Esc: açık pencere denetimi kapalı pencereleri saymaz", () => {
     assert.match(kod, /const acikPencere = Boolean\(document\.querySelector\(ACIK_PENCERE\)\);/);
     // Pencere Esc ile kapanırken aynı Esc odak modundan çıkarmasın: yakalama aşamasındaki durum kaydedilir.
     assert.match(kod, /if \(yakalama && \(acikPencere \|\| atifKarti\)\) sahipliEsc\.add\(olay\);/);
-    assert.match(kod, /escIsle\(escDurumu\(olay\)\)\) pdfKapat\(\)/);
-    assert.match(kod, /escIsle\(escDurumu\(e\)\)\) setOdak\(false\)/);
+    assert.match(kod, /pdfCekmecesiAcik\(\) && escIsle\(escDurumu\(olay\)\)\) pdfKapat\(\)/);
+    assert.match(kod, /!pdfCekmecesiAcik\(\) && escIsle\(escDurumu\(e\)\)\) setOdak\(false\)/);
+  });
+  // 19.11.2026 (C6): dinleyici yerleşim kararına bağlanırsa, karar gelene kadar çizilmiş çekmece Esc'le kapanmaz.
+  test("PDF çekmecesinin Esc dinleyicisi yerleşim kararını beklemez; çekmece olay anında, görünen durumdan okunur", () => {
+    assert.doesNotMatch(kod, /\bpdfCekmece\b/);
+    assert.match(kod, /if \(!kaynakAcik\) return;\s*const tus = \(olay: KeyboardEvent\) => \{\s*if \(olay\.key === "Escape" && pdfCekmecesiAcik\(\)/);
+    assert.match(kod, /cekmeceNiteligi: Boolean\(yerlesimRef\.current\?\.hasAttribute\("data-sag-cekmece"\)\)/);
+    assert.match(kod, /genislik: window\.innerWidth/);
   });
   test("belgeden gelen Esc için yakalama aşamasında da dinlenir (ProseMirror Esc'i her zaman işler)", () => {
     assert.equal((kod.match(/window\.addEventListener\("keydown", tus, true\);/g) ?? []).length >= 2, true);

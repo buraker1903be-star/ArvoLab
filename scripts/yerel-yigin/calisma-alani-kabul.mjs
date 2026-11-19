@@ -1108,6 +1108,64 @@ try {
     return { ayrinti: satirlar.join(" · ") + "; taşma yok, imleç ve odak korundu, kaldığı yerden yazıldı" };
   });
 
+  /* ---------- S20 ---------- */
+  /*
+    PDF çekmecesi ve Esc, yayın kabulü C6 (19.11.2026). Canlıda sayfa
+    açıldıktan sonra ~2 saniye boyunca "Esc ile kapatın" yazan çekmece Esc'le
+    kapanmadı: çekmece yerleşim kararından önce çiziliyor, dinleyici karar
+    gelince ekleniyordu. Yerelde sunucu hızlı olduğu için ara sıfıra yakın;
+    yavaş cihaz CPU kısıtlamasıyla (CDP, 6×) kurulur ve Esc ipucu GÖRÜNÜR
+    görünmez basılır — kullanıcının gördüğü an. Koda gecikme eklenmedi.
+    (a) erken Esc, 10 tekrar; (b) aynı sekmede Arvo AI aç/kapat → Kaynaklar →
+    PDF'i aç → 1472'den 1280'e → belge → önce açık pencere (Kısayollar): ilk
+    Esc yalnızca pencereyi kapatır, PDF kalır; ikinci Esc PDF'i kapatır,
+    10 tekrar.
+  */
+  await dene("S20", "PDF çekmecesi Esc: yerleşim kararından önce (yavaş cihaz) ve AI → PDF → 1472→1280 dizisi; açık pencerede ilk Esc yalnızca pencereyi kapatır", async () => {
+    const belgeyeTikla = async (s) => { const k = await kelimeKonumu(s, "Uzaktan öğrenme", 3); await s.mouse.click(k.x, k.y); };
+    const pdfAdreste = (s) => s.evaluate(() => new URL(location.href).searchParams.get("sag") === "pdf");
+    let erken = 0;
+    const e = await oturum(A, { genislik: 1280, yukseklik: 860 });
+    const cdp = await e.c.newCDPSession(e.s); await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+    for (let i = 0; i < 10; i++) {
+      await e.s.goto(`/dashboard/editor/${ESKI}/write?sol=kaynaklar&sag=pdf`);
+      await e.s.locator(".kaynak-pdf-cekmece-ipucu").waitFor({ state: "visible", timeout: 60000 });
+      await e.s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+      await belgeyeTikla(e.s); await e.s.keyboard.press("Escape");
+      await e.s.waitForFunction(() => new URL(location.href).searchParams.get("sag") !== "pdf", null, { timeout: 8000 }).catch(() => {});
+      if (!(await pdfAdreste(e.s)) && (await e.s.locator(".kaynak-pdf-paneli").count()) === 0) erken++;
+    }
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 }); await e.c.close();
+    beklenen(erken === 10, `erken Esc: çekmece ${erken}/10 kapandı`);
+    const { c, s } = await oturum(A, { genislik: 1472, yukseklik: 921 });
+    await editorAc(s);
+    let dizi = 0, pencere = 0;
+    for (let i = 0; i < 10; i++) {
+      await s.setViewportSize({ width: 1472, height: 921 }); await s.waitForTimeout(300);
+      await s.locator(".os-calisma-govde a", { hasText: "Arvo AI" }).first().click(); await s.locator(".yazim-paneli").waitFor({ timeout: 15000 });
+      await s.locator(".yazim-paneli").getByRole("button", { name: /^Paneli kapat$/ }).click(); await s.waitForTimeout(300);
+      await s.locator(".os-calisma-govde a", { hasText: "Kaynaklar" }).first().click();
+      await s.locator(".os-sol-alan").getByRole("button", { name: /PDF'i aç/ }).first().click();
+      await s.locator(".kaynak-pdf-paneli").waitFor({ timeout: 15000 });
+      await s.setViewportSize({ width: 1280, height: 860 }); await s.waitForTimeout(500);
+      beklenen(await s.locator(".kaynak-pdf-cekmece-ipucu").isVisible(), `1280'de PDF çekmece değil (tur ${i + 1})`);
+      await belgeyeTikla(s);
+      await s.getByRole("button", { name: /^Bul, odak modu/ }).first().click(); await s.waitForTimeout(150);
+      await s.getByRole("button", { name: /^Klavye kısayolları/ }).first().click();
+      await s.locator(".drawer-root.open").waitFor({ timeout: 5000 });
+      await s.keyboard.press("Escape"); await s.waitForTimeout(400);
+      if ((await s.locator(".drawer-root.open").count()) === 0 && (await pdfAdreste(s))) pencere++;
+      await belgeyeTikla(s); await s.keyboard.press("Escape"); await s.waitForTimeout(500);
+      if (!(await pdfAdreste(s)) && (await s.evaluate(() => Boolean(document.activeElement?.closest(".ProseMirror"))))) dizi++;
+      // Sonraki tur için sol aracı kapat (adres temiz başlasın).
+      await s.goto(`/dashboard/editor/${ESKI}/write`); await s.waitForSelector(".ProseMirror");
+    }
+    await c.close();
+    beklenen(pencere === 10, `açık pencerede ilk Esc yalnızca pencereyi kapatmalı: ${pencere}/10`);
+    beklenen(dizi === 10, `AI → PDF → 1472→1280 → belge → Esc: ${dizi}/10 kapandı`);
+    return { ayrinti: `yavaş cihaz (CPU 6×) ipucu görünür görünmez Esc: ${erken}/10 kapandı; AI aç/kapat → PDF'i aç → 1472→1280 → Kısayollar açıkken ilk Esc yalnızca pencereyi kapattı ${pencere}/10, ikinci Esc PDF'i kapattı ve odak belgede ${dizi}/10` };
+  });
+
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */
   if (GORSEL) {
     // Görseller senaryoların bıraktığı eklemelerden arınmış, tohumdaki belgeyle alınır.
