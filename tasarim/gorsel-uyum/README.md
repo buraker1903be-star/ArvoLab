@@ -257,3 +257,15 @@ her koşuda pageerror'ı FAIL sayıyor.
 ## Kontroller (`af329b4`)
 `tsc` ✓ · `lint` 0 hata (2 eski uyarı) · `check:css` ✓ · `check:migrations` ✓ · `check:rakamlar` ✓ ·
 `test:unit` 2358/2358 · `test:editor` 112/112 · `test:db` 362/362.
+
+## Kod incelemesi (PR #112)
+
+İnceleme `origin/main...HEAD` üzerinde yapıldı; Codex incelemesi `4301703`'te bulgu bildirmedi. Dört nit bulundu:
+1. `lib/calisma-alani-yerlesimi.ts` ve `gorsel-uyum.css`'te ilk turun kuralını anlatan eskimiş yorumlar → **düzeltildi** (`95f0d9b`, davranış değişmedi).
+2. Telefonda PDF "⋯" düğmesinde `aria-controls` yok → **düzeltildi** (`95f0d9b`, görünüm değişmedi).
+3. Yerleşim kararı `clientWidth`, CSS medya sorgusu kaydırma çubuğu dahil genişlik kullanıyor; Windows'ta ~1200–1215 px'te karar tablet, kabuk masaüstü olabiliyor → **bu turda değiştirilmedi** (1. turda bilinçli seçim; değiştirmek yerleşim davranışını değiştirir).
+4. Telefonda yeni çalışma düğmeleri `column-reverse`: görsel sıra ≠ odak sırası → **bu turda değiştirilmedi** (onaylı tasarım kararı; yorumda belgeli).
+
+Son uygulama kodu **`95f0d9b`**, BUILD_ID **`ulDWz5SEVrYzO2Ej5KFak`** (temiz derleme, S17 düzeneği):
+tam kabul **22/22 PASS, 0 FAIL, 0 UNVERIFIED** → `scripts/yerel-yigin/sonuclar/calisma-alani-kabul-95f0d9b.json`.
+CI (`kontrol`) `95f0d9b`'de başarılı. React #418 açık bulgu olarak kalıyor.
