@@ -193,3 +193,69 @@ kimliklerine (hesap, iki çalışma, iki kaynak, PDF) karşı tarandı (`query_t
 
 Sıra (canlı doğrulamadan sonra, onayla): Storage nesnesi → test oturumlarının kapatılması → kullanıcının silinmesi
 (geri kalan CASCADE). Silme öncesi aynı keşif yeniden koşulur; sayı değiştiyse durulur.
+
+---
+
+## PR #111 yayını — 19.11.2026 (düzeltme SONRASI; ilk canlı C6 FAIL yukarıda aynen duruyor)
+
+| Adım | Sonuç |
+|---|---|
+| HEAD / CI | `fdf6bfb`, `kontrol` iki koşuda yeşil; uygulama kodu kabul derlemesininkiyle (`0f55756`, `mcTiD3u_nmYfbZFw34raC1`) aynı |
+| `updated_by` incelemesi (salt okunur) | Alanı tetikleyici değil uygulama yazıyor (`saveManuscript`: kayıt anındaki oturum sahibi). `can_write_project` → `gozetim_kapsami`: `system_admin` ve `founder` her çalışmaya yazabilir (AGENTS.md "kurumlar arası yalnızca iç ekip"). Kayıt, kuralın izin verdiği bir düzenlemeyi doğru hesapla gösteriyor; yetkisiz erişim ya da yanlış atama belirtisi yok. Kişiye dair varsayım yapılmadı |
+| Birleştirme | PR #111 squash → **`8b2889725aca321915735ac960f8e7e5d1a321a4`**; migration yok |
+| Dağıtım | `dpl_3faB6DFhw7qRE76ziEcoqBZSzizd`, READY 05:33:40 UTC; `lab.arvo-os.com` → `8b28897` |
+
+### Canlı kabul (`8b28897`)
+
+| Kontrol | Sonuç |
+|---|---|
+| C6 hatalı dizi (aynı sekmede `?sag=ai`, sonra 1280'de PDF çekmecesi, belgede Esc) | **10/10 kapandı** (düzeltme öncesi canlı: 1/6) |
+| C6 yavaş cihaz (CPU 6×, ipucu görünür görünmez Esc) | **10/10** |
+| Aynı sekmede AI aç/kapat → PDF'i aç → 1472→1280 → belge → Esc | 10/10 |
+| Açık pencere (Teslim kontrolü) 1280 çekmecede: ilk Esc yalnızca pencere, PDF kalır; ikinci Esc PDF'i kapatır, odak belgede | 5/5 |
+| Odak modu: belgeden ve gövdeden Esc çıkar; Kısayollar açıkken ilk Esc yalnızca pencere, ikincisi çıkar | PASS |
+| C1 eski çalışma yaz/kaydet/yenile; `belge_dili` NULL | PASS |
+| C2 yeni çalışma (EN) `1c71f4f9-83c0-4705-b27e-ed787188e07b`, `belge_dili='en'` | PASS |
+| C3 + C7 Word: yeni (EN) TR/EN arayüzde "TABLE OF CONTENTS"; eski (NULL) TR "İÇİNDEKİLER", EN "TABLE OF CONTENTS"; 4×200 | PASS |
+| C4 PDF bağı "Kaynağa bağlı"; atıf kartı "PDF'i aç" bağlı PDF'i (`cde880db…`) açtı | PASS |
+| C5 başka çalışmanın kaynağı 403/42501, anon 401, bağ değişmedi | PASS |
+| Sayfa hatası (pageerror) | 0 |
+| Gözlem 05:33:40–06:03:40 UTC | Hata yok; tek kayıt Node `localStorage` uyarısı (05.11.2026'dan beri, C7 dışa aktarması tetikledi) |
+| AI | `ai_assistant_runs` bu hesap için 0 |
+
+### Temizlik
+
+**Önceki "24 kayıt" sayısı yanlıştı:** listelenen kalemlerin toplamı 19 idi (5 auth/profil + 1 abonelik + 7 çalışma
+grubu + 3 kaynak/PDF + 2 denetim + 1 Storage); 24 bir toplama hatasıydı, gizli ya da eksik bir kayıt yoktu.
+Kabulün regresyon adımı sonradan 4 kayıt daha üretti (çalışma `1c71f4f9…`, müsveddesi, iki otomatik sürüm
+`0be8d698…` ve `ffb76b23…`) ve oturum yenilendi; kesin envanter (06:05 UTC, yalnızca SELECT) **23 silinecek + 1
+korunacak**:
+
+| Tablo | Sayı | Kimlik(ler) |
+|---|---|---|
+| auth.users | 1 | `6168c0ea-f7de-4a02-9e12-8c1e4df3dfd0` |
+| auth.identities | 1 | `022dde1e-bf3a-480e-8eb7-cac4738d2e9b` |
+| auth.sessions | 1 | `2c91357d-ff33-4a62-a640-45adbaf2b298` |
+| auth.refresh_tokens | 1 | `467` |
+| public.profiles | 1 | `6168c0ea-…` |
+| public.individual_subscriptions | 1 | user_id `6168c0ea-…` |
+| public.academic_projects | 3 | `7788514e-12a7-4c2c-bab7-669cbf2ef278`, `9ff42aa9-9d6c-4c1e-a38d-5c39391eca37`, `1c71f4f9-83c0-4705-b27e-ed787188e07b` |
+| public.project_manuscripts | 3 | aynı üç çalışma |
+| public.project_manuscript_versions | 5 | `e3694af5-f8a2-46f1-a777-4133782ddf46`, `ffb76b23-3559-4de8-83c1-61d6c61c5cef`, `88cc3412-39f9-46c6-8594-8d7c7006c7f7`, `0fb5cc8c-d41c-46eb-8a18-620d36c44af1`, `0be8d698-a908-4b20-af79-d4c91153c457` |
+| public.literature_sources | 2 | `c6fc66cf-c456-4ce4-bc51-f8c58497f3d3`, `b5c98534-b5d0-4d90-ad57-3bc560737f36` |
+| public.kaynak_pdfleri | 1 | `cde880db-d675-4eb9-9334-fbbe8f3a7fe5` |
+| public.citation_checks | 1 | `f025051d-8cb1-42ca-90f0-9440f9532726` |
+| public.yazim_kontrolleri | 1 | `2b3e84f5-35e5-4bca-b33a-5ca113ecde2b` |
+| storage.objects | 1 | `2ad8b0ed-2df7-4595-aaee-4cebe6613824` |
+| **Korunacak:** public.sozlesme_onaylari | 1 | `cacb1c61-02b0-4a95-b045-1fdf1e2edce1` (FK `SET NULL`) |
+| Genel denetim: auth.audit_log_entries | 0 | — |
+
+Yapılanlar:
+
+1. **Storage nesnesi** Storage API ile (kullanıcının kendi oturumu, `DELETE /storage/v1/object/project-files`)
+   silindi: 200, liste boş, `storage.objects` 0.
+2. **Oturumlar** Auth API `POST /auth/v1/logout?scope=global` ile kapatıldı: 204; belirteç artık
+   `session_not_found`; `auth.sessions` 0, geçerli yenileme belirteci 0.
+3. **Hesabın kaldırılması BEKLİYOR.** Desteklenen Auth yönetim işlemi (`auth.admin.deleteUser`) `service_role`
+   anahtarı istiyor; bu oturumda yok. Uygulamanın kendi hesap silme akışı 30 gün bekletiyor; `auth.users`'a doğrudan
+   SQL ile silmek desteklenen yol değil. Bu yüzden durdu.
