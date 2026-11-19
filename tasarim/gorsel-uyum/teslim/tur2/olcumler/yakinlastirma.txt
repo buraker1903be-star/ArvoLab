@@ -1,0 +1,23 @@
+Üretim derlemesi BUILD_ID hDmEoQJubAbloP-ZWCddu (uygulama kodu af329b4), olc-yakin.mjs, 19.11.2026.
+PDF metninin ilk uzun satırının yüksekliği (px) ve ölçek; her "+" OLCEK_ADIM = 0,25.
+
+1440 · kaynak listesi + PDF (PDF 360 px)
+  sığdır  55%  yazı 6,0 px
+  +1      80%  yazı 8,8 px
+  +2     105%  yazı 11,5 px
+  +3     130%  yazı 14,3 px
+  +4     155%  yazı 17,0 px
+1280 · yalnızca PDF (PDF 382 px)
+  sığdır  58%  yazı 6,4 px
+  +1      83%  yazı 9,1 px
+  +2     108%  yazı 11,9 px
+  +3     133%  yazı 14,6 px
+  +4     158%  yazı 17,4 px
+
+Doğrulanmış pasaj (1440, liste + PDF): alıntı ekle → atıf kartı → Dayanağa git
+  Dayanağa git:     55%, pasaj 1 parça "The effect was strongest in programmes without weekly live sessions.", 6,0 px, görünür alanda; "Pasaja odaklan" düğmesi var
+  Pasaja odaklan:  160%, aynı pasaj 17,6 px, görünür alanda
+Eşleşme yok (doğrulanmış pasajı olmayan atıf → PDF'i aç):
+  55%, vurgulanan pasaj 0, arama eşleşmesi vurgusu 0, "Pasaja odaklan" düğmesi yok
+  Not: doğrulanmış pasajlar yalnızca oturum boyunca bellekte tutulur (manuscript-editor.tsx, "K3-ek onaylı değil: kalıcı kayıt yok");
+  sayfa yeniden yüklenince aynı atıf "Doğrulanmış pasaj yok" der ve hiçbir yer vurgulanmaz. Bu tur değiştirilmedi.
