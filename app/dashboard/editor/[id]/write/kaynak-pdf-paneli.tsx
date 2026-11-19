@@ -490,8 +490,10 @@ export default function KaynakPdfPaneli({
                 <ShieldCheck size={14} aria-hidden="true" />
                 <span>
                   {t({
-                    tr: "Arvo AI yalnızca bu PDF'in metnine dayanır; alıntısı PDF'te birebir geçmeyen ya da PDF'te olmayan sayı içeren cevap gösterilmez. Cevaplar belgenize kendiliğinden girmez.",
-                    en: "Arvo AI relies only on this PDF's text; answers whose quotes aren't in the PDF word for word, or that contain numbers not in the PDF, are not shown. Answers never enter your document by themselves.",
+                    // Görsel uyum 2. tur kapanışı: eskiden üç satırlık bir açıklamaydı ve okuma
+                    // alanını daraltıyordu (dar panelde yarım görünüyordu). Kural aynı, iki satır.
+                    tr: "Yalnızca bu PDF'e dayanır; doğrulanamayan cevap gösterilmez, belgeye kendiliğinden girmez.",
+                    en: "Uses only this PDF; unverifiable answers are hidden and never enter your document on their own.",
                   })}
                 </span>
               </p>

@@ -235,3 +235,18 @@
   .arac-grup { padding: 0 2px; }
   .manuscript-araclar { padding-inline: 2px; }
 }
+
+/*
+  PDF panelinin alt bölümü (görsel uyum 2. tur kapanışı, ölçüldü). Bölüm
+  "max-height: 45%; overflow: auto" ile kendi içinde kayıyor ama flex
+  içinde KÜÇÜLEBİLİYORDU: okuma alanı (flex: 1 1 auto) yeri alıyor, alt
+  bölüm içeriğinin altına iniyordu ve güven notu her genişlikte yarım ya
+  da hiç görünmüyordu (1440: not 852–921, bölüm 887'de bitiyor; 1280:
+  791–843 / 787). Alt bölüm artık içeriği kadar yer alır (üst sınır yine
+  %45; seçim ve atıf formu uzarsa orada kayar), küçülen okuma alanıdır.
+  Notun kendisi de kısaltıldı (kaynak-pdf-paneli.tsx): okuma alanından
+  ancak iki satırlık yer alsın.
+*/
+.kaynak-pdf-paneli .kaynak-pdf-alt { flex-shrink: 0; padding-bottom: 10px; }
+/* Henüz analiz yokken boş liste ızgarada bir boşluk daha açıyordu (8 px okuma alanından). */
+.kaynak-pdf-paneli .kaynak-analiz-liste:empty { display: none; }
