@@ -133,6 +133,12 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   await s.keyboard.press("ArrowRight");
 
   // 8) Tab kabul eder; tek Ctrl+Z yalnızca öneriyi geri alır.
+  // İmleç paragraf sonunda olmalı. Dört koşudan ikisinde imleç burada tablo hücresinin başındaydı
+  // (önceki adımlardaki programlı seçim ile tarayıcının selectionchange'i yarışıyor); konum açıkça
+  // yeniden kurulur ve önceki konum kayda yazılır.
+  const konumOnce = (await paragrafMetni(s)).slice(0, 30);
+  if (!konumOnce.startsWith("Üniversiteye")) console.log("GÖZLEM: 8. adımdan önce imleç beklenen paragrafta değildi:", konumOnce);
+  await sonaGit(s, "Üniversiteye"); await s.waitForTimeout(200);
   await s.keyboard.type(" ayrıca", { delay: 20 }); // hemen öncesinde yazılmış harfler (aynı geçmiş penceresi)
   await altSlash(s); const o3 = await bekleOneri(s);
   const kabulOnce = await metin(s); const pOnce = await paragrafMetni(s);
