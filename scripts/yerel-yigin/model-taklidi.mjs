@@ -24,6 +24,19 @@ function cevapUret(mesajlar) {
     biçimini istiyor. Metin kütüphanedeki Demir (2019) kaynağına atıf yapar;
     sunucunun atıf ve sayı denetimi (yazimDenetle) gerçekten çalışır.
   */
+  /*
+    M4 kabulü (20.11.2026): kısaltma seçimin ilk yarısını döner (atıf ve
+    olumsuzluk düşer → panel uyarısı görünmeli); isteğinde "ARAS" geçen
+    serbest istek kütüphanede İKİ kaynağa uyan bir atıf yazar (belirsiz).
+  */
+  if (/Seçili metni kısalt:/.test(hepsi)) {
+    const secim = hepsi.match(/SEÇİLİ METİN:\n([\s\S]*?)\n\n(?:[A-ZÇĞİÖŞÜ ]{4,}:)/)?.[1] ?? "";
+    const sozcukler = secim.replace(/\([^)]*\)/g, "").split(/\s+/).filter(Boolean);
+    return { yanit: "Kısalttım.", metin: `${sozcukler.slice(0, Math.max(3, Math.floor(sozcukler.length / 2))).join(" ").replace(/[,;]$/, "")}.` };
+  }
+  if (/YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür/.test(hepsi) && /ARAS/.test(String(mesajlar.at(-1)?.content ?? ""))) {
+    return { yanit: "Belirsiz atıflı bir cümle yazdım.", metin: "Bu görüş alanda tartışmalıdır (Aras, 2020)." };
+  }
   if (/YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür/.test(hepsi)) {
     return { yanit: "Akran gruplarıyla ilgili kısa bir paragraf yazdım.", metin: "Akran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor (Demir, 2019)." };
   }

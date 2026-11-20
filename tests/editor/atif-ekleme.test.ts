@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { describe } from "node:test";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
-import { atifIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
+import { atifIslemi, kaynakcaGirdisiIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
 import { belge, baslik, editorSchema, paragraf } from "./ortam";
 
 /*
@@ -100,3 +100,22 @@ describe("alıntı ve atıf", () => {
 });
 
 test("şema: editorSchema yüklendi", () => assert.ok(editorSchema.nodes.footnoteReference));
+
+/*
+  B-16 (20.11.2026): yazım asistanının metni ve eşleşen kaynağın künyesi
+  AYNI işlemde girer. Eskiden metin düz atıfla giriyor, Kaynakça hiç
+  güncellenmiyordu; ayrı işlem olsaydı Ctrl+Z metni geri alıp künyeyi
+  kaynakçada yetim bırakırdı.
+*/
+test("B-16: AI metni ve künyesi tek işlemde; tek geri alma ikisini birlikte kaldırır; olan künye yinelenmez", () => {
+  let s = EditorState.create({ doc: belge(baslik(1, "Giriş"), paragraf("Önceki çalışmalar")), plugins: [history()] });
+  const tr = s.tr.insert(s.doc.content.size, editorSchema.nodeFromJSON({ type: "paragraph", content: [{ type: "text", text: "Mevsimsel örüntüler belirgindir (Fisher & Other, 2023)." }] }));
+  assert.equal(kaynakcaGirdisiIslemi(tr, kaynak, "apa7", { dil: "tr" }), true);
+  s = s.apply(tr);
+  assert.match(metin(s), /Kaynakça\nFisher, E\. W\., & Other, J\. \(2023\)/);
+  const tr2 = s.tr;
+  assert.equal(kaynakcaGirdisiIslemi(tr2, kaynak, "apa7", { dil: "tr" }), false, "künye zaten kaynakçada");
+  assert.equal(tr2.docChanged, false);
+  undo(s, (u) => (s = s.apply(u)));
+  assert.equal(metin(s), "Giriş\nÖnceki çalışmalar");
+});

@@ -1,0 +1,66 @@
+[
+  {
+    "ad": "B-16: AI metni girer, eşleşen kaynak Kaynakça'ya yazılır",
+    "gecti": true,
+    "ayrinti": {
+      "kaynakca": "Demir, B. (2019). Peer study groups in higher education. Eğitim Dergisi."
+    }
+  },
+  {
+    "ad": "kart 'Eklendi' olur ve kilitlenir",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "tek Ctrl+Z metni ve künyeyi birlikte geri alır",
+    "gecti": true,
+    "ayrinti": {
+      "son": "yumu.\nAkran grupları yalnızlığı azaltmaktadır (Demir, 2019); ancak bu etki 3 ay sonra gözlenmemiştir ve kalıcı değildir."
+    }
+  },
+  {
+    "ad": "geri alınca kart yeniden eklenebilir olur",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "yeniden eklenebilir; künye bir kez yazılır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "belirsiz atıf Kaynakça'ya eklenmez",
+    "gecti": true,
+    "ayrinti": {
+      "kaynakca": "Demir, B. (2019). Peer study groups in higher education. Eğitim Dergisi."
+    }
+  },
+  {
+    "ad": "belirsiz atıf kullanıcıya söylenir",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "kısaltma: somut kayıplar uyarı olarak görünür",
+    "gecti": true,
+    "ayrinti": {
+      "uyari": [
+        "Olumsuzluk ifadeleri değişmiş; anlamın tersine dönmediğini kontrol edin.",
+        "Seçimdeki bir atıf kısaltmada yok.",
+        "Seçimdeki bir sayı kısaltmada yok."
+      ]
+    }
+  },
+  {
+    "ad": "kısaltma uyarısı eklemeyi engellemez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  }
+]

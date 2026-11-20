@@ -25,7 +25,7 @@ export default function KayitliCevaplar({
 }: {
   projectId: string;
   /** Denetimden geçen metni belgeye ekler (panelin ekleme yolu, asistan iziyle). */
-  onEkle: (cevap: { id: string; metin: string; gorev: KayitliCevap["gorev"] }) => boolean;
+  onEkle: (cevap: { id: string; metin: string; gorev: KayitliCevap["gorev"] }) => boolean | Promise<boolean>;
   onKopyala: (metin: string) => void;
 }) {
   const t = useCeviri();
@@ -68,7 +68,7 @@ export default function KayitliCevaplar({
         setKartHatasi((o) => ({ ...o, [c.id]: d.hata ?? t({ tr: "Metin eklenmedi.", en: "The text was not inserted." }) }));
         return;
       }
-      if (onEkle({ id: c.id, metin: d.metin, gorev: d.gorev ?? c.gorev })) setEklenen((o) => new Set(o).add(c.id));
+      if (await onEkle({ id: c.id, metin: d.metin, gorev: d.gorev ?? c.gorev })) setEklenen((o) => new Set(o).add(c.id));
     } catch {
       setKartHatasi((o) => ({ ...o, [c.id]: t({ tr: "Denetim yapılamadı; metin eklenmedi.", en: "The check could not run; the text was not inserted." }) }));
     } finally {

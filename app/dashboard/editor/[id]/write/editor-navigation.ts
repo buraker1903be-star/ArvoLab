@@ -341,7 +341,27 @@ export function atifIslemi(
   tr.setSelection(TextSelection.create(tr.doc, hedef + satirIci.size));
 
   if (existingIndex >= 0) return { citation, addedReference: false };
-  const parts = hazir?.kunye.length ? hazir.kunye : formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
+  kaynakcaGirdisiIslemi(tr, source, style, { dil, erisimTarihi: secenek.erisimTarihi, kunye: hazir?.kunye, numara: number });
+  return { citation, addedReference: true };
+}
+
+/**
+ * Kaynağın künyesini Kaynakça'ya VERİLEN işlemde yazar (yoksa başlığı
+ * açar); zaten varsa dokunmaz ve false döner. atifIslemi ve AI metni
+ * eklemesi (yazim-paneli.tsx, B-16) aynı yolu kullanır: iki ayrı kopya
+ * künyeyi iki ayrı biçimde yazardı.
+ */
+export function kaynakcaGirdisiIslemi(
+  tr: Transaction,
+  source: CitableSource,
+  style: CitationStyle,
+  secenek: { dil?: Dil; erisimTarihi?: string | null; kunye?: Parca[]; numara?: number } = {},
+): boolean {
+  const schema = tr.doc.type.schema;
+  const dil = secenek.dil ?? "tr";
+  const { number, existingIndex } = atifSirasi(tr.doc, source);
+  if (existingIndex >= 0) return false;
+  const parts = secenek.kunye?.length ? secenek.kunye : formatReferenceParts(source, style, secenek.numara ?? number, { erisimTarihi: secenek.erisimTarihi ?? undefined }, dil);
   const paragraph = schema.nodeFromJSON({ type: "paragraph", content: metinDugumleri(parts) });
   const current = findReferencesSection(tr.doc);
   if (!current) {
@@ -352,7 +372,7 @@ export function atifIslemi(
     if (last && last.node.childCount === 0) tr.replaceWith(last.pos, last.pos + last.node.nodeSize, paragraph);
     else tr.insert(current.end, paragraph);
   }
-  return { citation, addedReference: true };
+  return true;
 }
 
 /*
