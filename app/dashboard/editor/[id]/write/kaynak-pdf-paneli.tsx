@@ -48,7 +48,6 @@ type AtifDurumu =
 const ozet = (metin: string, uzunluk = 180) => (metin.length > uzunluk ? `${metin.slice(0, uzunluk).trimEnd()}…` : metin);
 
 export default function KaynakPdfPaneli({
-  editor,
   projectId,
   acik,
   acilacak = null,
