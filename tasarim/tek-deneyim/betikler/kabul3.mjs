@@ -180,10 +180,10 @@ for (const rol of HER_ROL) {
   const { c, s } = await baglam("personel");
   await s.goto("/dashboard/expert-requests?kuyruk=uzman-acik"); await yuklendi(s);
   const metin = await s.locator("main").first().innerText();
-  const not = /Geçici kuyruk/.test(metin) && /henüz kurulmadı/.test(metin);
+  const not = /ArvoOS'un Talepler bölümüne aktarılacak/.test(metin) && /henüz kurulmadı/.test(metin);
   const talepGorunur = metin.includes(`TEK-UZMAN-${ek}`) || (await s.locator(`text=TEK-UZMAN-${ek}`).count()) > 0;
   await s.screenshot({ path: `${G}/personel-gecici-uzman-kuyrugu.png`, animations: "disabled" });
-  kayit("personel: uzman kuyruğunda 'Geçici kuyruk … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi görünüyor", not && talepGorunur, { not, talepGorunur });
+  kayit("personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi görünüyor", not && talepGorunur, { not, talepGorunur });
   await c.close();
 }
 

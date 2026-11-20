@@ -18,7 +18,7 @@ duruyor). Güncel kabul: `betikler/kabul3.mjs`.
 | Kurum değiştirme | Ekip Yönetimi'nde "Kurum ekle", kişinin kurumunu değiştirme ve davette kurum seçimi kalktı. Kurum ve kurum bağı yalnızca ArvoOS'tan gelir (bkz. personel erişimi). |
 | Ana deneyim | Ana Sayfa, Çalışmalarım ve Yeni çalışma herkes için aynı; yalnızca kişinin kendi çalışmaları. Yeni çalışma üç türlü (tez, makale, proje). |
 | Personel erişimi | Kural kodda açık: `lib/erisim-yolu.ts`. Kuruma bağlı her hesap (rol fark etmez) kurum lisansından geçer, bireysel ödemeye hiç sorulmaz. Personel rolü tek başına hak vermez. Bağsız personelin kapalı erişim ekranı nedenini söyler. |
-| Uzmana sor | Talepler şimdilik ArvoLab'da kaydediliyor ve buradan yanıtlanıyor (karar: geçici olarak koru). Personelin kuyruğu "Geçici kuyruk … bağlantı henüz kurulmadı" diyor. Kılavuzdaki "zil simgesiyle haber verilir" cümlesi kaldırıldı: kodda böyle bir bildirim yok. |
+| Uzmana sor | Hedef: talep AkademikMerkez'in ArvoOS Talepler bölümüne ulaşır, yanıt ve durum ArvoLab'a döner (`ENTEGRASYON-PLANI.md`). Bugün talepler hâlâ ArvoLab'da kaydediliyor; bu bir karar değil, bağlantının henüz olmamasının sonucu. Personelin kuyruğu "bu bağlantı henüz kurulmadı" diyor. Kılavuzdaki "zil simgesiyle haber verilir" cümlesi kaldırıldı: kodda böyle bir bildirim yok. |
 
 ## Doçentlik verisi ve bağımlılıklar (silinmedi)
 
@@ -101,7 +101,7 @@ Kurumlar ArvoOS'tan yansıtılmış gibi (`synced_at` dolu); K kurumunun lisans�
 | Personel, açık lisans (controller, Kurum A) | Panel açık |
 | Personel, kapalı lisans (employee, Kurum K) | Erişim kapalı; "Kartla öde" yok; ArvoOS lisans yolu gösteriliyor |
 | Ekip Yönetimi (kurucu) | "Kurum ekle" ve kurum seçimi yok; rol seçimi duruyor; menüde "Ekip araçları" |
-| Uzmana sor | Talep ArvoLab'da kaydediliyor; personelin kuyruğunda geçici notu ve kendi kurumunun talebi |
+| Uzmana sor | Talep ArvoLab'da kaydediliyor (ArvoOS bağlantısı yok); personelin kuyruğunda "bağlantı henüz kurulmadı" notu ve kendi kurumunun talebi |
 | Yeni çalışma, dört hesap türü | Sahibi kendisi, tez, editör açıldı, kişisel listede |
 
 Yeniden koşmak (depo kökünde, yerel yığın, geçit ve `next start -p 3150` açıkken):

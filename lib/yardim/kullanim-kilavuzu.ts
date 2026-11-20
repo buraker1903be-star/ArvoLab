@@ -588,8 +588,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Open your own work with \"New work\" in My works; the editor, sources and checks are the same as for everyone.",
       },
       {
-        tr: "Uzman talepleri şimdilik ArvoLab'ın Destek sayfasındaki \"Kuyruklar\" görünümünde. Bu geçici: talepler ArvoOS'un Talepler bölümüne taşınacak.",
-        en: "Expert requests are, for now, in the \"Queues\" view of ArvoLab's Support page. This is temporary: requests will move to the Requests section in ArvoOS.",
+        tr: "Uzman talepleri bugün ArvoLab'ın Destek sayfasındaki \"Kuyruklar\" görünümünde duruyor. Hedef, talebin ArvoOS'un Talepler bölümüne ulaşması ve yanıtın ArvoLab'a dönmesi; bu bağlantı henüz kurulmadı.",
+        en: "Expert requests are currently in the \"Queues\" view of ArvoLab's Support page. The goal is for requests to reach the Requests section in ArvoOS and for replies to come back to ArvoLab; that link is not set up yet.",
       },
     ],
     roller: STAFF_ROLES,
