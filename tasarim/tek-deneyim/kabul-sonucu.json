@@ -1,0 +1,461 @@
+[
+  {
+    "ad": "kurucu: ana sayfa kişisel, yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "h1": "Günaydın, Deniz",
+      "anaGorulen": [
+        "kurucu"
+      ],
+      "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+    }
+  },
+  {
+    "ad": "kurucu: hesap menüsünde görünüm seçimi yok; Yönetim var",
+    "gecti": true,
+    "ayrinti": {
+      "gorunumVar": false,
+      "yonetimLinki": true
+    }
+  },
+  {
+    "ad": "kurucu: Çalışmalarım yalnızca kendi çalışması, yönetim sayaçları yok",
+    "gecti": true,
+    "ayrinti": {
+      "listeGorulen": [
+        "kurucu"
+      ],
+      "sayacVar": 0
+    }
+  },
+  {
+    "ad": "kurucu: Yeni çalışma (Çalışmalarım düğmesi) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "kurucu: Yeni çalışma (ana sayfa ?yeni=1) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "kurucu: /dashboard/yonetim açılır",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": "Yönetim · genel bakış",
+      "gorulen": [
+        "kurucu",
+        "personel",
+        "kurumlu",
+        "bireysel",
+        "bkurumu"
+      ],
+      "beklenen": null,
+      "onayAraci": null
+    }
+  },
+  {
+    "ad": "kurucu: /dashboard/yonetim/calismalar açılır, yetkinin kapsadığı çalışmalar",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": "Yönetim · çalışmalar",
+      "gorulen": [
+        "kurucu",
+        "personel",
+        "kurumlu",
+        "bireysel",
+        "bkurumu"
+      ],
+      "beklenen": [
+        "kurucu",
+        "personel",
+        "kurumlu",
+        "bireysel",
+        "bkurumu"
+      ],
+      "onayAraci": 1
+    }
+  },
+  {
+    "ad": "kurucu: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "personel: ana sayfa kişisel, yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "h1": "Günaydın, Ece",
+      "anaGorulen": [
+        "personel"
+      ],
+      "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+    }
+  },
+  {
+    "ad": "personel: hesap menüsünde görünüm seçimi yok; Yönetim var",
+    "gecti": true,
+    "ayrinti": {
+      "gorunumVar": false,
+      "yonetimLinki": true
+    }
+  },
+  {
+    "ad": "personel: Çalışmalarım yalnızca kendi çalışması, yönetim sayaçları yok",
+    "gecti": true,
+    "ayrinti": {
+      "listeGorulen": [
+        "personel"
+      ],
+      "sayacVar": 0
+    }
+  },
+  {
+    "ad": "personel: Yeni çalışma (Çalışmalarım düğmesi) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "personel: Yeni çalışma (ana sayfa ?yeni=1) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "personel: /dashboard/yonetim açılır",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": "Yönetim · genel bakış",
+      "gorulen": [
+        "personel",
+        "kurumlu"
+      ],
+      "beklenen": null,
+      "onayAraci": null
+    }
+  },
+  {
+    "ad": "personel: /dashboard/yonetim/calismalar açılır, yetkinin kapsadığı çalışmalar",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": "Yönetim · çalışmalar",
+      "gorulen": [
+        "personel",
+        "kurumlu"
+      ],
+      "beklenen": [
+        "personel",
+        "kurumlu"
+      ],
+      "onayAraci": 1
+    }
+  },
+  {
+    "ad": "personel: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "kurumlu: ana sayfa kişisel, yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "h1": "Günaydın, Arda",
+      "anaGorulen": [
+        "kurumlu"
+      ],
+      "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+    }
+  },
+  {
+    "ad": "kurumlu: hesap menüsünde görünüm seçimi yok; Yönetim yok",
+    "gecti": true,
+    "ayrinti": {
+      "gorunumVar": false,
+      "yonetimLinki": false
+    }
+  },
+  {
+    "ad": "kurumlu: Çalışmalarım yalnızca kendi çalışması, yönetim sayaçları yok",
+    "gecti": true,
+    "ayrinti": {
+      "listeGorulen": [
+        "kurumlu"
+      ],
+      "sayacVar": 0
+    }
+  },
+  {
+    "ad": "kurumlu: Yeni çalışma (Çalışmalarım düğmesi) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "kurumlu: Yeni çalışma (ana sayfa ?yeni=1) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "kurumlu: /dashboard/yonetim kapalı (bulunamadı)",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": ""
+    }
+  },
+  {
+    "ad": "kurumlu: /dashboard/yonetim/calismalar kapalı (bulunamadı)",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": ""
+    }
+  },
+  {
+    "ad": "kurumlu: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "bireysel: ana sayfa kişisel, yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "h1": "Günaydın, Selin",
+      "anaGorulen": [
+        "bireysel"
+      ],
+      "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+    }
+  },
+  {
+    "ad": "bireysel: hesap menüsünde görünüm seçimi yok; Yönetim yok",
+    "gecti": true,
+    "ayrinti": {
+      "gorunumVar": false,
+      "yonetimLinki": false
+    }
+  },
+  {
+    "ad": "bireysel: Çalışmalarım yalnızca kendi çalışması, yönetim sayaçları yok",
+    "gecti": true,
+    "ayrinti": {
+      "listeGorulen": [
+        "bireysel"
+      ],
+      "sayacVar": 0
+    }
+  },
+  {
+    "ad": "bireysel: Yeni çalışma (Çalışmalarım düğmesi) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "bireysel: Yeni çalışma (ana sayfa ?yeni=1) ad+tür+belge dili, iki çıkış, kurum alanı yok",
+    "gecti": true,
+    "ayrinti": {
+      "adlar": [
+        "title",
+        "type",
+        "belgeDili",
+        "citationStyle"
+      ],
+      "turler": 3,
+      "cikislar": [
+        "word",
+        "yaz"
+      ]
+    }
+  },
+  {
+    "ad": "bireysel: /dashboard/yonetim kapalı (bulunamadı)",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": ""
+    }
+  },
+  {
+    "ad": "bireysel: /dashboard/yonetim/calismalar kapalı (bulunamadı)",
+    "gecti": true,
+    "ayrinti": {
+      "durum": 200,
+      "baslik": ""
+    }
+  },
+  {
+    "ad": "bireysel: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "dört erişim türünde aynı ana gezinme ve ana sayfa düzeni",
+    "gecti": true,
+    "ayrinti": {
+      "kurucu": {
+        "gezinme": [
+          "/dashboard",
+          "/dashboard",
+          "/dashboard/editor",
+          "/dashboard/literature",
+          "/dashboard/analysis",
+          "/dashboard/documents",
+          "/dashboard/settings",
+          "/dashboard/expert-requests",
+          "/dashboard/yardim"
+        ],
+        "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+      },
+      "personel": {
+        "gezinme": [
+          "/dashboard",
+          "/dashboard",
+          "/dashboard/editor",
+          "/dashboard/literature",
+          "/dashboard/analysis",
+          "/dashboard/documents",
+          "/dashboard/settings",
+          "/dashboard/expert-requests",
+          "/dashboard/yardim"
+        ],
+        "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+      },
+      "kurumlu": {
+        "gezinme": [
+          "/dashboard",
+          "/dashboard",
+          "/dashboard/editor",
+          "/dashboard/literature",
+          "/dashboard/analysis",
+          "/dashboard/documents",
+          "/dashboard/settings",
+          "/dashboard/expert-requests",
+          "/dashboard/yardim"
+        ],
+        "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+      },
+      "bireysel": {
+        "gezinme": [
+          "/dashboard",
+          "/dashboard",
+          "/dashboard/editor",
+          "/dashboard/literature",
+          "/dashboard/analysis",
+          "/dashboard/documents",
+          "/dashboard/settings",
+          "/dashboard/expert-requests",
+          "/dashboard/yardim"
+        ],
+        "mainSinif": "dashboard-page gb gb-ana-sayfa os5-ana"
+      }
+    }
+  },
+  {
+    "ad": "personel: öğrencinin çalışması Yönetim listesinde seçili açılır (Özet ve teslim, eski adres)",
+    "gecti": true,
+    "ayrinti": {
+      "u1": "/dashboard/yonetim/calismalar?sec=3f390399-dbdb-4fb1-a4ae-ab251ee92d1f",
+      "u2": "/dashboard/yonetim/calismalar?sec=3f390399-dbdb-4fb1-a4ae-ab251ee92d1f"
+    }
+  },
+  {
+    "ad": "personel: kendi çalışması kişisel listede seçili açılır",
+    "gecti": true,
+    "ayrinti": {
+      "u": "/dashboard/editor?sec=f320e50c-492d-4215-875b-e3bad455de1c"
+    }
+  },
+  {
+    "ad": "kurumlu öğrenci: başkasının çalışma kimliğiyle Yönetim'e yönlenmez ve o çalışmayı görmez",
+    "gecti": true,
+    "ayrinti": {
+      "u": "/dashboard/editor?sec=9b066548-280b-4434-b173-4e38b7599d69"
+    }
+  }
+]
