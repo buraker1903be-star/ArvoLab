@@ -244,3 +244,32 @@ describe("içindekiler yalnızca başlık varsa", () => {
     assert.ok(!metin.includes("İÇİNDEKİLER"), metin);
   });
 });
+
+/*
+  KAYNAKÇA BAŞLIKLI BELGEDE İÇİNDEKİLER ÖNDE (20.11.2026, canlı deneme):
+  Kaynakça başlığı ana metnin başı sayılıyordu; başlıksız metinle başlayıp
+  Kaynakça ile biten belgede Word "Ana metin · İÇİNDEKİLER · Kaynakça"
+  sırasıyla çıkıyordu. Arka bölüm (Kaynakça, Ekler…) ana metni başlatmaz.
+*/
+describe("içindekiler ana metnin önünde, arka bölüm olsa da", () => {
+  const paragraf = (metin: string) => ({ type: "paragraph", content: [{ type: "text", text: metin }] });
+  const once = (metin: string, a: string, b: string) => metin.indexOf(a) >= 0 && metin.indexOf(a) < metin.indexOf(b);
+
+  test("[metin, Kaynakça, künye] → İÇİNDEKİLER metinden önce", async () => {
+    const doc = { type: "doc", content: [paragraf("Ana metin burada."), h(1, "Kaynakça"), paragraf("Fisher, E. W. (2023).")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(once(metin, "İÇİNDEKİLER", "Ana metin burada."), metin);
+  });
+
+  test("[Giriş, metin, Kaynakça] değişmedi: İÇİNDEKİLER başta", async () => {
+    const doc = { type: "doc", content: [h(1, "Giriş"), paragraf("Metin."), h(1, "Kaynakça"), paragraf("Künye.")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(once(metin, "İÇİNDEKİLER", "Metin."), metin);
+  });
+
+  test("[Özet, metin, Giriş, metin, Kaynakça] değişmedi: Özet → İÇİNDEKİLER → Giriş", async () => {
+    const doc = { type: "doc", content: [h(1, "Özet"), paragraf("Özet metni."), h(1, "Giriş"), paragraf("Giriş metni."), h(1, "Kaynakça"), paragraf("Künye.")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(once(metin, "Özet metni.", "İÇİNDEKİLER") && once(metin, "İÇİNDEKİLER", "Giriş metni."), metin);
+  });
+});

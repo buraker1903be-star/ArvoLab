@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { hasManualNumber, isUnnumberedHeading, numberHeadings, stripManualNumber } from "@/lib/heading-numbering";
+import test, { describe } from "node:test";
+import { anaMetinBaslangici, hasManualNumber, icindekilerSirasi, isUnnumberedHeading, numberHeadings, stripManualNumber } from "@/lib/heading-numbering";
 
 /*
   Otomatik başlık numaralandırma. Numara metne yazılmıyor, Word ve baskı
@@ -97,4 +97,21 @@ test("'Ek Analizler' ek başlığı değildir; 'Ek 1', 'EK-A', 'Ek A', 'EKLER' �
     numberHeadings([{ level: 1, text: "Giriş" }, { level: 2, text: "Amaç" }, { level: 2, text: "Ek Analizler" }]),
     ["1.", "1.1.", "1.2."],
   );
+});
+
+describe("arka bölüm ana metni başlatmaz (20.11.2026)", () => {
+  const p = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+  const h1 = (text: string) => ({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text }] });
+  test("[metin, Kaynakça] → ana metin 0, içindekiler 0", () => {
+    const doc = { content: [p("Metin"), h1("Kaynakça"), p("Künye")] };
+    assert.equal(anaMetinBaslangici(doc), 0);
+    assert.equal(icindekilerSirasi(doc), 0);
+  });
+  test("[Özet, Kaynakça] → ana metin Kaynakça'da (ön sayfa var, ana bölüm yok)", () => {
+    const doc = { content: [h1("Özet"), p("Özet"), h1("Kaynakça"), p("Künye")] };
+    assert.equal(anaMetinBaslangici(doc), 2);
+  });
+  test("[Giriş, Kaynakça] değişmedi", () => {
+    assert.equal(anaMetinBaslangici({ content: [h1("Giriş"), p("x"), h1("Kaynakça")] }), 0);
+  });
 });

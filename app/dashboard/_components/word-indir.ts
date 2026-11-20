@@ -12,6 +12,26 @@
   Tarayıcıda çalışır (document); sunucuda çağrılmaz.
 */
 import type { Dil, Metin } from "@/lib/dil";
+import { kaydedilmemisTaslakVar } from "@/lib/otomatik-kayit";
+
+const KAYDEDILMEMIS: Metin = {
+  tr: "Bu tarayıcıda çalışmanın kaydedilmemiş değişiklikleri var. Eski sürümü indirmemek için dosya oluşturulmadı: editörü açıp metnin kaydedildiğini görün, sonra tekrar deneyin.",
+  en: "This browser has unsaved changes to the work. To avoid downloading an older version, no file was created: open the editor, make sure the text is saved, then try again.",
+};
+
+/* Sunucu kaydından yeni taslak var mı (lib/otomatik-kayit.ts). localStorage okunamazsa engel yok. */
+function eskiSurumMu(projectId: string, guncellendi: string | null): boolean {
+  try {
+    const kayitlar: { anahtar: string; ham: string | null }[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const anahtar = window.localStorage.key(i);
+      if (anahtar) kayitlar.push({ anahtar, ham: window.localStorage.getItem(anahtar) });
+    }
+    return kaydedilmemisTaslakVar(kayitlar, projectId, guncellendi);
+  } catch {
+    return false;
+  }
+}
 
 const VARSAYILAN_HATA: Metin = {
   tr: "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.",
@@ -30,11 +50,15 @@ export async function wordBlobu(projectId: string, dil: Dil = "tr"): Promise<{ b
     imzalı bağlantıyla dönüyor; küçük dosyalar doğrudan geliyor.
   */
   if (response.headers.get("Content-Type")?.includes("application/json")) {
-    const { downloadUrl, fileName } = (await response.json()) as { downloadUrl: string; fileName?: string };
+    const { downloadUrl, fileName, guncellendi } = (await response.json()) as { downloadUrl: string; fileName?: string; guncellendi?: string | null };
+    if (eskiSurumMu(projectId, guncellendi ?? null)) return { hata: KAYDEDILMEMIS[dil] };
     const dosya = await fetch(downloadUrl);
     if (!dosya.ok) return { hata: VARSAYILAN_HATA[dil] };
     return { blob: await dosya.blob(), ad: fileName ?? "calisma.docx" };
   }
+  /* Kaydedilmemiş taslak varken eski kayıttan üretilen dosya sessizce inmez
+     (20.11.2026; ZIP de bu yoldan geçer). */
+  if (eskiSurumMu(projectId, response.headers.get("X-Belge-Guncellendi"))) return { hata: KAYDEDILMEMIS[dil] };
   const adBasligi = response.headers.get("Content-Disposition") ?? "";
   const eslesme = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(adBasligi);
   return { blob: await response.blob(), ad: eslesme ? decodeURIComponent(eslesme[1]) : "calisma.docx" };

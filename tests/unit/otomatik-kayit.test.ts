@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import {
   AUTOSAVE_DELAY_MS,
   autosaveDelay,
+  kaydedilmemisTaslakVar,
   kayitKarari,
   kayitSonucuKarari,
   kurtarilabilirTaslaklar,
@@ -338,5 +339,36 @@ describe("yazarkenKayitZamani: geri çekilme sürerken bekleyen deneme korunur",
   test("bekleyen deneme yoksa ya da süresi geçtiyse yeni geri çekilme aralığı kurulur", () => {
     assert.deepEqual(yazarkenKayitZamani(20_000, 1000, 2, null, ORTA_R), { gecikme: 20_000, denemeSonu: 40_000 });
     assert.deepEqual(yazarkenKayitZamani(20_000, 1000, 1, 15_000, ORTA_R), { gecikme: 10_000, denemeSonu: 30_000 });
+  });
+});
+
+/*
+  Dışa aktarmadan önce kaydedilmemiş taslak (20.11.2026): Word/ZIP sunucu
+  kaydından üretiliyor; tarayıcıda daha yeni taslak varken eski sürüm
+  sessizce iniyordu.
+*/
+describe("kaydedilmemisTaslakVar", () => {
+  const ham = (writtenAt: string) => JSON.stringify({ content: { type: "doc" }, baseUpdatedAt: null, writtenAt });
+  const P = "11111111-1111-1111-1111-111111111111";
+  test("kayıttan yeni taslak → var", () => {
+    assert.equal(kaydedilmemisTaslakVar([{ anahtar: `arvolab:manuscript-draft:${P}:u1:sekme1`, ham: ham("2026-11-20T10:05:00Z") }], P, "2026-11-20T10:00:00Z"), true);
+  });
+  test("kayıttan eski taslak, başka çalışmanın taslağı, bozuk kayıt → yok", () => {
+    assert.equal(
+      kaydedilmemisTaslakVar(
+        [
+          { anahtar: `arvolab:manuscript-draft:${P}:u1`, ham: ham("2026-11-20T09:00:00Z") },
+          { anahtar: "arvolab:manuscript-draft:22222222-2222-2222-2222-222222222222", ham: ham("2026-11-20T11:00:00Z") },
+          { anahtar: `arvolab:manuscript-draft:${P}`, ham: "{bozuk" },
+          { anahtar: `arvolab:manuscript-draft:${P}9`, ham: ham("2026-11-20T11:00:00Z") },
+        ],
+        P,
+        "2026-11-20T10:00:00Z",
+      ),
+      false,
+    );
+  });
+  test("kayıt zamanı bilinmiyorsa geçerli taslak yeter", () => {
+    assert.equal(kaydedilmemisTaslakVar([{ anahtar: `arvolab:manuscript-draft:${P}`, ham: ham("2026-11-20T09:00:00Z") }], P, null), true);
   });
 });
