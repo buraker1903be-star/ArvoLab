@@ -79,7 +79,14 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   devam: "Belgedeki metni kaldığı yerden, aynı üslupla BİR paragraf olarak sürdür.",
   paragraf: "İmlecin bulunduğu bölüm için kullanıcının isteği doğrultusunda BİR paragraf yaz.",
   akademik: "Seçili metni anlamını değiştirmeden akademik üsluba çevir.",
-  kisalt: "Seçili metni anlamını koruyarak kısalt.",
+  /*
+    20.11.2026: "anlamını koruyarak kısalt" tek başına yetmedi; model
+    olumsuzluğu ("değildir") ya da atıfı düşürüp kısaltabiliyordu. Neyin
+    korunacağı açıkça sayıldı. Örtüşme oranı anlamın kanıtı sayılmıyor;
+    panel somut kayıpları uyarı olarak gösteriyor (kisaltmaUyarilari).
+  */
+  kisalt:
+    "Seçili metni kısalt: yalnızca tekrarları, dolgu ifadelerini ve gereksiz ara sözleri çıkar. Anlamı, iddianın yönünü, olumsuzlukları ('değil', 'yok', 'not'), sınırlamaları, atıfları ve sayıları AYNEN koru; yeni bilgi, yorum ya da sonuç ekleme. Kısaltılmış metin aslından belirgin biçimde kısa olsun (yaklaşık üçte ikisi). Kısaltılamıyorsa 'metin' alanını boş bırak ve 'yanit' alanında nedenini söyle.",
   genislet: "Seçili metni anlamını değiştirmeden, mevcut bilgilerle derinleştirerek genişlet; yeni olgu ekleme.",
   /*
     Ana hat (03.11.2026): başlık iskeleti. Kılavuzun zorunlu bölümleri
@@ -91,10 +98,14 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   /*
     Satır içi tamamlama (03.11.2026, Jenni'nin imza özelliği): editörde
     gri öneri, kabul Tab ile kullanıcının. Kısa tutulur: uzun öneri hem
-    pahalı hem okunmadan kabul edilir.
+    pahalı hem okunmadan kabul edilir. 20.11.2026: "en çok iki cümle"
+    idi; artık imleçteki cümlenin devamı, en çok BİR kısa cümle (istemci
+    de ilk cümle sonunda keser, lib/ai/yazim-metni.ts). Bulgu ve sonuç
+    ilanı yasağı açıkça yazıldı: sayı ve atıf yapısal olarak denetleniyor
+    ama "bulgular gösterdi" sayısız da kurulabiliyor.
   */
   tamamla:
-    "İmleçten önceki metni kaldığı yerden sürdür: cümle yarımsa önce onu tamamla, toplamda EN ÇOK iki cümle yaz. 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Bağlam yeterli değilse 'metin' alanını boş bırak.",
+    "İmleçten önceki metni kaldığı yerden sürdür: yalnızca imlecin bulunduğu cümleyi tamamla ya da, cümle bitmişse, onu izleyen EN ÇOK BİR kısa cümle yaz (yaklaşık 20 sözcük). 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Metinde geçmeyen sayı, bulgu, sonuç ya da istatistik iddiası ('bulgular gösterdi', 'anlamlı fark bulundu') ve atıf ekleme. Bağlam yeterli değilse 'metin' alanını boş bırak.",
 };
 
 export const YAZIM_ISTEMI = `Sen ArvoLab'ın akademik yazım asistanısın. Türkiye'deki üniversitelerde tez ve makale yazan öğrencilere yazarken yardım ediyorsun.

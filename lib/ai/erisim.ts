@@ -19,7 +19,7 @@ import { loadCurrentProfile } from "@/lib/current-profile";
 import { denemeHakki, type DenemeHakki } from "./deneme-hakki";
 import { aiKurulumSorunu } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
-import { SAATLIK_HAK } from "./sinirlar";
+import { SAATLIK_HAK, TAMAMLAMA_EN_AZ_ARALIK_SN } from "./sinirlar";
 
 export { SAATLIK_HAK };
 
@@ -109,6 +109,41 @@ export async function asistanHakkiVar(kullaniciId: string, dil: Dil = "tr"): Pro
   return dil === "en"
     ? `You've reached your hourly assistant limit (${SAATLIK_HAK}). Try again a little later.`
     : `Saatlik asistan hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.`;
+}
+
+/**
+ * Saatlik hak dolduğunda hakkın yeniden açılmasına kalan süre (saniye,
+ * yaklaşık). Sayaç penceresi ilk istekten itibaren bir saattir
+ * (rate_limit_hit). Okunamazsa null: arayüz süre yazmaz ama yine
+ * "duraklatıldı" der — sessizce bozuk görünmez.
+ */
+export async function asistanHakkiAcilisiSn(kullaniciId: string): Promise<number | null> {
+  const admin = adminIstemcisiVarsa();
+  if (!admin) return null;
+  const { data, error } = await admin.from("auth_rate_limits").select("window_start").eq("key", `ai-asistan:${kullaniciId}`).maybeSingle();
+  if (error || !data?.window_start) return null;
+  const gecen = (Date.now() - new Date(String(data.window_start)).getTime()) / 1000;
+  return Math.max(0, Math.round(3_600 - gecen));
+}
+
+/**
+ * Satır içi tamamlamanın sunucudaki en az aralığı (lib/ai/sinirlar.ts →
+ * TAMAMLAMA_EN_AZ_ARALIK_SN). Sayaç kurulamıyorsa ya da okunamıyorsa
+ * geçer: geçici arıza kullanıcıyı dışarıda bırakmaz (asistanHakkiVar ile aynı).
+ */
+export async function tamamlamaAraligiUygun(kullaniciId: string): Promise<boolean> {
+  const admin = adminIstemcisiVarsa();
+  if (!admin) return true;
+  const { data, error } = await admin.rpc("rate_limit_hit", {
+    p_key: `ai-tamamla:${kullaniciId}`,
+    p_limit: 1,
+    p_window: `${TAMAMLAMA_EN_AZ_ARALIK_SN} seconds`,
+  });
+  if (error) {
+    console.error("[ai] tamamlama aralığı okunamadı:", error.message);
+    return true;
+  }
+  return data !== false;
 }
 
 /**
