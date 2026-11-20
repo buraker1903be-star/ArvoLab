@@ -141,7 +141,8 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * (toplu kaynak ekleme; DOI ayrıca Crossref'e gider), lookupDoi (tek DOI'nin
  * Crossref sorgusu; 12.11.2026'ya kadar kapısızdı, artık saatlik hakla da sınırlı:
  * lib/doi-sorgu-siniri.ts), literaturAramasiYap ve aramaKaydiniEkle (OpenAlex/
- * Crossref literatür araması ve sonucu kütüphaneye ekleme), addManuscriptComment,
+ * Crossref literatür araması ve sonucu kütüphaneye ekleme), okumayaAl (Makale
+ * bul: sonucu kütüphaneye ekleyip PDF'ini dış arşivden indirir), addManuscriptComment,
  * createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
  * kılavuz yüklemesi; PDF/OCR çözümlemesi), tasEkle ve taslakTakvimOlustur (tez takvimi;
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
