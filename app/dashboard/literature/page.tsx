@@ -19,6 +19,7 @@ import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslMi } from "@/lib/atif/csl-kimlik";
 import type { CitationStyle } from "@/lib/citation-format";
+import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -88,8 +89,9 @@ export default async function KaynaklarPage({
   const bagsiz = tumKaynaklar.filter((k) => !k.project_id).length;
   const oncekiDenetimler = calisma ? denetimler.filter((d) => d.project_id === calisma.id) : [];
 
-  const skor = sonDenetim ? sonDenetim.complianceScore : null;
-  const ton = skor == null ? "neutral" : skor >= 85 ? "success" : skor >= 60 ? "warning" : "danger";
+  /* "uyum /100" yerine kapsam ve açık sorun (lib/kaynakca-ozeti.ts, 20.11.2026). */
+  const ozet = sonDenetim ? kaynakcaOzeti(sonDenetim) : null;
+  const ton = ozet ? ozet.ton : "neutral";
   /* Son denetimin bulguları: her biri ayrı satır, tek bir "doğrulandı" yok. */
   const bulgular = sonDenetim
     ? [
@@ -193,17 +195,22 @@ export default async function KaynaklarPage({
               </div>
               <KaynakcaPenceresi
                 calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
-                sonDenetim={sonDenetim ? { skor, tarih: sonDenetim.tarih } : null}
+                sonDenetim={sonDenetim ? { acikSorun: ozet?.acikSorun ?? null, tarih: sonDenetim.tarih } : null}
                 triggerLabel={sonDenetim ? t({ tr: "Sonuçları aç", en: "Open results" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}
                 triggerClassName="projects-primary-button button-compact"
               />
             </header>
             {sonDenetim ? (
               <>
-                {/* Puan çalışmanın kendi atıf stiline göre; stil adı yazılmıyor. */}
+                {/* Açık sorun ve kapsam; genel uygunluk onayı verilmez. */}
                 <div className="kaynakca-puan" data-tone={ton}>
-                  <b>{skor}</b>
-                  <span>{t({ tr: "/100 kaynakça uyumu", en: "/100 reference list compliance" })}</span>
+                  <b>{ozet?.acikSorun ?? 0}</b>
+                  <span>
+                    {t({
+                      tr: `açık sorun · ${ozet?.kunye ?? 0} künye denetlendi (biçim, atıf eşleşmesi, dizin)`,
+                      en: `open ${ozet?.acikSorun === 1 ? "issue" : "issues"} · ${ozet?.kunye ?? 0} references checked (format, citation matching, index)`,
+                    })}
+                  </span>
                 </div>
                 <ul className="gb-liste">
                   {bulgular.map((b) => (
@@ -226,7 +233,6 @@ export default async function KaynaklarPage({
                           <span className="gb-satir-govde">
                             <b>{tarih(d.created_at)}</b>
                           </span>
-                          <span className="gb-zaman">{d.compliance_score ?? "—"}/100</span>
                         </li>
                       ))}
                     </ul>

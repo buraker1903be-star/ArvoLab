@@ -31,6 +31,7 @@ import { stilAdi, type AtifTuru } from "@/lib/atif/stiller";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
+import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 
 interface Project {
   id: string;
@@ -193,6 +194,8 @@ export default function CitationCheckForm({
     }
   }
   const [result, setResult] = useState<CheckResult | null>(oncekiSonuc);
+  /* Kapsam ve açık sorunlar: "uyum /100" yerine (lib/kaynakca-ozeti.ts). */
+  const ozet = result ? kaynakcaOzeti(result) : null;
   /* Gösterilen sonuç kayıtlı denetimden mi geliyor? Yeni çalıştırmada düşer. */
   const [kayitliTarih, setKayitliTarih] = useState<string | null>(oncekiSonuc?.tarih ?? null);
   /*
@@ -496,25 +499,43 @@ export default function CitationCheckForm({
         <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>
       )}
 
-      {result && (
+      {result && ozet && (
         <div className="results-divider">
           {/*
-            PUAN BAŞTA, BÜYÜK (04.11.2026). Eskiden puan ve üç sayı aynı
-            boyda dört çipti: öğrencinin ilk aradığı "kaç aldım" sorusu
-            "0 olası eşleşme" ile yan yana, aynı ağırlıkta duruyordu.
-            Eşikler Çalışmalarım'daki kartla aynı (85 / 60).
+            AÇIK SORUN BAŞTA (20.11.2026). 04.11.2026'dan beri burada büyük
+            bir "uyum /100" puanı vardı; puan biçim uyarılarını saymadığı için
+            uyarı varken 100 görünüyordu ve bir genel uygunluk onayı gibi
+            okunuyordu. Artık neyin kontrol edildiği ve kaç açık sorun kaldığı
+            yazıyor (lib/kaynakca-ozeti.ts).
           */}
-          <div className="kaynakca-skor" data-tone={result.complianceScore >= 85 ? "success" : result.complianceScore >= 60 ? "warning" : "danger"}>
+          <div className="kaynakca-skor" data-tone={ozet.ton}>
             <div className="kaynakca-skor-puan">
-              <b>{result.complianceScore}</b>
+              <b>{ozet.acikSorun}</b>
               <span>
-                <small>/100</small>
-                <small>{t({ tr: `${result.stil.ad} uyumu`, en: `${result.stil.ad} compliance` })}</small>
+                <small>{t({ tr: "açık sorun", en: ozet.acikSorun === 1 ? "open issue" : "open issues" })}</small>
+                <small>
+                  {t({
+                    tr: `${ozet.kunye} künye · biçim (${result.stil.ad}), metin içi atıf eşleşmesi${ozet.dizindeBakilan != null ? `, dizin doğrulaması (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
+                    en: `${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"} · format (${result.stil.ad}), in-text citation matching${ozet.dizindeBakilan != null ? `, index verification (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
+                  })}
+                </small>
               </span>
             </div>
+            <ul className="kaynakca-acik-sorunlar">
+              {ozet.bicimHatali ? <li>{t({ tr: `Biçim hatası olan künye: ${ozet.bicimHatali}`, en: `References with format errors: ${ozet.bicimHatali}` })}</li> : null}
+              {ozet.bicimUyarili ? <li>{t({ tr: `Biçim uyarısı olan künye: ${ozet.bicimUyarili}`, en: `References with format warnings: ${ozet.bicimUyarili}` })}</li> : null}
+              {ozet.karsiliksizAtif ? <li>{t({ tr: `Kaynakçada karşılığı olmayan atıf: ${ozet.karsiliksizAtif}`, en: `Citations missing from the list: ${ozet.karsiliksizAtif}` })}</li> : null}
+              {ozet.atifsizKaynak ? <li>{t({ tr: `Metinde atfı olmayan kaynak: ${ozet.atifsizKaynak}`, en: `Sources not cited in the text: ${ozet.atifsizKaynak}` })}</li> : null}
+              <li className="kaynakca-kapsam-notu">
+                {t({
+                  tr: "Bu, denetlenen alanların özetidir; kılavuzunuzun bütün kurallarına uygunluk onayı değildir.",
+                  en: "This summarises the checked areas; it doesn't certify compliance with every rule of your guideline.",
+                })}
+              </li>
+            </ul>
             <dl className="kaynakca-skor-sayilar">
               <div data-tone="success">
-                <dt>{t({ tr: "Doğrulandı", en: "Verified" })}</dt>
+                <dt>{t({ tr: "Dizinde bulundu", en: "Found in index" })}</dt>
                 <dd>{result.verificationSummary.verified}</dd>
               </div>
               <div data-tone="warning">

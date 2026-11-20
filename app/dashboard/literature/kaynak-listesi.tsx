@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, Search } from "lucide-react";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar } from "@/lib/citation-format";
+import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
@@ -125,9 +126,10 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
             return (
               <li key={k.id} className="gb-satir kaynak-satiri">
                 <span className="gb-satir-govde">
-                  <b>{k.title}</b>
+                  <b>{htmlVarliklariniCoz(k.title)}</b>
                   <small>
-                    {[k.authors || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year, k.container_title].filter(Boolean).join(" · ")}
+                    {/* Eski kayıtlarda "&amp;" kalmış olabilir; ekranda çözülür (lib/html-varlik.ts). */}
+                    {[htmlVarliklariniCoz(k.authors) || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year, htmlVarliklariniCoz(k.container_title)].filter(Boolean).join(" · ")}
                     {adres ? (
                       <>
                         {" · "}

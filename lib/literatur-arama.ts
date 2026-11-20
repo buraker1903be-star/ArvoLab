@@ -14,13 +14,24 @@
   mantığı ağ olmadan sınanabiliyor. Testi tests/unit/literatur-arama.test.ts.
 */
 
+import { formatAuthors } from "./doi";
+import { htmlVarliklariniCoz } from "./html-varlik";
+
 export type AramaSaglayici = "openalex" | "crossref";
 
 export interface AramaKaydi {
   /** Tekilleştirme anahtarı: DOI varsa o, yoksa adres. */
   kimlik: string;
   baslik: string;
+  /** Ekranda gösterilen adlar ("Ad Soyad"). Künyeye bu dizi YAZILMAZ. */
   yazarlar: string[];
+  /**
+   * Künyeye yazılacak yazar dizesi ("Soyad, A. B., & Soyad, C."), yalnızca
+   * sağlayıcı adı given/family olarak ayrı verdiyse. OpenAlex yalnızca
+   * "display_name" veriyor; orada null: soyadı "son sözcük" diye tahmin
+   * etmek "van der Berg", "Ortega y Gasset" ya da kurum adlarını bozar.
+   */
+  kunyeYazarlari: string | null;
   yil: number | null;
   /** literature_sources.source_type karşılığı */
   tur: string;
@@ -107,12 +118,13 @@ export function openAlexKayitlari(govde: unknown): AramaKaydi[] {
   return sonuclar.flatMap((ham) => {
     if (!ham || typeof ham !== "object") return [];
     const kayit = ham as Record<string, unknown>;
-    const baslik = typeof kayit.title === "string" ? kayit.title.trim() : "";
+    const baslik = typeof kayit.title === "string" ? htmlVarliklariniCoz(kayit.title) : "";
     if (!baslik) return [];
     const yazarlar = Array.isArray(kayit.authorships)
       ? kayit.authorships.flatMap((katki) => {
           const ad = (katki as { author?: { display_name?: unknown } })?.author?.display_name;
-          return typeof ad === "string" && ad.trim() ? [ad.trim()] : [];
+          const temiz = typeof ad === "string" ? htmlVarliklariniCoz(ad) : "";
+          return temiz ? [temiz] : [];
         })
       : [];
     const konum = (kayit.primary_location ?? null) as
@@ -131,8 +143,9 @@ export function openAlexKayitlari(govde: unknown): AramaKaydi[] {
         baslik,
         yazarlar,
         yil: yilSinirla(typeof kayit.publication_year === "number" ? kayit.publication_year : null),
+        kunyeYazarlari: null,
         tur: turEslestir(kayit.type),
-        dergi: typeof konum?.source?.display_name === "string" ? konum.source.display_name : null,
+        dergi: typeof konum?.source?.display_name === "string" ? htmlVarliklariniCoz(konum.source.display_name) || null : null,
         doi,
         url,
         atifSayisi: typeof kayit.cited_by_count === "number" ? kayit.cited_by_count : null,
@@ -180,23 +193,30 @@ export function crossrefKayitlari(govde: unknown): AramaKaydi[] {
   return ogeler.flatMap((ham) => {
     if (!ham || typeof ham !== "object") return [];
     const kayit = ham as Record<string, unknown>;
-    const baslik = Array.isArray(kayit.title) && typeof kayit.title[0] === "string" ? kayit.title[0].trim() : "";
+    const baslik = Array.isArray(kayit.title) && typeof kayit.title[0] === "string" ? htmlVarliklariniCoz(kayit.title[0]) : "";
     if (!baslik) return [];
-    const yazarlar = Array.isArray(kayit.author)
+    /*
+      YAPILANDIRILMIŞ AD KORUNUR (20.11.2026). Eskiden given + family
+      "Edward W. Fisher" diye birleştiriliyor, kaydedilirken ", " ile
+      dizilerek "Edward W. Fisher, Jane Other" oluyordu. Atıf bunu tek
+      yazar sanıp "(Edward W. Fisher, 2023)" yazıyordu. Künye dizesi artık
+      DOI yolundaki biçimle aynı (formatAuthors: "Fisher, E. W., & Other, J.").
+    */
+    const kisiler = Array.isArray(kayit.author)
       ? kayit.author.flatMap((yazar) => {
-          const deger = (yazar ?? {}) as Record<string, unknown>;
-          /*
-            Kurumsal yazarı Crossref {"name": "..."} olarak veriyor;
-            given/family yok. Yalnızca ikisine bakmak WHO, OECD, TÜİK gibi
-            kaynakları "Yazar bilgisi yok" yapıyor ve kullanıcının
-            kaynakçasına yazarsız kaydediyordu.
-          */
-          const ad =
-            [deger.given, deger.family].filter((parca) => typeof parca === "string").join(" ").trim()
-            || (typeof deger.name === "string" ? deger.name.trim() : "");
-          return ad ? [ad] : [];
+          const d = (yazar ?? {}) as Record<string, unknown>;
+          const parca = (v: unknown) => (typeof v === "string" ? htmlVarliklariniCoz(v) || undefined : undefined);
+          const kisi = { given: parca(d.given), family: parca(d.family), name: parca(d.name) };
+          return kisi.given || kisi.family || kisi.name ? [kisi] : [];
         })
       : [];
+    /*
+      Kurumsal yazarı Crossref {"name": "..."} olarak veriyor; given/family
+      yok. Yalnızca ikisine bakmak WHO, OECD, TÜİK gibi kaynakları "Yazar
+      bilgisi yok" yapıyor ve kullanıcının kaynakçasına yazarsız
+      kaydediyordu. Ekranda gösterilen ad "Ad Soyad" (künyeye bu YAZILMAZ).
+    */
+    const yazarlar = kisiler.map((k) => [k.given, k.family].filter(Boolean).join(" ") || k.name || "").filter(Boolean);
     const doi = doiDuzelt(kayit.DOI);
     const url = (doi && `https://doi.org/${doi}`) || (typeof kayit.URL === "string" ? kayit.URL : "");
     if (!url) return [];
@@ -205,11 +225,12 @@ export function crossrefKayitlari(govde: unknown): AramaKaydi[] {
         kimlik: doi ?? url,
         baslik,
         yazarlar,
+        kunyeYazarlari: formatAuthors(kisiler),
         yil: crossrefYil(kayit.issued) ?? crossrefYil(kayit["published-print"]) ?? crossrefYil(kayit["published-online"]),
         tur: turEslestir(kayit.type),
         dergi:
           Array.isArray(kayit["container-title"]) && typeof kayit["container-title"][0] === "string"
-            ? kayit["container-title"][0]
+            ? htmlVarliklariniCoz(kayit["container-title"][0]) || null
             : null,
         doi,
         url,
@@ -288,6 +309,8 @@ export function kayitlariBirlestir(listeler: AramaKaydi[][], sinir = EN_FAZLA_SO
         onceki.acikErisimUrl = kayit.acikErisimUrl;
       }
       if (onceki.yazarlar.length === 0) onceki.yazarlar = kayit.yazarlar;
+      // Yapılandırılmış ad yalnızca Crossref'te var; OpenAlex kopyası önce geldiyse oradan alınır.
+      onceki.kunyeYazarlari = onceki.kunyeYazarlari ?? kayit.kunyeYazarlari;
       /*
         YIL UZLAŞTIRILIYOR. Eskiden birleştirmede yıla hiç dokunulmuyordu
         ve hangi kopya önce geldiyse onun yılı kalıyordu. Crossref'in
