@@ -54,7 +54,8 @@ await kok.getByRole("button", { name: /^Ara$/ }).click();
 await kok.locator(".bulgu-satiri, .asistan-uyari").first().waitFor({ timeout: 90000 }).catch(() => {});
 if (!(await kok.locator(".bulgu-satiri").count())) await engel("arama (Crossref/OpenAlex)", (await kok.locator(".asistan-uyari").allTextContents()).join(" | ") || "sonuç yok");
 await s.waitForTimeout(1500);
-const satir = kok.locator(".bulgu-satiri", { hasText: /Efficiency Comparison of Document Preparation/i }).first();
+// Aynı başlıklı bir "Correction:" kaydı da çıkıyor (ayrı DOI); ilk denemede o seçilmişti.
+const satir = kok.locator(".bulgu-satiri", { hasText: /Efficiency Comparison of Document Preparation/i }).filter({ hasNotText: /Correction/i }).first();
 kayit("1. makale arama sonucunda bulundu", (await satir.count()) === 1, { satirSayisi: await kok.locator(".bulgu-satiri").count() });
 if (!(await satir.count())) await engel("arama sonucu", "makale ilk sayfada yok");
 kayit("arama sonucu için PDF kendiliğinden indirilmedi", psql(`select count(*) from public.kaynak_pdfleri where project_id='${PR}'`) === "0");
@@ -68,7 +69,8 @@ const durum = await satir.getAttribute("data-pdf-durumu").catch(() => null) ?? (
 if (!acildi) {
   const pdfSatiri = psql(`select coalesce(durum,'') || ' ' || coalesce(kaynak_adres,'') from public.kaynak_pdfleri where project_id='${PR}' limit 1`);
   await s.screenshot({ path: `${OUT}2-acilmadi.png` });
-  await engel("PDF indirme", { durum, pdfSatiri, uyari: (await satir.innerText()).slice(0, 300) });
+  // Konteynerde dış DNS yoksa SSRF koruması (lib/guvenli-indir.ts) adresi genel IP'ye çözemez ve indirmeyi reddeder.
+  await engel("PDF indirme", { durum, pdfSatiri, uyari: (await satir.innerText()).slice(0, 300), ipucu: "sunucu günlüğünde 'Adres genel ağa çözümlenemedi' varsa ortamda DNS yok" });
 }
 const pdf = psql(`select id || '|' || durum || '|' || coalesce(kaynak_id::text,'') || '|' || coalesce(depo_yolu,'') || '|' || coalesce(kaynak_adres,'') from public.kaynak_pdfleri where project_id='${PR}'`).split("|");
 const kaynak = psql(`select id || '|' || status from public.literature_sources where project_id='${PR}' and doi_or_url ilike '%${DOI}%'`).split("|");
