@@ -959,6 +959,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Eksik künye: sarı ve önünde uyarı işareti; gri metin arasında gözden kaçıyordu */
 .kaynak-eksik { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-weight: 550; }
 .kaynak-eksik::before { content: "⚠ "; }
+/* Eski kaynak düzeltme önerisi (20.11.2026): alan alan "şimdiki / dizindeki"; uygulama öğrencinin işaretiyle. */
+.kaynak-duzeltme { display: grid; gap: 6px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.kaynak-duzeltme-tablo { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.kaynak-duzeltme-tablo th, .kaynak-duzeltme-tablo td { padding: 4px 6px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.kaynak-duzeltme-tablo thead th { color: var(--muted); font-weight: 600; }
+.kaynak-duzeltme-eski { color: var(--muted); }
+.kaynak-duzeltme-yeni { color: var(--ink); font-weight: 550; }
 .kaynak-satiri-eylem { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .kaynak-onizleme li { display: grid; gap: 2px; }
 .kaynak-disa-aktar { display: grid; gap: 12px; }
