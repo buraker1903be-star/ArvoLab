@@ -294,3 +294,36 @@ export function sonrakiTeklif<T>(sira: T[]): T[] {
 export function teklifiYokSay<T>(sira: T[]): T[] {
   return sira.slice(1);
 }
+
+/*
+  DIŞA AKTARMADAN ÖNCE KAYDEDİLMEMİŞ TASLAK (20.11.2026). Word ve teslim
+  paketi (ZIP) sunucudaki son KAYITTAN üretiliyor. Bu tarayıcıda o kayıttan
+  daha yeni bir taslak varsa (kayıt başarısız oldu, sekme kapandı) indirilen
+  dosya eski sürüm olur ve bunu kimse söylemiyordu. Bu işlev o durumu bulur;
+  çağıran indirmeyi yapmaz ve kullanıcıyı editöre yönlendirir.
+
+  Kullanıcı kimliğine bakılmaz (dışa aktaran kendi tarayıcısında): bu
+  çalışmanın herhangi bir taslağı, kayıttan yeniyse yeter. Yanlış bir
+  "kaydedilmemiş değişiklik var" uyarısı yalnızca bekletir; kaçırılan bir
+  taslak eski sürümü teslim ettirir.
+*/
+export function kaydedilmemisTaslakVar(
+  kayitlar: { anahtar: string; ham: string | null }[],
+  projectId: string,
+  sunucuGuncelleme: string | null,
+): boolean {
+  const kayitZamani = Date.parse(sunucuGuncelleme ?? "");
+  const kok = `${ONEK}${projectId}`;
+  return kayitlar.some(({ anahtar, ham }) => {
+    if (!ham || (anahtar !== kok && !anahtar.startsWith(`${kok}:`))) return false;
+    try {
+      const taslak = JSON.parse(ham) as { writtenAt?: string; content?: unknown };
+      const yazildi = Date.parse(taslak?.writtenAt ?? "");
+      if (taslak?.content == null || !Number.isFinite(yazildi)) return false;
+      // Kayıt zamanı bilinmiyorsa taslağın kendisi yeterli kanıt.
+      return !Number.isFinite(kayitZamani) || yazildi > kayitZamani;
+    } catch {
+      return false;
+    }
+  });
+}

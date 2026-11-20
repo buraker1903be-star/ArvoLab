@@ -231,10 +231,21 @@ export function onSayfaBasligiMi(text: string): boolean {
  */
 export function anaMetinBaslangici(doc: { content?: JsonNode[] } | null | undefined): number {
   const dugumler = doc?.content ?? [];
-  for (const [sira, dugum] of dugumler.entries()) {
-    if (dugum.type === "heading" && (Number(dugum.attrs?.level) || 1) === 1 && !onSayfaBasligiMi(jsonText(dugum))) return sira;
-  }
-  return dugumler.some((d) => d.type === "heading" && (Number(d.attrs?.level) || 1) === 1) ? dugumler.length : 0;
+  const h1 = (d: JsonNode) => d.type === "heading" && (Number(d.attrs?.level) || 1) === 1;
+  const arka = (d: JsonNode) => ARKA_BOLUMLER.has(normalizeHeading(jsonText(d)));
+  /*
+    ARKA BÖLÜM ANA METNİ BAŞLATMAZ (20.11.2026). Eskiden Kaynakça da "ön
+    sayfa olmayan ilk H1" sayılıyordu: başlıksız metinle başlayıp Kaynakça
+    ile biten belgede ana metin Kaynakça'da başlıyor, önündeki bütün metin
+    ön sayfa sayılıyor ve Word İçindekiler'i ana metnin ARKASINA basıyordu.
+  */
+  const ana = dugumler.findIndex((d) => h1(d) && !onSayfaBasligiMi(jsonText(d)) && !arka(d));
+  if (ana >= 0) return ana;
+  const onSayfa = dugumler.findIndex((d) => h1(d) && onSayfaBasligiMi(jsonText(d)));
+  if (onSayfa < 0) return 0; // ön sayfa başlığı yok: hepsi ana metin (arka bölümler dahil)
+  // Ön sayfa var ama ana bölüm yok: ana metin ön sayfalardan sonraki ilk arka bölümde ya da hiç.
+  const arkaSira = dugumler.findIndex((d, i) => i > onSayfa && h1(d) && arka(d));
+  return arkaSira >= 0 ? arkaSira : dugumler.length;
 }
 
 /** Küçük Romen rakamı (i, ii, iii …); ön sayfa numarası. */
