@@ -614,7 +614,22 @@ export async function buildDocxFromTiptap({
     icindekilerSirasi). Eskiden hep kapağın hemen ardındaydı.
   */
   const icindekilerOgeleri: (Paragraph | TableOfContents)[] = [];
-  if (includeToc) {
+  /* Ön sayfaların arasına yerleşince ilk başlık yeni sayfadan başlayacak şekilde yeniden yazılıyor (icindekileriKoy); hangi başlık olduğu burada tutulur. */
+  let ilkBaslikMetni: string | null = null;
+  /*
+    BAŞLIKSIZ BELGEDE İÇİNDEKİLER YOK (20.11.2026, canlı deneme). Eskiden
+    "İçindekiler" açıkken başlığı olmayan belgede de "İÇİNDEKİLER" başlığı,
+    boş bir alan ve sayfa sonu yazılıyordu: Word çıktısının ilk sayfası boş
+    bir içindekiler sayfasıydı. Yazdırma/PDF yolu (print-sheet.ts →
+    manuscript-sheet.tsx) satır yoksa zaten çizmiyordu; Word de aynı karara
+    uyar. Tablo ve şekil listeleri kendi koşuluyla (başlık değil, alt yazı)
+    yazılmaya devam eder.
+  */
+  const tocSatirlari = includeToc
+    ? icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], headingNumbering, textDefaults.unnumberedSections)
+    : [];
+  if (includeToc && tocSatirlari.length) {
+    ilkBaslikMetni = en ? "TABLE OF CONTENTS" : "İÇİNDEKİLER";
     icindekilerOgeleri.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -632,29 +647,29 @@ export async function buildDocxFromTiptap({
       new TableOfContents(en ? "Table of Contents" : "İçindekiler", {
         hyperlink: true,
         headingStyleRange: "1-3",
-        cachedEntries: icindekilerSatirlari(
-          doc as Parameters<typeof icindekilerSatirlari>[0],
-          headingNumbering,
-          textDefaults.unnumberedSections,
-        ).map((s) => ({
+        cachedEntries: tocSatirlari.map((s) => ({
           title: s.numara ? `${s.numara} ${s.text}` : s.text,
           level: s.level,
         })),
       }),
       sayfaSonu()
     );
+  }
+  if (includeToc) {
     // Türk tez kılavuzlarındaki sıra: Tablolar Listesi, ardından Şekiller Listesi (varsa).
     const kinds = captionKinds(doc.content ?? []);
     for (const kind of ["table", "figure"] as CaptionKind[]) {
       if (!kinds.has(kind)) continue;
       const label = captionLabel(kind, dil);
+      const listeBasligi = en ? (kind === "table" ? "LIST OF TABLES" : "LIST OF FIGURES") : kind === "table" ? "TABLOLAR LİSTESİ" : "ŞEKİLLER LİSTESİ";
+      ilkBaslikMetni ??= listeBasligi;
       icindekilerOgeleri.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 240 },
           children: [
             new TextRun({
-              text: en ? (kind === "table" ? "LIST OF TABLES" : "LIST OF FIGURES") : kind === "table" ? "TABLOLAR LİSTESİ" : "ŞEKİLLER LİSTESİ",
+              text: listeBasligi,
               bold: true,
             }),
           ],
@@ -681,12 +696,13 @@ export async function buildDocxFromTiptap({
     if (!icindekilerOgeleri.length) return;
     /* Ön sayfaların arasındaysa kendi sayfasından başlar ve sonundaki sayfa sonu
        düşer: ardından gelen ön sayfa başlığı zaten yeni sayfadan başlıyor. */
-    if (bodyElements.length > kapakSon) {
+    if (bodyElements.length > kapakSon && ilkBaslikMetni) {
+      /* İçindekiler yoksa (başlıksız belge) ilk öğe tablo/şekil listesinin başlığıdır; onu "İÇİNDEKİLER" diye yeniden yazmamak için metin saklanıyor. */
       icindekilerOgeleri[0] = new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
         pageBreakBefore: true,
-        children: [new TextRun({ text: en ? "TABLE OF CONTENTS" : "İÇİNDEKİLER", bold: true })],
+        children: [new TextRun({ text: ilkBaslikMetni, bold: true })],
       });
       while (icindekilerOgeleri.length && sayfaSonlari.has(icindekilerOgeleri[icindekilerOgeleri.length - 1])) icindekilerOgeleri.pop();
     }

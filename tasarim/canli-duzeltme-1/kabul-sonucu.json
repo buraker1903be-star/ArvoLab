@@ -1,0 +1,135 @@
+[
+  {
+    "ad": "1440px: İncele kapalıyken araç çubuğunun sağ ucunda görünür düğme; kâğıtla çakışmıyor, çubuk taşmıyor, erişilebilir ad",
+    "gecti": true,
+    "ayrinti": {
+      "ilkGorunur": true,
+      "aracta": true,
+      "dk": {
+        "x": 1341.546875,
+        "y": 79.08385467529297,
+        "width": 73.453125,
+        "height": 31.99999237060547
+      },
+      "kagit": {
+        "x": 350,
+        "y": 132.81997680664062,
+        "width": 980,
+        "height": 541.9999694824219
+      },
+      "tasma": 0,
+      "ad": "İncele panelini aç"
+    }
+  },
+  {
+    "ad": "1440px: aç → kapat → tekrar aç (fare ve Enter); odak panele ve geri düğmeye taşınıyor; tercih yenilemede korunuyor",
+    "gecti": true,
+    "ayrinti": {
+      "acildi": true,
+      "dugmeGitti": true,
+      "odak1": "BUTTON.yazim-ikon|İnceleme panelini kapat",
+      "kapandi": true,
+      "dugmeGeldi": true,
+      "odak2": "BUTTON.inceleme-ac-dugme|İncele panelini aç",
+      "klavyeyleAcildi": true,
+      "yenilemedeAcik": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "1280px: İncele kapalıyken araç çubuğunun sağ ucunda görünür düğme; kâğıtla çakışmıyor, çubuk taşmıyor, erişilebilir ad",
+    "gecti": true,
+    "ayrinti": {
+      "ilkGorunur": true,
+      "aracta": true,
+      "dk": {
+        "x": 1182.546875,
+        "y": 80.497802734375,
+        "width": 73.453125,
+        "height": 32
+      },
+      "kagit": {
+        "x": 270,
+        "y": 134.08889770507812,
+        "width": 980,
+        "height": 542.0000305175781
+      },
+      "tasma": 0,
+      "ad": "İncele panelini aç"
+    }
+  },
+  {
+    "ad": "1280px: aç → kapat → tekrar aç (fare ve Enter); odak panele ve geri düğmeye taşınıyor; tercih yenilemede korunuyor",
+    "gecti": true,
+    "ayrinti": {
+      "acildi": true,
+      "dugmeGitti": true,
+      "odak1": "BUTTON.yazim-ikon|İnceleme panelini kapat",
+      "kapandi": true,
+      "dugmeGeldi": true,
+      "odak2": "BUTTON.inceleme-ac-dugme|İncele panelini aç",
+      "klavyeyleAcildi": true,
+      "yenilemedeAcik": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "yazarken belge alanında odak halkası yok (outline none, gölge yok)",
+    "gecti": true,
+    "ayrinti": {
+      "odakta": true,
+      "outline": "none",
+      "outlineGenislik": "3px",
+      "golge": "none",
+      "imlecKapali": true,
+      "imlecIcinde": true,
+      "caret": "rgb(20, 27, 43)"
+    }
+  },
+  {
+    "ad": "metin imleci belgede, yazılan metin kaydedildi",
+    "gecti": true,
+    "ayrinti": {
+      "odakta": true,
+      "outline": "none",
+      "outlineGenislik": "3px",
+      "golge": "none",
+      "imlecKapali": true,
+      "imlecIcinde": true,
+      "caret": "rgb(20, 27, 43)",
+      "kayitTamam": true
+    }
+  },
+  {
+    "ad": "normal metin seçimi çalışıyor ve seçim rengi duruyor",
+    "gecti": true,
+    "ayrinti": {
+      "metin": "Cerceve denemesi 0px62",
+      "renk": "color(srgb 0.0392157 0.164706 0.321569 / 0.26)"
+    }
+  },
+  {
+    "ad": "araç çubuğu düğmesinin klavye odak halkası duruyor",
+    "gecti": true,
+    "ayrinti": {
+      "araclarda": true,
+      "fv": true,
+      "outline": "solid 3px",
+      "golge": "none"
+    }
+  },
+  {
+    "ad": "Word: başlıksız belgede (içindekiler açık) İÇİNDEKİLER başlığı ve alanı yok, metin var",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true
+    }
+  },
+  {
+    "ad": "Word: başlıklı belgede İÇİNDEKİLER ve başlık satırı korunuyor",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true
+    }
+  }
+]

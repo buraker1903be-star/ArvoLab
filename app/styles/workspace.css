@@ -64,6 +64,16 @@
 :is(.manuscript-toolbar, .manuscript-araclar) .toolbar-select:focus { outline: none; border-color: var(--primary-ink); }
 
 /* ---------- Belge alanı ---------- */
+/*
+  YAZARKEN ÇERÇEVE YOK (20.11.2026, canlı deneme). TipTap belge alanına
+  tabindex="0" veriyor; base.css'teki genel ":is(…, [tabindex]):focus-visible"
+  kuralı ona 3 px'lik lacivert bir halka çiziyordu. Yazılabilir alanlarda
+  tarayıcı odağı her zaman "görünür" sayar, yani halka yalnızca klavyede değil
+  her tıklamada çıkıyor ve kâğıdın iki yanında kalın çizgi olarak görünüyordu.
+  Belgede odağı imleç zaten gösteriyor; seçim (::selection) ve araç çubuğu
+  düğmelerinin klavye halkası bu kurala girmiyor, aynen kalıyor.
+*/
+.manuscript-editor-content:focus-visible { outline: none; }
 /* Belge sayfayla birlikte uzar (iç kaydırma çubuğu yok); araç çubuğu üstte yapışık kalır */
 .manuscript-editor-content {
   min-height: 60vh;
@@ -774,6 +784,14 @@
 .manuscript-main { min-width: 0; }
 /* Yazarlık raporu: asistan izli metin yalnızca "Vurgula" açıkken renklenir (lib/tiptap-asistan-izi.ts). */
 .asistan-vurgu .asistan-izi { border-radius: 2px; background: color-mix(in srgb, var(--primary-ink) 18%, transparent); }
+/*
+  İNCELE PANELİNİ YENİDEN AÇMA DÜĞMESİ (20.11.2026). Araç çubuğunun sağ
+  ucunda, açıkken panelin başlığının durduğu yerin üstünde. Çerçeveli ve
+  yazılı: simgesiz düğmeler arasında "paneli geri getiren yer" olarak seçilsin.
+*/
+.manuscript-araclar .inceleme-ac-dugme { margin-left: 4px; border-color: var(--line-soft); color: var(--primary-ink); }
+.manuscript-araclar .inceleme-ac-dugme:hover { border-color: var(--primary-ink); background: var(--primary-soft); }
+
 .manuscript-outline {
   position: sticky;
   top: calc(var(--topbar-height) + 16px);

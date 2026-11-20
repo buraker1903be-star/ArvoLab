@@ -204,3 +204,43 @@ test("İngilizce belge: içindekiler, şekil etiketi ve kapak büyük harfi", as
   assert.ok(metin.includes("A THESIS ON THINGS"), metin);
   assert.ok(!metin.includes("Şekil"), metin);
 });
+
+/*
+  BAŞLIKSIZ BELGEDE İÇİNDEKİLER YOK (20.11.2026, canlı deneme): eskiden
+  "İçindekiler" açıkken başlığı olmayan belgenin Word çıktısı boş bir
+  "İÇİNDEKİLER" sayfasıyla başlıyordu. Başlıklı belgede içindekiler aynen kalır.
+*/
+describe("içindekiler yalnızca başlık varsa", () => {
+  const paragraf = (metin: string) => ({ type: "paragraph", content: [{ type: "text", text: metin }] });
+
+  test("başlıksız belge: İÇİNDEKİLER başlığı ve alanı yazılmaz, metin durur", async () => {
+    const doc = { type: "doc", content: [paragraf("Yalnızca düz metin.")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(!metin.includes("İÇİNDEKİLER"), metin);
+    // Metin bir kez geçer: içindekiler alanının önceden doldurulmuş satırları da yok.
+    assert.equal(metin.split("Yalnızca düz metin.").length - 1, 1, metin);
+  });
+
+  test("başlıksız ama alt yazılı belge: İÇİNDEKİLER yok, tablo listesi kendi başlığıyla var", async () => {
+    const doc = {
+      type: "doc",
+      content: [paragraf("Giriş metni."), { type: "paragraph", attrs: { caption: "table" }, content: [{ type: "text", text: "Örneklem" }] }],
+    } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(!metin.includes("İÇİNDEKİLER"), metin);
+    assert.ok(metin.includes("TABLOLAR LİSTESİ"), metin);
+  });
+
+  test("başlıklı belge: İÇİNDEKİLER ve başlık satırı korunur", async () => {
+    const doc = { type: "doc", content: [h(1, "Giriş"), paragraf("Metin.")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: true });
+    assert.ok(metin.includes("İÇİNDEKİLER"), metin);
+    assert.ok(metin.split("Giriş").length >= 3, "başlık hem içindekilerde hem metinde: " + metin);
+  });
+
+  test("içindekiler kapalıysa başlıklı belgede de yazılmaz (değişmedi)", async () => {
+    const doc = { type: "doc", content: [h(1, "Giriş"), paragraf("Metin.")] } as unknown as TiptapDoc;
+    const { metin } = await metneCevir(doc, { includeToc: false });
+    assert.ok(!metin.includes("İÇİNDEKİLER"), metin);
+  });
+});

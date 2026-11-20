@@ -801,6 +801,29 @@ export default function ManuscriptEditor({
   */
   const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, false), () => false);
   /*
+    PANELİ YENİDEN AÇMA (20.11.2026, canlı deneme). Eskiden panelin ×'ine
+    basınca panel kayboluyor, yeniden açmanın tek yolu "Kontroller" menüsünün
+    en altındaki satırdı: kapatan kullanıcı paneli bir daha bulamıyordu.
+    Kapalıyken araç çubuğunun sağ ucunda, panelin başlığının tam üstünde
+    görünür bir "İncele" düğmesi durur (önce sağ kenarda serbest duruyordu;
+    1280 px'te kâğıdın kenarına biniyordu, araç çubuğunda her genişlikte yeri var). Klavye kullanıcısı kaybolmasın diye odak iki yönde de taşınır:
+    açınca panelin kapatma düğmesine, kapatınca bu düğmeye.
+  */
+  const incelemeOdagi = (secici: string) =>
+    window.setTimeout(() => (document.querySelector(secici) as HTMLElement | null)?.focus(), 60);
+  const incelemeyiAc = () => {
+    tercihYaz(INCELEME_TERCIHI, true);
+    incelemeOdagi(".manuscript-outline .inceleme-bas button");
+    /* Telefonda panel belgenin altında akar; açılınca oraya kaydırılır (Kontroller menüsündeki düğmeyle aynı). */
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      window.setTimeout(() => document.querySelector(".manuscript-outline")?.scrollIntoView({ block: "start" }), 50);
+    }
+  };
+  const incelemeyiKapat = () => {
+    tercihYaz(INCELEME_TERCIHI, false);
+    incelemeOdagi(".inceleme-ac-dugme");
+  };
+  /*
     KAYNAK LİSTESİ + PDF (4. tur, 18.11.2026). PDF açılınca belge %85'in
     altına inecekse sol araç şeride iner (lib/calisma-alani-yerlesimi.ts,
     "aracDar"); şeritteki düğme (os-gezinme.tsx) aracı geri açar ve PDF
@@ -3385,6 +3408,19 @@ export default function ManuscriptEditor({
             <Keyboard size={16} />
           </ToolbarButton>
           </AracMenusu>
+          {/* İncele panelini yeniden açma (yukarıda "PANELİ YENİDEN AÇMA"). Sağ panel (AI/PDF) aynı yeri kullanırken ve odak modunda çizilmez; o durumda Kontroller menüsündeki "İnceleme paneline geç" var. */}
+          {!incelemeAcik && !sag && !odak ? (
+            <button
+              type="button"
+              className="inceleme-ac-dugme"
+              onClick={incelemeyiAc}
+              aria-label={t({ tr: "İncele panelini aç", en: "Open Review panel" })}
+              title={t({ tr: "İncele panelini aç", en: "Open Review panel" })}
+            >
+              <PanelRightOpen size={16} aria-hidden="true" />
+              <span>{t({ tr: "İncele", en: "Review" })}</span>
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -3858,7 +3894,7 @@ export default function ManuscriptEditor({
         inince görünüyordu; artık sağ panelin başında, her zaman görünür.
       */}
       <ManuscriptOutline
-        onKapat={() => tercihYaz(INCELEME_TERCIHI, false)}
+        onKapat={incelemeyiKapat}
         ust={
           /*
             KONTROL KARTI (26.10.2026, ikinci elden geçiriş: "bu kartı daha
