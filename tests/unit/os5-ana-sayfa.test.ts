@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 
 const oku = (yol: string) => readFileSync(yol, "utf8");
 const yorumsuz = (m: string) => m.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-const sayfa = oku("app/dashboard/page.tsx");
+const sayfa = oku("app/dashboard/ana-sayfa-icerik.tsx");
 const ogrenci = sayfa.slice(sayfa.indexOf(") : ogrenciGorunumu && resume ? ("), sayfa.indexOf("<SeriKarti"));
 
 /*
@@ -66,9 +66,9 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
     assert.match(ogrenci, /yazim \? sayi\(yazim\.words\) : "—"/);
     assert.doesNotMatch(yorumsuz(ogrenci), /ilerleme|progress/i);
   });
-  test("Danışmanıma gönder kartı çalışma özetine taşındı (bireysel abone)", () => {
-    const ozet = oku("app/dashboard/editor/page.tsx");
-    assert.match(ozet, /\{secili && gorunum\.bireysel \? \(\s*<DanismanaGonder /);
+  test("Danışmanıma gönder kartı çalışma özetinde; 20.11.2026'dan beri herkesin kendi çalışmasında (tek ana deneyim)", () => {
+    const ozet = oku("app/dashboard/editor/calisma-listesi.tsx");
+    assert.match(ozet, /\{secili && kapsam === "kisisel" \? \(\s*<DanismanaGonder /);
   });
 });
 

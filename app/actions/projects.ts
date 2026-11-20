@@ -1,10 +1,8 @@
 "use server";
 
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import { yeniCalismaAdresi } from "@/lib/calisma-karti";
 import { secilenBelgeDili } from "@/lib/belge-dili";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
@@ -107,10 +105,13 @@ function readInstitution(formData: FormData) {
 }
 
 /*
-  Kaydın kendisi; iki giriş noktası paylaşıyor. createProject (personelin
-  tam formu, /dashboard/editor/new) kayıttan sonra yönlendiriyor;
-  yeniCalisma (öğrencinin "Yeni çalışma" penceresi) kimliği geri veriyor,
-  pencere açık kalıp kılavuz yükleme adımına geçiyor.
+  Kaydın kendisi. Tek giriş noktası: "Yeni çalışma" penceresi
+  (editor/yeni-calisma-penceresi.tsx → yeniCalisma). 20.11.2026'ya kadar
+  personelin ayrı, üniversite/enstitü/bölüm seçtiren bir formu vardı
+  (createProject, kaldırıldı); kurum alanları artık yalnızca "Bilgileri
+  düzenle"den yazılıyor, buradaki readInstitution o yüzden duruyor ve
+  boş formda hepsi NULL kalıyor. Mevcut kurum ve kılavuz kayıtları
+  değişmiyor.
 */
 async function calismaKaydet(
   formData: FormData,
@@ -180,15 +181,6 @@ async function calismaKaydet(
   return { id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) };
 }
 
-// Hatalar formun içinde gösterilir (yazılanlar kaybolmaz); başarıda editör açılır.
-export async function createProject(formData: FormData): Promise<ActionResult> {
-  const sonuc = await calismaKaydet(formData);
-  if ("error" in sonuc) return sonuc;
-  /* Kılavuzu eşleşen tez doğrudan editöre; eşleşmeyen tez kılavuz
-     penceresine, makale dergi bilgilerine (lib/calisma-karti.ts). */
-  redirect(yeniCalismaAdresi(sonuc));
-}
-
 /*
   Öğrencinin "Yeni çalışma" penceresi (editor/yeni-calisma-penceresi.tsx).
   Yönlendirmiyor: pencere açık kalıyor ve ikinci adımda öğrenci kendi tez
@@ -219,6 +211,10 @@ export async function komutCalismalari(): Promise<{ id: string; title: string; p
   const { data, error } = await ctx.supabase
     .from("academic_projects")
     .select("id, title, project_type")
+    /* Yalnızca kendi çalışmaları (20.11.2026, lib/yonetim.ts): eskiden RLS'in
+       gösterdiği her satır geliyordu ve kurucunun "çalışma aç" listesi
+       kurumların tezleriyle doluyordu. Yönetimin gördükleri Yönetim'de. */
+    .eq("owner_id", ctx.user.id)
     .order("updated_at", { ascending: false })
     .limit(50);
   if (error) {
@@ -228,21 +224,28 @@ export async function komutCalismalari(): Promise<{ id: string; title: string; p
   return data ?? [];
 }
 
-export async function getProjects(): Promise<ListeSonucu<AcademicProject>> {
+export async function getProjects(kapsam: "kisisel" | "yonetim" = "yonetim"): Promise<ListeSonucu<AcademicProject>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   // Oturum yoksa gerçekten kayıt yoktur; bu bir okuma arızası değil.
   if (!user) return listeBasarili([]);
-  /* İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer. */
-  const kurum = await seciliKurum();
+  /*
+    Kişisel kapsam (Ana Sayfa, Çalışmalarım; lib/yonetim.ts): yalnızca
+    kendi çalışmaları, veritabanında süzülür ve iç ekibin kurum seçimi
+    UYGULANMAZ — başka bir kurumu seçmiş kurucunun kendi tezi kendi
+    listesinden düşmemeli. Yönetim kapsamında eskisi gibi RLS'in gösterdiği
+    her satır, kurum seçimiyle süzülmüş.
+  */
+  const kurum = kapsam === "yonetim" ? await seciliKurum() : null;
 
   let sorgu = supabase
     .from("academic_projects")
     .select(
       "id, owner_id, organization_id, assignee_id, guideline_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
     );
+  if (kapsam === "kisisel") sorgu = sorgu.eq("owner_id", user.id);
   /* organization_id'siz eski satırlar sahibinin kurumuyla eşlenir (RLS'teki kuralın aynısı). */
   if (kurum)
     sorgu = kurum.kullanicilar.length

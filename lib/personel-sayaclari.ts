@@ -48,6 +48,8 @@ export function personelSayaclari<T extends ProjectFilterInput>(
   simdikiFiltre: ProjectFilters,
   baglam: Parameters<typeof applyProjectFilters<T>>[2],
   dil: Dil = "tr",
+  /* Sayacın açtığı liste (lib/yonetim.ts listeTabani). */
+  taban = "/dashboard/editor",
 ): PersonelSayaci[] {
   return TANIMLAR.map((t) => {
     const filtre: ProjectFilters = { ...DEFAULT_PROJECT_FILTERS, ...t.filtre };
@@ -59,7 +61,7 @@ export function personelSayaclari<T extends ProjectFilterInput>(
       etiket: t.etiket[dil],
       sayi: applyProjectFilters(calismalar, filtre, baglam).length,
       // Seçili sayaca yeniden basınca filtre kalkar.
-      href: secili ? "/dashboard/editor" : filtreAdresi(filtre),
+      href: secili ? taban : filtreAdresi(filtre, taban),
       ton: t.ton,
       secili,
     };

@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { Building2, Check, ChevronsUpDown, Eye, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { OsSimge } from "./os-simge";
 import type { OsIkon } from "@/lib/os/uygulamalar";
 import ActionForm from "../action-form";
-import { gorunumSec } from "@/app/actions/onizleme";
 import { kurumSec } from "@/app/actions/kurum-secimi";
-import { GORUNUMLER, GORUNUM_ETIKETI, type Gorunum } from "@/lib/onizleme";
 import { ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import DilSecici from "@/app/_components/dil-secici";
@@ -41,7 +39,6 @@ export default async function KullaniciMenusu({
   rol,
   basHarf,
   cikis,
-  gorunum,
   kurumlar,
   seciliKurumId = null,
   yerlesim = "ust",
@@ -53,11 +50,6 @@ export default async function KullaniciMenusu({
   rol: string;
   basHarf: string;
   cikis: () => Promise<void>;
-  /*
-    Yalnızca iç ekipte verilir (lib/onizleme.ts): seçili görünüm.
-    Verilmezse menüde görünüm bölümü yok.
-  */
-  gorunum?: Gorunum;
   /* Yalnızca iç ekipte ve birden çok kurum varsa verilir (lib/kurum-secimi.ts). */
   kurumlar?: { id: string; name: string }[];
   seciliKurumId?: string | null;
@@ -92,26 +84,11 @@ export default async function KullaniciMenusu({
             <small>{rol}</small>
           </div>
         </div>
-        {gorunum ? (
-          /*
-            GÖRÜNÜM ÖNİZLEMESİ: ana sayfa ve Çalışmalarım'ı öğrencinin
-            düzeninde gösterir. Yalnızca düzen; veriler ve yetkiler aynı.
-          */
-          <div className="os-kullanici-gorunum">
-            <small>
-              <Eye size={13} aria-hidden="true" /> {t({ tr: "Görünüm", en: "View" })}
-            </small>
-            {GORUNUMLER.map((secenek) => (
-              <ActionForm key={secenek} action={gorunumSec}>
-                <input type="hidden" name="gorunum" value={secenek} />
-                <button type="submit" aria-pressed={gorunum === secenek}>
-                  {t(GORUNUM_ETIKETI[secenek])}
-                  {gorunum === secenek ? <Check size={15} aria-hidden="true" /> : null}
-                </button>
-              </ActionForm>
-            ))}
-          </div>
-        ) : null}
+        {/*
+          "Görünüm" seçimi (Personel / Öğrenci · kurum / Öğrenci · bireysel)
+          20.11.2026'da kalktı: herkesin ana deneyimi aynı, yönetim işleri
+          aşağıdaki Yönetim bölümünde (lib/yonetim.ts).
+        */}
         {kurumlar ? (
           /*
             KURUM SEÇİMİ: çalışmalar, ekip, destek kuyrukları ve ana sayfa
@@ -133,7 +110,7 @@ export default async function KullaniciMenusu({
           </div>
         ) : null}
         {/* Çeviri bitene kadar yalnızca iç ekipte (lib/dil.ts, INGILIZCE_YAYINDA). */}
-        {INGILIZCE_YAYINDA || gorunum ? <DilSecici /> : null}
+        {INGILIZCE_YAYINDA ? <DilSecici /> : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>
           {hesapBaglantilari.map((b) => (
             <Link key={b.key} href={b.href}>
@@ -153,9 +130,9 @@ export default async function KullaniciMenusu({
             (aria-label): menü iki yerleşimde çizildiği için id ile
             bağlamak sayfada aynı id'yi iki kez üretirdi.
           */
-          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Personel Araçları", en: "Staff tools" })}>
+          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Yönetim", en: "Management" })}>
             <small className="os-kullanici-bolum" aria-hidden="true">
-              {t({ tr: "Personel Araçları", en: "Staff tools" })}
+              {t({ tr: "Yönetim", en: "Management" })}
             </small>
             {personelAraclari.map((b) => (
               <Link key={b.key} href={b.href}>

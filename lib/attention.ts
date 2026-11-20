@@ -29,8 +29,10 @@ export function computeAttention(
   projects: AttentionProject[],
   openComments: ReadonlyMap<string, number>,
   /* etikRiski: lib/etik/durum.ts etikTehlikesi; verilmezse etik maddesi çıkmaz (02.11.2026). */
-  options: { now?: Date; dil?: Dil; etikRiski?: (projectId: string) => boolean } = {}
+  options: { now?: Date; dil?: Dil; etikRiski?: (projectId: string) => boolean; taban?: string } = {}
 ): AttentionItem[] {
+  /* Maddelerin açtığı liste: Yönetim'deki kurum listesi (lib/yonetim.ts). */
+  const taban = options.taban ?? "/dashboard/editor";
   const en = options.dil === "en";
   const active = projects.filter((project) => !CLOSED_STATUSES.has(project.status));
   const days = active.map((project) => dueInfo(project.due_date, project.status, options.now)?.days ?? null);
@@ -46,21 +48,21 @@ export function computeAttention(
       label: en ? "Ethics approval problem" : "Etik kurul sorunu",
       count: options.etikRiski ? active.filter((project) => options.etikRiski!(project.id)).length : 0,
       tone: "danger",
-      href: "/dashboard/editor?durum=aktif&etik=risk",
+      href: `${taban}?durum=aktif&etik=risk`,
     },
     {
       id: "overdue",
       label: en ? "Past due date" : "Teslim tarihi geçmiş",
       count: days.filter((day) => day !== null && day < 0).length,
       tone: "danger",
-      href: "/dashboard/editor?durum=gecikmis&sirala=teslim",
+      href: `${taban}?durum=gecikmis&sirala=teslim`,
     },
     {
       id: "due-soon",
       label: en ? `Due within ${DUE_SOON_DAYS} days` : `${DUE_SOON_DAYS} gün içinde teslim`,
       count: days.filter((day) => day !== null && day >= 0 && day <= DUE_SOON_DAYS).length,
       tone: "warning",
-      href: "/dashboard/editor?durum=yaklasan&sirala=teslim",
+      href: `${taban}?durum=yaklasan&sirala=teslim`,
     },
     {
       id: "approval",
@@ -70,7 +72,7 @@ export function computeAttention(
       /* Adres sayaçla AYNI kümeyi açar: "durum=ready" tek başına onaylanmış
          çalışmaları da getiriyordu ve kullanıcı sayıyla listeyi
          eşleştiremiyordu (lib/project-filters.ts: onay=bekliyor). */
-      href: "/dashboard/editor?durum=ready&onay=bekliyor",
+      href: `${taban}?durum=ready&onay=bekliyor`,
     },
     {
       id: "comments",
@@ -78,7 +80,7 @@ export function computeAttention(
       count: active.filter((project) => (openComments.get(project.id) ?? 0) > 0).length,
       tone: "info",
       // Eskiden bütün aktif çalışmaları açıyordu; şimdi yalnızca yorumu olanları.
-      href: "/dashboard/editor?durum=aktif&yorum=acik&sirala=duzenleme",
+      href: `${taban}?durum=aktif&yorum=acik&sirala=duzenleme`,
     },
   ];
   return items.filter((item) => item.count > 0);

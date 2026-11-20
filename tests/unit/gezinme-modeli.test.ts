@@ -39,7 +39,8 @@ describe("Ctrl+K gezinme hedefleri tekil", () => {
     // Kaynağın kendisi: bu beşi yalnizBaslatici. Eski osSayfalari onları
     // ikinci kez ekliyordu; palet uygulamaları da listeliyordu.
     const baslatici = hepsi.filter((u) => u.yalnizBaslatici).map((u) => u.key);
-    assert.deepEqual([...baslatici].sort(), [...MUKERRER_BES].sort());
+    // 20.11.2026: Yönetim de yalnızca başlatıcıda (hesap menüsü + Ctrl+K), dock'ta değil (lib/yonetim.ts).
+    assert.deepEqual([...baslatici].sort(), [...MUKERRER_BES, "yonetim"].sort());
   });
 
   test("osSayfalari yalnızca gerçek alt bölümleri döndürür, uygulamanın kendisini değil", () => {
@@ -94,11 +95,12 @@ describe("Ctrl+K gezinme hedefleri tekil", () => {
     assert.ok(!h.includes("/dashboard/team"));
   });
 
-  test("palet hedef sayısı rol başına beklenen: öğrenci 9, personel 10, iç ekip 12", () => {
+  test("palet hedef sayısı rol başına beklenen: öğrenci 9, personel 11, iç ekip 13", () => {
     // Eskiden iç ekipte 17 gezinme hedefi çıkıyordu (12 uygulama + 5 mükerrer).
+    // 20.11.2026: personele Yönetim eklendi (+1); öğrencinin paleti değişmedi.
     assert.equal(komutHedefleri(gorunen("client")).length, 9);
-    assert.equal(komutHedefleri(gorunen("employee")).length, 10);
-    assert.equal(komutHedefleri(gorunen("system_admin")).length, 12);
+    assert.equal(komutHedefleri(gorunen("employee")).length, 11);
+    assert.equal(komutHedefleri(gorunen("system_admin")).length, 13);
   });
 });
 
@@ -117,11 +119,11 @@ describe("hesap menüsü sınıflandırması (yer)", () => {
     }
   });
 
-  test("Personel Araçları rolle süzülür: öğrenci boş, personel doçentlik, iç ekip üçü", () => {
+  test("Yönetim bölümü rolle süzülür: öğrenci boş, personel doçentlik + Yönetim, iç ekip dördü", () => {
     assert.deepEqual(personelAraclari(gorunen("client")).map((u) => u.key), []);
     assert.deepEqual(personelAraclari(gorunen(undefined)).map((u) => u.key), []);
-    assert.deepEqual(personelAraclari(gorunen("employee")).map((u) => u.key), ["docentlik"]);
-    assert.deepEqual(personelAraclari(gorunen("system_admin")).map((u) => u.key), ["docentlik", "asistan", "ekip"]);
+    assert.deepEqual(personelAraclari(gorunen("employee")).map((u) => u.key), ["docentlik", "yonetim"]);
+    assert.deepEqual(personelAraclari(gorunen("system_admin")).map((u) => u.key), ["docentlik", "yonetim", "asistan", "ekip"]);
   });
 
   test("yonetim'deki her uygulamanın rol kısıtı var: yer, görünürlük kararı vermez", () => {
@@ -140,8 +142,9 @@ describe("hesap menüsü sınıflandırması (yer)", () => {
     const anahtar = (rol: string | undefined) => gorunen(rol).map((u) => u.key);
     const temel = ["home", "tez", "kaynaklar", "analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"];
     assert.deepEqual(anahtar("client"), temel);
-    assert.deepEqual(anahtar("employee"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik"]);
-    assert.deepEqual(anahtar("system_admin"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik", "asistan", "ekip"]);
+    // Öğrencinin listesi değişmedi; personele yalnızca Yönetim eklendi (20.11.2026).
+    assert.deepEqual(anahtar("employee"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik", "yonetim"]);
+    assert.deepEqual(anahtar("system_admin"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik", "yonetim", "asistan", "ekip"]);
   });
 
   // 17.11.2026 (onaylı tasarım): ana gezinmede üç öğe. Eskiden altıydı (Analiz, Belge Kontrol, Destek de).

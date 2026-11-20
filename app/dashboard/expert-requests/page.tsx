@@ -26,12 +26,12 @@ import { uzmanYazismaDurumu, yanitGeldi, yazismaKur } from "@/lib/destek-yazisma
 import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { isExpertEligible, requestTypeLabel, STAFF_ROLES } from "@/lib/project-labels";
+import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
 import { createClient } from "@/lib/supabase/server";
 import { kuyrukAdresi, TALEPLERIM_ADRESI, type KuyrukTuru } from "@/lib/destek-kuyrugu";
 import DestekKuyruklari from "./destek-kuyruklari";
 import Yazisma from "./yazisma";
-import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
+import { yonetimeGirebilir } from "@/lib/yonetim";
 import { statusTone } from "@/lib/status-tone";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
@@ -105,11 +105,8 @@ export default async function DestekPage({
     kuyruğu" ve içlerinde "Üstlen" çıkıyordu — öğrenci bunları hiç
     görmez, önizleme de göstermemeli. Yetki değişmiyor: RLS gerçek rolle.
   */
-  const gorunum = await sayfaGorunumu({
-    rol: profile?.role,
-    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
-    kurumVar: Boolean(profile?.organization_id),
-  });
+  /* Önizleme 20.11.2026'da kalktı (lib/yonetim.ts): karar gerçek rolden. */
+  const gorunum = { personel: yonetimeGirebilir(profile?.role) };
   const uzman = gorunum.personel && isExpertEligible(profile?.role);
   const yonetici = gorunum.personel && (profile?.role === "system_admin" || profile?.role === "founder");
   // Geri bildirimleri Yönetici de okur (app/actions/geri-bildirim.ts);

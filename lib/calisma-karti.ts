@@ -107,7 +107,7 @@ export function calismaAdresi(id: string, secenek: { kilavuz?: boolean; takvim?:
 }
 
 /** Satırın adresi: filtreler (q, durum, sirala…) korunur, yalnızca seçim değişir. */
-export function secimAdresi(params: Record<string, string | string[] | undefined>, id: string): string {
+export function secimAdresi(params: Record<string, string | string[] | undefined>, id: string, taban = "/dashboard/editor"): string {
   const arama = new URLSearchParams();
   for (const [anahtar, deger] of Object.entries(params)) {
     /* kilavuz=1 ve takvim=1 yalnızca o çalışmanın penceresini açar;
@@ -116,7 +116,7 @@ export function secimAdresi(params: Record<string, string | string[] | undefined
     for (const tek of Array.isArray(deger) ? deger : [deger]) arama.append(anahtar, tek);
   }
   arama.set("sec", id);
-  return `/dashboard/editor?${arama.toString()}`;
+  return `${taban}?${arama.toString()}`;
 }
 
 export type EksikTuru = "stil" | "eksik" | "tutarsizlik" | "bakilacak" | "asistan" | "yapilmadi";

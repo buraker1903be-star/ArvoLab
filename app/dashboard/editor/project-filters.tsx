@@ -17,6 +17,7 @@ export default function ProjectFilters({
   total,
   shown,
   filtered,
+  taban = "/dashboard/editor",
 }: {
   filters: Filters;
   statuses: { value: string; label: string; tone?: Tone }[];
@@ -25,6 +26,8 @@ export default function ProjectFilters({
   total: number;
   shown: number;
   filtered: boolean;
+  /** Süzülen liste: Çalışmalarım ya da Yönetim'deki kurum listesi (lib/yonetim.ts). */
+  taban?: string;
 }) {
   const t = useCeviri();
 
@@ -36,10 +39,10 @@ export default function ProjectFilters({
     görünmezdi. Yanlarındaki çip hem filtrenin açık olduğunu söylüyor hem de
     kaldırma yolunu veriyor.
   */
-  const adres = (degisiklik: Partial<Filters>) => filtreAdresi({ ...filters, ...degisiklik });
+  const adres = (degisiklik: Partial<Filters>) => filtreAdresi({ ...filters, ...degisiklik }, taban);
 
   return (
-    <Form action="/dashboard/editor" className="project-filters" role="search" aria-label={t({ tr: "Çalışmaları filtrele", en: "Filter works" })}>
+    <Form action={taban} className="project-filters" role="search" aria-label={t({ tr: "Çalışmaları filtrele", en: "Filter works" })}>
       <label className="project-filter-search">
         <Search size={15} aria-hidden="true" />
         <input type="search" name="q" defaultValue={filters.q} placeholder={
@@ -112,7 +115,7 @@ export default function ProjectFilters({
           : t({ tr: `${total} çalışmadan ${shown} gösteriliyor`, en: `Showing ${shown} of ${total} works` })}
       </span>
       {filtered ? (
-        <Link href="/dashboard/editor" className="result-link">
+        <Link href={taban} className="result-link">
           {t({ tr: "Filtreyi temizle", en: "Clear filter" })}
         </Link>
       ) : null}

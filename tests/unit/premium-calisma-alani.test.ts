@@ -96,7 +96,7 @@ describe("düz yüzey: birincil düğmede gradyan ve gölge yok", () => {
 });
 
 describe("ikinci tur: yeni kullanıcı ve çalışma özeti", () => {
-  const sayfa = oku("app/dashboard/page.tsx");
+  const sayfa = oku("app/dashboard/ana-sayfa-icerik.tsx");
   test("yeni kullanıcı: tek açıklama, tek birincil, rehber isteğe bağlı", () => {
     const bas = sayfa.slice(sayfa.indexOf("{yeniKullanici ? ("), sayfa.indexOf(") : ogrenciGorunumu && resume ? ("));
     assert.match(bas, /<details className="pw-rehber">/);

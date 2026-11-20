@@ -176,6 +176,25 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       liste "controller"ı atlamıştı, yani Kontrolör yetkisi olduğu
       sayfayı başlatıcıda göremiyordu (AGENTS.md'deki kural).
     */
+    /*
+      YÖNETİM (20.11.2026, tek ana deneyim kararı; lib/yonetim.ts). Kurumun
+      çalışmaları, onay, sorumlu atama ve kuyruklar kişinin kendi Ana
+      Sayfa'sından ve Çalışmalarım'ından çıktı; yetkili kişi buraya hesap
+      menüsünün Yönetim bölümünden ya da Ctrl+K'dan AÇIKÇA girer. Roller
+      sayfanın kapısıyla aynı kaynaktan (STAFF_ROLES, app/dashboard/yonetim/kapi.ts).
+    */
+    {
+      key: "yonetim",
+      label: t({ tr: "Yönetim", en: "Management" }),
+      href: "/dashboard/yonetim",
+      ikon: "apps",
+      yollar: ["/dashboard/yonetim"],
+      yalnizBaslatici: true,
+      roller: STAFF_ROLES,
+      yer: "yonetim",
+      /* Bölüm yok (modüller tek sayfa, sekme şeridi çizilmez): genel bakışın
+         başlığındaki "Çalışmalar" düğmesi kurum listesine götürür. */
+    },
     { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI, yer: "yonetim" },
     { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ADMIN_ROLES, yer: "yonetim" },
     /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
@@ -415,7 +434,7 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
     { key: "ai", label: "Arvo AI", href: `${yazim}?sag=ai`, grup: "arastir", ikon: "ai" },
     { key: "kaynakca", label: t({ tr: "Kaynakça", en: "References" }), href: `${yazim}?sol=kaynakca`, grup: "kontrol", ikon: "kaynakca" },
     { key: "kilavuz", label: t({ tr: "Kılavuz ve biçim", en: "Guideline and format" }), href: `${yazim}?sol=kilavuz`, grup: "kontrol", ikon: "kilavuz" },
-    { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" },
+    { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" }, /* Başkasının çalışmasıysa Çalışmalarım yetkiliyi Yönetim'deki listeye geçirir (calisma-listesi.tsx). */
     { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "diger", ikon: "kanit" },
     ...(calisma.tur === "article"
       ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "diger" as const, ikon: "makale" as const }]
