@@ -144,51 +144,121 @@
     "ayrinti": {}
   },
   {
-    "ad": "personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi görünüyor",
+    "ad": "personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi listede ve açılınca mesajı görünüyor",
     "gecti": true,
     "ayrinti": {
       "not": true,
-      "talepGorunur": true
+      "satirVar": true,
+      "talepGorunur": true,
+      "kurumdakiAcikTalep": 2
     }
   },
   {
     "ad": "kurucu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
     "gecti": true,
     "ayrinti": {
-      "id": "8e8d9059-21b3-4dc2-a21f-17745257c4d2",
+      "id": "fd7b37f5-43e9-4f4e-8370-eb5bf155d896",
       "kaydedildi": true,
       "yenidenAcildi": true,
       "hata": []
+    }
+  },
+  {
+    "ad": "kurucu: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "kurucu: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
     }
   },
   {
     "ad": "personel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
     "gecti": true,
     "ayrinti": {
-      "id": "d5a3c7cb-ca28-457c-bd63-6aaf62454d99",
+      "id": "ea3577d5-27e6-4e62-8c2c-eb36bb23a09d",
       "kaydedildi": true,
       "yenidenAcildi": true,
       "hata": []
+    }
+  },
+  {
+    "ad": "personel: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "personel: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
     }
   },
   {
     "ad": "kurumlu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
     "gecti": true,
     "ayrinti": {
-      "id": "266f6234-3313-447a-9136-3215caf90799",
+      "id": "2da78642-42eb-4bb8-98cf-651baafb37a5",
       "kaydedildi": true,
       "yenidenAcildi": true,
       "hata": []
     }
   },
   {
+    "ad": "kurumlu: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "kurumlu: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
+    }
+  },
+  {
     "ad": "bireysel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
     "gecti": true,
     "ayrinti": {
-      "id": "470380d1-467f-4aac-957c-1137260e0bdb",
+      "id": "83c03863-545b-42d3-a079-2c529113f7b3",
       "kaydedildi": true,
       "yenidenAcildi": true,
       "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "bireysel: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
     }
   }
 ]

@@ -32,11 +32,12 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     durumu ve iki yolu (Kılavuzumu yükle, Kurumu seç) çalışma menüsündeki
     "Kılavuz ve biçim" aracında. İki yolun da kaybolmadığını sabitler.
   */
-  test("kılavuz yok şeridi editörde yok; iki yol Kılavuz ve biçim aracında", () => {
+  test("kılavuz yok şeridi editörde yok; yükleme yolu Kılavuz ve biçim aracında, kurum seçimi yok", () => {
     assert.doesNotMatch(editor, /className="kilavuz-satiri"/);
     const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kilavuz")'), editor.indexOf('acilanAraclar.includes("kilavuz")') + 6000);
     assert.match(arac, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
-    assert.match(arac, /href=\{editHref\}/);
+    // "Kurumu seç" 20.11.2026'da kalktı: kılavuz isteğe bağlı, ArvoLab kurum seçtirmiyor.
+    assert.doesNotMatch(arac, /href=\{editHref\}|Kurumu seç/);
     assert.match(arac, /setGuidelineOpen\(true\)/);
   });
   test("Bul ve Odak modu kaldırılmadı: Belge menüsünde", () => {

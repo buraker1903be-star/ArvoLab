@@ -174,13 +174,25 @@ for (const rol of HER_ROL) {
   await c.close();
 }
 {
+  /*
+    Kuyruk ilk gelen önce sıralanıyor ve satırda mesaj değil çalışma başlığı
+    yazıyor; mesaj yalnızca SEÇİLİ kaydın detayında. Eskiden betik sayfanın
+    tamamında mesajı arıyordu: temiz tohumda kurumun tek talebi seçili geldiği
+    için geçiyor, aynı tohumla ikinci koşuda ilk satır önceki koşunun talebi
+    olduğu için düşüyordu (20.11.2026). Artık talebin kendi satırı bulunup açılıyor.
+  */
+  const talepId = psql(`select id from public.consultancy_requests where message like ${q(`TEK-UZMAN-${ek}%`)}`);
   const { c, s } = await baglam("personel");
   await s.goto("/dashboard/expert-requests?kuyruk=uzman-acik"); await yuklendi(s);
   const metin = await s.locator("main").first().innerText();
   const not = /ArvoOS'un Talepler bölümüne aktarılacak/.test(metin) && /henüz kurulmadı/.test(metin);
-  const talepGorunur = metin.includes(`TEK-UZMAN-${ek}`) || (await s.locator(`text=TEK-UZMAN-${ek}`).count()) > 0;
+  const satir = s.locator(`a.gb-satir[href*="sec=${talepId}"]`);
+  const satirVar = (await satir.count()) === 1;
+  if (satirVar) { await satir.click(); await s.waitForURL(new RegExp(`sec=${talepId}`)); await yuklendi(s); }
+  const talepGorunur = satirVar && (await s.locator(`text=TEK-UZMAN-${ek}`).count()) > 0;
+  const acikSayisi = Number(psql(`select count(*) from public.consultancy_requests where status='open' and requested_by in (select id from public.profiles where organization_id=(select organization_id from public.profiles where id='${T.hesaplar.personel.id}'))`));
   await s.screenshot({ path: `${G}/personel-gecici-uzman-kuyrugu.png`, animations: "disabled" });
-  kayit("personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi görünüyor", not && talepGorunur, { not, talepGorunur });
+  kayit("personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi listede ve açılınca mesajı görünüyor", not && satirVar && talepGorunur, { not, satirVar, talepGorunur, kurumdakiAcikTalep: acikSayisi });
   await c.close();
 }
 
@@ -205,9 +217,25 @@ for (const rol of HER_ROL) {
   await s.goto(editorAdresi); await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
   const yenidenAcildi = (await s.locator(".ProseMirror").first().innerText()).includes(metin);
   await s.screenshot({ path: `${G}/${rol}-editor-yeniden-acildi.png`, animations: "disabled" });
+  // Kurum seçmeden dışa aktarma (20.11.2026): Word dosyası iniyor ve yazılan metni taşıyor.
+  // Menü düğmesinin erişilebilir adı açıklamasıyla geliyor ("Word, PDF ya da LaTeX olarak indir"); görünen yazısıyla aranıyor.
+  await s.locator("button:visible", { hasText: /^\s*Dışa aktar\s*$/ }).first().click();
+  const [indirme] = await Promise.all([s.waitForEvent("download", { timeout: 60000 }).catch(() => null), s.locator("button.arac-menu-oge:visible", { hasText: "Word (.docx)" }).first().click()]);
+  let wordMetni = false;
+  if (indirme) { const yol = await indirme.path(); wordMetni = execFileSync("unzip", ["-p", yol, "word/document.xml"], { encoding: "utf8" }).includes(metin); }
   await s.goto("/dashboard/editor"); await yuklendi(s);
   kayit(`${rol}: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede`,
     sahip === T.hesaplar[rol].id && tur === "thesis" && kaydedildi && yenidenAcildi && (await ana(s)).includes(baslik) && hata.length === 0, { id, kaydedildi, yenidenAcildi, hata });
+  kayit(`${rol}: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)`, Boolean(indirme) && wordMetni, { indi: Boolean(indirme), wordMetni });
+  // Çalışmalarım: "Kurum seç" yok; kılavuz isteğe bağlı ("Yazım kılavuzunuz varsa yükleyebilirsiniz" / "Kılavuz yükle"), "Şimdi" işi değil.
+  await s.goto(`/dashboard/editor?sec=${id}`); await yuklendi(s);
+  const kart = await s.locator(".calisma-durum").first().innerText();
+  const simdi = await s.locator(".tez-simdi").first().innerText().catch(() => "");
+  const kurumSec = /Kurumu? seç/i.test(kart);
+  const istegeBagli = kart.includes("Yazım kılavuzunuz varsa yükleyebilirsiniz") && /Kılavuz yükle/.test(kart);
+  const simdiKilavuz = /kılavuz/i.test(simdi);
+  if (rol === "kurucu") await s.screenshot({ path: `${G}/kurucu-calismalarim-kilavuz-istege-bagli.png`, animations: "disabled" });
+  kayit(`${rol}: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil`, !kurumSec && istegeBagli && !simdiKilavuz, { kurumSec, istegeBagli, simdi: simdi.slice(0, 120) });
   await c.close();
 }
 

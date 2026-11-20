@@ -55,6 +55,7 @@ const TUR: Record<EksikTuru, { etiket: Metin; ton: string }> = {
   bakilacak: { etiket: { tr: "Bakılacak", en: "To review" }, ton: "warning" },
   asistan: { etiket: { tr: "Asistan", en: "Assistant" }, ton: "info" },
   yapilmadi: { etiket: { tr: "Yapılmadı", en: "Not done" }, ton: "neutral" },
+  istegeBagli: { etiket: { tr: "İsteğe bağlı", en: "Optional" }, ton: "neutral" },
 };
 
 export default async function CalismaDurumKarti({

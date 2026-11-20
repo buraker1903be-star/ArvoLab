@@ -348,8 +348,8 @@ interface ManuscriptEditorProps {
   guideline: AppliedGuideline | null;
   /** Sayfa ayarlarının kılavuzla senkron durumu (sunucuda hesaplanır) */
   guidelineSync: { mode: GuidelineSyncMode; source: SettingsSource; changes: GuidelineSyncChange[] };
-  /** Kurum seçimi için çalışma düzenleme sayfası */
-  editHref: string;
+  /** Çalışma düzenleme sayfası. 20.11.2026'dan beri editörde kullanılmıyor ("Kurum seç" kalktı); çağıran hâlâ veriyor. */
+  editHref?: string;
   /** Word çıktısına içindekiler tablosu */
   initialIncludeToc: boolean;
   /** Kılavuz ve kaynakça kontrolü geçmişi, en yenisi başta (yazim_kontrolleri) */
@@ -550,7 +550,6 @@ export default function ManuscriptEditor({
   projectDefaults,
   guideline,
   guidelineSync,
-  editHref,
   initialIncludeToc,
   kontrolGecmisi = [],
   sonKontrol = null,
@@ -2205,12 +2204,9 @@ export default function ManuscriptEditor({
   }, dil);
   const handleChecklistAction = (action: ChecklistAction) => {
     switch (action) {
-      case "link-guideline":
-        window.open(editHref, "_self");
-        break;
-      /* Kurum girili ama katalogda karşılığı yok: kılavuz penceresi
-         Çalışmalarım'daki kartta açılır (?kilavuz=1). Ayarlara göndermek,
-         hiçbir şeyi değiştirmeyen bir ekrana göndermekti. */
+      /* Kılavuz penceresi Çalışmalarım'daki kartta açılır (?kilavuz=1).
+         20.11.2026'ya kadar bir de "Kurum seç" (link-guideline) vardı ve
+         çalışma ayarlarına gönderiyordu; kılavuz isteğe bağlı olunca kalktı. */
       case "upload-guideline":
         window.open(`/dashboard/editor?sec=${encodeURIComponent(projectId)}&kilavuz=1`, "_self");
         break;
@@ -2731,7 +2727,8 @@ export default function ManuscriptEditor({
                 teslim"in, Kontroller menüsünün ve inceleme panelinin içindeydi;
                 kılavuzun durumu ise belgenin üstünde KALICI bir şeritti ("Bu
                 çalışmaya bağlı kılavuz yok · Kılavuzumu yükle · Kurumu seç").
-                Şerit kalktı, içeriği ve iki bağlantısı burada. Hiçbir işlev
+                Şerit kalktı, içeriği burada; "Kurumu seç" bağlantısı da 20.11.2026'da
+                kalktı (kılavuz isteğe bağlı, ArvoLab kurum seçtirmiyor). Hiçbir işlev
                 kaldırılmadı: Kontroller menüsü ve inceleme paneli aynen duruyor,
                 buradaki düğmeler aynı işleyicileri çağırıyor.
               */}
@@ -2822,18 +2819,15 @@ export default function ManuscriptEditor({
                     ) : (
                       <>
                         <p className="sol-arac-bos">
-                          {t({ tr: "Bu çalışmaya bağlı kılavuz yok.", en: "No guideline is linked to this work." })}{" "}
+                          {/* Kılavuz isteğe bağlı (20.11.2026); kılavuzsuz yazma ve dışa aktarma çalışır. */}
                           {t({
-                            tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-                            en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
+                            tr: "Yazım kılavuzunuz varsa yükleyebilirsiniz (PDF ya da web adresi); onayladığınız kurallar editöre uygulanır.",
+                            en: "If you have a writing guideline, you can upload it (PDF or web address); the rules you approve are applied to the editor.",
                           })}
                         </p>
                         <div className="sol-arac-eylem">
                           <Link className="projects-filter-button button-compact" href={calismaAdresi(projectId, { kilavuz: true })}>
-                            {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
-                          </Link>
-                          <Link className="projects-filter-button button-compact" href={editHref}>
-                            {t({ tr: "Kurumu seç", en: "Select institution" })}
+                            {t({ tr: "Kılavuz yükle", en: "Upload guideline" })}
                           </Link>
                         </div>
                       </>

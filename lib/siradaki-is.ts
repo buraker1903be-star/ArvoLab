@@ -76,7 +76,10 @@ export function siradakiIs(girdi: {
     "todo" ile "warning" ayrı: ilki eksik bir şey, ikincisi bakılması
     gereken bir şey. Eksik varsa önce o gelir.
   */
-  const eksik = girdi.eksikler.find((e) => e.status === "todo") ?? girdi.eksikler.find((e) => e.status === "warning");
+  /* İsteğe bağlı madde (kılavuz yükleme, 20.11.2026) "Şimdi" işi olmaz;
+     eskiden kılavuzsuz her tezde "Şimdi" satırı "Kurum seç" diyordu. */
+  const zorunlu = girdi.eksikler.filter((e) => !e.optional);
+  const eksik = zorunlu.find((e) => e.status === "todo") ?? zorunlu.find((e) => e.status === "warning");
   if (eksik) {
     return {
       baslik: eksik.label,

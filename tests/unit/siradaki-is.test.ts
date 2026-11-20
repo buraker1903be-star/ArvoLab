@@ -129,3 +129,13 @@ test("İngilizce: bitmiş çalışmada cümle ve eylem", () => {
   assert.equal(is.eylem, "Open work overview");
   assert.equal(siradakiIs({ calismaId: "c1", adimlar: [], eksikler: [], kalanGun: null }).baslik, "Teslime hazır görünüyor");
 });
+
+test("isteğe bağlı madde (kılavuz yükleme) 'Şimdi' işi olmaz (20.11.2026)", () => {
+  /* Eskiden kılavuzsuz her tezde "Şimdi" satırı kılavuz maddesini, yani
+     "Kurum seç"i gösteriyordu. Kılavuz isteğe bağlı; sıradaki iş birimlerden gelir. */
+  const istegeBagli: ChecklistItem = { id: "guideline", label: "Tez yazım kılavuzu", status: "warning", optional: true, detail: "Yazım kılavuzunuz varsa yükleyebilirsiniz.", action: { id: "upload-guideline", label: "Kılavuz yükle" } };
+  const adim: Adim = { anahtar: "yazim", baslik: "Yaz", aciklama: "Müsvedde boş", href: "/dashboard/editor/c1/write", tamam: false, zaman: null };
+  const is = siradakiIs({ calismaId: "c1", adimlar: [adim], eksikler: [istegeBagli], kalanGun: null });
+  assert.equal(is.kaynakMadde, undefined);
+  assert.equal(is.baslik, "Yaz");
+});

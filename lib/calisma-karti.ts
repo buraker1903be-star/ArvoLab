@@ -119,10 +119,10 @@ export function secimAdresi(params: Record<string, string | string[] | undefined
   return `${taban}?${arama.toString()}`;
 }
 
-export type EksikTuru = "stil" | "eksik" | "tutarsizlik" | "bakilacak" | "asistan" | "yapilmadi";
+export type EksikTuru = "stil" | "eksik" | "tutarsizlik" | "bakilacak" | "asistan" | "yapilmadi" | "istegeBagli";
 export type EksikSatiri = { anahtar: string; tur: EksikTuru; baslik: string; aciklama: string; href: string };
 
-type MaddeGirdisi = { id: string; label: string; detail: string; status: string };
+type MaddeGirdisi = { id: string; label: string; detail: string; status: string; optional?: boolean };
 type AdimGirdisi = { anahtar: string; baslik: string; aciklama: string; href: string; tamam: boolean };
 
 /*
@@ -165,7 +165,10 @@ export function eksikSatirlari(girdi: {
     aciklama: m.detail,
     href: `/dashboard/editor/${calismaId}/write?teslim=${m.id}`,
   });
-  const kalan = girdi.maddeler.filter((m) => m.status !== "ok" && m.id !== sirada?.kaynakMadde);
+  /* İsteğe bağlı madde (kılavuz yükleme, 20.11.2026) eksik ya da bakılacak
+     sayılmaz; listenin sonunda kendi rozetiyle durur ve kılavuz penceresini açar. */
+  const kalan = girdi.maddeler.filter((m) => m.status !== "ok" && !m.optional && m.id !== sirada?.kaynakMadde);
+  const istegeBagli = girdi.maddeler.filter((m) => m.status !== "ok" && m.optional);
   const siradakiAdim = sirada && !sirada.bitti && !sirada.kaynakMadde ? sirada.href : null;
 
   return [
@@ -176,6 +179,7 @@ export function eksikSatirlari(girdi: {
     ...girdi.tutarsizliklar.map((t) => ({ anahtar: `tutarsizlik-${t.tur}`, tur: "tutarsizlik" as const, baslik: t.baslik, aciklama: t.aciklama, href: literatur })),
     ...kalan.filter((m) => m.status !== "todo").map((m) => madde(m, "bakilacak")),
     ...(girdi.asistanBulgulari ?? []).map((b, sira) => ({ anahtar: `asistan-${sira}`, tur: "asistan" as const, baslik: b.baslik, aciklama: b.aciklama, href: "/dashboard/asistan" })),
+    ...istegeBagli.map((m) => ({ anahtar: `madde-${m.id}`, tur: "istegeBagli" as const, baslik: m.label, aciklama: m.detail, href: calismaAdresi(calismaId, { kilavuz: true }) })),
     ...girdi.adimlar
       .filter((a) => !a.tamam && a.href !== siradakiAdim)
       .map((a) => ({ anahtar: `adim-${a.anahtar}`, tur: "yapilmadi" as const, baslik: a.baslik, aciklama: a.aciklama, href: a.href })),

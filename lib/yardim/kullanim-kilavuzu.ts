@@ -110,8 +110,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Click \"Create and write\" to open the editor. If you have a Word draft, choose \"Import a Word file\"; the work is created and the import window opens.",
       },
       {
-        tr: "Üniversite, anabilim dalı, teslim tarihi ve tez yazım kılavuzu başlangıçta sorulmaz; hepsini sonra çalışmanın içinden eklersiniz. Kılavuzu editördeki \"Kılavuzumu yükle\" bağlantısından yükleyin: ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
-        en: "University, department, due date and the thesis writing guideline aren't asked at the start; you add them later from inside the work. Upload your guideline from the \"Upload my guideline\" link in the editor: ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
+        tr: "Üniversite, anabilim dalı, teslim tarihi ve tez yazım kılavuzu başlangıçta sorulmaz; hepsini sonra çalışmanın içinden eklersiniz. Kılavuz isteğe bağlıdır; varsa editördeki \"Kılavuz yükle\" bağlantısından yükleyin: ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
+        en: "University, department, due date and the thesis writing guideline aren't asked at the start; you add them later from inside the work. The guideline is optional; if you have one, upload it from the \"Upload guideline\" link in the editor: ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
       },
     ],
     notlar: [
