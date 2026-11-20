@@ -1,0 +1,75 @@
+[
+  {
+    "ad": "masaüstü: üst çubukta arama kutusu yok",
+    "gecti": true,
+    "ayrinti": {
+      "eskiSinif": false,
+      "aramaBenzeri": []
+    }
+  },
+  {
+    "ad": "masaüstü: eylemler sağ kenarda",
+    "gecti": true,
+    "ayrinti": {
+      "sagBosluk": 32
+    }
+  },
+  {
+    "ad": "masaüstü: Ctrl+K paleti açar",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "masaüstü: Esc paleti kapatır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "masaüstü: hesap menüsünde Komut paleti girişi",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "masaüstü: menüden palet açılır, menü kapanır",
+    "gecti": true,
+    "ayrinti": {
+      "menuAcik": false
+    }
+  },
+  {
+    "ad": "editör: yuva dolu, eylemler sağda, çakışma yok",
+    "gecti": true,
+    "ayrinti": {
+      "yuvaGenislik": 608,
+      "yuvaSag": 1236,
+      "eylemSol": 1252,
+      "sagBosluk": 32,
+      "tekSatir": 52
+    }
+  },
+  {
+    "ad": "editör: Ctrl+K paleti açar",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "telefon: üst çubukta arama düğmesi yok",
+    "gecti": true,
+    "ayrinti": {
+      "eskiSinif": false,
+      "aramaBenzeri": []
+    }
+  },
+  {
+    "ad": "telefon: Daha fazla penceresinde Komut paleti girişi",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "telefon: girişten palet açılır, pencere kapanır",
+    "gecti": true,
+    "ayrinti": {
+      "dahaAcik": false
+    }
+  }
+]

@@ -270,19 +270,28 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
   );
 }
 
-/* Üst çubuktaki arama düğmesi: paleti açar. */
-export function OsAramaDugmesi() {
+/*
+  KOMUT PALETİNİ AÇAN MENÜ ÖĞESİ (20.11.2026). Üst çubukta "Ara veya komut
+  çalıştır · Ctrl K" diye bir kutu vardı (OsAramaDugmesi); kurum sahibinin
+  kararıyla kaldırıldı: üst çubuk sade kalsın, makale/belge/PDF aramaları
+  kendi yerlerinde. Palet ve Ctrl+K kısayolu aynen duruyor; menüden bu
+  öğeyle açılır (hesap menüsü ve "Diğer araçlar"). Aynı "os:ara" olayını yayar.
+*/
+export function KomutPaletiAcOgesi({ className }: { className?: string }) {
   const t = useCeviri();
   return (
     <button
       type="button"
-      className="os-search"
-      onClick={() => window.dispatchEvent(new Event("os:ara"))}
-      aria-label={t({ tr: "Ara veya komut çalıştır (Ctrl+K)", en: "Search or run a command (Ctrl+K)" })}
+      className={className}
+      onClick={(e) => {
+        // Hesap menüsü bir <details>: açık kalırsa palet kapanınca menü ekranda asılı duruyor.
+        e.currentTarget.closest("details")?.removeAttribute("open");
+        window.dispatchEvent(new Event("os:ara"));
+      }}
     >
-      <Search size={18} aria-hidden="true" />
-      <span className="os-search-text">{t({ tr: "Ara veya komut çalıştır", en: "Search or run a command" })}</span>
-      <kbd>Ctrl K</kbd>
+      <Search size={16} aria-hidden="true" />
+      <span>{t({ tr: "Komut paleti", en: "Command palette" })}</span>
+      <kbd aria-label={t({ tr: "Kısayol: Ctrl K", en: "Shortcut: Ctrl K" })}>Ctrl K</kbd>
     </button>
   );
 }
