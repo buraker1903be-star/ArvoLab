@@ -15,8 +15,32 @@ düzeltildi.
 | 4 | Telefonda kabul yolu yok | Tab yok | Kaba işaretçide öneriyle birlikte "Ekle" düğmesi; dokunuş ProseMirror'a geçmez (`stopEvent`), yoksa imleç taşınıp öneri düşüyordu |
 | 5 | Gri metin paragrafı kaplıyor | İstem "en çok iki cümle", istemci 400 karakter | İstem: en çok bir kısa cümle; istemci ilk cümle sonunda keser (`ilkCumle`) |
 | 6 | Ctrl+Z son yazılan sözcüğü de siliyor | Kabul, hemen önce yazılan harflerle aynı geçmiş grubuna giriyordu | `closeHistory` önce ve sonra: kabul tek adım |
-| 7 | Otomatik mod saatlik hakkı tüketiyor | Hak sohbetle ortak (kullanıcı başına tek sayaç, bilerek) | Otomatik yolun istemci sınırı: 12 sn aralık, saatte 12 (`lib/oneri-siniri.ts`); elle istek sınırsız |
+| 7 | Otomatik mod hak/kota dolunca sessizce kapanıyordu | İstemcide sabit "saatte 12" (localStorage) bir ürün sınırı gibi davranıyordu; sunucunun reddi görünmüyordu | Sınır SUNUCUDA (aşağıda); istemcide sabit sınır yok. Red nedeni görünür bir duruma çevrilir |
 | 8 | Bulgu uydurma riski | Sayı ve atıf denetleniyor, "bulgular gösterdi" sayısız da kurulabiliyor | `bulguIddiasi`: öncesinde dayanağı yoksa öneri düşer (red nedeni migration gerektirmesin diye boş, ayrıntı `findings.neden = "bulgu"`) |
+
+## Sınır sunucuda (20.11.2026, ikinci tur)
+
+İstemcideki "12 sn aralık, saatte 12" (`lib/oneri-siniri.ts`) kaldırıldı.
+Bir öneri yazım asistanının bir çağrısıdır ve onun kapısından geçer
+(`app/actions/ai-yazim.ts`, `lib/ai/erisim.ts`):
+
+- abonelik, deneme ve kurum kredisi (kapı; diğer yeteneklerle aynı),
+- kullanıcı başına saatlik asistan hakkı (sohbetle ORTAK, `lib/ai/sinirlar.ts`;
+  yetenek başına ayrı sayaç tutulmaz — AGENTS.md),
+- yalnızca tamamlamaya özgü **en az 3 sn aralık** (`TAMAMLAMA_EN_AZ_ARALIK_SN`):
+  ayrı bir hak DEĞİL, daha sıkı bir fren; frene takılan istek saatlik hakkı
+  tüketmez.
+
+Sunucu reddi `sinir` alanıyla döner (`aralik` / `saatlik` / `kapi` / `deneme`).
+Aralıkta otomatik yol kısa süre sonra kendisi yeniden dener; diğerlerinde öneri
+"duraklatıldı" durumuna geçer: düğme "Öneri · N dk" ya da "Öneri · duraklatıldı"
+der, ipucunda nedeni yazar, Alt+/ aynı nedeni bildirir. Saatlik hak açılınca
+durum kendiliğinden "hazır"a döner; düğmeyi yeniden açmak duraklatmayı sıfırlar.
+
+**Açık ürün kararı:** öneri, sohbetle ortak saatlik 20 hakkı ve kurum
+kredisini harcıyor. Otomatik mod açık bir öğrenci yoğun yazarken bu hakkı
+sohbetten önce tüketebilir. Ayrı bir öneri kotası istenirse bu AGENTS.md'deki
+"yetenek başına ayrı sayaç tutulmaz" kuralının bilinçli bir istisnası olur.
 
 Korunanlar: öneri süslemedir, belgeye/kayda/kelime sayısına/çıktılara girmez;
 yazma ve imleç hareketi siler; geç cevap belge değiştiyse gösterilmez;
@@ -25,7 +49,9 @@ Tab yalnızca öneri görünürken kabul eder (yoksa tabloda hücre değiştirir
 ## Kabul
 
 `node tasarim/satir-ici-oneri/betikler/kabul.mjs` — yerel yığın + model
-taklidi, **28/28** (`kabul-sonucu.json`). Masaüstü TR, masaüstü EN (İngilizce
+taklidi, **31/31** (`kabul-sonucu.json`). Sunucu freni (art arda ikinci istek
+saatlik hakkı tüketmeden reddedilir ve söylenir) ve hak doluyken duraklatma
+(düğme kalan süreyi gösterir, otomatik istek gitmez, Alt+/ nedeni söyler) dahil. Masaüstü TR, masaüstü EN (İngilizce
 arayüz + İngilizce belge), telefon (iPhone 13 öykünmesi).
 
 **Gerçek servisle doğrulanmadı:** cevaplar model taklidinden

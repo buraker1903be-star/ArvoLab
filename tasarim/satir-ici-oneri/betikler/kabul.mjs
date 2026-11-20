@@ -17,6 +17,8 @@ const KUL = T.hesaplar.bireysel;
 const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const sonuc = [];
+// Yerel tohum hesabının saatlik asistan hakkı (20): betik bunu aşacak kadar istek gönderiyor; bölüm başlarında sıfırlanır.
+const hakSifirla = () => psql(`delete from public.auth_rate_limits where key in ('ai-asistan:${KUL.id}', 'ai-tamamla:${KUL.id}')`);
 const kayit = (ad, gecti, ayrinti = {}) => { sonuc.push({ ad, gecti, ayrinti }); console.log(gecti ? "PASS" : "FAIL", ad, JSON.stringify(ayrinti).slice(0, 400)); };
 
 // Yerel yığında saatlik asistan hakkı (20) art arda koşularda doluyor: betik ~13 istek atıyor.
@@ -54,7 +56,14 @@ const metin = (s) => ed(s, (e) => e.state.doc.textContent);
 // İmlecin bulunduğu paragrafın metni: öneri oraya girer, belgenin sonuna değil.
 const paragrafMetni = (s) => ed(s, (e) => e.state.selection.$head.parent.textContent);
 // İmleci paragrafın SONUNA koy (End görsel satırın sonuna gider; satır kayınca paragraf sonu değildir).
-const sonaGit = (s, icerik) => ed(s, (e, a) => { let hedef = null; e.state.doc.descendants((n, p) => { if (hedef === null && n.isTextblock && n.textContent.startsWith(a)) hedef = p + 1 + n.content.size; }); e.commands.focus(); e.commands.setTextSelection(hedef); return hedef; }, icerik);
+const sonaGit = async (s, icerik) => {
+  const hedef = await ed(s, (e, a) => { let h = null; e.state.doc.descendants((n, p) => { if (h === null && n.isTextblock && n.textContent.startsWith(a)) h = p + 1 + n.content.size; }); if (h !== null) { e.commands.focus(); e.commands.setTextSelection(h); } return h; }, icerik);
+  if (hedef === null) throw new Error(`"${icerik}" ile başlayan paragraf yok: ${JSON.stringify(await ed(s, (e) => { const l = []; e.state.doc.descendants((n) => { if (n.isTextblock) l.push(n.textContent.slice(0, 50)); }); return l; }))}`);
+  return hedef;
+};
+// Sunucunun en az aralığı (3 sn, lib/ai/sinirlar.ts): senaryolar arası istekler bu aralığı gözetir.
+let sonIstek = 0;
+const altSlash = async (s) => { const bekle = sonIstek + 3300 - Date.now(); if (bekle > 0) await s.waitForTimeout(bekle); sonIstek = Date.now(); await s.keyboard.press("Alt+/"); };
 const bekleOneri = async (s, ms = 6000) => { const son = Date.now() + ms; while (Date.now() < son) { const o = await oneri(s); if (o) return o; await s.waitForTimeout(150); } return null; };
 // Durum çubuğu ve sayfa tahmini aynı sayaçtan okur (characterCount); gösterilen kutu panele göre değişiyor.
 const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
@@ -95,14 +104,21 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   // 4) Esc kapatır, belge değişmez.
   const escOnce = await metin(s); await s.keyboard.press("Escape"); await s.waitForTimeout(200);
   kayit("Esc öneriyi kapatır, belge değişmez", !(await oneri(s)) && (await metin(s)) === escOnce);
-  // 4b) Otomatik yolun sıklık sınırı: 12 sn dolmadan ikinci otomatik istek gitmez.
-  await sonaGit(s, "Üniversiteye"); await s.keyboard.type(" yeni", { delay: 40 }); const nA = calismaKayitlari(PR_TR).length; await s.waitForTimeout(2600);
-  kayit("otomatik: 12 sn içinde ikinci otomatik istek gitmez", calismaKayitlari(PR_TR).length === nA, {});
+  // 4b) SUNUCUDAKİ en az aralık: iki elle istek art arda → ikincisi frene takılır, hak tüketmez, söylenir.
+  await s.waitForTimeout(3500);
+  await sonaGit(s, "Üniversiteye");
+  const hakOnce = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
+  await s.keyboard.press("Alt+/"); await bekleOneri(s); await s.keyboard.press("Escape");
+  await s.keyboard.press("Alt+/"); await s.waitForTimeout(1500); sonIstek = Date.now();
+  const hakSonra = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
+  const aralikMetni = await s.evaluate(() => document.body.innerText);
+  kayit("sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir", hakSonra - hakOnce === 1 && /çok sık istendi/.test(aralikMetni), { hakOnce, hakSonra });
 
 
+  hakSifirla();
   // 5) Kısayol (Alt+/) tıklamanın HEMEN ardından: eskiden konum yarışı yüzünden öneri düşüyordu.
   await s.click(".ProseMirror p >> nth=0"); await s.keyboard.press("Control+End"); await sonaGit(s, "Üniversiteye");
-  await s.keyboard.press("Alt+/");
+  await altSlash(s);
   const o2 = await bekleOneri(s);
   kayit("Alt+/ hemen ardından da öneri gösterir (konum yarışı)", !!o2, { o2 });
 
@@ -111,29 +127,31 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   kayit("yazmak öneriyi siler", !(await oneri(s)));
   await s.keyboard.press("Backspace");
   // 7) İmleç hareketi siler.
-  await s.keyboard.press("Alt+/"); await bekleOneri(s);
+  await altSlash(s); await bekleOneri(s);
   await s.keyboard.press("ArrowLeft"); await s.waitForTimeout(150);
   kayit("imleç hareketi öneriyi siler", !(await oneri(s)));
   await s.keyboard.press("ArrowRight");
 
   // 8) Tab kabul eder; tek Ctrl+Z yalnızca öneriyi geri alır.
   await s.keyboard.type(" ayrıca", { delay: 20 }); // hemen öncesinde yazılmış harfler (aynı geçmiş penceresi)
-  await s.keyboard.press("Alt+/"); const o3 = await bekleOneri(s);
+  await altSlash(s); const o3 = await bekleOneri(s);
   const kabulOnce = await metin(s); const pOnce = await paragrafMetni(s);
   await s.keyboard.press("Tab"); await s.waitForTimeout(200);
-  kayit("Tab öneriyi asistan iziyle ekler", (await paragrafMetni(s)) === pOnce + o3 && (await s.evaluate((t) => [...document.querySelectorAll(".ProseMirror .asistan-izi")].some((e) => e.textContent === t), o3)), { o3 });
+  kayit("Tab öneriyi asistan iziyle ekler", (await paragrafMetni(s)) === pOnce + o3 && (await s.evaluate((t) => [...document.querySelectorAll(".ProseMirror .asistan-izi")].some((e) => e.textContent === t), o3)), { o3, pOnce: pOnce.slice(-60), pSonra: (await paragrafMetni(s)).slice(-90), izler: await s.evaluate(() => [...document.querySelectorAll(".ProseMirror .asistan-izi")].map((e) => e.textContent)) });
   await s.keyboard.press("Control+z"); await s.waitForTimeout(200);
   kayit("tek Ctrl+Z yalnızca öneriyi geri alır", (await metin(s)) === kabulOnce, { sonra: (await metin(s)).slice(-40) });
 
   // 9) Geç gelen cevap yanlış yere düşmez.
-  await s.keyboard.type(" GECIKME", { delay: 20 }); await s.keyboard.press("Alt+/"); await s.waitForTimeout(900);
+  await s.keyboard.type(" GECIKME", { delay: 20 }); await altSlash(s); await s.waitForTimeout(900);
   await s.keyboard.type(" devam", { delay: 30 }); await s.waitForTimeout(2600);
-  kayit("geç cevap: yazmaya devam edilince gösterilmez", !(await oneri(s)) && !(await metin(s)).includes("geç gelen"), { o: await oneri(s) });
+  // Otomatik mod açık: " devam"dan sonraki duraksama YENİ konum için meşru bir öneri getirebilir; düşmesi gereken GECİKMELİ cevaptır.
+  kayit("geç cevap: yazmaya devam edilince gösterilmez", !((await oneri(s)) ?? "").includes("geç gelen") && !(await metin(s)).includes("geç gelen"), { o: await oneri(s) });
   for (let i = 0; i < " GECIKME devam".length; i++) await s.keyboard.press("Backspace");
 
+  hakSifirla();
   // 10) Dayanaksız sayı: sunucu düşürür, hiçbir şey gösterilmez.
   const nS = calismaKayitlari(PR_TR).length;
-  await s.keyboard.type(" SAYI", { delay: 20 }); await s.keyboard.press("Alt+/"); await s.waitForTimeout(2500);
+  await s.keyboard.type(" SAYI", { delay: 20 }); await altSlash(s); await s.waitForTimeout(2500);
   const sayiKaydi = calismaKayitlari(PR_TR).slice(nS);
   kayit("bağlamda olmayan sayı: öneri düşer", !(await oneri(s)) && sayiKaydi.some((k) => k.startsWith("rejected:uydurma_sayi")), { sayiKaydi });
   for (let i = 0; i < " SAYI".length; i++) await s.keyboard.press("Backspace");
@@ -141,7 +159,7 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   // 11) Seçim varken istek yok.
   const nSec = calismaKayitlari(PR_TR).length;
   await ed(s, (e) => { let a = null; e.state.doc.descendants((n, p) => { if (a === null && n.isTextblock && n.textContent.startsWith("İkinci")) a = p + 1; }); e.commands.focus(); e.commands.setTextSelection({ from: a, to: a + 6 }); });
-  await s.keyboard.press("Alt+/"); await s.waitForTimeout(1500);
+  await altSlash(s); await s.waitForTimeout(1500);
   kayit("seçim varken öneri istenmez", calismaKayitlari(PR_TR).length === nSec && !(await oneri(s)));
 
   // 12) Tablo: öneri yokken Tab hücre değiştirir; öneri varken kabul eder.
@@ -150,14 +168,28 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   await s.keyboard.press("Tab"); await s.waitForTimeout(150);
   const hucreSonra = await ed(s, (e) => e.state.selection.$head.parent.textContent);
   kayit("tabloda öneri yokken Tab sonraki hücreye geçer", hucreOnce.startsWith("Hücre içinde") && hucreSonra === "Komşu hücre", { hucreSonra });
-  await sonaGit(s, "Hücre içinde"); await s.keyboard.press("Alt+/"); const o4 = await bekleOneri(s);
+  await sonaGit(s, "Hücre içinde"); await altSlash(s); const o4 = await bekleOneri(s);
   await s.keyboard.press("Tab"); await s.waitForTimeout(150);
   const hucreKabul = await ed(s, (e) => e.state.selection.$head.parent.textContent);
   kayit("tabloda öneri varken Tab kabul eder (hücrede kalır)", !!o4 && hucreKabul.endsWith(o4.trim()), { hucreKabul: hucreKabul.slice(-50) });
   await s.screenshot({ path: OUT + "masaustu-tablo.png" });
 
+  // 13b) Saatlik hak dolu: öneri DURAKLATILIR ve bu görünür (düğme yazısı + Alt+/ mesajı); otomatik istek gitmez.
+  psql(`insert into public.auth_rate_limits (key, window_start, count) values ('ai-asistan:${KUL.id}', now(), 99) on conflict (key) do update set window_start = now(), count = 99`);
+  await s.waitForTimeout(3500);
+  await sonaGit(s, "Üniversiteye"); await altSlash(s); await s.waitForTimeout(1500);
+  const duraklatma = await dugme.textContent();
+  kayit("hak dolunca düğme duraklatıldığını ve kalan süreyi söyler", /Öneri · \d+ dk/.test(duraklatma ?? ""), { duraklatma });
+  await s.screenshot({ path: OUT + "masaustu-duraklatildi.png" });
+  const nD = calismaKayitlari(PR_TR).length;
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type(" dur", { delay: 40 }); await s.waitForTimeout(2600);
+  kayit("duraklatılmışken otomatik istek gitmez ve öneri görünmez", calismaKayitlari(PR_TR).length === nD && !(await oneri(s)));
+  await altSlash(s); await s.waitForTimeout(600);
+  kayit("duraklatılmışken Alt+/ nedeni söyler (sessiz değil)", /Saatlik asistan hakkınız doldu/.test(await s.evaluate(() => document.body.innerText)));
+  psql(`delete from public.auth_rate_limits where key='ai-asistan:${KUL.id}'`);
+
   // 14) Kapatınca otomatik istek durur.
-  await dugme.click(); await s.waitForTimeout(13000);
+  await dugme.click(); await s.waitForTimeout(1500);
   await sonaGit(s, "Üniversiteye"); await s.keyboard.type(" son", { delay: 40 }); const nK = calismaKayitlari(PR_TR).length; await s.waitForTimeout(2600);
   kayit("kapatınca otomatik istek gitmez", calismaKayitlari(PR_TR).length === nK && (await dugme.getAttribute("aria-pressed")) === "false");
   kayit("masaüstü TR: sayfa hatası yok", hatalar.length === 0, { hatalar });
@@ -165,10 +197,11 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
 }
 
 // ── Masaüstü, İngilizce arayüz + İngilizce belge
+hakSifirla();
 {
   const { c, s, hatalar } = await baglam({ viewport: { width: 1440, height: 900 } }, "en");
   await ac(s, PR_EN);
-  await sonaGit(s, "First-year"); await s.keyboard.press("Alt+/");
+  await sonaGit(s, "First-year"); await altSlash(s);
   const o = await bekleOneri(s);
   kayit("EN: İngilizce belgede İngilizce devam", !!o && /which shapes/.test(o), { o });
   const dugme = s.getByRole("button", { name: /Automatic suggestions/ }).first();
@@ -180,6 +213,7 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   await c.close();
 }
 
+hakSifirla();
 // ── Telefon: dokunarak kabul + klavye açıkken (görünüm yüksekliği daraltılarak taklit)
 {
   const { c, s, hatalar } = await baglam({ ...devices["iPhone 13"] });

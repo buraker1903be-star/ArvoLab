@@ -4,6 +4,10 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
 import { etkinOneri, kabulEdilenOneri, oneriEklentisi, oneriGoster, oneriKabulEt, oneriKabulGonder, oneriTemizleIslem } from "@/lib/tiptap-satir-ici-oneri";
 import { belge, paragraf } from "./ortam";
+import JSZip from "jszip";
+import { Packer } from "docx";
+import { renderTiptapHtml } from "@/lib/tiptap-html";
+import { buildDocxFromTiptap } from "@/lib/tiptap-docx";
 
 /*
   Satır içi öneri (03.11.2026). Öneri SÜSLEMEDİR: gösterilmesi belgeyi
@@ -106,4 +110,21 @@ test("öneri kaydedilen belgeye, kelime sayısına ve metne girmez", () => {
   s = s.apply(oneriGoster(s, { konum: s.selection.head, metin: " gizli öneri metni", kayit: null })!);
   assert.equal(JSON.stringify(s.doc.toJSON()), once);
   assert.equal(s.doc.textContent.includes("gizli"), false);
+});
+
+/*
+  20.11.2026: öneri gösterilirken alınan yazdırma/paylaşım HTML'i ve Word
+  çıktısı öneriyi TAŞIMAZ. Öneri süsleme olduğu için belgenin JSON'unda yok;
+  bu test, bir gün öneriyi düğüm olarak yazan bir yol eklenirse üç çıktıdan
+  ikisinde hemen kırmızı yanar.
+*/
+test("görünen öneri yazdırma HTML'ine ve Word'e girmez", async () => {
+  let s = durum();
+  s = s.apply(oneriGoster(s, { konum: s.selection.head, metin: " GIZLI_ONERI_METNI", kayit: null })!);
+  const json = s.doc.toJSON();
+  assert.equal(renderTiptapHtml(json as never, {}).html.includes("GIZLI_ONERI_METNI"), false);
+  const word = await buildDocxFromTiptap({ title: "T", doc: json as never, fetchImage: async () => null } as never);
+  const xml = await (await JSZip.loadAsync(await Packer.toBuffer(word))).file("word/document.xml")!.async("string");
+  assert.equal(xml.includes("GIZLI_ONERI_METNI"), false);
+  assert.equal(xml.includes("Enflasyon ile işsizlik"), true, "asıl metin Word'de");
 });

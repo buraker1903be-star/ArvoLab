@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { oneriTemizle } from "@/lib/ai/yazim-metni";
 import { etkinOneri, kabulEdilenOneri, oneriGoster } from "@/lib/tiptap-satir-ici-oneri";
-import { otomatikIzin } from "@/lib/oneri-siniri";
 import { collectHeadings } from "./editor-navigation";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -22,8 +21,8 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
       paragrafın SONUNDAYSA. Varsayılan KAPALI: her öneri bir asistan
       hakkı (saatlik 20, lib/ai/sinirlar.ts) ve kurum kredisi harcıyor;
       kendiliğinden açık olsaydı öğrenci bir saat yazınca sohbet
-      asistanını kullanamaz hâle gelirdi. Hak dolunca otomatik kapanır ve
-      bir kez söylenir.
+      asistanını kullanamaz hâle gelirdi. Hak dolunca öneri "duraklatıldı"
+      durumuna geçer ve bunu düğmede söyler (aşağıda ÖNERİNİN DURUMU).
 
   Cevap geldiğinde belge değişmişse (öğrenci yazmaya devam etti) öneri
   gösterilmez: eski konuma ait öneri yanlış yere düşerdi.
@@ -38,48 +37,46 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
     - Otomatik yol 80 karakterden önce hiç çalışmıyordu; ilk cümlesini
       yazan öğrenci hiçbir şey görmüyordu. Eşik 40.
     - Otomatik istek uçuştayken gelen yeni duraksama yutuluyordu; artık
-      cevap dönünce bir kez yeniden kurulur. Otomatik yolun kendi sıklık
-      sınırı var (lib/oneri-siniri.ts): saatlik hak sohbetle ortak.
+      cevap dönünce bir kez yeniden kurulur. Sıklık sınırı sunucuda
+      (app/actions/ai-yazim.ts): saatlik hak sohbetle ortak.
     - Editör odakta değilse (öğrenci araç çubuğuna, panele geçti)
       otomatik istek gitmez, gelen cevap da gösterilmez.
 */
 const BEKLEME_MS = 1_500;
 const EN_AZ_OTOMATIK = 40;
-const SINIR_ANAHTARI = "arvolab:otomatik-oneri-zamanlari";
-
-function zamanlariOku(): number[] {
-  try {
-    const ham = JSON.parse(window.localStorage.getItem(SINIR_ANAHTARI) ?? "[]");
-    return Array.isArray(ham) ? ham.filter((z): z is number => typeof z === "number") : [];
-  } catch {
-    return [];
-  }
-}
-function zamanlariYaz(zamanlar: number[]) {
-  try {
-    window.localStorage.setItem(SINIR_ANAHTARI, JSON.stringify(zamanlar));
-  } catch {
-    // Depolama kapalıysa sınır yalnızca bu sekmenin belleğinde kalır (aşağıdaki ref).
-  }
-}
+/*
+  ÖNERİNİN DURUMU (20.11.2026). Sınır artık SUNUCUDA (app/actions/ai-yazim.ts):
+  abonelik, deneme, kredi, kullanıcı başına saatlik asistan hakkı ve
+  tamamlamaya özgü en az aralık. Eskiden istemcide sabit bir "saatte 12"
+  vardı (localStorage) ve hak dolunca otomatik mod sessizce kapanıyordu;
+  öğrenci düğmeyi açık sanıp öneri bekliyordu. Şimdi sunucunun nedeni
+  görünür bir duruma çevrilir: düğme "duraklatıldı" der, nedenini ve
+  (saatlik hakta) ne zaman açılacağını söyler; Alt+/ aynı mesajı gösterir.
+*/
+export type OneriDurumu = { tur: "hazir" } | { tur: "duraklatildi"; neden: "saatlik" | "kapi" | "deneme"; mesaj: string; bitis: number | null };
 
 export function useSatirIciOneri({
   editor,
   projectId,
   otomatik,
-  otomatigiKapat,
 }: {
   editor: Editor | null;
   projectId: string;
   otomatik: boolean;
-  otomatigiKapat: () => void;
 }) {
   const t = useCeviri();
   const istekte = useRef(false);
   const bekleyen = useRef(false);
   const sonKonum = useRef<string | null>(null);
-  const bellekZamanlar = useRef<number[]>([]);
-  const tavanSoylendi = useRef(false);
+  const [durum, setDurum] = useState<OneriDurumu>({ tur: "hazir" });
+  const durumRef = useRef<OneriDurumu>({ tur: "hazir" });
+  // Kalan süre yazısı için "şimdi": render saf kalsın diye olayda ve zamanlayıcıda güncellenir.
+  const [simdi, setSimdi] = useState(0);
+  const durumuKur = useCallback((d: OneriDurumu) => {
+    durumRef.current = d;
+    setDurum(d);
+    setSimdi(Date.now());
+  }, []);
   // Bekleyen turu kuran zamanlayıcı en güncel iste'yi çağırsın (kendi içinden çağrı yerine).
   const isteRef = useRef<(elle: boolean) => Promise<void>>(async () => undefined);
 
@@ -90,6 +87,15 @@ export function useSatirIciOneri({
         // Uçuştaki istek bitince yeniden denenir (otomatik yol); elle istek ikinciyi göndermez.
         if (!elle) bekleyen.current = true;
         return;
+      }
+      const d = durumRef.current;
+      if (d.tur === "duraklatildi") {
+        if (d.bitis !== null && Date.now() >= d.bitis) durumuKur({ tur: "hazir" });
+        else {
+          // Duraklatılmışken otomatik istek gitmez; elle istek nedenini SÖYLER (sessizce bozuk görünmesin).
+          if (elle) showToast("error", d.mesaj);
+          return;
+        }
       }
       if (!elle && (!editor.isFocused || etkinOneri(editor.state))) return;
       const { selection, doc } = editor.state;
@@ -106,35 +112,27 @@ export function useSatirIciOneri({
       // Otomatik yol aynı yer için ikinci kez istemez (öğrenci öneriyi Esc ile reddetmiş olabilir).
       const anahtar = `${konum}:${oncesi.slice(-60)}`;
       if (!elle && sonKonum.current === anahtar) return;
-      if (!elle) {
-        const karar = otomatikIzin([...zamanlariOku(), ...bellekZamanlar.current], Date.now());
-        if (!karar.izin) {
-          if (karar.neden === "saatlik" && !tavanSoylendi.current) {
-            tavanSoylendi.current = true;
-            showToast(
-              "info",
-              t({
-                tr: "Otomatik öneri bu saat için duraklatıldı; asistan hakkınız sohbet için korunuyor. Alt+/ ile istemeye devam edebilirsiniz.",
-                en: "Automatic suggestions are paused for this hour to save your assistant credits for chat. You can still press Alt+/.",
-              }),
-            );
-          }
-          return;
-        }
-        bellekZamanlar.current = karar.zamanlar;
-        zamanlariYaz(karar.zamanlar);
-      }
       sonKonum.current = anahtar;
       istekte.current = true;
       try {
         const bolum = collectHeadings(doc).filter((h) => h.pos < konum).at(-1)?.text ?? null;
         const cevap = await yazimAsistani({ projectId, istek: "", gorev: "tamamla", bolum, oncesi });
         if (cevap.hata) {
-          if (elle) showToast("error", cevap.hata);
-          else if (cevap.odemeGerekli || /hak|limit|kredi|credit/i.test(cevap.hata)) {
-            otomatigiKapat();
-            showToast("error", t({ tr: `Otomatik öneri kapatıldı: ${cevap.hata}`, en: `Automatic suggestions turned off: ${cevap.hata}` }));
+          const sinir = cevap.sinir;
+          if (sinir?.tur === "aralik") {
+            // En az aralık: kısa süre sonra kendiliğinden yeniden denenir; elle istekte söylenir.
+            sonKonum.current = null;
+            if (elle) showToast("info", cevap.hata);
+            else window.setTimeout(() => void isteRef.current(false), (sinir.tekrarSaniye ?? 3) * 1000 + 200);
+            return;
           }
+          if (sinir) {
+            const bitis = sinir.tur === "saatlik" && typeof sinir.tekrarSaniye === "number" ? Date.now() + sinir.tekrarSaniye * 1000 : null;
+            durumuKur({ tur: "duraklatildi", neden: sinir.tur, mesaj: cevap.hata, bitis });
+            showToast(elle ? "error" : "info", t({ tr: `Öneriler duraklatıldı: ${cevap.hata}`, en: `Suggestions paused: ${cevap.hata}` }));
+            return;
+          }
+          if (elle) showToast("error", cevap.hata);
           return;
         }
         if (editor.isDestroyed || editor.state.doc !== doc) return;
@@ -157,7 +155,7 @@ export function useSatirIciOneri({
         }
       }
     },
-    [editor, projectId, otomatigiKapat, t],
+    [editor, projectId, durumuKur, t],
   );
 
   useEffect(() => {
@@ -204,5 +202,20 @@ export function useSatirIciOneri({
     };
   }, [editor, otomatik, iste]);
 
-  return { iste };
+  // Saatlik hak açılınca durum kendiliğinden "hazır"a döner (düğme yazısı da).
+  useEffect(() => {
+    if (durum.tur !== "duraklatildi" || durum.bitis === null) return;
+    const z = window.setTimeout(() => durumuKur({ tur: "hazir" }), Math.max(0, durum.bitis - Date.now()) + 500);
+    const saat = window.setInterval(() => setSimdi(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(z);
+      window.clearInterval(saat);
+    };
+  }, [durum, durumuKur]);
+  const kalanDk = durum.tur === "duraklatildi" && durum.bitis !== null ? Math.max(1, Math.ceil((durum.bitis - simdi) / 60_000)) : null;
+
+  /** Kullanıcı düğmeyi yeniden açınca duraklatma sıfırlanır (abonelik/kredi değişmiş olabilir). */
+  const durumuSifirla = useCallback(() => durumuKur({ tur: "hazir" }), [durumuKur]);
+
+  return { iste, durum, kalanDk, durumuSifirla };
 }

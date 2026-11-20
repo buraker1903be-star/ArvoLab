@@ -49,9 +49,12 @@
     "ayrinti": {}
   },
   {
-    "ad": "otomatik: 12 sn içinde ikinci otomatik istek gitmez",
+    "ad": "sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir",
     "gecti": true,
-    "ayrinti": {}
+    "ayrinti": {
+      "hakOnce": 1,
+      "hakSonra": 2
+    }
   },
   {
     "ad": "Alt+/ hemen ardından da öneri gösterir (konum yarışı)",
@@ -74,7 +77,12 @@
     "ad": "Tab öneriyi asistan iziyle ekler",
     "gecti": true,
     "ayrinti": {
-      "o3": " bu da öğrencilerin çalışma planlarını doğrudan etkiler."
+      "o3": " bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
+      "pOnce": "osyal ilişkilerini birlikte belirler ve ve bu süreçte ayrıca",
+      "pSonra": "e belirler ve ve bu süreçte ayrıca bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
+      "izler": [
+        " bu da öğrencilerin çalışma planlarını doğrudan etkiler."
+      ]
     }
   },
   {
@@ -118,6 +126,23 @@
     "ayrinti": {
       "hucreKabul": " öğrencilerin çalışma planlarını doğrudan etkiler."
     }
+  },
+  {
+    "ad": "hak dolunca düğme duraklatıldığını ve kalan süreyi söyler",
+    "gecti": true,
+    "ayrinti": {
+      "duraklatma": "Öneri · 60 dk"
+    }
+  },
+  {
+    "ad": "duraklatılmışken otomatik istek gitmez ve öneri görünmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "duraklatılmışken Alt+/ nedeni söyler (sessiz değil)",
+    "gecti": true,
+    "ayrinti": {}
   },
   {
     "ad": "kapatınca otomatik istek gitmez",
@@ -166,8 +191,8 @@
     "ayrinti": {
       "o": " bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
       "dugmeKutusu": {
-        "y": 356,
-        "alt": 388,
+        "y": 330,
+        "alt": 362,
         "w": 46,
         "h": 32,
         "ekran": 460
