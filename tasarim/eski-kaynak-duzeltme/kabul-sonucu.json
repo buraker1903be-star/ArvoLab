@@ -1,0 +1,44 @@
+[
+  {
+    "ad": "belirsiz yazar biçimi rozeti görünür",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "dizinden öneri: farklı alanlar listelenir, hiçbir alan kendiliğinden değişmez",
+    "gecti": true,
+    "ayrinti": {
+      "alanlar": [
+        "Yazarlar",
+        "Dergi / kitap",
+        "Sayfalar",
+        "Yayınevi"
+      ]
+    }
+  },
+  {
+    "ad": "başlangıçta hiçbir alan işaretli değil; uygulama düğmesi kapalı",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "yalnızca seçilen alan (yazarlar) dizindeki değerle yazılır",
+    "gecti": true,
+    "ayrinti": {
+      "once": "A. Gal and B. Eich||Elle yazılmış yayınevi",
+      "sonra": "Gal, A., Eich, B., Shaver, M., Anderson, D., Mandelin, D., Haghighat, M. R., Kaplan, B., Hoare, G., Zbarsky, B., Orendorff, J., Ruderman, J., Smith, E. W., Reitmaier, R., Bebenita, M., Chang, M., & Franz, M.||Elle yazılmış yayınevi"
+    }
+  },
+  {
+    "ad": "öğrencinin elle yazdığı yayınevi korunur",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  }
+]

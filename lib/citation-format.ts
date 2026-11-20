@@ -8,6 +8,7 @@
 // dilini vermeli — İngilizce arayüz kullanan öğrenci Türkçe tez yazabilir.
 
 import type { Dil } from "@/lib/dil";
+import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 
 export interface CitableSource {
   title: string;
@@ -23,6 +24,24 @@ export interface CitableSource {
   publisher?: string | null;
   /** Basım yeri ("Ankara"); klasik yöntem, Chicago ve Harvard kitap künyesinde. Uydurulmaz: yoksa yazılmaz. */
   publication_place?: string | null;
+}
+
+/*
+  ESKİ KAYITLARDA HTML VARLIĞI (20.11.2026). Arama sonuçları bir süre
+  "Journal of Science &amp; Society" diye kaydedildi. Veritabanı topluca
+  dönüştürülmüyor; künye ve atıf üretilirken metin alanları çözülüyor
+  (lib/html-varlik.ts). Temiz bir alanda işlev hiçbir şey değiştirmez.
+*/
+export function kaynakMetniniCoz<T extends CitableSource>(source: T): T {
+  const coz = (v: string | null | undefined) => (v == null ? v : htmlVarliklariniCoz(v));
+  return {
+    ...source,
+    title: htmlVarliklariniCoz(source.title),
+    authors: coz(source.authors) ?? null,
+    container_title: coz(source.container_title),
+    publisher: coz(source.publisher),
+    publication_place: coz(source.publication_place),
+  };
 }
 
 export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
@@ -129,8 +148,14 @@ export function stilYazarlari(authors: string | null, style: CitationStyle, dil:
       if (p.length === 2) return `${ilk}, ${ve} ${kalan[0]}`;
       return `${ilk}, ${kalan.slice(0, -1).join(", ")}${seriVirgul} ${ve} ${kalan[kalan.length - 1]}`;
     }
-    default:
-      return (authors ?? "").trim();
+    default: {
+      /* "; " ile saklanan liste (kurum ya da tek adlı yazar içeren DOI künyesi,
+         ya da soyadı bilinmeyen arama kaydı) APA dizisine çevrilir. Eskiden
+         olduğu gibi yazılıyordu: kaynakçada "Fisher, E. W.; Other, J.". */
+      if (!(authors ?? "").includes(";")) return (authors ?? "").trim();
+      if (yazarlar.length === 1) return yazarlar[0];
+      return `${yazarlar.slice(0, -1).join(", ")}, & ${yazarlar[yazarlar.length - 1]}`;
+    }
   }
 }
 
@@ -212,6 +237,7 @@ export function dipnotNotu(
   secenek: AtifSecenegi & { kisa?: boolean } = {},
   dil: Dil = "tr",
 ): string {
+  source = kaynakMetniniCoz(source);
   const en = dil === "en";
   const sayfa = sayfaEtiketi(secenek.sayfa, dil);
   const yazarlar = splitAuthors(source.authors);
@@ -279,6 +305,7 @@ export function formatInTextCitation(
   secenek: AtifSecenegi = {},
   dil: Dil = "tr",
 ): string {
+  source = kaynakMetniniCoz(source);
   const sayfa = sayfaEtiketi(secenek.sayfa, dil);
   const yil = yearOf(source, dil);
   const etiket = authorLabel(source, dil);
@@ -389,6 +416,7 @@ export function formatReferenceParts(
   secenek: KunyeSecenegi = {},
   dil: Dil = "tr",
 ): TextPart[] {
+  source = kaynakMetniniCoz(source);
   const en = dil === "en";
   const yil = () => yearOf(source, dil);
   const yilYazisi = () => yearText(source, dil);

@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/react";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import { bolumDuzeyi, headingMatchesSection } from "@/lib/section-match";
 import { authorLabel, dipnotNotu, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
@@ -233,40 +234,75 @@ const metinDugumleri = (parcalar: Parca[]) =>
     .filter((part) => part.text)
     .map((part) => ({ type: "text", text: part.text, ...(part.italic ? { marks: [{ type: "italic" }] } : {}) }));
 
-export function insertCitation(
-  editor: Editor,
+/*
+  ATIF (VE ALINTI) TEK İŞLEMDE (20.11.2026). Eskiden PDF panelindeki alıntı
+  ayrı bir insertContent ile önce yazılıyor, atıf sunucudan dönünce ayrı
+  bir işlemle ekleniyor, kaynakça girdisi de üçüncü bir işlemle geliyordu:
+  - alıntının önüne boşluk konmuyordu ("tanımlanmıştır“…”"),
+  - atıf üretilemezse alıntı belgede atıfsız kalıyordu,
+  - Ctrl+Z alıntıyı ve atfı ayrı ayrı geri alıyordu.
+  Artık alıntı, metin içi atıf ve kaynakça girdisi TEK işlemdir (TipTap
+  zinciri tek transaction gönderir): tek geri alma hepsini kaldırır. Atıf
+  metni (CSL) çağıranda önceden üretilir; burada başarısız olabilecek bir
+  ağ adımı yok.
+
+  konum: yazılacak yer. Verilmezse editörün o anki seçimi. PDF çekmecesi
+  öğrencinin editörde bıraktığı yeri verir (odak çekmecedeyken editör
+  seçimi güvenilir değil). Yazım her zaman konumun SONUNA yapılır; seçili
+  metin silinmez.
+*/
+type AtifSecenekleri = AtifSecenegi &
+  KunyeSecenegi & {
+    kalip?: AtifKalibi | null;
+    dil?: Dil;
+    /*
+      hazir: CSL stilinde atıf ve künye sunucuda citeproc ile üretildi
+      (app/actions/csl.ts); burada yalnızca yerine konur. Numara, çağıran
+      atifSirasi ile aldığı sıradır.
+    */
+    hazir?: { atif: Parca[]; kunye: Parca[]; dipnot: boolean };
+    /** Atıftan önce tırnak içinde yazılacak doğrulanmış alıntı (PDF çekmecesi). */
+    alinti?: string | null;
+    /** Yazılacak yer; verilmezse işlemin seçimi. Yazım konumun SONUNA yapılır, seçili metin silinmez. */
+    konum?: { from: number; to: number } | null;
+    /** false: işlem editöre odak vermez (PDF çekmecesi). */
+    odaklanma?: boolean;
+  };
+
+/**
+ * Atıf (ve varsa alıntı) ile kaynakça girdisini VERİLEN işleme yazar. Saf
+ * ProseMirror: tarayıcısız sınanır (tests/editor/atif-ekleme.test.ts).
+ */
+export function atifIslemi(
+  tr: Transaction,
   source: CitableSource,
   style: CitationStyle,
-  /* Sayfa (atıf penceresinde öğrencinin yazdığı) ve erişim tarihi (bugün). */
-  /* dil: BELGENİN dili (lib/belge-dili.ts) — "s."/"p.", "t.y."/"n.d.", "vd."/"et al." ve yeni açılan Kaynakça başlığı. */
-  /*
-    hazir: CSL stilinde atıf ve künye sunucuda citeproc ile üretildi
-    (app/actions/csl.ts); burada yalnızca yerine konur. Numara, çağıran
-    atifSirasi ile aldığı sıradır.
-  */
-  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null; dil?: Dil; hazir?: { atif: Parca[]; kunye: Parca[]; dipnot: boolean } } = {}
+  secenek: AtifSecenekleri = {},
 ): { citation: string; addedReference: boolean } {
+  const schema = tr.doc.type.schema;
   const dil = secenek.dil ?? "tr";
-  const { number, existingIndex } = atifSirasi(editor.state.doc, source);
+  const { number, existingIndex } = atifSirasi(tr.doc, source);
+  const boyut = tr.doc.content.size;
+  const hedef = Math.min(Math.max(secenek.konum?.to ?? tr.selection.to, 0), boyut);
+  /* Yazım noktasından önceki ve sonraki karakter: boşluk kararları buna göre.
+     Eskiden önceki karakter seçimin BAŞINDAN okunuyordu (seçim varken yanlış). */
+  const once = tr.doc.textBetween(Math.max(0, hedef - 1), hedef);
+  const sonra = tr.doc.textBetween(hedef, Math.min(boyut, hedef + 1));
+  const sozcukOnce = Boolean(once) && !/[\s(\[“"‘]/.test(once);
+
   /*
     Kılavuzun örnek atıfı girildiyse yazar–tarih atıfı ONUN noktalamasıyla
     yazılır ("(Yılmaz, 2020: 14)"); öğrenci her atıfı elle düzeltmesin.
     Numaralı stillerde (IEEE, Vancouver) örnek uygulanmaz.
   */
-  const { from, to } = editor.state.selection;
-  let citation: string;
   const hazir = secenek.hazir;
+  let citation: string;
+  let dipnot = false;
+  let atifParcalari: Parca[];
   if (hazir) {
     citation = hazir.atif.map((p) => p.text).join("");
-    if (hazir.dipnot) {
-      editor.chain().focus().insertContentAt({ from: to, to }, { type: "footnoteReference", attrs: { text: citation } }).run();
-    } else {
-      /* Üst simge atıf sözcüğe yapışır ("bulunmuştur¹"); öteki biçimlerde öncesine boşluk. */
-      const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
-      const ustSimge = /^[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(citation);
-      const bosluk = !ustSimge && before && !/[\s(\[]/.test(before) ? [{ type: "text", text: " " }] : [];
-      editor.chain().focus().insertContentAt({ from: to, to }, [...bosluk, ...metinDugumleri(hazir.atif)]).run();
-    }
+    dipnot = hazir.dipnot;
+    atifParcalari = hazir.atif;
   } else if (style === "dipnot") {
     /*
       Dipnotlu stil (02.11.2026): atıf metne değil, imlecin olduğu yere
@@ -275,41 +311,79 @@ export function insertCitation(
       kaynağın başlığı geçiyorsa ilk atıf yapılmış sayılır.
     */
     const oncekiNotlar: string[] = [];
-    editor.state.doc.nodesBetween(0, from, (node) => {
+    tr.doc.nodesBetween(0, hedef, (node) => {
       if (node.type.name === "footnoteReference") oncekiNotlar.push(String(node.attrs.text ?? ""));
     });
     citation = dipnotNotu(source, { sayfa: secenek.sayfa, kisa: oncedenAtifYapildi(source.title, oncekiNotlar) }, dil);
-    editor.chain().focus().insertContentAt({ from: to, to }, { type: "footnoteReference", attrs: { text: citation } }).run();
+    dipnot = true;
+    atifParcalari = [{ text: citation }];
   } else {
     citation =
       secenek.kalip && (style === "apa7" || style === "chicago" || style === "harvard")
         ? kalibaGoreAtif(authorLabel(source, dil), source.year?.trim() || (dil === "en" ? "n.d." : "t.y."), secenek.sayfa?.trim() || null, secenek.kalip)
         : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa }, dil);
-    const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
-    const text = `${before && !/[\s(\[]/.test(before) ? " " : ""}${citation}`;
-    editor.chain().focus().insertContentAt({ from: to, to }, { type: "text", text }).run();
+    atifParcalari = [{ text: citation }];
   }
 
-  if (existingIndex >= 0) return { citation, addedReference: false };
+  const icerik: Record<string, unknown>[] = [];
+  const alinti = secenek.alinti?.trim();
+  if (alinti) icerik.push({ type: "text", text: `${sozcukOnce ? " " : ""}“${alinti}”` });
+  if (dipnot) {
+    icerik.push({ type: "footnoteReference", attrs: { text: citation } });
+  } else {
+    /* Üst simge atıf sözcüğe (ya da alıntıya) yapışır ("bulunmuştur¹"); öteki biçimlerde öncesine boşluk. */
+    const ustSimge = /^[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(citation);
+    if (!ustSimge && (alinti || sozcukOnce)) icerik.push({ type: "text", text: " " });
+    icerik.push(...metinDugumleri(atifParcalari));
+  }
+  /* Sözcüğün ortasına yazılıyorsa sonrasına da boşluk: atıf ardındaki sözcüğe yapışmasın. */
+  if (/[\p{L}\p{N}]/u.test(sonra)) icerik.push({ type: "text", text: " " });
+  const satirIci = Fragment.fromJSON(schema, icerik);
+  tr.insert(hedef, satirIci);
+  tr.setSelection(TextSelection.create(tr.doc, hedef + satirIci.size));
 
+  if (existingIndex >= 0) return { citation, addedReference: false };
   const parts = hazir?.kunye.length ? hazir.kunye : formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
-  const paragraph = editor.schema.nodeFromJSON({ type: "paragraph", content: metinDugumleri(parts) });
-  editor
-    .chain()
+  const paragraph = schema.nodeFromJSON({ type: "paragraph", content: metinDugumleri(parts) });
+  const current = findReferencesSection(tr.doc);
+  if (!current) {
+    const heading = schema.nodeFromJSON({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: dil === "en" ? "References" : "Kaynakça" }] });
+    tr.insert(tr.doc.content.size, [heading, paragraph]);
+  } else {
+    const last = current.paragraphs[current.paragraphs.length - 1];
+    if (last && last.node.childCount === 0) tr.replaceWith(last.pos, last.pos + last.node.nodeSize, paragraph);
+    else tr.insert(current.end, paragraph);
+  }
+  return { citation, addedReference: true };
+}
+
+/*
+  ATIF (VE ALINTI) TEK İŞLEMDE (20.11.2026). Eskiden PDF panelindeki alıntı
+  ayrı bir insertContent ile önce yazılıyor, atıf sunucudan dönünce ayrı
+  bir işlemle ekleniyor, kaynakça girdisi de üçüncü bir işlemle geliyordu:
+  - alıntının önüne boşluk konmuyordu ("tanımlanmıştır“…”"),
+  - atıf üretilemezse alıntı belgede atıfsız kalıyordu,
+  - Ctrl+Z alıntıyı ve atfı ayrı ayrı geri alıyordu.
+  Artık alıntı, metin içi atıf ve kaynakça girdisi TEK işlemdir: tek geri
+  alma hepsini kaldırır. Atıf metni (CSL) çağıranda önceden üretilir;
+  burada başarısız olabilecek bir ağ adımı yok.
+*/
+export function insertCitation(
+  editor: Editor,
+  source: CitableSource,
+  style: CitationStyle,
+  secenek: AtifSecenekleri = {},
+): { citation: string; addedReference: boolean } {
+  let sonuc: { citation: string; addedReference: boolean } = { citation: "", addedReference: false };
+  /* PDF çekmecesinden gelen ekleme odağı editöre ÇEKMEZ: çekmece açık kalır, öğrenci okumaya devam eder. */
+  const zincir = editor.chain();
+  (secenek.odaklanma === false ? zincir : zincir.focus())
     .command(({ tr }) => {
-      const current = findReferencesSection(tr.doc);
-      if (!current) {
-        const heading = editor.schema.nodeFromJSON({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: dil === "en" ? "References" : "Kaynakça" }] });
-        tr.insert(tr.doc.content.size, [heading, paragraph]);
-        return true;
-      }
-      const last = current.paragraphs[current.paragraphs.length - 1];
-      if (last && last.node.childCount === 0) tr.replaceWith(last.pos, last.pos + last.node.nodeSize, paragraph);
-      else tr.insert(current.end, paragraph);
+      sonuc = atifIslemi(tr, source, style, secenek);
       return true;
     })
     .run();
-  return { citation, addedReference: true };
+  return sonuc;
 }
 
 /**

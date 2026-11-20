@@ -7,6 +7,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { goruntuleyiciKaynaklari } from "@/app/actions/kaynak-pdf";
+import { acilacakPdf, kaynakDurumlari, kaynakKaydiAdresi, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import LiteraturBulucu from "@/app/dashboard/literature/literatur-bulucu";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 
@@ -110,30 +111,7 @@ export function SolBolumler({
   );
 }
 
-/*
-  Kaynak satırının PDF'i: bu turda (3/5) yalnızca DOI eşleşmesi kesin
-  sayılır. Kaynak kaydı ile PDF arasındaki açık bağ (kaynak_pdfleri.kaynak_id)
-  4/5'te geliyor; o gelince bağlı PDF önce gelir.
-*/
-export type KaynakPdfi = { id: string; doi: string | null; kaynakId?: string | null };
-
-const doiAnahtari = (deger: string | null | undefined) =>
-  (deger ?? "")
-    .toLowerCase()
-    .replace(/^https?:\/\/(dx\.)?doi\.org\//, "")
-    .replace(/^doi:\s*/, "")
-    .trim();
-
-export function kaynaginPdfi(kaynak: Pick<LiteratureSource, "id" | "doi_or_url">, pdfler: KaynakPdfi[]): KaynakPdfi | null {
-  const bagli = pdfler.find((p) => p.kaynakId === kaynak.id);
-  if (bagli) return bagli;
-  const doi = doiAnahtari(kaynak.doi_or_url);
-  if (!doi.startsWith("10.")) return null;
-  const adaylar = pdfler.filter((p) => !p.kaynakId && doiAnahtari(p.doi) === doi);
-  // Aynı DOI'li iki PDF varsa hangisi olduğu belli değil: kesin sayılmaz.
-  return adaylar.length === 1 ? adaylar[0] : null;
-}
-
+/* Kaynağın PDF eşleşmesi ve durumları tek yerde: lib/kaynak-durumu.ts (atıf kartı da oradan okur). */
 export function SolKaynaklar({
   projectId,
   gorunur,
@@ -201,7 +179,9 @@ export function SolKaynaklar({
         ) : (
           <ul className="sol-kaynak-listesi">
             {gorunenler.map((k) => {
-              const pdf = pdfler ? kaynaginPdfi(k, pdfler) : null;
+              const eslesme = pdfler ? pdfEslesmesi(k, pdfler) : ({ tur: "yok" } as const);
+              const pdf = acilacakPdf(eslesme);
+              const pdfDurumu = kaynakDurumlari({ kunye: null, pdf: eslesme })[1];
               return (
                 <li key={k.id} className="sol-kaynak">
                   <p className="sol-kaynak-kunye">
@@ -209,13 +189,10 @@ export function SolKaynaklar({
                     <span>{k.title}</span>
                   </p>
                   <div className="sol-kaynak-durum">
-                    {pdf ? (
-                      <span className="guven-cip" data-tur="erisim">
-                        <FileText size={12} aria-hidden="true" /> {t({ tr: "PDF açılabilir", en: "PDF available" })}
-                      </span>
-                    ) : (
-                      <span className="guven-cip" data-tur="notr">{t({ tr: "PDF yok", en: "No PDF" })}</span>
-                    )}
+                    {/* PDF durumu ortak kuraldan (lib/kaynak-durumu): DOI eşleşmesi ve belirsizlik onay tonunda gösterilmez. */}
+                    <span className="guven-cip" data-tur={pdfDurumu.ton === "tamam" ? "erisim" : pdfDurumu.ton === "uyari" ? "uyari" : "notr"} title={t(pdfDurumu.aciklama)}>
+                      <FileText size={12} aria-hidden="true" /> {t(pdfDurumu.kisa)}
+                    </span>
                   </div>
                   <div className="sol-kaynak-eylem">
                     <button type="button" className="projects-filter-button button-compact" onClick={() => onCite(k)}>
@@ -226,6 +203,10 @@ export function SolKaynaklar({
                         <FileText size={14} aria-hidden="true" /> {t({ tr: "PDF'i aç", en: "Open PDF" })}
                       </button>
                     ) : null}
+                    {/* Kaydın kendisine doğrudan: Kaynaklar sayfası bu satırı açıp vurgular (?kaynak=). */}
+                    <Link href={kaynakKaydiAdresi(projectId, k.id)} className="projects-filter-button button-compact" aria-label={t({ tr: `${k.title}: kaynak kaydını aç`, en: `${k.title}: open source record` })}>
+                      <Library size={14} aria-hidden="true" /> {t({ tr: "Kayıt", en: "Record" })}
+                    </Link>
                   </div>
                 </li>
               );

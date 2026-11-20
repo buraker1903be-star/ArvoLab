@@ -7,6 +7,8 @@ import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 import { ceviri } from "@/lib/dil-sunucu";
+import { lookupDoi } from "@/app/actions/literature";
+import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -223,6 +225,8 @@ export async function taramaGunlugu(projectId?: string | null, sinir = 50): Prom
 export async function aramaKaydiniEkle(kayit: {
   baslik: string;
   yazarlar?: string[];
+  /** Sağlayıcının given/family verisinden kurulmuş künye dizesi (lib/literatur-arama.ts). */
+  kunyeYazarlari?: string | null;
   yil?: number | null;
   tur?: string;
   dergi?: string | null;
@@ -238,21 +242,41 @@ export async function aramaKaydiniEkle(kayit: {
   const baslik = String(kayit.baslik ?? "").trim().slice(0, 500);
   if (!baslik) return { error: t({ tr: "Kaynak başlığı okunamadı.", en: "Couldn't read the source title." }) };
 
+  /*
+    YAZAR VE KÜNYE (20.11.2026). Eskiden ekrandaki "Ad Soyad" dizisi ", "
+    ile birleştirilip yazılıyordu ("Edward W. Fisher, Jane Other"); atıf bunu
+    tek yazar sanıyordu. Sıra: (1) DOI varsa Crossref künyesi (DOI ile kaynak
+    eklemenin aynısı; cilt, sayı, sayfa da gelir), (2) sağlayıcının
+    yapılandırılmış adı, (3) ikisi de yoksa adlar "; " ile, TERS ÇEVRİLMEDEN:
+    soyadını tahmin etmek "van der Berg" ya da kurum adını bozar. Üçüncü
+    durumdaki kayıt Kaynaklar'da "yazar biçimi doğrulanmadı" diye işaretlenir.
+  */
+  const doiBilgisi = kayit.doi ? (await lookupDoi(kayit.doi).catch(() => ({ metadata: undefined }))).metadata : undefined;
+  const kesinYazar = htmlVarliklariniCoz(kayit.kunyeYazarlari);
+  const yazarlar = doiBilgisi?.authors || kesinYazar || (kayit.yazarlar ?? []).map(htmlVarliklariniCoz).filter(Boolean).join("; ");
   const satir = {
     owner_id: ctx.user.id,
     project_id: String(kayit.projectId ?? "").trim() || null,
-    title: baslik,
-    authors: (kayit.yazarlar ?? []).join(", ").slice(0, 500) || null,
-    year: kayit.yil ? String(kayit.yil) : null,
+    title: htmlVarliklariniCoz(baslik).slice(0, 500) || baslik,
+    authors: yazarlar.slice(0, 500) || null,
+    // Künye yılı sayının yılı (OpenAlex'le uzlaştırılmış arama yılı); yoksa Crossref'inki.
+    year: kayit.yil ? String(kayit.yil) : doiBilgisi?.year ?? null,
     source_type: TURLER.includes(String(kayit.tur)) ? String(kayit.tur) : "other",
     doi_or_url: (kayit.doi ? `https://doi.org/${kayit.doi}` : String(kayit.url ?? "")).slice(0, 500) || null,
     status: "to_review" as const,
     notes: null,
   };
+  const yayin = {
+    container_title: (doiBilgisi?.containerTitle || htmlVarliklariniCoz(kayit.dergi)).slice(0, 500) || null,
+    volume: doiBilgisi?.volume ?? null,
+    issue: doiBilgisi?.issue ?? null,
+    pages: doiBilgisi?.pages ?? null,
+    publisher: doiBilgisi?.publisher ?? null,
+  };
   // Dergi adı sonradan eklenen bir kolon; yoksa kaynak yine kaydedilir.
   let { error } = await ctx.supabase
     .from("literature_sources")
-    .insert({ ...satir, container_title: (kayit.dergi ?? "").slice(0, 500) || null });
+    .insert({ ...satir, ...yayin });
   if (error?.code === "PGRST204" || error?.code === "42703") {
     ({ error } = await ctx.supabase.from("literature_sources").insert(satir));
   }

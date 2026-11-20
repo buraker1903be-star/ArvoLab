@@ -1576,7 +1576,8 @@
 .pdf-sayfa .textLayer :is(span, br) { position: absolute; color: transparent; white-space: pre; cursor: text; transform-origin: 0% 0%; }
 .pdf-sayfa .textLayer span.markedContent { top: 0; height: 0; }
 .pdf-sayfa .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; cursor: default; user-select: none; }
-.pdf-sayfa .textLayer ::selection { background: var(--primary-soft); }
+/* Seçim YARI SAYDAM (20.11.2026): açık temada --primary-soft opak bir renk ve seçilen satırı kanvastaki metnin üstünden örtüyordu. */
+.pdf-sayfa .textLayer ::selection { background: color-mix(in srgb, var(--primary) 28%, transparent); }
 .pdf-sayfa .textLayer br::selection { background: transparent; }
 .pdf-sayfa .textLayer span.pdf-esles { background: var(--warning-soft); border-radius: 2px; }
 /* Doğrulanmış pasaj (atıf kartı "Dayanağa git"): sarı vurgu, iki temada aynı — PDF sayfası her temada beyaz. */
@@ -1843,7 +1844,7 @@
 .sol-kaynak-listesi { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .sol-kaynak { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
 .sol-kaynak-kunye { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
-.sol-kaynak-kunye b { color: var(--ink); font-weight: 600; }
+.sol-kaynak-kunye b { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
 .sol-kaynak-kunye span { color: var(--ink-soft); display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .sol-kaynak-durum, .sol-kaynak-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
 .sol-arama-govde .project-form-grid { grid-template-columns: 1fr 1fr; }
@@ -1926,8 +1927,13 @@
 .atif-karti-kaynak { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
 .atif-karti-kaynak b { color: var(--ink); }
 .atif-karti-kaynak span { color: var(--ink-soft); }
+/* Kısa özet (M9): üç durum tek satırda; açıklamalar "Ayrıntılar"da. */
+.atif-karti-ozet { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.atif-karti-ayrinti summary { color: var(--muted); font-size: var(--fs-micro); cursor: pointer; }
+.atif-karti-ayrinti[open] summary { margin-bottom: 6px; }
 .atif-karti-durumlar { display: grid; gap: 6px; margin: 0; }
-.atif-karti-durumlar > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.atif-karti-durumlar > div { display: grid; gap: 2px; }
+.atif-karti-durumlar dd { margin: 0; color: var(--ink-soft); font-size: var(--fs-micro); line-height: 1.45; }
 .atif-karti-durumlar dt { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
 .atif-karti-durumlar dd { margin: 0; }
 .atif-karti-uyari, .atif-karti-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: 1.45; }
@@ -1957,4 +1963,123 @@
   .os-sol-alan :is(button, a, input, select), .atif-karti :is(button, a), .pdf-bag :is(button, select), .pdf-arac .yazim-ikon { min-height: 44px; }
   .pdf-arac .yazim-ikon { min-width: 44px; }
   .sol-bolum-listesi button { min-height: 44px; }
+}
+
+/* ============================================================
+   PDF ÇEKMECESİ (20.11.2026, kurum sahibinin kararı). PDF sağdan açılan
+   geniş bir çekmecede, editörün ÜSTÜNDE: editör daralmaz, kaymaz,
+   yeniden ölçeklenmez (lib/calisma-alani-yerlesimi.ts); arkası hafifçe
+   kararır. Genişlik --sag-panel-genislik (varsayılan ekranın %65'i),
+   kenardaki tutamakla ayarlanır; tam ekran düğmesi bütün genişliği verir.
+   Okuma alanını küçülten alt form yok: seçim eylemleri ve kısa onay,
+   sayfanın üstünde seçimin yanında açılan katmanlar.
+   ============================================================ */
+.kaynak-pdf-paneli[hidden] { display: none !important; }
+.kaynak-pdf-paneli:focus { outline: none; }
+.kaynak-pdf-paneli:focus-visible { box-shadow: var(--odak-halkasi), var(--shadow-lg); }
+.pdf-cekmece-ortu { display: none; }
+@media (min-width: 761px) {
+  .manuscript-layout[data-sag-cekmece] .kaynak-pdf-paneli {
+    top: calc(var(--topbar-height) + 8px);
+    width: min(var(--sag-panel-genislik, 65vw), calc(100vw - 16px));
+    z-index: var(--z-panel);
+  }
+  .manuscript-layout[data-sag-cekmece] .kaynak-pdf-paneli[data-tam-ekran] { left: 8px; width: auto; }
+  .pdf-cekmece-ortu {
+    display: block; position: fixed; inset: var(--topbar-height) 0 0 0;
+    z-index: calc(var(--z-panel) - 1);
+    background: color-mix(in srgb, var(--overlay) 45%, transparent);
+  }
+}
+.pdf-cekmece-tutamak {
+  position: absolute; top: 0; bottom: 0; left: -5px; z-index: var(--z-ust);
+  width: 10px; cursor: col-resize; touch-action: none;
+}
+.pdf-cekmece-tutamak::after { content: ""; position: absolute; top: 50%; left: 3px; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line); }
+.pdf-cekmece-tutamak:hover::after, .pdf-cekmece-tutamak:focus-visible::after { background: var(--primary); }
+.pdf-cekmece-tutamak:focus-visible { outline: none; }
+.kaynak-pdf-paneli[data-tam-ekran] .pdf-cekmece-tutamak { display: none; }
+
+.pdf-cekmece-bas { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line-soft); }
+.pdf-cekmece-ad { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--ink); font-size: var(--fs-sm); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-cekmece-secici { flex: 0 1 260px; min-width: 120px; }
+.pdf-cekmece-secici select.field-control { width: 100%; min-height: 32px; height: 32px; font-size: var(--os5-fs-meta); }
+.pdf-sayac { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding-inline: 4px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); }
+
+.pdf-durum-ozeti { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 14px; border-bottom: 1px solid var(--line-soft); font-size: var(--fs-micro); }
+.pdf-durum-ozeti .link-button { margin-left: auto; font-size: var(--fs-micro); }
+.pdf-durum-ayrinti { display: grid; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); }
+.pdf-durum-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: 1.5; }
+
+.pdf-gorunum { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.pdf-gorunum[hidden] { display: none; }
+.pdf-gorunum .pdf-goruntuleyici { min-height: 0; }
+.pdf-ara[hidden] { display: none; }
+
+/* Seçim araç çubuğu ve kısa onay: sayfayla birlikte kayan, seçimin altında açılan katman. */
+.pdf-secim-katmani { position: absolute; z-index: var(--z-acilir); top: var(--katman-ust, 12px); left: var(--katman-sol, 12px); max-width: min(460px, calc(100% - 16px)); }
+.pdf-secim-katmani:not([data-konumlu]) { position: sticky; top: auto; bottom: 12px; left: 12px; }
+.pdf-secim-arac { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r-md); background: var(--ink); box-shadow: var(--shadow-lg); }
+.pdf-secim-arac button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--surface); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.pdf-secim-arac button:hover:not(:disabled), .pdf-secim-arac button:focus-visible { background: color-mix(in srgb, var(--surface) 16%, transparent); outline: none; }
+.pdf-secim-arac button:disabled { opacity: .55; cursor: default; }
+.pdf-secim-arac .pdf-secim-kapat { padding: 0 8px; }
+.pdf-secim-not { align-self: center; padding: 0 8px; color: var(--surface); font-size: var(--fs-sm); }
+.pdf-onay { display: grid; gap: 8px; width: min(420px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-lg); font-size: var(--fs-sm); }
+.pdf-onay p { margin: 0; line-height: 1.5; }
+.pdf-onay-bas { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.pdf-onay-alinti { display: -webkit-box; margin: 0; padding: 4px 10px; overflow: hidden; border-left: 3px solid var(--primary-soft); color: var(--ink-soft); font-style: italic; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; }
+.pdf-onay-kaynak { color: var(--ink-soft); }
+.pdf-onay .kaynak-adaylar legend { margin-bottom: 4px; color: var(--warning); font-size: var(--fs-sm); line-height: 1.5; }
+.pdf-onay-sayfa { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.pdf-onay-sayfa input.field-control { width: 9em; min-height: 32px; height: 32px; }
+.pdf-onay-eylem { display: flex; justify-content: flex-end; gap: 8px; }
+
+.pdf-ai-gorunum { display: flex; flex: 1 1 auto; flex-direction: column; gap: 10px; min-height: 0; padding: 12px 14px; overflow: auto; }
+/* Satırlar içerik boyunda: liste esneyince soru balonu boşluğu dolduracak kadar uzuyordu. */
+.pdf-ai-gorunum .kaynak-analiz-liste { flex: 1 1 auto; align-content: start; }
+.pdf-ai-gorunum .kaynak-analiz-oge { align-content: start; }
+.pdf-ai-gorunum .yazim-girdi { position: sticky; bottom: 0; padding-top: 8px; background: var(--surface); }
+
+@media (max-width: 760px) {
+  .pdf-tam-ekran, .pdf-cekmece-tutamak { display: none; }
+  .pdf-cekmece-secici { flex-basis: 140px; }
+  .pdf-secim-arac button { min-height: 40px; }
+}
+
+/* PDF çekmecesi ekleri (20.11.2026): atıf önizlemesi, iki ayrı sayfa, telefonda tam örtü. */
+.pdf-onay-etiket { color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .02em; text-transform: uppercase; }
+.pdf-onay-onizleme { display: grid; gap: 4px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); }
+.pdf-onay-onizleme p { margin: 0; line-height: 1.55; }
+.pdf-onay-onizleme .pdf-onay-alinti { display: inline; padding: 0; border: 0; font-style: normal; -webkit-line-clamp: unset; line-clamp: unset; }
+.pdf-onay-atif { color: var(--ink); }
+.pdf-onay-sayfalar { display: grid; gap: 6px; }
+.pdf-onay-sayfalar small { color: var(--muted); }
+.pdf-onay-sayfa { flex-wrap: wrap; }
+.pdf-durum-kisa { display: none; }
+.pdf-ayrinti-secici { display: none; }
+@media (max-width: 760px) {
+  /*
+    Telefonda çekmece alt gezinme DAHİL bütün görünür alanı örter
+    (20.11.2026); arkası kaydırılamaz. Eskiden alt gezinmenin üstünde
+    bitiyordu (inset 0 0 var(--dock-alani)).
+  */
+  .kaynak-pdf-paneli { inset: 0; bottom: 0; padding-bottom: env(safe-area-inset-bottom); z-index: var(--z-pencere); }
+  html[data-pdf-tam-ekran], html[data-pdf-tam-ekran] body { overflow: hidden; overscroll-behavior: none; }
+  .kaynak-pdf-paneli .pdf-sayfa-alani { overscroll-behavior: contain; padding: 6px; }
+  /* Sade başlık: kaynak seçici ayrıntılara, "PDF'e sor" yalnızca simge. */
+  .pdf-cekmece-secici { display: none; }
+  .pdf-ayrinti-secici { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
+  .pdf-cekmece-bas { gap: 4px; padding: 6px 6px 6px 12px; }
+  .pdf-cekmece-bas > svg { display: none; }
+  .pdf-dugme-metin { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Üç durum tek satırda kısa işaretlerle; çipler ve bağ ayrıntılar açılınca. */
+  .pdf-durum-ozeti { padding: 4px 12px; }
+  .pdf-durum-kisa { display: inline-flex; gap: 10px; align-items: center; min-height: 32px; padding: 0; border: 0; background: none; color: var(--ink-soft); font: inherit; font-size: var(--fs-micro); cursor: pointer; }
+  .pdf-durum-kisa span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; background: var(--line); vertical-align: 1px; }
+  .pdf-durum-kisa span[data-tur="tamam"]::before { background: var(--success); }
+  .pdf-durum-kisa span[data-tur="uyari"]::before { background: var(--warning); }
+  .pdf-durum-ozeti:not([data-acik]) > .guven-cip, .pdf-durum-ozeti > .link-button { display: none; }
+  .kaynak-pdf-paneli .pdf-arac { padding: 4px 6px; }
+  .kaynak-pdf-paneli .pdf-arac .yazim-ikon { width: 38px; min-width: 38px; height: 40px; }
 }

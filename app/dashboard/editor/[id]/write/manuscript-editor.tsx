@@ -1,6 +1,7 @@
 "use client";
 
 import { ornekKalibi } from "@/lib/atif/tyk";
+import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
@@ -80,7 +81,8 @@ import {
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { SolArama, SolBolumler, SolKaynaklar, kaynaginPdfi, type KaynakPdfi } from "./sol-araclar";
+import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
+import { adrestekiPdf, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
 import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
@@ -93,6 +95,7 @@ import {
   gecerliOlcek,
   olcekAdimi,
   olcekTercihiOku,
+  pdfCekmeceGenisligi,
   sagPanelGenisligiSinirla,
   yerlesimKarari,
   SOL_ALAN_DAR_OZNITELIGI,
@@ -186,6 +189,7 @@ import {
   collectHeadings,
   insertSections,
   insertFrontMatter,
+  atifIslemi,
   insertCitation,
   atifSirasi,
   oncekiDipnottaVar,
@@ -714,6 +718,32 @@ export default function ManuscriptEditor({
   }, []);
   /* Kaynaklar aracından "PDF'i aç": panel o PDF'le açılır (anahtar aynı PDF'e ikinci basışı da iletir). */
   const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number; sayfa?: number; pasaj?: string } | null>(null);
+  /*
+    DIŞARIDAN "PDF'i oku" (20.11.2026, M5): Kaynakça penceresi ve Kaynaklar
+    sayfası PDF'i artık yeni sekmede ham dosya olarak açmıyor, editörün
+    çekmecesine bu adresle geliyor (?sag=pdf&pdf=<id>&sayfa=<n>,
+    lib/kaynak-durumu editorPdfAdresi). Eskiden imzalı depo adresi yeni
+    sekmede açılıyordu: pasaj seçmek, alıntı eklemek, AI'a sormak orada
+    yoktu ve öğrenci aynı PDF'i iki ayrı yerde okuyordu. İstek bir kez
+    işlenir, sonra adresten silinir (yenileme aynı sayfaya geri atmasın).
+  */
+  const pdfAdresi = adres.get("pdf");
+  const sayfaAdresi = adres.get("sayfa");
+  const pdfIstegi = adrestekiPdf(pdfAdresi, sayfaAdresi);
+  const [islenenPdfIstegi, setIslenenPdfIstegi] = useState<string | null>(null);
+  if (pdfIstegi && `${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}` !== islenenPdfIstegi) {
+    setIslenenPdfIstegi(`${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}`);
+    setAcilacakPdf({ id: pdfIstegi.id, anahtar: -1, sayfa: pdfIstegi.sayfa });
+    if (sag !== "pdf") setSag("pdf");
+  }
+  useEffect(() => {
+    if (!pdfAdresi && !sayfaAdresi) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("pdf");
+    u.searchParams.delete("sayfa");
+    if (pdfIstegi) u.searchParams.set("sag", "pdf");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  }, [pdfAdresi, sayfaAdresi, pdfIstegi]);
 
   /*
     ATIF KARTI (K3-A) ve SEÇİM İŞLEMLERİ: iki ayrı durum, aynı anda açılmaz
@@ -748,15 +778,20 @@ export default function ManuscriptEditor({
     window.addEventListener("resize", olc);
     return () => window.removeEventListener("resize", olc);
   }, []);
-  const SAG_ANAHTARI: Record<SagPanel, string> = { ai: "arvolab.sagPanel.ai", pdf: "arvolab.pdfPanelGenisligi" };
-  const [sagGenislikleri, setSagGenislikleri] = useState<Record<SagPanel, number>>({ ai: SAG_PANEL_SINIRI.ai.varsayilan, pdf: SAG_PANEL_SINIRI.pdf.varsayilan });
+  /*
+    PDF çekmecesinin genişliği YENİ anahtarda (20.11.2026): eski anahtar
+    (arvolab.pdfPanelGenisligi) sütun döneminin 360–600 px değerini tutuyor;
+    onu okumak çekmeceyi ilk açılışta %65 yerine 520 px açardı. 0 = ekranın %65'i.
+  */
+  const SAG_ANAHTARI: Record<SagPanel, string> = { ai: "arvolab.sagPanel.ai", pdf: "arvolab.pdfCekmeceGenisligi" };
+  const [sagGenislikleri, setSagGenislikleri] = useState<Record<SagPanel, number>>({ ai: SAG_PANEL_SINIRI.ai.varsayilan, pdf: 0 });
   const [olcekTercihi, setOlcekTercihi] = useState<OlcekTercihi>("sigdir");
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- tercihler yalnızca tarayıcıda okunabilir; ilk çizim sunucuyla aynı kalır
       setSagGenislikleri({
         ai: sagPanelGenisligiSinirla("ai", Number(window.localStorage.getItem(SAG_ANAHTARI.ai))),
-        pdf: sagPanelGenisligiSinirla("pdf", Number(window.localStorage.getItem(SAG_ANAHTARI.pdf))),
+        pdf: Number(window.localStorage.getItem(SAG_ANAHTARI.pdf)) || 0,
       });
       setOlcekTercihi(olcekTercihiOku(window.localStorage.getItem("arvolab.belgeOlcegi")));
     } catch {
@@ -765,8 +800,10 @@ export default function ManuscriptEditor({
     // Anahtarlar sabit; yalnızca açılışta okunur.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const sagGenislikDegisti = (genislik: number, kaydet: boolean) => {
+  const sagGenislikDegisti = (istenen: number, kaydet: boolean) => {
     if (!sag) return;
+    // Çekmece: sınırlar ekran genişliğine göre (lib/calisma-alani-yerlesimi.ts pdfCekmeceGenisligi).
+    const genislik = sag === "pdf" ? pdfCekmeceGenisligi(ekran || window.innerWidth, istenen) : istenen;
     setSagGenislikleri((onceki) => ({ ...onceki, [sag]: genislik }));
     if (kaydet) {
       try {
@@ -924,7 +961,7 @@ export default function ManuscriptEditor({
   const [anaGenislik, setAnaGenislik] = useState(0);
   const otomatikOlcek = karar?.sabitKagit && anaGenislik ? Math.min(1, Math.floor(((anaGenislik - 2) / KAGIT_GENISLIGI) * 100) / 100) : 1;
   const belgeOlcegi = karar?.sabitKagit ? gecerliOlcek(olcekTercihi, otomatikOlcek) : 1;
-  const sagGenislik = karar?.sag === "sutun" ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
+  const sagGenislik = karar && (karar.sag === "sutun" || sag === "pdf") ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
   /* CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css). */
   useEffect(() => {
     const kap = yerlesimRef.current;
@@ -1279,6 +1316,57 @@ export default function ManuscriptEditor({
       },
     },
   });
+
+  /*
+    KAYITLI İMLEÇ (20.11.2026): öğrencinin editörde son bıraktığı yer. Odak
+    PDF'e geçtiğinde editör seçimi hâlâ duruyor ama bir sonraki odak
+    olayında (focus()) neyin geri yükleneceği tarayıcıya bağlı; otomatik
+    sınamada alıntı bir karakter önceye girdi. Çekmeceden gelen alıntı bu
+    konuma yazılır. Belge bu arada değişirse (başka sekme değil, aynı
+    editördeki işlem) konum işlemin eşlemesiyle kaydırılır.
+  */
+  const kayitliImlec = useRef<{ from: number; to: number } | null>(null);
+  useEffect(() => {
+    if (!editor) return;
+    const kaydet = () => {
+      if (editor.isFocused) kayitliImlec.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    };
+    /*
+      ODAK GİDERKEN DOM SEÇİMİ OKUNUR (20.11.2026, kabulde 5 turdan 1'inde
+      ölçüldü). Tıklamanın hemen ardından basılan End gibi bir tuşla taşınan
+      imleç ProseMirror'ın durumuna her zaman yansımıyor: tarayıcıda imleç
+      satır sonunda, editörün seçimi bir karakter geride kalıyor ve alıntı
+      "tanımlanmıştı“…” r" diye yazılıyordu. Odak editörden çıkarken seçim
+      henüz editörün içinde: konum oradan, tarayıcının gördüğü yerden alınır.
+    */
+    const bulanik = () => {
+      const dom = window.getSelection();
+      if (!dom?.anchorNode || !dom.focusNode || !editor.view.dom.contains(dom.anchorNode) || !editor.view.dom.contains(dom.focusNode)) return;
+      try {
+        const a = editor.view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+        const b = editor.view.posAtDOM(dom.focusNode, dom.focusOffset);
+        kayitliImlec.current = { from: Math.min(a, b), to: Math.max(a, b) };
+      } catch {
+        /* DOM konumu çözülemedi (düğüm görünümü): son ProseMirror seçimi kalır. */
+      }
+    };
+    const esle = ({ transaction }: { transaction: import("@tiptap/pm/state").Transaction }) => {
+      const k = kayitliImlec.current;
+      if (!k || !transaction.docChanged) return;
+      kayitliImlec.current = { from: transaction.mapping.map(k.from, -1), to: transaction.mapping.map(k.to, 1) };
+    };
+    kaydet();
+    editor.on("selectionUpdate", kaydet);
+    editor.on("focus", kaydet);
+    editor.on("transaction", esle);
+    editor.on("blur", bulanik);
+    return () => {
+      editor.off("selectionUpdate", kaydet);
+      editor.off("focus", kaydet);
+      editor.off("transaction", esle);
+      editor.off("blur", bulanik);
+    };
+  }, [editor]);
 
   /*
     PDF paneli kapanınca odak BELGEYE, kullanıcının bıraktığı konuma döner
@@ -2583,7 +2671,19 @@ export default function ManuscriptEditor({
       .insertContent(satirlar.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })))
       .run();
   };
-  const handleCite = async (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
+  /*
+    Sonuç döner (20.11.2026): PDF çekmecesi atıf üretilemediğinde açık kalıp
+    hatayı göstersin. Eskiden dönüş yoktu; panel alıntıyı önceden yazıp
+    başarısız atıftan sonra "eklendi" gibi kapanıyordu.
+    alinti: atıftan önce tırnak içinde yazılır, atıfla AYNI işlemde
+    (editor-navigation.ts atifIslemi). kayitliKonum: çekmeceden gelen
+    ekleme, öğrencinin editörde bıraktığı yere yazılır.
+  */
+  const handleCite = async (
+    source: LiteratureSource,
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean } = {},
+  ): Promise<{ ok: true; atif?: string } | { ok: false; hata: string }> => {
+    const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
     let hazir: { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean } | undefined;
@@ -2605,10 +2705,29 @@ export default function ManuscriptEditor({
         erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
       }).catch(() => ({ hata: t({ tr: "Atıf stili sunucusuna ulaşılamadı.", en: "Couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
       if (sonuc.hata || !sonuc.atif) {
-        showToast("error", sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." }));
-        return;
+        /* Belge DEĞİŞMEDİ: alıntı da atıf da yazılmadı (ikisi aynı işlemde). */
+        const hata = sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." });
+        showToast("error", hata);
+        return { ok: false, hata };
       }
       hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
+    }
+    /*
+      ÖNİZLEME (20.11.2026, PDF çekmecesinin onay katmanı): atıf, eklenecek
+      işlemin AYNISIYLA ama gönderilmeyen bir işlemde kurulur; belgeye hiçbir
+      şey yazılmaz. Önizlenen metin, "Ekle"de yazılanla aynı yoldan gelir
+      (aynı stil, kalıp, sayfa, konum); ayrı bir biçimleyiciyle tahmin edilmez.
+    */
+    if (secenek.onizle) {
+      const { citation } = atifIslemi(editor.state.tr, source, style, {
+        sayfa: secenek.sayfa,
+        erisimTarihi: bugun,
+        kalip: ornekKalibi(ornekAtif),
+        dil: belgeDili,
+        hazir,
+        konum,
+      });
+      return { ok: true, atif: citation };
     }
     const { citation, addedReference } = insertCitation(editor, source, style, {
       sayfa: secenek.sayfa,
@@ -2616,12 +2735,17 @@ export default function ManuscriptEditor({
       kalip: ornekKalibi(ornekAtif),
       dil: belgeDili,
       hazir,
+      alinti: secenek.alinti,
+      konum,
+      odaklanma: !secenek.kayitliKonum,
     });
-    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
+    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
+       Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
+       ekleme kırmızı "İşlem tamamlanamadı" başlığıyla gösteriliyordu (20.11.2026). */
     const eksik = addedReference ? eksikAlanlar(source, dil) : [];
     const eksikMetni = eksik.join(", ");
     showToast(
-      eksik.length ? "error" : "success",
+      eksik.length ? "info" : "success",
       eksik.length
         ? t({
             tr: `${citation} eklendi; künyede eksik: ${eksikMetni}. Literatür'den kaynağı tamamlayın.`,
@@ -2632,6 +2756,7 @@ export default function ManuscriptEditor({
           : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
+    return { ok: true, atif: citation };
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
   const handlePrint = async () => {
@@ -4055,6 +4180,12 @@ export default function ManuscriptEditor({
       {sag && karar?.sag === "sutun" ? (
         <SagPanelAyirici panel={sag} genislik={sagGenislik} enCok={karar.sagEnCok} onDegis={sagGenislikDegisti} yerlesim={yerlesimiAl} />
       ) : null}
+      {/*
+        PDF ÇEKMECESİNİN ARKASI (20.11.2026): editör hafifçe kararır, yerinden
+        oynamaz; tıklamak çekmeceyi kapatır (Esc gibi). Telefonda çekmece tam
+        ekran olduğu için örtü yok (workspace.css).
+      */}
+      {kaynakAcik ? <div className="pdf-cekmece-ortu" aria-hidden="true" onClick={pdfKapat} /> : null}
       <KaynakPdfPaneli
         editor={editor}
         projectId={projectId}
@@ -4062,6 +4193,8 @@ export default function ManuscriptEditor({
         acilacak={acilacakPdf}
         onKapat={pdfKapat}
         onCite={handleCite}
+        genislik={kaynakAcik ? sagGenislik : undefined}
+        onGenislik={sagGenislikDegisti}
         onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
         onBagDegisti={() => setKartVerisi(null)}
       />
@@ -4070,7 +4203,7 @@ export default function ManuscriptEditor({
           durum={atifKarti}
           projectId={projectId}
           kaynaklar={kartVerisi?.kaynaklar ?? []}
-          pdfBul={(k) => (kartVerisi ? kaynaginPdfi(k, kartVerisi.pdfler) : null)}
+          pdfBul={(k) => (kartVerisi ? pdfEslesmesi(k, kartVerisi.pdfler) : { tur: "yok" })}
           kunye={kartVerisi?.kunye ?? new Map()}
           pasajlar={dogrulanmisPasajlar}
           yukleniyor={kartYukleniyor}
@@ -4258,18 +4391,22 @@ export default function ManuscriptEditor({
           <section className="sorun-grubu" aria-label={t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}>
             <header>
               <strong>{t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}</strong>
-              {checkResult.atif.referenceSectionFound && checkResult.atif.complianceScore !== null ? (
-                <span
-                  className="status-pill"
-                  data-tone={
-                    checkResult.atif.complianceScore >= 85 ? "success" : checkResult.atif.complianceScore >= 60 ? "warning" : "danger"
-                  }
-                >
-                  {t({
-                    tr: `${checkResult.stil.ad} uyum ${checkResult.atif.complianceScore}/100`,
-                    en: `${checkResult.stil.ad} compliance ${checkResult.atif.complianceScore}/100`,
-                  })}
-                </span>
+              {/* "uyum /100" yerine açık sorun sayısı (20.11.2026): puan biçim
+                  uyarılarını saymadığı için uyarı varken 100 görünüyordu. */}
+              {checkResult.atif.referenceSectionFound ? (
+                (() => {
+                  const ozet = kaynakcaOzeti(checkResult.atif);
+                  return (
+                    <span className="status-pill" data-tone={ozet.ton}>
+                      {ozet.acikSorun
+                        ? t({
+                            tr: `${ozet.kunye} künyede ${ozet.acikSorun} açık sorun`,
+                            en: `${ozet.acikSorun} open ${ozet.acikSorun === 1 ? "issue" : "issues"} in ${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"}`,
+                          })
+                        : t({ tr: `${ozet.kunye} künye · açık sorun yok`, en: `${ozet.kunye} references · no open issues` })}
+                    </span>
+                  );
+                })()
               ) : null}
             </header>
             {!checkResult.atif.referenceSectionFound ? (
