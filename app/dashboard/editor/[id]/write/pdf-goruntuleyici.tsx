@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal, LocateFixed } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal, LocateFixed, X } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { pasajParcalari } from "@/lib/pdf-pasaj";
@@ -49,9 +49,20 @@ function pdfjsYukle(): Promise<Pdf> {
   return pdfjsSozu;
 }
 
-export type PdfSecimi = { sayfa: number; metin: string };
-/** Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), panel yeniden açılınca geri yüklenir. */
-export type OkumaKonumu = { sayfa: number; olcek: number | "sigdir" };
+/** kutu: seçimin sayfa alanındaki (kaydırılan içerik) dikdörtgeni; seçim araç çubuğu onun altına konur. */
+export type PdfSecimi = {
+  sayfa: number;
+  metin: string;
+  /** Seçimin ve o anki GÖRÜNÜR alanın sayfa alanındaki (kaydırılan içerik) konumu; katman kenarlara göre yerleşir. */
+  kutu?: { sol: number; ust: number; alt: number; genislik: number; alan: { sol: number; ust: number; genislik: number; yukseklik: number } };
+};
+/*
+  Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), çekmece yeniden
+  açılınca geri yüklenir. 20.11.2026'dan beri sayfa içi kaydırma da
+  (kaydirma) saklanıyor: eskiden çekmece kapanıp açılınca doğru sayfa ama
+  sayfanın en üstü açılıyordu.
+*/
+export type OkumaKonumu = { sayfa: number; olcek: number | "sigdir"; kaydirma?: { x: number; y: number } };
 
 /*
   Pasaja kaydırma YALNIZCA PDF alanının içinde. Eskiden scrollIntoView
@@ -80,6 +91,7 @@ export default function PdfGoruntuleyici({
   onKonum,
   onPasaj,
   onGidisUygulandi,
+  katman,
 }: {
   pdfId: string;
   /**
@@ -97,6 +109,8 @@ export default function PdfGoruntuleyici({
   konumAl?: (pdfId: string) => OkumaKonumu | null;
   /** Belge hazırken sayfa ya da yakınlaştırma değişince; konum PDF kimliğiyle bildirilir. */
   onKonum?: (pdfId: string, konum: OkumaKonumu) => void;
+  /** Sayfa alanının içinde, sayfayla birlikte kayan katman (seçim araç çubuğu ve kısa onay; kaynak-pdf-paneli.tsx). */
+  katman?: ReactNode;
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
@@ -108,6 +122,15 @@ export default function PdfGoruntuleyici({
   const [olcek, setOlcek] = useState<number | "sigdir">(() => konumAl?.(pdfId)?.olcek ?? "sigdir");
   const [cizilenOlcek, setCizilenOlcek] = useState(1);
   const [arama, setArama] = useState("");
+  /* Arama kutusu istenince açılır: araç satırı tek satır kalsın (20.11.2026, yoğunluk). */
+  const [aramaAcik, setAramaAcik] = useState(false);
+  /*
+    Sayfa alanının genişliği: YALNIZCA "genişliğe sığdır" etkinken çizimi
+    tetikler (aşağıda). Eskiden genişlik yalnızca ilk çizimde okunuyordu;
+    çekmece genişletilince ya da tam ekrana alınınca sayfa eski genişlikte
+    kalıyordu. Elle seçilen yakınlaştırma alan değişince EZİLMEZ.
+  */
+  const [alanGenisligi, setAlanGenisligi] = useState(0);
   const [eslesenler, setEslesenler] = useState<number[] | null>(null);
   const [araniyor, setAraniyor] = useState(false);
   const kapRef = useRef<HTMLDivElement>(null);
@@ -227,9 +250,75 @@ export default function PdfGoruntuleyici({
     setSayfaGirdi(String(n));
   }
 
+  /* Sayfa içi kaydırma: kayıt sayfa ya da yakınlaştırmayla birlikte bildirilir; sayfa değişince baştan. */
+  const kaydirmaRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const sonSayfaRef = useRef(sayfaNo);
   useEffect(() => {
-    if (durum === "hazir") onKonum?.(pdfId, { sayfa: sayfaNo, olcek });
+    if (sonSayfaRef.current !== sayfaNo) {
+      sonSayfaRef.current = sayfaNo;
+      kaydirmaRef.current = { x: 0, y: 0 };
+    }
+    if (durum === "hazir") onKonum?.(pdfId, { sayfa: sayfaNo, olcek, kaydirma: kaydirmaRef.current });
   }, [durum, pdfId, sayfaNo, olcek, onKonum]);
+  const kaydirmaKaresi = useRef(0);
+  const kaydirildi = () => {
+    if (kaydirmaKaresi.current || durum !== "hazir") return;
+    kaydirmaKaresi.current = window.requestAnimationFrame(() => {
+      kaydirmaKaresi.current = 0;
+      const kap = kapRef.current;
+      // Gizliyken gelen kaydırma (0) saklanan konumu ezmesin.
+      if (!kap || !geriYuklendiRef.current || kap.clientWidth === 0) return;
+      kaydirmaRef.current = { x: Math.round(kap.scrollLeft), y: Math.round(kap.scrollTop) };
+      onKonum?.(pdfId, { sayfa: sayfaNo, olcek, kaydirma: kaydirmaRef.current });
+    });
+  };
+  /*
+    Hatırlanan kaydırma PDF yüklendikten sonraki İLK çizimde bir kez
+    uygulanır. O ana kadar kaydırma olayları kaydedilmez (geriYuklendiRef):
+    yükleme sırasında alan boşken gelen "0" saklanan konumu ezerdi.
+  */
+  const geriYuklendiRef = useRef(false);
+  useEffect(() => {
+    geriYuklendiRef.current = false;
+  }, [pdfId]);
+
+  /* Sayfa alanının genişliği (yalnızca "sığdır" modunda çizimi etkiler). */
+  useEffect(() => {
+    const kap = kapRef.current;
+    if (!kap || typeof ResizeObserver === "undefined") return;
+    let kare = 0;
+    let gizliydi = kap.clientWidth === 0;
+    const gozlemci = new ResizeObserver(() => {
+      /*
+        GİZLENİP YENİDEN GÖRÜNÜNCE KAYDIRMA GERİ GELİR (20.11.2026). Çekmece
+        kapanınca ya da AI görünümüne geçilince görüntüleyici sökülmüyor,
+        gizleniyor; ama gizlenen (display:none) öğe kaydırma konumunu
+        bırakıyor ve tarayıcı yeniden gösterirken 0'dan başlatıyor (kabulde
+        ölçüldü: 240 → 0). Son bilinen konum geri yazılır.
+      */
+      if (kap.clientWidth === 0) {
+        gizliydi = true;
+        return;
+      }
+      if (gizliydi) {
+        gizliydi = false;
+        const { x, y } = kaydirmaRef.current;
+        if (x || y) kap.scrollTo({ left: x, top: y });
+      }
+      if (kare) return;
+      kare = window.requestAnimationFrame(() => {
+        kare = 0;
+        // 8 px'lik adım: sürükleme sırasında her pikselde yeniden çizilmesin.
+        setAlanGenisligi(Math.round(kap.clientWidth / 8) * 8);
+      });
+    });
+    gozlemci.observe(kap);
+    return () => {
+      gozlemci.disconnect();
+      if (kare) window.cancelAnimationFrame(kare);
+    };
+  }, []);
+  const sigdirGenisligi = olcek === "sigdir" ? alanGenisligi : 0;
 
   /* Çizili sayfadaki arama eşleşmelerini işaretler (parça düzeyinde). */
   const vurgula = useCallback(() => {
@@ -296,6 +385,15 @@ export default function PdfGoruntuleyici({
           setCizilenOlcek(hedef);
           katman.dataset.sayfa = String(sayfaNo);
           vurgula();
+          if (!geriYuklendiRef.current) {
+            geriYuklendiRef.current = true;
+            const k = konumAlRef.current?.(pdfId);
+            const alan = kapRef.current;
+            if (alan && k?.kaydirma && k.sayfa === sayfaNo) {
+              alan.scrollTo({ left: k.kaydirma.x, top: k.kaydirma.y });
+              kaydirmaRef.current = k.kaydirma;
+            }
+          }
         }
       } catch {
         /* İptal edilen çizim (sayfa ya da ölçek değişti) hata değildir. */
@@ -306,18 +404,45 @@ export default function PdfGoruntuleyici({
       cizim?.cancel();
       katmanIsi?.cancel();
     };
-  }, [belge, sayfaNo, olcek, vurgula]);
+    // sigdirGenisligi: yalnızca "sığdır" modunda alan değişince yeniden çiz (elle seçilen ölçek ezilmez).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [belge, sayfaNo, olcek, vurgula, sigdirGenisligi]);
 
   /* Seçim bırakılınca: yalnızca metin katmanının içindeki seçim bildirilir. */
-  const secimiBildir = useCallback(() => {
-    window.setTimeout(() => {
-      const secim = window.getSelection();
-      const katman = katmanRef.current;
-      const metin = secim?.toString().trim() ?? "";
-      if (!secim || !katman || !metin || !secim.anchorNode || !katman.contains(secim.anchorNode)) return;
-      onSecim({ sayfa: sayfaNo, metin });
-    }, 0);
-  }, [onSecim, sayfaNo]);
+  /*
+    Seçim bırakılınca bildirilir. Seçim KALDIRILINCA da (sayfaya tıklayıp
+    boş bırakmak) bildirilir: eskiden boş seçimde erken dönülüyordu ve
+    önceki seçimin kartı ekranda kalıyordu. Seçim araç çubuğunun içine
+    yapılan tıklama (data-pdf-katman) seçimi düşürmez.
+  */
+  const secimiBildir = useCallback(
+    (olay?: { target: EventTarget | null }) => {
+      if (olay?.target instanceof Element && olay.target.closest("[data-pdf-katman]")) return;
+      window.setTimeout(() => {
+        const secim = window.getSelection();
+        const katman = katmanRef.current;
+        const kap = kapRef.current;
+        const metin = secim?.toString().trim() ?? "";
+        if (!secim || !katman || !kap || !metin || !secim.anchorNode || !katman.contains(secim.anchorNode)) {
+          onSecim(null);
+          return;
+        }
+        const r = secim.rangeCount ? secim.getRangeAt(0).getBoundingClientRect() : null;
+        const a = kap.getBoundingClientRect();
+        const kutu = r
+          ? {
+              sol: r.left - a.left + kap.scrollLeft,
+              ust: r.top - a.top + kap.scrollTop,
+              alt: r.bottom - a.top + kap.scrollTop,
+              genislik: r.width,
+              alan: { sol: kap.scrollLeft, ust: kap.scrollTop, genislik: kap.clientWidth, yukseklik: kap.clientHeight },
+            }
+          : undefined;
+        onSecim({ sayfa: sayfaNo, metin, kutu });
+      }, 0);
+    },
+    [onSecim, sayfaNo],
+  );
 
   const sayfayaGit = (n: number) => {
     if (!belge) return;
@@ -426,11 +551,23 @@ export default function PdfGoruntuleyici({
             </button>
           ) : null}
         </div>
-        <form className="pdf-ara" onSubmit={ara} role="search">
+        <button
+          type="button"
+          className="yazim-ikon pdf-ara-ac"
+          aria-expanded={aramaAcik}
+          aria-controls={`pdf-ara-${pdfId}-form`}
+          onClick={() => setAramaAcik((a) => !a)}
+          disabled={!belge}
+          aria-label={aramaAcik ? t({ tr: "Aramayı kapat", en: "Close search" }) : t({ tr: "PDF içinde ara", en: "Search in PDF" })}
+          title={t({ tr: "PDF içinde ara", en: "Search in PDF" })}
+        >
+          {aramaAcik ? <X size={16} aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
+        </button>
+        <form id={`pdf-ara-${pdfId}-form`} className="pdf-ara" onSubmit={ara} role="search" hidden={!aramaAcik}>
           <label className="sr-only" htmlFor={`pdf-ara-${pdfId}`}>
             {t({ tr: "PDF içinde ara", en: "Search in PDF" })}
           </label>
-          <input id={`pdf-ara-${pdfId}`} className="field-control" type="search" value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
+          <input id={`pdf-ara-${pdfId}`} className="field-control" type="search" autoFocus value={arama} onChange={(e) => setArama(e.target.value)} placeholder={t({ tr: "PDF içinde ara", en: "Search in PDF" })} disabled={!belge} />
           <button type="submit" className="yazim-ikon" disabled={!belge || araniyor} aria-label={t({ tr: "Ara", en: "Search" })}>
             {araniyor ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
           </button>
@@ -454,7 +591,7 @@ export default function PdfGoruntuleyici({
         </form>
       </div>
 
-      <div className="pdf-sayfa-alani" ref={kapRef} onPointerUp={secimiBildir} onKeyUp={secimiBildir}>
+      <div className="pdf-sayfa-alani" ref={kapRef} onPointerUp={secimiBildir} onKeyUp={secimiBildir} onScroll={kaydirildi}>
         {durum === "yukleniyor" ? (
           <p className="pdf-durum" role="status">
             <Loader2 size={16} className="spin" aria-hidden="true" /> {t({ tr: "PDF yükleniyor…", en: "Loading PDF…" })}
@@ -469,6 +606,7 @@ export default function PdfGoruntuleyici({
           <canvas ref={kanvasRef} aria-hidden="true" />
           <div className="textLayer" ref={katmanRef} />
         </div>
+        {katman}
       </div>
     </div>
   );

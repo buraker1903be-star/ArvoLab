@@ -265,6 +265,8 @@ type AtifSecenekleri = AtifSecenegi &
     alinti?: string | null;
     /** Yazılacak yer; verilmezse işlemin seçimi. Yazım konumun SONUNA yapılır, seçili metin silinmez. */
     konum?: { from: number; to: number } | null;
+    /** false: işlem editöre odak vermez (PDF çekmecesi). */
+    odaklanma?: boolean;
   };
 
 /**
@@ -373,9 +375,9 @@ export function insertCitation(
   secenek: AtifSecenekleri = {},
 ): { citation: string; addedReference: boolean } {
   let sonuc: { citation: string; addedReference: boolean } = { citation: "", addedReference: false };
-  editor
-    .chain()
-    .focus()
+  /* PDF çekmecesinden gelen ekleme odağı editöre ÇEKMEZ: çekmece açık kalır, öğrenci okumaya devam eder. */
+  const zincir = editor.chain();
+  (secenek.odaklanma === false ? zincir : zincir.focus())
     .command(({ tr }) => {
       sonuc = atifIslemi(tr, source, style, secenek);
       return true;
