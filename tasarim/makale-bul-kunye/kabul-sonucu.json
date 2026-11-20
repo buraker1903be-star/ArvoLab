@@ -1,0 +1,193 @@
+{
+  "normal": [
+    {
+      "ad": "sonuçlar künye kontrolünü beklemeden listelenir (ilk anda en az bir rozet 'kontrol ediliyor')",
+      "gecti": true,
+      "ayrinti": {
+        "listeSure": 877,
+        "n": 12,
+        "durumlar": [
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor",
+          "kontrol_ediliyor"
+        ]
+      }
+    },
+    {
+      "ad": "rozetler arkada güncellenir; hepsi beş durumdan biriyle sonuçlanır",
+      "gecti": true,
+      "ayrinti": {
+        "bitisSure": 1496,
+        "sayim": {
+          "eslesti": 12
+        }
+      }
+    },
+    {
+      "ad": "TraceMonkey sonucu öteki dizinle eşleşti (rozette karşılaştırılan dizin yazıyor)",
+      "gecti": true,
+      "ayrinti": {
+        "baslik": "Trace-based just-in-time type specialization for dynamic languages",
+        "durum": "eslesti",
+        "metin": "Künye eşleşti · OpenAlex",
+        "ton": "success",
+        "neden": ""
+      }
+    },
+    {
+      "ad": "'Kontrol edilemedi' ve 'Belirsiz' tehlike tonunda değil",
+      "gecti": true,
+      "ayrinti": {}
+    },
+    {
+      "ad": "kontroller paralel gider ama en çok 3 eşzamanlı",
+      "gecti": true,
+      "ayrinti": {
+        "enCok": 3,
+        "toplam": 12
+      }
+    },
+    {
+      "ad": "önbellek: aynı sonuçlar yeniden sorulmaz",
+      "gecti": true,
+      "ayrinti": {
+        "yeniIstek": 0
+      }
+    },
+    {
+      "ad": "ikinci arama: eski aramanın bekleyen kontrolleri atıldı, uçuştakiler iptal edildi",
+      "gecti": true,
+      "ayrinti": {
+        "aSorulan": 3,
+        "aSayisi": 15,
+        "iptal": 3
+      }
+    },
+    {
+      "ad": "ikinci arama: yeni listenin her kaydı en çok bir kez soruldu (iki listede ortak olan önbellekten)",
+      "gecti": true,
+      "ayrinti": {
+        "bSayim": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "ad": "ikinci arama: listede yalnızca yeni aramanın kayıtları, hepsinin rozeti sonuçlandı",
+      "gecti": true,
+      "ayrinti": {
+        "ornek": [
+          {
+            "baslik": "Cost-Effectiveness Analysis of a Television Campaign to Promote Seasonal Influenza Vaccination Among the Elderly",
+            "durum": "eslesti",
+            "metin": "Künye eşleşti · OpenAlex",
+            "ton": "success",
+            "neden": ""
+          },
+          {
+            "baslik": "Evaluation of seasonal influenza vaccination effectiveness based on antibody efficacy among the institutionalized elderly in Japan",
+            "durum": "eslesti",
+            "metin": "Künye eşleşti · OpenAlex",
+            "ton": "success",
+            "neden": ""
+          }
+        ]
+      }
+    },
+    {
+      "ad": "eklenen kaynak: yıl 2009 ve DOI (öteki dizinle teyitli bilgi)",
+      "gecti": true,
+      "ayrinti": {
+        "eklenen": "2009|https://doi.org/10.1145/1543135.1542528"
+      }
+    },
+    {
+      "ad": "normal aşama: sayfa hatası yok",
+      "gecti": true,
+      "ayrinti": []
+    },
+    {
+      "ad": "arama sonuçları oturumda saklandı (arıza aşaması için)",
+      "gecti": true,
+      "ayrinti": {}
+    },
+    {
+      "ad": "telefon: aynı rozetler (sunucu önbelleğinden)",
+      "gecti": true,
+      "ayrinti": {
+        "n": 12
+      }
+    }
+  ],
+  "ariza": [
+    {
+      "ad": "dizinlere ulaşılamıyor: sonuçlar yine listelenir",
+      "gecti": true,
+      "ayrinti": {
+        "n": 12
+      }
+    },
+    {
+      "ad": "servis arızası → 'Kontrol edilemedi' (nötr ton)",
+      "gecti": true,
+      "ayrinti": {
+        "ornek": [
+          {
+            "baslik": "Trace-based just-in-time type specialization for dynamic languages",
+            "durum": "kontrol_edilemedi",
+            "metin": "Kontrol edilemedi",
+            "ton": "neutral",
+            "neden": "OpenAlex'e şu anda ulaşılamadı; künye kontrol edilemedi. Bu, kaynağın yanlış olduğu anlamına gelmez."
+          },
+          {
+            "baslik": "Just-in-time Length Specialization of Dynamic Vector Code",
+            "durum": "kontrol_edilemedi",
+            "metin": "Kontrol edilemedi",
+            "ton": "neutral",
+            "neden": "OpenAlex'e şu anda ulaşılamadı; künye kontrol edilemedi. Bu, kaynağın yanlış olduğu anlamına gelmez."
+          }
+        ]
+      }
+    },
+    {
+      "ad": "servis arızası 'yanlış kaynak' demez, ulaşılamadığını söyler",
+      "gecti": true,
+      "ayrinti": {
+        "neden": "OpenAlex'e şu anda ulaşılamadı; künye kontrol edilemedi. Bu, kaynağın yanlış olduğu anlamına gelmez."
+      }
+    },
+    {
+      "ad": "arıza aşaması: ekleme düğmeleri hâlâ kullanılabilir",
+      "gecti": true,
+      "ayrinti": {}
+    },
+    {
+      "ad": "arıza aşaması: sayfa hatası yok",
+      "gecti": true,
+      "ayrinti": []
+    }
+  ]
+}
