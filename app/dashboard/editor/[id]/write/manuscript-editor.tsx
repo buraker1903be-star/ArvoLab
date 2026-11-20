@@ -2930,7 +2930,16 @@ export default function ManuscriptEditor({
               ) : null}
               {acilanAraclar.includes("arama") ? (
                 <div className="sol-arac" hidden={solArac !== "arama"}>
-                  <SolArama projectId={projectId} projeAdi={projectDefaults?.title ?? ""} gorunur={solArac === "arama"} />
+                  <SolArama
+                    projectId={projectId}
+                    projeAdi={projectDefaults?.title ?? ""}
+                    gorunur={solArac === "arama"}
+                    onPdfOku={(id) => {
+                      /* Makale Bul → "PDF'yi oku" (M7): uygulama içi okuyucu; indirme ayrı eylem olarak kalır. */
+                      setAcilacakPdf({ id, anahtar: Date.now() });
+                      sagAc("pdf");
+                    }}
+                  />
                 </div>
               ) : null}
               {/*

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
-import { BookOpenCheck, Check, ExternalLink, Plus, Search, Unlock } from "lucide-react";
-import { aramaKaydiniEkle, literaturAramasiYap, type AramaYaniti } from "@/app/actions/literatur-arama";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { BookOpenCheck, Check, ExternalLink, FileText, Plus, Search, SlidersHorizontal, Undo2, Unlock, X } from "lucide-react";
+import { aramaKaydiniEkle, literaturAramasiYap, okumayaAl, type AramaYaniti } from "@/app/actions/literatur-arama";
+import { deleteLiteratureSource } from "@/app/actions/literature";
+import { kaynakPdfleriniBul, pdfKaynaginiBagla } from "@/app/actions/kaynak-pdf";
+import { aramaKunyesi, pdfAramaDurumu, type MakalePdfDurumu } from "@/lib/makale-pdf-durumu";
 import { showToast } from "../_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useOturumDurumu } from "@/app/_components/oturum-durumu";
@@ -29,6 +32,7 @@ export default function LiteraturBulucu({
   gomulu = false,
   aramaYaninda,
   durumAnahtari = null,
+  onPdfOku,
 }: {
   projeler: Proje[];
   secilenCalisma?: string | null;
@@ -45,6 +49,12 @@ export default function LiteraturBulucu({
    * başka bir çalışma sayfasına gidip gelen öğrenci aramasını kaybetmesin.
    */
   durumAnahtari?: string | null;
+  /**
+   * Verilirse her sonuçta "PDF'yi oku" çıkar (yazım ekranı): PDF bulununca
+   * çekmece bu kimlikle açılır. Verilmezse (Kaynaklar sayfası) yalnızca
+   * "Tam metin / Kaynağa git" bağlantısı kalır.
+   */
+  onPdfOku?: (pdfId: string) => void;
 }) {
   const t = useCeviri();
   const anahtar = (ek: string) => (durumAnahtari ? `${durumAnahtari}.${ek}` : null);
@@ -56,6 +66,21 @@ export default function LiteraturBulucu({
   const [eklenen, setEklenen] = useState<Set<string>>(new Set());
   const [aranıyor, aramayaBasla] = useTransition();
   const [eklenenKimlik, setEklenenKimlik] = useState<string | null>(null);
+  /*
+    SADE ARAMA (M7, 20.11.2026): tek alan + Ara; yıl, açık erişim ve
+    çalışma seçimi "Filtreler"in altında ve varsayılan KAPALI. Etkin
+    süzgeçler çip olarak görünür, ×'le kalkar. Eskiden beş alan aynı anda
+    açıktı; dar sol panelde arama düğmesi ekranın altına itiliyordu.
+  */
+  const [filtreAcik, setFiltreAcik] = useState(false);
+  /*
+    Sonuç başına PDF durumu (lib/makale-pdf-durumu.ts) ve Geri al bilgisi.
+    Sonuçlar gibi oturumda saklanır: çekmece açılıp kapanınca sol panel
+    yeniden çiziliyor ve yerel durum sıfırlanıyordu — öğrenci az önce
+    eklediği kaydın "Geri al"ını kaybediyordu.
+  */
+  const [pdfDurumu, setPdfDurumu] = useOturumDurumu<Record<string, { durum: MakalePdfDurumu; adres?: string | null; pdfId?: string | null }>>(anahtar("pdfDurumu"), {});
+  const [okumaya, setOkumaya] = useOturumDurumu<Record<string, { kaynakId: string; yeni: boolean }>>(anahtar("okumaya"), {});
 
   const ara = () => {
     aramayaBasla(async () => {
@@ -71,6 +96,76 @@ export default function LiteraturBulucu({
         })
       );
     });
+  };
+
+  /*
+    Süzgeç değişince (arama yapılmışsa) yeniden aranır, 600 ms bekletilerek:
+    yıl kutusuna "2015" yazarken dört ayrı istek gitmesin. Sorgu metni
+    tuş başına aranmaz; onun için Ara/Enter.
+  */
+  const ilkCizim = useRef(true);
+  useEffect(() => {
+    if (ilkCizim.current) {
+      ilkCizim.current = false;
+      return;
+    }
+    if (!yanit || sorgu.trim().length < 3) return;
+    const zamanlayici = setTimeout(ara, 600);
+    return () => clearTimeout(zamanlayici);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnızca süzgeçler tetikler; sorgu Ara ile
+  }, [yilDan, yilaKadar, acikErisim]);
+
+  const pdfiOku = async (kayit: Kayit) => {
+    if (!onPdfOku) return;
+    if (!projeId) {
+      showToast("error", t({ tr: "Önce bir çalışma seçin; PDF çalışmanın kaynaklarına eklenir.", en: "Pick a work first; the PDF is added to that work's sources." }));
+      return;
+    }
+    setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "araniyor" } }));
+    try {
+      const alim = await okumayaAl({ baslik: kayit.baslik, yazarlar: kayit.yazarlar, yil: kayit.yil, tur: kayit.tur, dergi: kayit.dergi, doi: kayit.doi, url: kayit.url, projectId: projeId });
+      if ("error" in alim) {
+        setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "servis_hatasi" } }));
+        showToast("error", alim.error);
+        return;
+      }
+      setOkumaya((o) => ({ ...o, [kayit.kimlik]: alim }));
+      setEklenen((o) => new Set(o).add(kayit.kimlik));
+      let pdfId = alim.hazirPdfId;
+      let durum: MakalePdfDurumu = pdfId ? "bulundu" : "araniyor";
+      let adres: string | null = null;
+      if (!pdfId) {
+        const sonuc = await kaynakPdfleriniBul(projeId, [{ kunye: aramaKunyesi(kayit), doi: kayit.doi }]).catch(() => null);
+        ({ durum, pdfId, adres } = pdfAramaDurumu(sonuc));
+        if (pdfId) await pdfKaynaginiBagla({ projectId: projeId, pdfId, kaynakId: alim.kaynakId }).catch(() => undefined);
+      }
+      setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum, adres, pdfId } }));
+      if (pdfId) onPdfOku(pdfId);
+    } catch {
+      setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "servis_hatasi" } }));
+    }
+  };
+
+  const okumayiGeriAl = async (kayit: Kayit) => {
+    const alim = okumaya[kayit.kimlik];
+    // Yalnızca bu oturumda YENİ eklenen kayıt silinir; önceden var olana dokunulmaz.
+    if (!alim?.yeni) return;
+    const sonuc = await deleteLiteratureSource(alim.kaynakId);
+    if (sonuc?.error) {
+      showToast("error", sonuc.error);
+      return;
+    }
+    setOkumaya((o) => {
+      const yeni = { ...o };
+      delete yeni[kayit.kimlik];
+      return yeni;
+    });
+    setEklenen((o) => {
+      const yeni = new Set(o);
+      yeni.delete(kayit.kimlik);
+      return yeni;
+    });
+    showToast("success", t({ tr: "Kaynak çalışmadan kaldırıldı.", en: "Source removed from the work." }));
   };
 
   const ekle = (kayit: Kayit) => {
@@ -103,11 +198,18 @@ export default function LiteraturBulucu({
   const acikErisimSayisi = kayitlar.filter((kayit) => kayit.acikErisim).length;
   const listedekiSayisi = kayitlar.filter((kayit) => kayit.listede || eklenen.has(kayit.kimlik)).length;
 
+  const secilenProje = projeler.find((p) => p.id === projeId);
+  const cipler: { ad: string; kaldir: () => void }[] = [
+    ...(yilDan ? [{ ad: t({ tr: `${yilDan} ve sonrası`, en: `${yilDan} or later` }), kaldir: () => setYilDan("") }] : []),
+    ...(yilaKadar ? [{ ad: t({ tr: `${yilaKadar} ve öncesi`, en: `${yilaKadar} or earlier` }), kaldir: () => setYilaKadar("") }] : []),
+    ...(acikErisim ? [{ ad: t({ tr: "Yalnızca açık erişim", en: "Open access only" }), kaldir: () => setAcikErisim(false) }] : []),
+    ...(!gomulu && secilenProje ? [{ ad: secilenProje.title, kaldir: () => setProjeId("") }] : []),
+  ];
   const formBlok = (
     <>
-      <div className="project-form-grid">
-        <label className="project-form-full">
-          <span>{t({ tr: "Arama", en: "Search" })}</span>
+      <div className="makale-arama-satiri">
+        <label className="makale-arama-alani">
+          <span className="sr-only">{t({ tr: "Arama", en: "Search" })}</span>
           <input
             type="search"
             value={sorgu}
@@ -117,43 +219,60 @@ export default function LiteraturBulucu({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                ara();
+                if (sorgu.trim().length >= 3) ara();
               }
             }}
           />
         </label>
-        <label>
-          <span>{t({ tr: "Yıl (en erken)", en: "Year (earliest)" })}</span>
-          <input type="number" inputMode="numeric" value={yilDan} min={1800} max={2100} onChange={(e) => setYilDan(e.target.value)} />
-        </label>
-        <label>
-          <span>{t({ tr: "Yıl (en geç)", en: "Year (latest)" })}</span>
-          <input type="number" inputMode="numeric" value={yilaKadar} min={1800} max={2100} onChange={(e) => setYilaKadar(e.target.value)} />
-        </label>
-        {projeler.length > 0 && (
-          <label>
-            <span>{t({ tr: "Eklenecek çalışma", en: "Add to work" })}</span>
-            <select value={projeId} onChange={(e) => setProjeId(e.target.value)}>
-              <option value="">{t({ tr: "Çalışmaya bağlama", en: "Don't link to a work" })}</option>
-              {projeler.map((proje) => (
-                <option key={proje.id} value={proje.id}>{proje.title}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="secim-satiri">
-          <input type="checkbox" checked={acikErisim} onChange={(e) => setAcikErisim(e.target.checked)} />
-          <span>{t({ tr: "Yalnızca açık erişim (tam metni okuyabildikleriniz)", en: "Open access only (full text you can read)" })}</span>
-        </label>
-      </div>
-
-      <div className="project-form-actions mt-sm">
         <button type="button" className="projects-primary-button" disabled={aranıyor || sorgu.trim().length < 3} onClick={ara}>
           <Search size={16} aria-hidden="true" />
-          {aranıyor ? t({ tr: "Aranıyor…", en: "Searching…" }) : t({ tr: "Dizinlerde ara", en: "Search the indexes" })}
+          {aranıyor ? t({ tr: "Aranıyor…", en: "Searching…" }) : t({ tr: "Ara", en: "Search" })}
         </button>
-        {aramaYaninda}
+        <button type="button" className="projects-filter-button" aria-expanded={filtreAcik} aria-controls="makale-filtreler" onClick={() => setFiltreAcik((a) => !a)}>
+          <SlidersHorizontal size={16} aria-hidden="true" />
+          {t({ tr: "Filtreler", en: "Filters" })}
+        </button>
       </div>
+      {cipler.length > 0 && (
+        <div className="chip-row mt-sm" aria-label={t({ tr: "Etkin filtreler", en: "Active filters" })}>
+          {cipler.map((c) => (
+            <span className="chip makale-cip" key={c.ad}>
+              {c.ad}
+              <button type="button" onClick={c.kaldir} aria-label={t({ tr: `${c.ad} filtresini kaldır`, en: `Remove filter ${c.ad}` })}>
+                <X size={12} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {filtreAcik && (
+        <div id="makale-filtreler" className="project-form-grid mt-sm">
+          <label>
+            <span>{t({ tr: "Yıl (en erken)", en: "Year (earliest)" })}</span>
+            <input type="number" inputMode="numeric" value={yilDan} min={1800} max={2100} onChange={(e) => setYilDan(e.target.value)} />
+          </label>
+          <label>
+            <span>{t({ tr: "Yıl (en geç)", en: "Year (latest)" })}</span>
+            <input type="number" inputMode="numeric" value={yilaKadar} min={1800} max={2100} onChange={(e) => setYilaKadar(e.target.value)} />
+          </label>
+          {!gomulu && projeler.length > 0 && (
+            <label>
+              <span>{t({ tr: "Eklenecek çalışma", en: "Add to work" })}</span>
+              <select value={projeId} onChange={(e) => setProjeId(e.target.value)}>
+                <option value="">{t({ tr: "Çalışmaya bağlama", en: "Don't link to a work" })}</option>
+                {projeler.map((proje) => (
+                  <option key={proje.id} value={proje.id}>{proje.title}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="secim-satiri">
+            <input type="checkbox" checked={acikErisim} onChange={(e) => setAcikErisim(e.target.checked)} />
+            <span>{t({ tr: "Yalnızca açık erişim (tam metni okuyabildikleriniz)", en: "Open access only (full text you can read)" })}</span>
+          </label>
+        </div>
+      )}
+      {aramaYaninda ? <div className="project-form-actions mt-sm">{aramaYaninda}</div> : null}
     </>
   );
   const sonucBlok = (
@@ -241,7 +360,13 @@ export default function LiteraturBulucu({
                   )}
                 </div>
                 <div className="bulgu-eylemler">
-                  <a className="projects-filter-button button-compact" href={kayit.acikErisimUrl ?? kayit.url} target="_blank" rel="noreferrer">
+                  {onPdfOku ? <PdfOkuDugmesi durum={pdfDurumu[kayit.kimlik]} onOku={() => void pdfiOku(kayit)} onAc={(id) => onPdfOku(id)} /> : null}
+                  {okumaya[kayit.kimlik]?.yeni ? (
+                    <button type="button" className="projects-filter-button button-compact" onClick={() => void okumayiGeriAl(kayit)}>
+                      <Undo2 size={14} aria-hidden="true" /> {t({ tr: "Geri al", en: "Undo" })}
+                    </button>
+                  ) : null}
+                  <a className="projects-filter-button button-compact" href={pdfDurumu[kayit.kimlik]?.adres ?? kayit.acikErisimUrl ?? kayit.url} target="_blank" rel="noreferrer">
                     <ExternalLink size={14} aria-hidden="true" />
                     {kayit.acikErisimUrl ? t({ tr: "Tam metin", en: "Full text" }) : t({ tr: "Kaynağa git", en: "Go to source" })}
                   </a>
@@ -313,5 +438,40 @@ export default function LiteraturBulucu({
         </p>
       )}
     </section>
+  );
+}
+
+/*
+  "PDF'yi oku" düğmesi beş durumu ayrı gösterir (lib/makale-pdf-durumu.ts).
+  Bulunamadı kalıcıdır (düğme kapanır); servis hatası geçicidir (yeniden
+  denenebilir). İndirme yalnızca öğrenci isteyince, yalnızca bu kayıt için.
+*/
+function PdfOkuDugmesi({ durum, onOku, onAc }: { durum?: { durum: MakalePdfDurumu; pdfId?: string | null }; onOku: () => void; onAc: (pdfId: string) => void }) {
+  const t = useCeviri();
+  const d = durum?.durum ?? "aranmadi";
+  if (d === "bulundu" && durum?.pdfId) {
+    const pdfId = durum.pdfId;
+    return (
+      <button type="button" className="projects-primary-button button-compact" data-pdf-durumu={d} onClick={() => onAc(pdfId)}>
+        <FileText size={14} aria-hidden="true" /> {t({ tr: "PDF'yi aç", en: "Open PDF" })}
+      </button>
+    );
+  }
+  if (d === "bulunamadi") {
+    return (
+      <span className="status-pill" data-tone="neutral" data-pdf-durumu={d}>
+        {t({ tr: "Açık erişim PDF bulunamadı", en: "No open-access PDF found" })}
+      </span>
+    );
+  }
+  return (
+    <button type="button" className="projects-primary-button button-compact" data-pdf-durumu={d} disabled={d === "araniyor"} onClick={onOku}>
+      <FileText size={14} aria-hidden="true" />
+      {d === "araniyor"
+        ? t({ tr: "PDF aranıyor…", en: "Finding PDF…" })
+        : d === "servis_hatasi"
+          ? t({ tr: "PDF'e ulaşılamadı · Tekrar dene", en: "Couldn't reach the PDF · Retry" })
+          : t({ tr: "PDF'yi oku", en: "Read PDF" })}
+    </button>
   );
 }
