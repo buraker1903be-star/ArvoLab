@@ -957,7 +957,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .profil-grafigi { max-width: 460px; margin: 10px 0; }
 .profil-grafigi svg { display: block; width: 100%; height: auto; }
 .profil-izgara { stroke: var(--line-soft); stroke-width: 1; }
-.profil-eksen { fill: var(--muted); font-size: 11px; }
+.profil-eksen { fill: var(--muted); font-size: 12px; }
 .profil-seri { --seri: var(--primary-ink); }
 .profil-seri[data-sira="1"], .profil-lejant[data-sira="1"] { --seri: var(--warning); }
 .profil-seri[data-sira="2"], .profil-lejant[data-sira="2"] { --seri: var(--success); }

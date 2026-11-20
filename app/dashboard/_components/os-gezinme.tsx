@@ -69,8 +69,14 @@ const CALISMA_IKONLARI: Record<CalismaIkon, LucideIcon> = {
   kilavuz: ListChecks,
 };
 const CALISMA_GRUPLARI: CalismaGrubu[] = ["yaz", "arastir", "kontrol", "diger"];
-/** Telefonda çalışmanın içindeyken alt çubuk: belge, kaynaklar, Arvo AI; geri kalanı "Çalışma" sayfasında. */
-const CALISMA_ALT_CUBUK = ["yazim", "kaynaklar", "ai"];
+/*
+  Telefonda çalışmanın içindeyken alt çubuk: Belge, Araştır (makale arama),
+  Arvo AI ve "Çalışma" — onaylı prototipin dört sekmesi (görsel uyum,
+  19.11.2026). Eskiden beş sekmeydi: "Çalışmalar" (geri) ve "Kaynaklar"
+  da alttaydı. Geri dönüş üst çubukta (header-title.tsx); Kaynaklar ve
+  öteki araçlar "Çalışma" yaprağında, hiçbirine erişim kaybolmadı.
+*/
+const CALISMA_ALT_CUBUK = ["yazim", "arama", "ai"];
 
 /*
   UYARLANIR GEZİNME (Phase 3, 04.11.2026; Signature OS 5 / Phase 3,
@@ -107,6 +113,13 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const t = useCeviri();
   const yol = usePathname();
   const pencere = useRef<HTMLDialogElement>(null);
+  /*
+    Telefonda "Çalışma" yaprağı yarım boy açılır, tutamaçla tam boya
+    genişler (görsel uyum, 19.11.2026: onaylı prototipte yaprak belgenin
+    yarısını örter). Eskiden ilk açılışta ekranı tamamen kaplıyordu.
+    Yarım boyda içerik kayar; hiçbir öğe gizlenmez.
+  */
+  const [yaprakTam, setYaprakTam] = useState(false);
   const etkin = etkinUygulama(uygulamalar, yol);
   const ana = anaUygulamalar(uygulamalar);
   const araclar = aracUygulamalari(uygulamalar);
@@ -238,7 +251,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           <Ikon size={20} aria-hidden="true" />
           <span className="os-gezinme-ad">{b.label}</span>
           <span className="os-gezinme-kisa" aria-hidden="true">
-            {b.key === "yazim" ? t({ tr: "Belge", en: "Document" }) : b.key === "arama" ? t({ tr: "Ara", en: "Search" }) : b.label}
+            {b.key === "yazim" ? t({ tr: "Belge", en: "Document" }) : b.key === "arama" ? t({ tr: "Araştır", en: "Research" }) : b.label}
           </span>
         </Link>
       </li>
@@ -348,9 +361,9 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
         {calisma ? (
           <>
             {/*
-              ÇALIŞMA DÜZEYİ. Telefonda alt çubuk: Çalışmalar (geri), Belge,
-              Kaynaklar, Arvo AI ve "Çalışma" (bu çalışmanın bütün bölümleri,
-              aşağıdaki pencere). Masaüstü ve tablette gruplar.
+              ÇALIŞMA DÜZEYİ. Telefonda alt çubuk: Belge, Araştır, Arvo AI ve
+              "Çalışma" (bu çalışmanın bütün bölümleri, aşağıdaki pencere);
+              geri dönüş üst çubukta. Masaüstü ve tablette gruplar.
             */}
             <div className="os-gezinme-govde os-calisma-govde">
               <div className="os-calisma-ust">
@@ -365,7 +378,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               {calismaGruplari("os-calisma-grup", true)}
             </div>
             <ul className="os-gezinme-liste os-calisma-telefon">
-              <li data-alt-cubuk="">{geriBaglantisi}</li>
               {calismaOgeleri.filter((b) => CALISMA_ALT_CUBUK.includes(b.key)).map((b) => calismaOgesi(b, true))}
             </ul>
           </>
@@ -390,7 +402,10 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               className={dahaEtkin ? "os-gezinme-oge os-gezinme-daha is-active" : "os-gezinme-oge os-gezinme-daha"}
               aria-haspopup="dialog"
               title={calisma ? t({ tr: "Çalışmanın bütün bölümleri", en: "All sections of this work" }) : t({ tr: "Daha fazla", en: "More" })}
-              onClick={() => pencere.current?.showModal()}
+              onClick={() => {
+                setYaprakTam(false);
+                pencere.current?.showModal();
+              }}
             >
               <Ellipsis size={20} aria-hidden="true" />
               <span className="os-gezinme-ad">{calisma ? t({ tr: "Çalışma", en: "Work" }) : t({ tr: "Daha fazla", en: "More" })}</span>
@@ -453,11 +468,23 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
       <dialog
         ref={pencere}
         className="os-daha"
+        data-tam={yaprakTam ? "" : undefined}
         aria-label={t({ tr: "Bütün bölümler", en: "All sections" })}
         onClick={(olay) => {
           if (olay.target === pencere.current) pencere.current?.close();
         }}
       >
+        {calisma ? (
+          <button
+            type="button"
+            className="os-daha-tutamac"
+            aria-expanded={yaprakTam}
+            aria-label={yaprakTam ? t({ tr: "Yaprağı daralt", en: "Collapse sheet" }) : t({ tr: "Yaprağı genişlet", en: "Expand sheet" })}
+            onClick={() => setYaprakTam((a) => !a)}
+          >
+            <span aria-hidden="true" />
+          </button>
+        ) : null}
         <header className="os-daha-bas">
           <h2>{calisma ? t({ tr: "Bu çalışma", en: "This work" }) : t({ tr: "Bütün bölümler", en: "All sections" })}</h2>
           <button type="button" className="os-icon-btn" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={() => pencere.current?.close()}>

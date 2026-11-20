@@ -1,0 +1,11 @@
+{
+  "etiket": "Yerel üretim derlemesi · b2f94d0",
+  "gitHead": "b2f94d0",
+  "uygulamaKoduTemiz": false,
+  "buildId": "hDmEoQJubAbloP-ZWCddu",
+  "sunucu": "next start (rm -rf .next, next build)",
+  "veri": "yalnızca yerel yığın 127.0.0.1, sentetik kullanıcı ve içerik",
+  "ai": "yerel model taklidi (scripts/yerel-yigin/model-taklidi.mjs), gerçek model çağrılmadı",
+  "tarih": "2026-11-19T21:21:41.044Z",
+  "sayfaHatalari": []
+}

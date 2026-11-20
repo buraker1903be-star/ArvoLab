@@ -106,23 +106,16 @@ export default async function WriteManuscriptPage({
     /* "gb": diğer modül sayfaları gibi tam genişlik. Üç sütunlu düzende
        (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
        sayfa öbür ekranlardan dar görünüyordu. */
-    <main className="dashboard-page gb">
-      {/* İnce başlık (04.11.2026): tek satır, kesilen başlığın tamamı üzerine gelince. Eskiden üç satırlık dev başlık yazı alanını ekranın üçte birine itiyordu. */}
-      <section className="projects-header yazma-basligi">
-        <div>
-          <h1 title={project.title ?? undefined}>{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
-          {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
-              kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
-              adı ise artık "Kılavuz ve kaynakça kontrolü". */}
-        </div>
-        {/*
-          Geri düğmesi kalktı (19.11.2026): "Çalışmalarıma dön" çalışma
-          gezinmesinin başında (os-gezinme.tsx), listeye süzgeci ve konumuyla
-          döner. Eskiden burada bir "Çalışmalarım" düğmesi çalışmanın özetine
-          gidiyordu; aynı ekranda iki ayrı "geri" vardı.
-        */}
-        <div className="cluster yazma-eylemleri" id="yazma-eylemleri" />
-      </section>
+    <main className="dashboard-page gb yazma-sayfasi">
+      {/*
+        Başlık satırı kalktı (görsel uyum, 19.11.2026: "tekrarlanan çalışma
+        başlığını kaldır; iki kompakt bant"). Üst çubuk zaten "Belge ·
+        <çalışmanın adı>" yazıyor (header-title.tsx); bu satır adı ikinci kez
+        yazıyor, belgeyi 100 px aşağı itiyordu. Eylemler üst çubuğun yuvasında
+        (#ust-cubuk-yuva, manuscript-editor.tsx portalı). Sayfanın h1'i
+        ekran okuyucu için yerinde.
+      */}
+      <h1 className="sr-only">{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
 
       {/* Çalışmayı gezinmeye bildirir: başlık ve tür çalışma menüsünde görünür (os-gezinme.tsx). */}
       <CalismaBaglamiYayinla id={project.id} baslik={project.title ?? ""} tur={project.project_type} />

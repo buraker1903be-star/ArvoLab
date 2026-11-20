@@ -84,8 +84,15 @@ async function kullanici(ad, tamAd) {
   const t = await auth("/token?grant_type=password", { email: adres, password: parola }, "POST", ANON);
   return { id: r.json.id, adres, parola, erisim: t.json.access_token };
 }
-const p = (t) => ({ type: "paragraph", content: [{ type: "text", text: t }] });
-const h = (n, t) => ({ type: "heading", attrs: { level: n }, content: [{ type: "text", text: t }] });
+/*
+  Düğümler editörün kaydettiği gibi TAM öznitelikli (19.11.2026). Eskiden
+  paragraf özniteliksiz yazılıyordu; lib/format-loss.ts bunu eski kayıt
+  hatasının izi sayıp editörde "biçim bilgileri kaybolmuş" uyarısını
+  gösteriyordu. Uyarı doğruydu, tohum yanlıştı.
+*/
+const BLOK = { textAlign: null, lineSpacing: null, firstLineIndent: false, hangingIndent: false };
+const p = (t) => ({ type: "paragraph", attrs: { ...BLOK, caption: null }, content: [{ type: "text", text: t }] });
+const h = (n, t) => ({ type: "heading", attrs: { ...BLOK, level: n }, content: [{ type: "text", text: t }] });
 
 /* ---------- Tohum ---------- */
 const A = await kullanici("kabul-elif", "Elif Aydın");
@@ -291,13 +298,16 @@ try {
     const sonra = Number(await ayirici.getAttribute("aria-valuenow"));
     beklenen(sonra === Math.min(600, once + 24), `ayırıcı ArrowLeft: ${once} → ${sonra}`);
     await a.s.keyboard.press("End"); await a.s.waitForTimeout(300);
-    beklenen(Number(await ayirici.getAttribute("aria-valuenow")) === 440, "End en dar değil");
+    // Görsel uyum 2. tur: PDF'in en dar genişliği 440 → 360 (denetimler 340'ta da kesilmiyor; ölçüm README'de).
+    beklenen(Number(await ayirici.getAttribute("aria-valuenow")) === 360, "End en dar değil");
     await a.c.close();
     const b1 = await olc(1440, "?sag=pdf"); beklenen(!b1.r.cekmece && b1.r.olcek >= 0.85 && b1.r.ray, `1440 ${JSON.stringify(b1.r)}`); await b1.c.close();
-    const c1 = await olc(1280, "?sag=pdf"); beklenen(c1.r.cekmece && c1.r.olcek === 1, `1280 ${JSON.stringify(c1.r)}`); await c1.c.close();
+    // Eskiden 1280'de PDF çekmeceydi (en dar 440 belgeye %79 bırakıyordu); en dar 360 ile ray + PDF 382 + belge %85 sığıyor.
+    const c1 = await olc(1280, "?sag=pdf"); beklenen(!c1.r.cekmece && c1.r.olcek >= 0.85 && c1.r.ray, `1280 ${JSON.stringify(c1.r)}`); await c1.c.close();
+    const c2 = await olc(1200, "?sag=pdf"); beklenen(c2.r.cekmece && c2.r.olcek === 1, `1200 ${JSON.stringify(c2.r)}`); await c2.c.close();
     const d1 = await olc(1440, "?sol=arama&sag=ai"); beklenen(d1.r.cekmece, `1440 araç+AI ${JSON.stringify(d1.r)}`); await d1.c.close();
     const e1 = await olc(1024, "?sag=pdf"); beklenen(e1.r.cekmece && !e1.r.sabit, `1024 ${JSON.stringify(e1.r)}`); await e1.c.close();
-    return { ayrinti: `1920 %${Math.round(a.r.olcek * 100)} sütun; 1440 %${Math.round(b1.r.olcek * 100)} ray+sütun; 1280 çekmece %100; 1024 akan+çekmece` };
+    return { ayrinti: `1920 %${Math.round(a.r.olcek * 100)} sütun; 1440 %${Math.round(b1.r.olcek * 100)} ray+sütun; 1280 %${Math.round(c1.r.olcek * 100)} ray+sütun; 1200 çekmece %100; 1024 akan+çekmece; ayırıcı End = 360` };
   });
 
   /* ---------- S5 ---------- */
@@ -782,24 +792,29 @@ try {
     beklenen(zemin.every((z) => z.sinif && z.lum < 0.35), `koyu temada denetim zeminleri: ${JSON.stringify(zemin)}`);
     await goruntu(kd.s, "s14-pdf-koyu");
     await kd.c.close();
-    // 1280: PDF çekmece; üstü editör başlığının altında, Kontroller ve Dışa aktar tıklanabilir, kapatma görünür.
-    const d = await oturum(A, { genislik: 1280, yukseklik: 800 });
+    /*
+      1200: PDF çekmece (2. turdan beri 1280'de sütun); üstü editör başlığının altında, Kontroller ve Dışa aktar tıklanabilir, kapatma görünür.
+      Görsel uyum (19.11.2026): sayfanın başlık satırı (.yazma-basligi) kalktı; çalışmanın adı ve
+      eylemler kabuğun üst çubuğunda (.dashboard-header, #ust-cubuk-yuva). Ölçü oradan alınır.
+    */
+    const d = await oturum(A, { genislik: 1200, yukseklik: 800 });
     await editorAc(d.s, "?sag=pdf"); await d.s.waitForTimeout(1500);
     const g = await d.s.evaluate(() => {
       const panel = document.querySelector(".kaynak-pdf-paneli").getBoundingClientRect();
-      const baslik = document.querySelector(".yazma-basligi").getBoundingClientRect();
+      const baslik = document.querySelector(".dashboard-header").getBoundingClientRect();
       const ust = (q) => { const e = document.querySelector(q); if (!e) return false; const r = e.getBoundingClientRect(); const x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e.contains(x); };
       return { panelUst: Math.round(panel.top), baslikAlt: Math.round(baslik.bottom), kontroller: ust('button[aria-label^="Kontroller"]'), disaAktar: ust('button[aria-label^="Word"], button[aria-label^="Dışa"], .yazma-eylemleri .projects-filter-button:last-child'), kapat: ust('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]') };
     });
-    beklenen(g.panelUst >= g.baslikAlt && g.kontroller && g.kapat, `1280 çekmece: ${JSON.stringify(g)}`);
-    await goruntu(d.s, "s14-cekmece-1280");
+    beklenen(g.panelUst >= g.baslikAlt && g.kontroller && g.kapat, `1200 çekmece: ${JSON.stringify(g)}`);
+    await goruntu(d.s, "s14-cekmece-1200");
     await d.c.close();
     // 1472: AI paneli açılınca belge kaymaz, editör başlığı görünür kalır. (Karşılaştırma 08'de görülen 159 px
     // kayma odaktan değil, çalışmanın geri yüklenen okuma konumundandı; temiz açılışta kayma olmamalı.)
     const ai = await oturum(A, { genislik: 1472, yukseklik: 921 });
     await editorAc(ai.s, "?sag=ai"); await ai.s.waitForTimeout(1500);
-    const a = await ai.s.evaluate(() => ({ kayma: Math.round(document.scrollingElement.scrollTop), baslikUst: Math.round(document.querySelector(".yazma-basligi").getBoundingClientRect().top), panelUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top) }));
-    beklenen(a.kayma === 0 && a.baslikUst > 0 && a.panelUst >= 0, `1472 AI açılışı: ${JSON.stringify(a)}`);
+    // Üst çubuk yapışık (top 0): başlık görünür demek üstünün 0'da ve eylemlerin tıklanır olması demek.
+    const a = await ai.s.evaluate(() => ({ kayma: Math.round(document.scrollingElement.scrollTop), baslikUst: Math.round(document.querySelector(".dashboard-header").getBoundingClientRect().top), eylem: Boolean(document.querySelector("#ust-cubuk-yuva .yazma-kayit")), panelUst: Math.round(document.querySelector(".yazim-paneli").getBoundingClientRect().top) }));
+    beklenen(a.kayma === 0 && a.baslikUst >= 0 && a.eylem && a.panelUst >= 0, `1472 AI açılışı: ${JSON.stringify(a)}`);
     await ai.c.close();
     // Telefon: PDF alt çubuğun üstünde biter; alt çubuk görünür ve tıklanır; pasaj yokken sığdır + yakınlaştırma çalışır.
     const m = await oturum(A, { genislik: 390, yukseklik: 844, mobil: true });
@@ -819,7 +834,7 @@ try {
     beklenen(Number(yakin) > Number(t.olcek), `yakınlaştırma: ${t.olcek}% → ${yakin}%`);
     await goruntu(m.s, "s14-telefon-pdf");
     await m.c.close();
-    return { ayrinti: `koyu zemin lum ${zemin.map((z) => z.lum.toFixed(2)).join("/")}; 1280 panel üstü ${g.panelUst} ≥ başlık altı ${g.baslikAlt}; 1472 AI açılışı kayma ${a.kayma}, başlık üstü ${a.baslikUst}; telefon panel altı ${t.panelAlt} ≤ alt çubuk ${t.altUst}, ölçek ${t.olcek}%→${yakin}% (pasajlı odak S15)` };
+    return { ayrinti: `koyu zemin lum ${zemin.map((z) => z.lum.toFixed(2)).join("/")}; 1200 panel üstü ${g.panelUst} ≥ başlık altı ${g.baslikAlt}; 1472 AI açılışı kayma ${a.kayma}, başlık üstü ${a.baslikUst}; telefon panel altı ${t.panelAlt} ≤ alt çubuk ${t.altUst}, ölçek ${t.olcek}%→${yakin}% (pasajlı odak S15)` };
   });
 
   /* ---------- S15 ---------- */
@@ -882,13 +897,16 @@ try {
 
   /* ---------- S16 ---------- */
   /*
-    Kaynak listesi + belge + PDF (4. tur). 1472 ve 1440'ta liste şeride iner,
-    PDF belgenin yanında sütundur ve belge ≥ %85; 1280'de liste açık kalır,
-    PDF geçici çekmecedir. Her genişlikte PDF açıkken belgeye tıklanır,
+    Kaynak listesi + belge + PDF. Görsel uyum 2. tur (19.11.2026): PDF'in en dar
+    genişliği 360'a indi ve liste 246 px'lik sıkı hâliyle sığabiliyor. 1472 ve
+    1440'ta liste AÇIK kalır (246), PDF yanda, belge ≥ %85 — eskiden ikisinde de
+    liste şeride iniyordu. 1280'de liste şeride iner, PDF sütundur (eskiden
+    çekmeceydi); şeritten liste geri açılınca PDF geçici çekmeceye geçer.
+    1200'de liste açık, PDF çekmecedir. Her genişlikte PDF açıkken belgeye tıklanır,
     yazılır, kayıt veritabanında görülür; PDF kapatılınca seçim aynı yerde
     kalır, odak belgeye döner ve yazmaya kaldığı yerden devam edilir.
   */
-  await dene("S16", "kaynak listesi + belge + PDF: şerit/sütun ya da geçici çekmece; PDF açıkken imleç, yazma, kaydetme, kapatınca konum", async () => {
+  await dene("S16", "kaynak listesi + belge + PDF: sıkı liste/şerit + sütun ya da geçici çekmece; PDF açıkken imleç, yazma, kaydetme, kapatınca konum", async () => {
     const icerik = (isaret) => psql(`select position(${q(isaret)} in content::text) > 0 from public.project_manuscripts where project_id='${ESKI}'`) === "t";
     const kayitBekle = async (isaret) => { for (let i = 0; i < 30; i++) { if (icerik(isaret)) return true; await new Promise((r) => setTimeout(r, 500)); } return false; };
     const yerlesim = (s) => s.evaluate(() => {
@@ -898,28 +916,36 @@ try {
       const pdf = document.querySelector(".kaynak-pdf-paneli")?.getBoundingClientRect();
       const ipucu = document.querySelector(".kaynak-pdf-cekmece-ipucu");
       return {
-        serit: kok.hasAttribute("data-sol-alan-dar"), solEn: Math.round(sol?.width ?? 0),
+        serit: kok.hasAttribute("data-sol-alan-dar"), sik: kok.hasAttribute("data-sol-alan-sik"), solEn: Math.round(sol?.width ?? 0),
         cekmece: y.hasAttribute("data-sag-cekmece"), olcek: Number(getComputedStyle(document.querySelector(".manuscript-editor-content")).zoom),
         yanyana: Boolean(kagit && pdf && kagit.right <= pdf.left + 1), ipucu: Boolean(ipucu && ipucu.offsetParent),
       };
     });
     const durumOku = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; return { from: e.state.selection.from, odak: e.view.hasFocus(), kayma: Math.round(scrollY) }; });
-    const yazVeKaydet = async (s, isaret) => {
-      const k = await kelimeKonumu(s, "Çalışmanın amacı", 0);
+    /*
+      Tıklanan cümle verilebilir: her adım "Çalışmanın amacı"nın önüne işaret
+      yazdığı için cümle adım adım sağa kayıyor; 1200'de çekmecenin altında
+      kalıyor ve tıklama çekmeceye düşüyordu (yazılan metin belgeye gitmedi,
+      "kaydedilmedi"). 1200 adımı çekmecenin örtmediği "Üç fakülteden"i kullanır.
+    */
+    const yazVeKaydet = async (s, isaret, cumle = "Çalışmanın amacı") => {
+      const k = await kelimeKonumu(s, cumle, 0);
       beklenen(k, "paragraf bulunamadı");
+      const ortulu = await s.evaluate(([x, y]) => !document.elementFromPoint(x, y)?.closest(".ProseMirror"), [k.x - 2, k.y]);
+      beklenen(!ortulu, `"${cumle}" örtülü: tıklama belgeye düşmüyor`);
       await s.mouse.click(k.x - 2, k.y); await s.waitForTimeout(300);
       await s.keyboard.type(`${isaret} `, { delay: 15 });
       beklenen(await kayitBekle(isaret), `${isaret} kaydedilmedi`);
       return durumOku(s);
     };
-    const kapatSonrasi = async (s, once, isaret) => {
+    const kapatSonrasi = async (s, once, isaret, devam = "Çalışmanın") => {
       await s.waitForTimeout(800);
       const sonra = await durumOku(s);
       beklenen(sonra.from === once.from, `kapatınca seçim değişti: ${once.from} → ${sonra.from}`);
       beklenen(sonra.odak, "kapatınca odak belgeye dönmedi");
       beklenen(Math.abs(sonra.kayma - once.kayma) <= 4, `kapatınca belge kaydı: ${once.kayma} → ${sonra.kayma}`);
       await s.keyboard.type("+", { delay: 15 });
-      beklenen(await kayitBekle(`${isaret} +Çalışmanın`), "kaldığı yerden yazılamadı");
+      beklenen(await kayitBekle(`${isaret} +${devam}`), "kaldığı yerden yazılamadı");
     };
     const ozet = [];
     for (const [g, y] of [[1472, 921], [1440, 900]]) {
@@ -927,27 +953,15 @@ try {
       await editorAc(s, "?sol=kaynaklar&sag=pdf");
       await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
       const l = await yerlesim(s);
-      beklenen(l.serit && l.solEn <= 66 && !l.cekmece && l.yanyana && l.olcek >= 0.85, `${g} yerleşim: ${JSON.stringify(l)}`);
-      await goruntu(s, `s16-${g}-serit`);
+      beklenen(l.sik && !l.serit && l.solEn >= 240 && l.solEn <= 250 && !l.cekmece && l.yanyana && l.olcek >= 0.85, `${g} yerleşim: ${JSON.stringify(l)}`);
+      await goruntu(s, `s16-${g}-liste-sik`);
       const isaret = `KABUL-S16-${g}`;
       const once = await yazVeKaydet(s, isaret);
-      if (g === 1472) {
-        // Şeritten liste geri açılır → PDF geçici çekmece; Esc kapatır, liste tam genişlikte kalır.
-        await s.locator(".os-sol-genislet").click(); await s.waitForTimeout(900);
-        const ac = await yerlesim(s);
-        beklenen(!ac.serit && ac.solEn >= 290 && ac.cekmece && ac.ipucu, `şeritten genişletince: ${JSON.stringify(ac)}`);
-        await goruntu(s, "s16-1472-genis-cekmece");
-        await s.keyboard.press("Escape");
-        beklenen(await s.locator(".kaynak-pdf-paneli").count() === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "Esc çekmeceyi kapatmadı");
-        await kapatSonrasi(s, once, isaret);
-        const son = await yerlesim(s);
-        beklenen(!son.serit && son.solEn >= 290, `kapatınca liste: ${JSON.stringify(son)}`);
-        ozet.push(`1472 şerit ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; şeritten açınca çekmece, Esc kapatır`);
-      } else {
-        await s.locator('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]').click();
-        await kapatSonrasi(s, once, isaret);
-        ozet.push(`1440 şerit ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; kapat → konum ve odak korunur`);
-      }
+      await s.locator('.kaynak-pdf-paneli button[aria-label="Kaynak panelini kapat"]').click();
+      await kapatSonrasi(s, once, isaret);
+      const son = await yerlesim(s);
+      beklenen(!son.sik && !son.serit && son.solEn >= 290, `${g} PDF kapanınca liste tam genişliğe dönmedi: ${JSON.stringify(son)}`);
+      ozet.push(`${g} liste açık ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; kapat → liste ${son.solEn}px, konum ve odak korunur`);
       await c.close();
     }
     {
@@ -955,15 +969,37 @@ try {
       await editorAc(s, "?sol=kaynaklar&sag=pdf");
       await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
       const l = await yerlesim(s);
-      beklenen(!l.serit && l.solEn >= 290 && l.cekmece && l.ipucu && l.olcek >= 0.85, `1280 yerleşim: ${JSON.stringify(l)}`);
-      await goruntu(s, "s16-1280-cekmece");
+      beklenen(l.serit && l.solEn <= 66 && !l.cekmece && l.yanyana && l.olcek >= 0.85, `1280 yerleşim: ${JSON.stringify(l)}`);
+      await goruntu(s, "s16-1280-serit");
       const isaret = "KABUL-S16-1280";
       const once = await yazVeKaydet(s, isaret);
+      // Şeritten liste geri açılır → PDF geçici çekmece; Esc kapatır, liste tam genişlikte kalır.
+      await s.locator(".os-sol-genislet").click(); await s.waitForTimeout(900);
+      const ac = await yerlesim(s);
+      beklenen(!ac.serit && ac.solEn >= 290 && ac.cekmece && ac.ipucu, `şeritten genişletince: ${JSON.stringify(ac)}`);
+      await goruntu(s, "s16-1280-genis-cekmece");
+      await s.keyboard.press("Escape");
+      beklenen(await s.locator(".kaynak-pdf-paneli").count() === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "Esc çekmeceyi kapatmadı");
+      await kapatSonrasi(s, once, isaret);
+      const son = await yerlesim(s);
+      beklenen(!son.serit && son.solEn >= 290, `kapatınca liste: ${JSON.stringify(son)}`);
+      ozet.push(`1280 şerit ${l.solEn}px, belge %${Math.round(l.olcek * 100)}, PDF yan yana; şeritten açınca çekmece, Esc kapatır`);
+      await c.close();
+    }
+    {
+      const { c, s } = await oturum(A, { genislik: 1200, yukseklik: 800 });
+      await editorAc(s, "?sol=kaynaklar&sag=pdf");
+      await s.waitForSelector(".pdf-sayfa .textLayer span", { timeout: 60000 }); await s.waitForTimeout(800);
+      const l = await yerlesim(s);
+      beklenen(!l.serit && l.solEn >= 290 && l.cekmece && l.ipucu && l.olcek >= 0.85, `1200 yerleşim: ${JSON.stringify(l)}`);
+      await goruntu(s, "s16-1200-cekmece");
+      const isaret = "KABUL-S16-1200";
+      const once = await yazVeKaydet(s, isaret, "Üç fakülteden");
       // İmleç belgedeyken Esc: ProseMirror Esc'i her zaman işlenmiş sayar; çekmece yine de kapanmalı.
       await s.keyboard.press("Escape"); await s.waitForTimeout(500);
-      beklenen((await s.locator(".kaynak-pdf-paneli").count()) === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "1280: imleç belgedeyken Esc çekmeceyi kapatmadı");
-      await kapatSonrasi(s, once, isaret);
-      ozet.push(`1280 liste açık, PDF geçici çekmece (belge %${Math.round(l.olcek * 100)}); çekmece açıkken yazıldı, Esc → konum ve odak korunur`);
+      beklenen((await s.locator(".kaynak-pdf-paneli").count()) === 0 || !(await s.locator(".kaynak-pdf-paneli").isVisible()), "1200: imleç belgedeyken Esc çekmeceyi kapatmadı");
+      await kapatSonrasi(s, once, isaret, "Üç");
+      ozet.push(`1200 liste açık, PDF geçici çekmece (belge %${Math.round(l.olcek * 100)}); çekmece açıkken yazıldı, Esc → konum ve odak korunur`);
       await c.close();
     }
     return { ayrinti: ozet.join("; ") };
@@ -1117,15 +1153,16 @@ try {
     yavaş cihaz CPU kısıtlamasıyla (CDP, 6×) kurulur ve Esc ipucu GÖRÜNÜR
     görünmez basılır — kullanıcının gördüğü an. Koda gecikme eklenmedi.
     (a) erken Esc, 10 tekrar; (b) aynı sekmede Arvo AI aç/kapat → Kaynaklar →
-    PDF'i aç → 1472'den 1280'e → belge → önce açık pencere (Teslim kontrolü): ilk
+    PDF'i aç → 1472'den 1200'e → belge → önce açık pencere (Teslim kontrolü): ilk
     Esc yalnızca pencereyi kapatır, PDF kalır; ikinci Esc PDF'i kapatır,
     10 tekrar.
   */
-  await dene("S20", "PDF çekmecesi Esc: yerleşim kararından önce (yavaş cihaz) ve AI → PDF → 1472→1280 dizisi; açık pencerede ilk Esc yalnızca pencereyi kapatır", async () => {
+  await dene("S20", "PDF çekmecesi Esc: yerleşim kararından önce (yavaş cihaz) ve AI → PDF → 1472→1200 dizisi; açık pencerede ilk Esc yalnızca pencereyi kapatır", async () => {
     const belgeyeTikla = async (s) => { const k = await kelimeKonumu(s, "Uzaktan öğrenme", 3); await s.mouse.click(k.x, k.y); };
     const pdfAdreste = (s) => s.evaluate(() => new URL(location.href).searchParams.get("sag") === "pdf");
     let erken = 0;
-    const e = await oturum(A, { genislik: 1280, yukseklik: 860 });
+    // 2. turdan beri 1280'de liste + PDF sütun (şerit); çekmece 1200'de oluşuyor.
+    const e = await oturum(A, { genislik: 1200, yukseklik: 860 });
     const cdp = await e.c.newCDPSession(e.s); await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
     for (let i = 0; i < 10; i++) {
       await e.s.goto(`/dashboard/editor/${ESKI}/write?sol=kaynaklar&sag=pdf`);
@@ -1147,10 +1184,10 @@ try {
       await s.locator(".os-calisma-govde a", { hasText: "Kaynaklar" }).first().click();
       await s.locator(".os-sol-alan").getByRole("button", { name: /PDF'i aç/ }).first().click();
       await s.locator(".kaynak-pdf-paneli").waitFor({ timeout: 15000 });
-      await s.setViewportSize({ width: 1280, height: 860 }); await s.waitForTimeout(500);
-      beklenen(await s.locator(".kaynak-pdf-cekmece-ipucu").isVisible(), `1280'de PDF çekmece değil (tur ${i + 1})`);
+      await s.setViewportSize({ width: 1200, height: 860 }); await s.waitForTimeout(500);
+      beklenen(await s.locator(".kaynak-pdf-cekmece-ipucu").isVisible(), `1200'de PDF çekmece değil (tur ${i + 1})`);
       await belgeyeTikla(s);
-      // 1280'de çekmece açıkken araç çubuğunun Belge menüsü çekmecenin altında kalıyor; başlıktaki Kontroller erişilebilir.
+      // 1200'de çekmece açıkken araç çubuğunun Belge menüsü çekmecenin altında kalıyor; başlıktaki Kontroller erişilebilir.
       await s.getByRole("button", { name: /^Kontroller/ }).first().click(); await s.waitForTimeout(150);
       await s.getByRole("button", { name: /^Teslim kontrolü/ }).first().click();
       await s.locator(".drawer-root.open").waitFor({ timeout: 5000 });
@@ -1163,8 +1200,8 @@ try {
     }
     await c.close();
     beklenen(pencere === 10, `açık pencerede ilk Esc yalnızca pencereyi kapatmalı: ${pencere}/10`);
-    beklenen(dizi === 10, `AI → PDF → 1472→1280 → belge → Esc: ${dizi}/10 kapandı`);
-    return { ayrinti: `yavaş cihaz (CPU 6×) ipucu görünür görünmez Esc: ${erken}/10 kapandı; AI aç/kapat → PDF'i aç → 1472→1280 → Teslim kontrolü penceresi açıkken ilk Esc yalnızca pencereyi kapattı ${pencere}/10, ikinci Esc PDF'i kapattı ve odak belgede ${dizi}/10` };
+    beklenen(dizi === 10, `AI → PDF → 1472→1200 → belge → Esc: ${dizi}/10 kapandı`);
+    return { ayrinti: `yavaş cihaz (CPU 6×) ipucu görünür görünmez Esc: ${erken}/10 kapandı; AI aç/kapat → PDF'i aç → 1472→1200 → Teslim kontrolü penceresi açıkken ilk Esc yalnızca pencereyi kapattı ${pencere}/10, ikinci Esc PDF'i kapattı ve odak belgede ${dizi}/10` };
   });
 
   /* ---------- Görseller: TR/EN, açık/koyu, masaüstü/tablet/telefon ---------- */

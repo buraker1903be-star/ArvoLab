@@ -21,6 +21,8 @@ import "./styles/os5-bilesenler.css";
 import "./styles/os5-kimlik.css";
 /* Phase 4: öğrencinin ana sayfası (yalnızca .os5-ana altında). */
 import "./styles/os5-ana-sayfa.css";
+/* Görsel uyum (19.11.2026): onaylı prototipe uyum kuralları; öncekilerin ÜSTÜNE yazar, en sonda yüklenir. */
+import "./styles/gorsel-uyum.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Editor } from "@tiptap/react";
-import { BookOpenCheck, FileText, Link2, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
+import { BookOpenCheck, Ellipsis, FileText, Link2, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 import { goruntuleyiciKaynaklari, kaynakSecimiDogrula, pdfKaynaginiBagla } from "@/app/actions/kaynak-pdf";
@@ -70,6 +70,8 @@ export default function KaynakPdfPaneli({
   onCite: (source: LiteratureSource, secenek: { sayfa?: string | null }) => Promise<void>;
 }) {
   const t = useCeviri();
+  /* Telefonda ikincil PDF işlemlerinin ("⋯") açık olup olmadığı; masaüstünde etkisiz. */
+  const [ikincilAcik, setIkincilAcik] = useState(false);
   const [liste, setListe] = useState<KaynakPdfSatiri[] | null>(null);
   const [listeHatasi, setListeHatasi] = useState<string | null>(null);
   /*
@@ -276,27 +278,52 @@ export default function KaynakPdfPaneli({
         </p>
       ) : (
         <>
-          <label className="kaynak-pdf-secici">
-            <span>{t({ tr: "Kaynak", en: "Source" })}</span>
-            <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
-              {liste.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {ozet(r.kunye, 110)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/*
+            TELEFONDA İKİ KOMPAKT SATIR (görsel uyum, 19.11.2026). Birinci
+            satır: kaynak seçici, bağ durumu çipi, "⋯". İkinci satır: PDF
+            görüntüleyicinin sayfa ve ölçek denetimleri. İkincil işlemler
+            (bağı kaldır/kaynağa bağla, PDF içinde ara) "⋯" altında. Eskiden
+            PDF'in üstünde beş satır denetim vardı ve sayfa ekranın üçte
+            birinden aşağıda başlıyordu. Masaüstünde bu kap yok sayılır
+            (display: contents, gorsel-uyum.css); düzen eskisi gibi.
+          */}
+          <div className="pdf-ust-satir">
+            <label className="kaynak-pdf-secici">
+              <span>{t({ tr: "Kaynak", en: "Source" })}</span>
+              <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
+                {liste.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {ozet(r.kunye, 110)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          {pdf ? (
-            <PdfBagSatiri
-              projectId={projectId}
-              pdf={pdf}
-              onDegisti={(kaynakId) => {
-                setListe((onceki) => onceki?.map((r) => (r.id === pdf.id ? { ...r, kaynak_id: kaynakId } : r)) ?? onceki);
-                onBagDegisti?.();
-              }}
-            />
-          ) : null}
+            {pdf ? (
+              <div id="pdf-ikincil-islemler" className="pdf-ikincil" data-acik={ikincilAcik ? "" : undefined}>
+                <PdfBagSatiri
+                  projectId={projectId}
+                  pdf={pdf}
+                  onDegisti={(kaynakId) => {
+                    setListe((onceki) => onceki?.map((r) => (r.id === pdf.id ? { ...r, kaynak_id: kaynakId } : r)) ?? onceki);
+                    onBagDegisti?.();
+                  }}
+                />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="yazim-ikon pdf-ikincil-dugme"
+              aria-expanded={ikincilAcik}
+              /* Ekran okuyucu açılan bölgeyi bulsun (kod incelemesi, PR #112). */
+              aria-controls="pdf-ikincil-islemler"
+              aria-label={t({ tr: "Diğer PDF işlemleri: kaynak bağı ve PDF içinde arama", en: "More PDF actions: source link and search in PDF" })}
+              title={t({ tr: "Diğer PDF işlemleri", en: "More PDF actions" })}
+              onClick={() => setIkincilAcik((a) => !a)}
+            >
+              <Ellipsis size={16} aria-hidden="true" />
+            </button>
+          </div>
           {pasajSonucu === false ? (
             <p className="pdf-pasaj-durum" role="status">
               {t({
@@ -465,8 +492,10 @@ export default function KaynakPdfPaneli({
                 <ShieldCheck size={14} aria-hidden="true" />
                 <span>
                   {t({
-                    tr: "Arvo AI yalnızca bu PDF'in metnine dayanır; alıntısı PDF'te birebir geçmeyen ya da PDF'te olmayan sayı içeren cevap gösterilmez. Cevaplar belgenize kendiliğinden girmez.",
-                    en: "Arvo AI relies only on this PDF's text; answers whose quotes aren't in the PDF word for word, or that contain numbers not in the PDF, are not shown. Answers never enter your document by themselves.",
+                    // Görsel uyum 2. tur kapanışı: eskiden üç satırlık bir açıklamaydı ve okuma
+                    // alanını daraltıyordu (dar panelde yarım görünüyordu). Kural aynı, iki satır.
+                    tr: "Yalnızca bu PDF'e dayanır; doğrulanamayan cevap gösterilmez, belgeye kendiliğinden girmez.",
+                    en: "Uses only this PDF; unverifiable answers are hidden and never enter your document on their own.",
                   })}
                 </span>
               </p>

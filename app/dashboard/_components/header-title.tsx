@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { calismaBaglantilari, calismaIcindeMi, etkinBaglanti, etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { listeyeDonusIsaretle, useListeAdresi } from "./liste-donusu";
 
 /*
   ÜST ÇUBUĞUN SOLU: marka ve açık uygulama (ArvoOS'taki os-brand).
@@ -39,6 +41,7 @@ export default function HeaderTitle() {
   const sorgu = useSearchParams();
   const t = useCeviri();
   const calisma = useCalismaBaglami();
+  const listeAdresi = useListeAdresi();
   const uygulamalar = labUygulamalari(t);
   const uygulama = etkinUygulama(uygulamalar, pathname);
   const bolum = uygulama?.bolumler ? etkinBolum(uygulama.bolumler, pathname) : null;
@@ -50,7 +53,18 @@ export default function HeaderTitle() {
     : (bolum?.label ?? uygulama?.label ?? t({ tr: "Çalışma alanı", en: "Workspace" }));
 
   return (
-    <div className="os-marka">
+    <div className="os-marka" data-calisma={calismaIcinde ? "" : undefined}>
+      {/*
+        Telefonda çalışmanın içindeyken üst çubuğun solunda "Çalışmalarıma
+        dön" (görsel uyum, 19.11.2026: alt çubuk prototipin dört sekmesine
+        indi, geri dönüş üstte korundu). Yalnızca telefonda görünür
+        (gorsel-uyum.css); masaüstü ve tablette dönüş gezinmenin başında.
+      */}
+      {calismaIcinde ? (
+        <Link href={listeAdresi} className="os-marka-geri" onClick={listeyeDonusIsaretle} aria-label={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })} title={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })}>
+          <ArrowLeft size={20} aria-hidden="true" />
+        </Link>
+      ) : null}
       <Link href="/dashboard" className="os-marka-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
         <ArvoLabLogosu alt="" />
       </Link>

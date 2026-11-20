@@ -474,7 +474,6 @@ export default async function DashboardPage() {
           .limit(4)
       : { data: null, error: null };
   const sonKaynaklar = (sonKaynakSatirlari ?? []) as { id: string; title: string; authors: string | null; year: string | null }[];
-  const sonrakiCalismalar = resume ? activeProjects.filter((p) => p.id !== resume.id).slice(0, 3) : [];
 
   return (
     <main className={ogrenciGorunumu || yeniKullanici ? "dashboard-page gb gb-ana-sayfa os5-ana" : "dashboard-page gb gb-ana-sayfa"}>
@@ -541,7 +540,18 @@ export default async function DashboardPage() {
             </Link>
           ) : null}
           {/* Yeni kullanıcıda başlangıç kartının "İlk çalışmayı oluştur"u tek ana eylem (Phase 3); üstte ikinci koyu düğme aynı yere gidiyordu. */}
-          {ogrenciGorunumu || yeniKullanici ? null : (
+          {ogrenciGorunumu && resume && !yeniKullanici ? (
+            /*
+              Görsel uyum (19.11.2026, onaylı prototip): öğrencinin "Yeni
+              çalışma"sı başlığın sağında görünür, çerçeveli bir düğme. Eskiden
+              "Çalışmanıza devam edin" başlığının yanında düz bir bağlantıydı;
+              sayfadaki tek birincil eylem yine "Yazmaya devam et".
+            */
+            <DugmeBaglanti href={yeniCalismaHref} tur="ikincil">
+              <Plus size={16} aria-hidden="true" />
+              {t({ tr: "Yeni çalışma", en: "New work" })}
+            </DugmeBaglanti>
+          ) : ogrenciGorunumu || yeniKullanici ? null : (
             <Link href={yeniCalismaHref} className={resume || isStaff ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
               {t({ tr: "Yeni çalışma", en: "New work" })}
@@ -656,24 +666,27 @@ export default async function DashboardPage() {
             danışmana gönderme (Dışa aktar) ve yorumlar Yazım Stüdyosu'nda;
             abonelik ve kredi hesap menüsünde. Yerlerin tablosu PR açıklamasında.
           */}
+          {/*
+            Görsel uyum (19.11.2026, onaylı prototipin hiyerarşisi): "Kaldığınız
+            yer" kartı + son çalışmaların kompakt tablosu. Eskiden kartın altında
+            en fazla üç çalışma tek tek satır olarak duruyordu, tür ve kelime
+            sayısı okunmuyordu. Tablodaki her sayı gerçek veri (writing-stats);
+            hedef kelime verisi olmadığı için ilerleme çubuğu YOK.
+          */}
           <section className="pw-bolum" aria-labelledby="pw-devam-baslik">
-            <header className="pw-bolum-bas">
-              <h2 id="pw-devam-baslik">{t({ tr: "Çalışmanıza devam edin", en: "Continue your work" })}</h2>
-              <Link href={yeniCalismaHref} className="pw-bolum-baglanti">
-                {t({ tr: "Yeni çalışma", en: "New work" })}
-              </Link>
-            </header>
             <article className="pw-devam">
               <span className="pw-devam-simge" aria-hidden="true">
                 <FileText size={20} />
               </span>
               <div className="pw-devam-metin">
+                <h2 id="pw-devam-baslik" className="pw-devam-ust">{t({ tr: "Kaldığınız yer", en: "Where you left off" })}</h2>
                 <h3 title={resume.title}>
                   <Link href={calismaAdresi(resume.id)}>{resume.title}</Link>
                 </h3>
                 <p>
                   {t(projectTypeLabel(resume.project_type))}
                   {resumeStats ? ` · ${t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(resumeStats.updatedAt, simdiAn)}` })}` : ""}
+                  {resumeStats ? ` · ${t({ tr: `${sayi(resumeStats.words)} kelime`, en: `${sayi(resumeStats.words)} words` })}` : ""}
                 </p>
               </div>
               {/* Sayfanın TEK birincil eylemi. */}
@@ -682,36 +695,45 @@ export default async function DashboardPage() {
                 {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
               </DugmeBaglanti>
             </article>
-            {/*
-              Çok çalışmalı öğrenci: son düzenlenenin ardından en fazla üç
-              çalışma daha, sade satır olarak. Tamamı Çalışmalarım'da.
-            */}
-            {sonrakiCalismalar.length ? (
-              <>
-                <ul className="pw-liste" aria-label={t({ tr: "Diğer çalışmalarınız", en: "Your other works" })}>
-                  {sonrakiCalismalar.map((p) => (
-                    <li key={p.id}>
-                      <Link href={calismaAdresi(p.id)} className="pw-satir">
-                        <FileText size={18} aria-hidden="true" className="pw-satir-simge" />
-                        <span className="pw-satir-metin">
-                          <b>{p.title}</b>
-                          <small>
-                            {t(projectTypeLabel(p.project_type))}
-                            {writing.get(p.id) ? ` · ${t({ tr: `${once(writing.get(p.id)!.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(writing.get(p.id)!.updatedAt, simdiAn)}` })}` : ""}
-                          </small>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                {activeProjects.length > sonrakiCalismalar.length + 1 ? (
-                  <Link href="/dashboard/editor" className="pw-bolum-baglanti pw-bolum-alt">
-                    {t({ tr: `Bütün çalışmalar (${sayi(activeProjects.length)})`, en: `All works (${sayi(activeProjects.length)})` })}
-                  </Link>
-                ) : null}
-              </>
-            ) : null}
           </section>
+
+          {calismalarim.length > 1 ? (
+            <section className="pw-bolum" aria-labelledby="pw-calismalar-baslik">
+              <header className="pw-bolum-bas">
+                <h2 id="pw-calismalar-baslik">{t({ tr: "Son çalışmalar", en: "Recent works" })}</h2>
+                <Link href="/dashboard/editor" className="pw-bolum-baglanti">
+                  {t({ tr: `Tümü (${sayi(activeProjects.length)})`, en: `All (${sayi(activeProjects.length)})` })}
+                </Link>
+              </header>
+              <div className="pw-tablo-kap">
+                <table className="pw-tablo">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t({ tr: "Çalışma", en: "Work" })}</th>
+                      <th scope="col">{t({ tr: "Tür", en: "Type" })}</th>
+                      <th scope="col">{t({ tr: "Son düzenleme", en: "Last edited" })}</th>
+                      <th scope="col" className="pw-tablo-sayi">{t({ tr: "Kelime", en: "Words" })}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calismalarim.map((p) => {
+                      const yazim = writing.get(p.id);
+                      return (
+                        <tr key={p.id}>
+                          <td>
+                            <Link href={calismaAdresi(p.id)} title={p.title}>{p.title}</Link>
+                          </td>
+                          <td>{t(projectTypeLabel(p.project_type))}</td>
+                          <td>{yazim ? once(yazim.updatedAt, simdiAn) : "—"}</td>
+                          <td className="pw-tablo-sayi">{yazim ? sayi(yazim.words) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
 
           <section className="pw-bolum" aria-labelledby="pw-kaynak-baslik">
             <header className="pw-bolum-bas">

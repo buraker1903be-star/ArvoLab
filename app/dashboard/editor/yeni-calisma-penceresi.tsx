@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, Plus } from "lucide-react";
 import { yeniCalisma } from "@/app/actions/projects";
@@ -8,6 +8,15 @@ import PanelDrawer from "../_components/panel-drawer";
 import { useAdrestenAcilis } from "./adresten-acilis";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import BelgeDiliAlani from "./belge-dili-alani";
+
+/* Telefon kırılımı gorsel-uyum.css ile aynı (max-width: 760px). Sunucuda ve hidrasyonda masaüstü sırası. */
+const TELEFON_SORGUSU = "(max-width: 760px)";
+const telefonMu = () => window.matchMedia(TELEFON_SORGUSU).matches;
+function telefonAbone(degisti: () => void) {
+  const sorgu = window.matchMedia(TELEFON_SORGUSU);
+  sorgu.addEventListener("change", degisti);
+  return () => sorgu.removeEventListener("change", degisti);
+}
 
 /*
   YENİ ÇALIŞMA PENCERESİ.
@@ -79,6 +88,20 @@ export default function YeniCalismaPenceresi({
     setSurum((s) => s + 1);
   };
 
+  const telefonda = useSyncExternalStore(telefonAbone, telefonMu, () => false);
+  const wordDugmesi = (
+    <button type="submit" name="cikis" value="word" className="projects-filter-button" disabled={bekleniyor}>
+      <FileUp size={16} aria-hidden="true" />
+      {t({ tr: "Word dosyasından içe aktar", en: "Import a Word file" })}
+    </button>
+  );
+  const olusturDugmesi = (
+    <button type="submit" name="cikis" value="yaz" className="projects-primary-button" disabled={bekleniyor}>
+      <Plus size={16} aria-hidden="true" />
+      {bekleniyor ? t({ tr: "Oluşturuluyor…", en: "Creating…" }) : t({ tr: "Oluştur ve yaz", en: "Create and write" })}
+    </button>
+  );
+
   return (
     <PanelDrawer
       triggerLabel={t({ tr: "Yeni çalışma", en: "New work" })}
@@ -142,15 +165,26 @@ export default function YeniCalismaPenceresi({
           </p>
         ) : null}
 
+        {/*
+          Düğme SIRASI DOM'da görünümle aynı (kod incelemesi, PR #112).
+          Onaylı tasarımda masaüstünde Word solda, "Oluştur ve yaz" sağda;
+          telefonda "Oluştur ve yaz" üstte, Word altta. Eskiden telefonda
+          görünüm CSS'le (column-reverse) ters çevriliyordu: Tab önce alttaki
+          Word düğmesine gidiyordu, görülen sıra ile odak sırası farklıydı.
+          Pozitif tabindex yerine öğeler gerçekten yer değiştirir.
+        */}
         <div className="pencere-dugmeler project-form-full">
-          <button type="submit" name="cikis" value="word" className="projects-filter-button" disabled={bekleniyor}>
-            <FileUp size={16} aria-hidden="true" />
-            {t({ tr: "Word dosyasından içe aktar", en: "Import a Word file" })}
-          </button>
-          <button type="submit" name="cikis" value="yaz" className="projects-primary-button" disabled={bekleniyor}>
-            <Plus size={16} aria-hidden="true" />
-            {bekleniyor ? t({ tr: "Oluşturuluyor…", en: "Creating…" }) : t({ tr: "Oluştur ve yaz", en: "Create and write" })}
-          </button>
+          {telefonda ? (
+            <>
+              {olusturDugmesi}
+              {wordDugmesi}
+            </>
+          ) : (
+            <>
+              {wordDugmesi}
+              {olusturDugmesi}
+            </>
+          )}
         </div>
       </form>
     </PanelDrawer>

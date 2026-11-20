@@ -32,6 +32,18 @@
   Kullanıcı ölçeği her zaman kendisi seçebilir (BELGE_OLCEK_*); seçtiği ölçek
   bu kararı değiştirmez, yalnızca kâğıdın büyüklüğünü.
 
+  GÖRSEL UYUM (19.11.2026, kurum sahibinin kararı: "onaylı prototipe uydur";
+  okunurluk sınırı %85'te KALIR, metin küçültülerek yer açılmaz). Canlıdaki
+  8b28897'de AI paneli 1440 px'te gezinmeyi raya indiriyordu (belge %77
+  olacaktı); prototipte gezinme açık, belge ve AI yan yana. Yer, belgenin
+  ÇEVRESİNDEN açıldı: editör sayfasının yan payı 64 → 24 px (SAYFA_PAYI,
+  workspace.css .yazma-sayfasi), panel ile belge arası 26 → 22 px
+  (AYIRICI_PAYI). Kâğıt (924 px), punto ve satır sonları değişmedi.
+  Sığmayan durum bilerek çekmece kalır. İlk turda en dar PDF 440 idi ve
+  1280 px'te PDF belgenin yanında ancak %79 ile durabildiği için orada
+  çekmeceydi; 2. turda en dar PDF 360'a indi (aşağıda SAG_PANEL_SINIRI):
+  1280'de ray 64 + PDF 382 + belge %85 yan yana, çekmece 1200–1257 px'te.
+
   İNCELEME PANELİ (19.11.2026, kabul turu). Kontroller menüsünden açılan
   inceleme paneli (teslim kontrolü, kılavuz, kaynakça, yorumlar) de sağ
   yuvanın bir sakini: sağ panel (AI/PDF) açıkken gösterilmez, aynı anda iki
@@ -57,18 +69,39 @@ export const KENAR_RAY = 64;
 /** Sol araçların genişliği (talimattaki aralıkların içinde: liste 280–320, arama 340–400). */
 export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372, kaynakca: 300, kilavuz: 300 };
 
-/** Sağ panelin sınırları (talimat: AI 360–420, PDF 440–600). */
+/** Sağ panelin sınırları (AI 360–420, PDF 360–600; ilk talimatta PDF 440–600 idi). */
+/*
+  PDF'in alt sınırı 440 → 360 (görsel uyum 2, 19.11.2026; kurum sahibinin
+  "360–400 aralığını dene" isteği). Panel denetimleri 360 px'te ölçüldü:
+  hiçbir düğme kesilmiyor (gorsel-uyum/README.md). 440'ta 1280 px'te PDF
+  belgenin yanına sığmıyor, çekmece oluyordu.
+*/
 export const SAG_PANEL_SINIRI: Record<SagPanel, { enAz: number; varsayilan: number; enCok: number }> = {
   ai: { enAz: 360, varsayilan: 396, enCok: 420 },
-  pdf: { enAz: 440, varsayilan: 520, enCok: 600 },
+  pdf: { enAz: 360, varsayilan: 520, enCok: 600 },
 };
+/*
+  Kaynak listesinin SIKI genişliği (görsel uyum 2): PDF açıkken liste raya
+  inmeden önce 246 px'e daralır. Tarayıcıda ölçüldü: 246'da "Atıf ekle" ve
+  "PDF'i aç" yan yana, arama kutusu ve kart başlıkları kesilmeden; 220'nin
+  altında ikinci düğme alt satıra düşüyor. Yalnızca kaynak listesi ölçüldü;
+  öteki araçlar eskisi gibi doğrudan şeride iner.
+*/
+export const SOL_ARAC_SIK = 246;
+export const SOL_ARAC_SIK_OLANLAR: SolArac[] = ["kaynaklar"];
+/*
+  Editör otomatik ölçeği belge sütunundan 2 px düşüp yüzdeyi AŞAĞI yuvarlar
+  (manuscript-editor.tsx, otomatikOlcek). %85'in ekranda %85 görünmesi için
+  belge sütunu en az ceil(0,85 × 924) + 2 = 788 px olmalı.
+*/
+export const BELGE_SUTUNU_EN_AZ = Math.ceil(0.85 * 924) + 2;
 /** İnceleme panelinin sütun genişliği ve belgeyle arası (workspace.css, .manuscript-layout). */
 export const INCELEME_GENISLIGI = 340;
 export const INCELEME_ARALIGI = 16;
-/** Ayırıcı (10 px) ve iki sütun aralığı (8 px). */
-export const AYIRICI_PAYI = 26;
-/** İçerik alanının iki yandaki boşluğu (dashboard-page). */
-export const SAYFA_PAYI = 64;
+/** Ayırıcı (10 px) ve iki sütun aralığı (6 px; workspace.css, sağ yuva). */
+export const AYIRICI_PAYI = 22;
+/** Editör sayfasının iki yandaki boşluğu (workspace.css, .yazma-sayfasi: 12 + 12). */
+export const SAYFA_PAYI = 24;
 
 export const MASAUSTU_EN_AZ = 1200;
 
@@ -80,6 +113,8 @@ export const MASAUSTU_EN_AZ = 1200;
   için ikisi arasında prop yolu yok.
 */
 export const SOL_ALAN_DAR_OZNITELIGI = "data-sol-alan-dar";
+/* Kaynak listesi sıkı genişlikte (SOL_ARAC_SIK, "aracSik"): gorsel-uyum.css listeyi 246 px'e indirir. */
+export const SOL_ALAN_SIK_OZNITELIGI = "data-sol-alan-sik";
 export const SOL_ALAN_GENISLET_OLAYI = "arvolab:sol-alan-genislet";
 
 export function sagPanelGenisligiSinirla(panel: SagPanel, istenen: number): number {
@@ -90,7 +125,7 @@ export function sagPanelGenisligiSinirla(panel: SagPanel, istenen: number): numb
 
 export type YerlesimKarari = {
   /** Sol yuva: tam gezinme, ray (yalnızca simge), açık araç ya da şeride inmiş araç (PDF yan yana kalsın diye). */
-  kenar: "tam" | "ray" | "arac" | "aracDar";
+  kenar: "tam" | "ray" | "arac" | "aracSik" | "aracDar";
   /** Sağ panel: yok, belgenin yanında sütun ya da belgenin üstünde çekmece. */
   sag: "yok" | "sutun" | "cekmece";
   /** Kâğıdın otomatik ölçeği (Sığdır); 1 = doğal boy. Tablet ve telefonda her zaman 1 (belge akar). */
@@ -154,6 +189,50 @@ export function yerlesimKarari(girdi: {
   }
   const enDar = SAG_PANEL_SINIRI[sagPanel].enAz;
   const sinir = SAG_PANEL_SINIRI[sagPanel];
+  /*
+    PDF (görsel uyum 2): ÖNCE sol alan daralır (gezinme raya; kaynak listesi
+    300 → 246 → şerit), sonra PDF belgeyi %85'te tutan EN GENİŞ değere iner
+    (en az 360). Eskiden PDF yalnızca istenen ya da en dar (440) olabiliyordu;
+    arası denenmiyordu.
+  */
+  if (sagPanel === "pdf") {
+    const sigan = (sol: number) => Math.min(istenenSag, Math.floor(ekran - sol - AYIRICI_PAYI - SAYFA_PAYI - BELGE_SUTUNU_EN_AZ));
+    const dizilis: [YerlesimKarari["kenar"], number][] = solArac
+      ? [
+          ["arac", solEn],
+          ...(SOL_ARAC_SIK_OLANLAR.includes(solArac) && !girdi.solGenisIstendi ? ([["aracSik", SOL_ARAC_SIK]] as [YerlesimKarari["kenar"], number][]) : []),
+          ...(!girdi.solGenisIstendi ? ([["aracDar", KENAR_RAY]] as [YerlesimKarari["kenar"], number][]) : []),
+        ]
+      : kenar === "tam"
+        ? [["tam", KENAR_GENIS], ["ray", KENAR_RAY]]
+        : [[kenar, solEn]];
+    if (solArac) {
+      /*
+        Kaynak listesi açık: liste mümkün olduğunca görünür kalır (kurum
+        sahibi: "1440'ta kaynak listesini de koruyabilecek dağılımı dene").
+        Her adımda PDF sığan en geniş değeri alır; 1440'ta liste 246 + PDF
+        360, belge %85. Liste ancak 246'da da sığmıyorsa şeride iner.
+      */
+      for (const [k, sol] of dizilis) {
+        const sag = sigan(sol);
+        if (sag >= enDar) return pdfSutun(k, sol, sag);
+      }
+    } else {
+      // Gezinme: önce raya iner (istenen PDF genişliği sığıyorsa), sonra PDF daralır.
+      for (const [k, sol] of dizilis) {
+        if (sigan(sol) >= istenenSag) return pdfSutun(k, sol, istenenSag);
+      }
+      for (const [k, sol] of dizilis.slice().reverse()) {
+        const sag = sigan(sol);
+        if (sag >= enDar) return pdfSutun(k, sol, sag);
+      }
+    }
+    return { kenar, sag: "cekmece", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: istenenSag, sagEnCok: sinir.enCok, inceleme: "yok" };
+  }
+  function pdfSutun(k: YerlesimKarari["kenar"], sol: number, sag: number): YerlesimKarari {
+    const pay = Math.floor(ekran - sol - AYIRICI_PAYI - SAYFA_PAYI - BELGE_SUTUNU_EN_AZ);
+    return { kenar: k, sag: "sutun", olcek: yuvarla(olcekFor(sol, sag)), sabitKagit: true, sagGenislik: sag, sagEnCok: Math.max(sinir.enAz, Math.min(sinir.enCok, pay)), inceleme: "yok" };
+  }
   const denemeler: [YerlesimKarari["kenar"], number, number][] = [
     [kenar, solEn, istenenSag],
     [kenar, solEn, enDar],
@@ -161,12 +240,6 @@ export function yerlesimKarari(girdi: {
       ? ([
           ["ray", KENAR_RAY, istenenSag],
           ["ray", KENAR_RAY, enDar],
-        ] as [YerlesimKarari["kenar"], number, number][])
-      : []),
-    ...(solArac && sagPanel === "pdf" && !girdi.solGenisIstendi
-      ? ([
-          ["aracDar", KENAR_RAY, istenenSag],
-          ["aracDar", KENAR_RAY, enDar],
         ] as [YerlesimKarari["kenar"], number, number][])
       : []),
   ];

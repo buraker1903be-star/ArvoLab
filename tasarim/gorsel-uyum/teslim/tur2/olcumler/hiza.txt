@@ -1,0 +1,3 @@
+390 {"baslik":{"top":63,"bottom":107,"left":16,"right":215,"h":44},"dugme":{"top":63,"bottom":107,"left":231,"right":374,"h":44},"metin":"Yeni çalışma","tasma":false} dikey merkez farkı 0
+360 {"baslik":{"top":63,"bottom":107,"left":16,"right":185,"h":44},"dugme":{"top":63,"bottom":107,"left":201,"right":344,"h":44},"metin":"Yeni çalışma","tasma":false} dikey merkez farkı 0
+1440 {"baslik":{"top":78,"bottom":110,"left":272,"right":454,"h":32},"dugme":{"top":96,"bottom":136,"left":889,"right":1032,"h":40},"metin":"Yeni çalışma","tasma":false} dikey merkez farkı 22

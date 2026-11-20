@@ -96,6 +96,7 @@ import {
   sagPanelGenisligiSinirla,
   yerlesimKarari,
   SOL_ALAN_DAR_OZNITELIGI,
+  SOL_ALAN_SIK_OZNITELIGI,
   SOL_ALAN_GENISLET_OLAYI,
   type OlcekTercihi,
 } from "@/lib/calisma-alani-yerlesimi";
@@ -737,7 +738,13 @@ export default function ManuscriptEditor({
   */
   const [ekran, setEkran] = useState(0);
   useEffect(() => {
-    const olc = () => setEkran(window.innerWidth);
+    /*
+      Kaydırma çubuğu HARİÇ genişlik (görsel uyum, 19.11.2026). Eskiden
+      innerWidth okunuyordu: kaydırma çubuğu yer kaplayan sistemlerde
+      (Windows) karar 15 px fazlası için verilir, belge sınırın altına
+      inerdi. Paylar artık dar olduğu için bu fark kararı çevirebilir.
+    */
+    const olc = () => setEkran(document.documentElement.clientWidth || window.innerWidth);
     olc();
     window.addEventListener("resize", olc);
     return () => window.removeEventListener("resize", olc);
@@ -819,6 +826,14 @@ export default function ManuscriptEditor({
     else kok.removeAttribute(SOL_ALAN_DAR_OZNITELIGI);
   }, [solAlanDar]);
   useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_DAR_OZNITELIGI), []);
+  /* Kaynak listesi sıkı genişlikte (görsel uyum 2): PDF ile birlikte görünür kalsın diye 246 px. */
+  const solAlanSik = karar?.kenar === "aracSik";
+  useEffect(() => {
+    const kok = document.documentElement;
+    if (solAlanSik) kok.setAttribute(SOL_ALAN_SIK_OZNITELIGI, "");
+    else kok.removeAttribute(SOL_ALAN_SIK_OZNITELIGI);
+  }, [solAlanSik]);
+  useEffect(() => () => document.documentElement.removeAttribute(SOL_ALAN_SIK_OZNITELIGI), []);
   /*
     Gezinme yalnızca GEÇİCİ olarak raya iner (sağ panel açıkken belge
     okunabilirlik sınırının altına inecekse): tercih kaydedilmez, panel
@@ -865,7 +880,13 @@ export default function ManuscriptEditor({
       return;
     }
     const ayarla = () => {
-      const baslik = document.querySelector(".yazma-basligi");
+      /*
+        Çekmece ARAÇ ÇUBUĞUNUN altından başlar (görsel uyum 2). Başlık satırı
+        kalkınca önce üst çubuğun altından başlatılmıştı; 1200–1240 px'te AI/PDF
+        çekmecesi araç çubuğunun sağını (liste, alıntı, asistan, Belge menüsü)
+        örtüyor, o düğmeler tıklanamıyordu (tarayıcıda ölçüldü).
+      */
+      const baslik = document.querySelector(".manuscript-araclar") ?? document.querySelector(".dashboard-header");
       const ustCubuk = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64;
       const alt = baslik ? baslik.getBoundingClientRect().bottom : 0;
       yerlesim.style.setProperty("--cekmece-ust", `${Math.round(Math.max(ustCubuk + 8, alt + 8))}px`);
@@ -2061,14 +2082,20 @@ export default function ManuscriptEditor({
       setAtifKarti(null);
       const bas = editor.view.coordsAtPos(from);
       const son = editor.view.coordsAtPos(to);
-      const kagit = (editor.view.dom as HTMLElement).getBoundingClientRect();
+      const dom = editor.view.dom as HTMLElement;
+      const kagit = dom.getBoundingClientRect();
+      /* Metin sütununun sağ kenarı: kâğıdın iç boşluğu ekran ölçeğiyle birlikte (görsel uyum, lib/atif-karti.ts). */
+      const olcek = dom.offsetWidth ? kagit.width / dom.offsetWidth : 1;
+      const metinSagi = kagit.right - (parseFloat(getComputedStyle(dom).paddingRight) || 0) * olcek;
       setSecimKonumu(
         kartKonumu({
           kagit,
+          metinSagi,
+          bosluk: 8,
           satir: { left: bas.left, right: son.right, top: bas.top, bottom: son.bottom },
-          ekranGenisligi: window.innerWidth,
+          ekranGenisligi: document.documentElement.clientWidth || window.innerWidth,
           ekranYuksekligi: window.innerHeight,
-          genislik: 168,
+          genislik: 152,
           yukseklik: 120,
         }),
       );
@@ -2102,7 +2129,14 @@ export default function ManuscriptEditor({
   }, [editor]);
 
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
-  const eylemHedefi = document.getElementById("yazma-eylemleri");
+  /*
+    Eylemler (ölçek, kayıt durumu, Kontroller, Dışa aktar) kabuğun üst
+    çubuğundaki yuvaya yerleşir (görsel uyum, 19.11.2026: "iki kompakt
+    bant"). Eskiden sayfanın kendi başlık satırındaydılar; o satır çalışmanın
+    adını üst çubuktan sonra ikinci kez yazıyor, belgeyi 100 px aşağı itiyordu.
+    Yuva yoksa (eski kabuk) sayfadaki kutuya düşer.
+  */
+  const eylemHedefi = document.getElementById("ust-cubuk-yuva") ?? document.getElementById("yazma-eylemleri");
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
   const ui = toolbarState ?? selectToolbarState({ editor })!;

@@ -206,4 +206,4 @@ denetlediği hatadan farksızdır.
 ## Stil
 
 TSX'te satır içi stil ve ham hex renk yok; ham renk yalnızca
-`app/styles/tokens.css`'te. En küçük yazı 11px. `npm run check:css` denetler.
+`app/styles/tokens.css`'te. En küçük yazı 12px. `npm run check:css` denetler.
