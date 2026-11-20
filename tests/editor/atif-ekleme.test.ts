@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { describe } from "node:test";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
-import { atifIslemi, kaynakcaGirdisiIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
+import { aiAtiflariniBagla, atifIslemi, kaynakcaGirdisiIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
 import { belge, baslik, editorSchema, paragraf } from "./ortam";
 
 /*
@@ -118,4 +118,57 @@ test("B-16: AI metni ve künyesi tek işlemde; tek geri alma ikisini birlikte ka
   assert.equal(tr2.docChanged, false);
   undo(s, (u) => (s = s.apply(u)));
   assert.equal(metin(s), "Giriş\nÖnceki çalışmalar");
+});
+
+/*
+  B-16 ikinci adım (20.11.2026): AI metnindeki tekil eşleşen atıf, atıf
+  altyapısıyla belgenin STİLİNDE yeniden üretilir. Eskiden IEEE ya da
+  dipnotlu belgede metinde yazar–tarih atfı kalıyordu.
+*/
+describe("B-16: AI atıfları belgenin stilinde", () => {
+  const izli = (metin: string) => ({ type: "text", text: metin, marks: [{ type: "asistanIzi", attrs: { kayit: "k1" } }] });
+  const aiDurum = (metin: string) =>
+    EditorState.create({ doc: belge(baslik(1, "Giriş"), { type: "paragraph", content: [izli(metin)] }), plugins: [history()] });
+  const fisher = kaynak;
+  const bul = (atif: string) => (/Fisher/.test(atif) ? fisher : null);
+  const uygula = (s: EditorState, style: "apa7" | "ieee" | "dipnot") => {
+    const tr = s.tr;
+    const sonuc = aiAtiflariniBagla(tr, { kayitId: "k1", kaynakBul: bul, style, secenek: { dil: "tr" } });
+    return { s: s.apply(tr), sonuc };
+  };
+
+  test("APA: atıf stil biçiminde kalır, künye Kaynakça'ya; belirsiz atıf düz metin kalır", () => {
+    const { s, sonuc } = uygula(aiDurum("Mevsimsel örüntüler belirgindir (Fisher & Other, 2023). Tartışmalıdır (Aras, 2020)."), "apa7");
+    assert.equal(sonuc.donusen, 1);
+    assert.match(metin(s), /belirgindir \(Fisher (&|ve) Other, 2023\)\. Tartışmalıdır \(Aras, 2020\)\./);
+    assert.match(metin(s), /Kaynakça\nFisher, E\. W\., & Other, J\. \(2023\)/);
+    assert.doesNotMatch(metin(s).split("Kaynakça")[1] ?? "", /Aras/, "belirsiz atıf kaynakçaya girmez");
+  });
+
+  test("IEEE: yazar–tarih atfı numaraya döner", () => {
+    const { s } = uygula(aiDurum("Mevsimsel örüntüler belirgindir (Fisher & Other, 2023)."), "ieee");
+    assert.match(metin(s), /belirgindir \[1\]\./);
+    assert.doesNotMatch(metin(s), /\(Fisher/);
+  });
+
+  test("dipnot: atıf dipnot düğümü olur, metinde parantez kalmaz", () => {
+    const { s } = uygula(aiDurum("Mevsimsel örüntüler belirgindir (Fisher & Other, 2023)."), "dipnot");
+    let dipnot = 0;
+    s.doc.descendants((n) => {
+      if (n.type.name === "footnoteReference") dipnot += 1;
+    });
+    assert.equal(dipnot, 1);
+    assert.doesNotMatch(metin(s), /\(Fisher/);
+  });
+
+  test("tek geri alma: metin dönüşümü ve künye birlikte geri alınır; iz taşımayan metne dokunulmaz", () => {
+    let s = EditorState.create({ doc: belge(baslik(1, "Giriş"), paragraf("Öğrencinin kendi atfı (Fisher & Other, 2023)."), { type: "paragraph", content: [izli("AI cümlesi (Fisher & Other, 2023).")] }), plugins: [history()] });
+    const tr = s.tr;
+    const sonuc = aiAtiflariniBagla(tr, { kayitId: "k1", kaynakBul: bul, style: "ieee", secenek: { dil: "tr" } });
+    s = s.apply(tr);
+    assert.equal(sonuc.donusen, 1, "yalnızca bu asistan kaydının metni");
+    assert.match(metin(s), /Öğrencinin kendi atfı \(Fisher & Other, 2023\)\.\nAI cümlesi \[1\]\./);
+    undo(s, (u) => (s = s.apply(u)));
+    assert.equal(metin(s), "Giriş\nÖğrencinin kendi atfı (Fisher & Other, 2023).\nAI cümlesi (Fisher & Other, 2023).");
+  });
 });

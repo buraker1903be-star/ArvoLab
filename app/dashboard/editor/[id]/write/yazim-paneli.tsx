@@ -49,7 +49,7 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
 type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean; secimMetni?: string };
 
 /** B-16: AI metnindeki atıfların kaynakçaya yazılması için editörün hazırlığı (manuscript-editor.tsx). */
-export type AiAtifHazirlik = { uygula: (tr: Transaction) => number; belirsiz: string[]; hata?: string };
+export type AiAtifHazirlik = { uygula: (tr: Transaction, kayitId: string | null) => { donusen: number; kaynakcaya: number }; belirsiz: string[]; hata?: string };
 
 const KISALTMA_UYARISI: Record<KisaltmaUyarisi, { tr: string; en: string }> = {
   kisalmadi: { tr: "Kısaltma aslından belirgin biçimde kısa değil.", en: "The shortened text isn't clearly shorter." },
@@ -163,16 +163,16 @@ export default function YazimPaneli({
     kalan bir ekleme, atfı olup künyesi olmayan bir belge bırakırdı.
   */
   const metniEkle = async (kayit: { ekMetin: string; aralik: Aralik; gorev?: YazimGorevi | null; kayitId?: string | null }, yerineKoy: boolean): Promise<boolean> => {
-    const hazirlik = kayit.gorev === "anahat" || !aiAtifHazirla ? null : await aiAtifHazirla(kayit.ekMetin).catch(() => ({ uygula: () => 0, belirsiz: [], hata: t({ tr: "Kaynakça hazırlanamadı.", en: "The reference list couldn't be prepared." }) }) as AiAtifHazirlik);
+    const hazirlik = kayit.gorev === "anahat" || !aiAtifHazirla ? null : await aiAtifHazirla(kayit.ekMetin).catch(() => ({ uygula: () => ({ donusen: 0, kaynakcaya: 0 }), belirsiz: [], hata: t({ tr: "Kaynakça hazırlanamadı.", en: "The reference list couldn't be prepared." }) }) as AiAtifHazirlik);
     if (hazirlik?.hata) {
       showToast("error", t({ tr: `Metin eklenmedi: ${hazirlik.hata}`, en: `Text not inserted: ${hazirlik.hata}` }));
       return false;
     }
-    let kaynakcaya = 0;
+    let baglanan = { donusen: 0, kaynakcaya: 0 };
     const bitir = (zincir: ReturnType<Editor["chain"]>) =>
       zincir
         .command(({ tr }) => {
-          kaynakcaya = hazirlik?.uygula(tr) ?? 0;
+          if (hazirlik) baglanan = hazirlik.uygula(tr, kayit.kayitId ?? null);
           return true;
         })
         .run();
@@ -219,7 +219,8 @@ export default function YazimPaneli({
       belirsiz.length ? "info" : "success",
       [
         t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }),
-        kaynakcaya ? t({ tr: `${kaynakcaya} kaynak Kaynakça'ya yazıldı.`, en: `${kaynakcaya} source(s) added to the reference list.` }) : "",
+        baglanan.donusen ? t({ tr: `${baglanan.donusen} atıf belgenin atıf stiline çevrildi ve Kaynakça'ya bağlandı.`, en: `${baglanan.donusen} citation(s) converted to the document's citation style and linked to the reference list.` }) : "",
+        baglanan.kaynakcaya ? t({ tr: `${baglanan.kaynakcaya} kaynak Kaynakça'ya yazıldı.`, en: `${baglanan.kaynakcaya} source(s) added to the reference list.` }) : "",
         belirsiz.length
           ? t({
               tr: `Belirsiz atıf: ${belirsiz.join(", ")} kütüphanenizde birden çok kaynakla eşleşiyor; Kaynakça'ya eklenmedi. Atıf penceresinden doğru kaynağı seçin.`,

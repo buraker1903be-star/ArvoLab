@@ -96,6 +96,25 @@ kayit("kısaltma: somut kayıplar uyarı olarak görünür", uyari.some((u) => /
 kayit("kısaltma uyarısı eklemeyi engellemez", !(await sonKart().getByRole("button", { name: /Seçilenin yerine koy/ }).isDisabled()));
 await sonKart().scrollIntoViewIfNeeded();
 await s.screenshot({ path: OUT + "kisaltma-uyari.png" });
+// 5) Stil dönüşümü (B-16 ikinci adım): IEEE ve dipnotlu belgede AI atfı stilin biçimiyle girer.
+for (const [stil, beklenen] of [["ieee", "numara"], ["dipnot", "dipnot"]]) {
+  const prS = psql(`insert into public.academic_projects (owner_id, project_type, title, status, citation_style) values ('${KUL.id}','thesis',${q(`AI kart ${stil} ${ek}`)},'writing','${stil}') returning id`).split("\n")[0];
+  psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${prS}', ${q(JSON.stringify({ type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Giriş" }] }, P("Birinci sınıf öğrencilerinin uyumu.")] }))}::jsonb, 'x') on conflict (project_id) do update set content = excluded.content`);
+  await s.goto(`/dashboard/editor/${prS}/write`); await s.waitForSelector(".ProseMirror"); await s.waitForTimeout(1200);
+  await s.getByRole("button", { name: /^Yazım asistanı/ }).first().click(); await panel.waitFor();
+  await paragrafSonu("Birinci sınıf");
+  await iste("Akran grupları hakkında bir cümle yaz.");
+  await ekleDugme().click(); await s.waitForTimeout(700);
+  const m = await metin();
+  const dipnotSayisi = await ed((e) => { let n = 0; e.state.doc.descendants((d) => { if (d.type.name === "footnoteReference") n += 1; }); return n; });
+  const gecti = beklenen === "numara" ? /azaltıyor \[1\]\./.test(m) && !/\(Demir, 2019\)/.test(m) : dipnotSayisi === 1 && !/\(Demir, 2019\)/.test(m);
+  kayit(`stil ${stil}: AI atfı ${beklenen} olarak girer, düz yazar–tarih kalmaz`, gecti, { son: m.slice(-220), dipnotSayisi });
+  await s.screenshot({ path: OUT + `stil-${stil}.png` });
+  await ed((e) => e.commands.focus());
+  await s.keyboard.press("Control+z"); await s.waitForTimeout(500);
+  kayit(`stil ${stil}: tek Ctrl+Z metni, atfı ve künyeyi birlikte alır`, !(await metin()).includes("Akran çalışma grupları"), {});
+}
+
 kayit("sayfa hatası yok", hatalar.length === 0, { hatalar });
 await b.close();
 fs.writeFileSync(OUT + "sonuc.json", JSON.stringify(sonuc, null, 2));

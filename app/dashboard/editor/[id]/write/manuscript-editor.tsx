@@ -189,6 +189,7 @@ import {
   insertCitation,
   atifSirasi,
   kaynakcaGirdisiIslemi,
+  aiAtiflariniBagla,
   oncekiDipnottaVar,
   isDocumentEmpty,
   jumpToHeading,
@@ -2633,35 +2634,54 @@ export default function ManuscriptEditor({
     döner ve metin girmez (okunamayan liste boş liste değildir).
   */
   const aiAtifHazirla = async (metin: string): Promise<AiAtifHazirlik> => {
-    const bos: AiAtifHazirlik = { uygula: () => 0, belirsiz: [] };
+    const bos: AiAtifHazirlik = { uygula: () => ({ donusen: 0, kaynakcaya: 0 }), belirsiz: [] };
     if (!/\d{4}/.test(metin)) return bos;
     const liste = await kartKaynaklariniOku();
     if (liste.okunamadi) return { ...bos, hata: t({ tr: "kütüphaneniz okunamadı; tekrar deneyin.", en: "your library couldn't be read; try again." }) };
-    const esleme = aiAtiflariniEsle(metin, liste.satirlar.map((k) => ({ id: k.id, authors: k.authors, year: k.year, title: k.title })), cikarmaStili);
-    const eklenecek = esleme.eslesen
-      .map((id) => liste.satirlar.find((k) => k.id === id))
-      .filter((k): k is LiteratureSource => Boolean(k) && atifSirasi(editor.state.doc, k!).existingIndex < 0);
+    const eslenebilir = liste.satirlar.map((k) => ({ id: k.id, authors: k.authors, year: k.year, title: k.title }));
+    const esleme = aiAtiflariniEsle(metin, eslenebilir, cikarmaStili);
+    const eslesenler = esleme.eslesen.map((id) => liste.satirlar.find((k) => k.id === id)).filter((k): k is LiteratureSource => Boolean(k));
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
-    const kunyeler = new Map<string, { text: string; italic?: boolean }[]>();
-    if (csl && eklenecek.length) {
-      const ilkNumara = atifSirasi(editor.state.doc, eklenecek[0]).number;
-      for (const [sira, kaynak] of eklenecek.entries()) {
+    /* CSL: atıf ve künye citeproc'tan ÖNCEDEN alınır (işlem içinde ağ adımı olmaz). Numara, yeni kaynaklar Kaynakça'ya eklenme sırasıyla tahmin edilir. */
+    const hazirlar = new Map<string, { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean }>();
+    if (csl && eslesenler.length) {
+      let sonrakiNumara = atifSirasi(editor.state.doc, eslesenler[0]).number;
+      for (const kaynak of eslesenler) {
+        const { number, existingIndex } = atifSirasi(editor.state.doc, kaynak);
+        const numara = existingIndex >= 0 ? number : sonrakiNumara++;
         const sonuc = await cslAtifUret({
           stil: citationStyle,
           kaynak,
-          numara: ilkNumara + sira,
+          numara,
           sayfa: null,
           kisa: false,
           dil: belgeDili,
           erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
-        }).catch(() => ({ hata: t({ tr: "atıf stili sunucusuna ulaşılamadı.", en: "couldn't reach the citation style server." }) }) as { hata: string; kunye?: undefined });
-        if (sonuc.hata || !sonuc.kunye?.length) return { ...bos, hata: sonuc.hata ?? t({ tr: "künye üretilemedi.", en: "the reference couldn't be produced." }) };
-        kunyeler.set(kaynak.id, sonuc.kunye);
+        }).catch(() => ({ hata: t({ tr: "atıf stili sunucusuna ulaşılamadı.", en: "couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
+        if (sonuc.hata || !sonuc.atif || !sonuc.kunye?.length) return { ...bos, hata: sonuc.hata ?? t({ tr: "atıf üretilemedi.", en: "the citation couldn't be produced." }) };
+        hazirlar.set(kaynak.id, { atif: sonuc.atif, kunye: sonuc.kunye, dipnot: csl.kod === "d" });
       }
     }
     return {
-      belirsiz: esleme.belirsiz.map((b) => b.atif),
-      uygula: (tr) => eklenecek.filter((k) => kaynakcaGirdisiIslemi(tr, k, style, { dil: belgeDili, erisimTarihi: bugun, kunye: kunyeler.get(k.id) })).length,
+      belirsiz: esleme.belirsiz.map((x) => x.atif),
+      uygula: (tr, kayitId) => {
+        const kunyeYaz = () => ({
+          donusen: 0,
+          kaynakcaya: eslesenler.filter((k) => kaynakcaGirdisiIslemi(tr, k, style, { dil: belgeDili, erisimTarihi: bugun, kunye: hazirlar.get(k.id)?.kunye })).length,
+        });
+        // İz kimliği yoksa (kayıt yazılamadı) metin bulunamaz: yalnızca künyeler.
+        if (!kayitId) return kunyeYaz();
+        return aiAtiflariniBagla(tr, {
+          kayitId,
+          kaynakBul: (atif) => {
+            const tek = aiAtiflariniEsle(atif, eslenebilir, cikarmaStili);
+            return tek.eslesen.length === 1 && !tek.belirsiz.length ? (eslesenler.find((k) => k.id === tek.eslesen[0]) ?? null) : null;
+          },
+          digerEslesenler: eslesenler,
+          style,
+          secenek: { dil: belgeDili, erisimTarihi: bugun, kalip: ornekKalibi(ornekAtif), hazir: (k) => hazirlar.get((k as LiteratureSource).id) },
+        });
+      },
     };
   };
 

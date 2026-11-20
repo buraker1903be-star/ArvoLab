@@ -57,6 +57,32 @@
     "ayrinti": {}
   },
   {
+    "ad": "stil ieee: AI atfı numara olarak girer, düz yazar–tarih kalmaz",
+    "gecti": true,
+    "ayrinti": {
+      "son": "Giriş\nBirinci sınıf öğrencilerinin uyumu.\nAkran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor [1].\nKaynakça\n[1] B. Demir, \"Peer study groups in higher education,\" Eğitim Dergisi, 2019.",
+      "dipnotSayisi": 0
+    }
+  },
+  {
+    "ad": "stil ieee: tek Ctrl+Z metni, atfı ve künyeyi birlikte alır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "stil dipnot: AI atfı dipnot olarak girer, düz yazar–tarih kalmaz",
+    "gecti": true,
+    "ayrinti": {
+      "son": "Giriş\nBirinci sınıf öğrencilerinin uyumu.\nAkran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor.\nKaynakça\nDemir, B. “Peer study groups in higher education”, Eğitim Dergisi, 2019.",
+      "dipnotSayisi": 1
+    }
+  },
+  {
+    "ad": "stil dipnot: tek Ctrl+Z metni, atfı ve künyeyi birlikte alır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
     "ad": "sayfa hatası yok",
     "gecti": true,
     "ayrinti": {
