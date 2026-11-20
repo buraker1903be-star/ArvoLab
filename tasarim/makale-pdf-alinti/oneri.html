@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Makale → PDF → Alıntı · görsel öneri</title>
+<style>
+/* Yalnızca öneri görseli; ürün CSS'i değil. Renkler app/styles/tokens.css'teki marka/vurgu tonlarından. */
+:root{--z:#f4f6f9;--k:#fff;--m:#0f1b2d;--s:#5b6778;--c:#dfe4ec;--b:#153563;--b1:#eef2f8;--y:#587a37;--y1:#f3f7ee;--u:#9a6b00;--u1:#fff7e0;--r:#a3312b;--r1:#fbeceb}
+*{box-sizing:border-box}body{margin:0;background:var(--z);color:var(--m);font:14px/1.45 Inter,system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:0}.alt{color:var(--s);font-size:13px}
+.tuval{width:1440px;padding:28px 32px}.baslik{margin-bottom:18px}
+.ekran{background:var(--k);border:1px solid var(--c);border-radius:12px;overflow:hidden}
+.etiket{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--b);background:var(--b1);padding:2px 8px;border-radius:99px;margin-bottom:8px}
+.not{font-size:12px;color:var(--s);margin-top:8px}
+.dgm{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--c);background:var(--k);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px;white-space:nowrap}
+.dgm.ana{background:var(--b);border-color:var(--b);color:#fff}.dgm.kucuk{padding:4px 9px;font-size:12px}.dgm.duz{border-color:transparent;background:none;color:var(--b)}
+.cip{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.cip.y{background:var(--y1);color:var(--y)}.cip.u{background:var(--u1);color:var(--u)}.cip.n{background:var(--z);color:var(--s)}.cip.f{background:var(--b1);color:var(--b)}
+.cip .x{opacity:.7;margin-left:2px}
+/* 1 Makale Bul */
+.mb{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.mb .ekran{padding:18px}.arama{display:flex;gap:8px}.arama input{flex:1;border:1px solid var(--c);border-radius:8px;padding:9px 12px;font:inherit}
+.secili{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.filtre{border:1px solid var(--c);border-radius:10px;padding:12px;margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px}
+.filtre label{display:flex;flex-direction:column;gap:4px;color:var(--s)}.filtre .ip{border:1px solid var(--c);border-radius:6px;padding:6px 8px;color:var(--m)}
+.sonuc{border-top:1px solid var(--c);padding:12px 0;display:grid;gap:6px}.sonuc b{font-size:14px}.sonuc .meta{font-size:12px;color:var(--s)}
+.eylem{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.eski{opacity:.92}.eski .ekran{padding:18px}.eski .satir{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.eski .ip{border:1px solid var(--c);border-radius:6px;padding:6px 8px;font-size:13px;color:var(--s)}
+/* 2 Editör + PDF */
+.ed{display:grid;grid-template-columns:56px 1fr 6px 560px;height:640px}
+.ray{background:var(--z);border-right:1px solid var(--c)}
+.belge{background:#e9edf2;padding:24px;overflow:hidden}.kagit{background:var(--k);max-width:640px;margin:0 auto;padding:40px 52px;min-height:560px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kagit h3{margin:0 0 12px;font-size:18px}.kagit p{margin:0 0 10px;line-height:1.7}.imlec{display:inline-block;width:2px;height:18px;background:var(--b);vertical-align:-3px}
+.atif{background:var(--b1);border-radius:3px;padding:0 2px}
+.bolucu{background:var(--c);position:relative;cursor:col-resize}.bolucu::after{content:"";position:absolute;top:50%;left:1px;width:4px;height:36px;margin-top:-18px;border-radius:2px;background:var(--s)}
+.pdf{display:flex;flex-direction:column;background:var(--k)}
+.pdf-ust{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--c)}
+.pdf-ust .ad{flex:1;min-width:0;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.durum{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--c);flex-wrap:wrap}
+.sayfa{flex:1;background:#d9dee6;padding:14px;overflow:hidden;position:relative}
+.pdfk{background:var(--k);padding:36px 40px;font:13px/1.65 Georgia,serif;color:#222;min-height:520px}
+.sec{background:rgba(31,61,110,.22)}
+.arac{position:absolute;left:96px;top:186px;display:flex;gap:2px;background:var(--m);color:#fff;border-radius:8px;padding:4px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.arac span{padding:6px 10px;font-size:12px;font-weight:600;border-radius:6px}.arac span:first-child{background:rgba(255,255,255,.14)}
+.onay{position:absolute;left:96px;top:232px;width:340px;background:var(--k);border:1px solid var(--c);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.18);padding:12px;font-size:12px;display:grid;gap:8px}
+.onay q{font-style:italic}.onay .sat{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pdf-alt{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid var(--c);font-size:12px;color:var(--s)}
+/* 3 Durum */
+.dr{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.dr .ekran{padding:16px}
+.dr dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:13px}.dr dt{color:var(--s)}
+.blok{margin-top:28px}
+.tablo{width:100%;border-collapse:collapse;font-size:12px}.tablo td,.tablo th{border-top:1px solid var(--c);padding:6px 8px;text-align:left;vertical-align:top}
+</style></head><body><div class="tuval">
+
+<div class="baslik"><h1>Makale bul → PDF'yi oku → çalışmana ekle → alıntı yap</h1>
+<div class="alt">Görsel öneri, 20.11.2026. Merkezde belge durur. PDF ve kaynak yalnızca gerektiğinde yanında açılır, öteki kontroller istenince görünür. Ürün kodu değil: yerleşimi ve sırayı tartışmak için hazırlandı.</div></div>
+
+<span class="etiket">1 · Makale Bul</span>
+<div class="mb">
+  <div class="eski"><div class="ekran">
+    <h2>Bugün</h2>
+    <div class="satir"><span class="ip" style="flex:1">Anahtar kelime, başlık ya da yazar</span><span class="dgm ana">Ara</span></div>
+    <div class="satir"><span class="ip">Yıl (başlangıç)</span><span class="ip">Yıl (bitiş)</span><span class="ip">Eklenecek çalışma ▾</span><span class="ip">☐ Yalnızca açık erişim</span></div>
+    <div class="sonuc"><b>Seasonal patterns in synthetic data</b><div class="meta">Edward W. Fisher, Jane Other · 2023 · Journal of Science &amp;amp; Society</div>
+      <div class="eylem"><span class="dgm kucuk">Tam metin ↗</span><span class="dgm kucuk">Listeme ekle</span></div></div>
+    <div class="not">Tek eylem dış sitede açılıyor. Kaynakta PDF olup olmadığı burada görünmüyor; PDF'yi getirmek için ayrı ekrandaki kaynakça denetimini çalıştırmak gerekiyor.</div>
+  </div></div>
+  <div><div class="ekran">
+    <h2>Öneri</h2>
+    <div class="arama" style="margin-top:8px"><input value="seasonal variation regional differences"><span class="dgm ana">Ara</span><span class="dgm">Filtreler · 2</span></div>
+    <div class="secili"><span class="cip f">2018–2024 <span class="x">✕</span></span><span class="cip f">PDF'si olanlar <span class="x">✕</span></span><span class="dgm duz kucuk">Temizle</span></div>
+    <div class="filtre"><label>Yıl<span class="ip">2018 – 2024</span></label><label>Tür<span class="ip">Makale ▾</span></label><label>Erişim<span class="ip">☑ PDF'si olanlar</span></label><label>Ekleneceği çalışma<span class="ip">Tez · Mevsimsel örüntüler ▾</span></label></div>
+    <div class="not">Filtre paneli istenince açılır. Seçimler kaldırılabilir etiket olur. Filtre değişince arama bir kez yinelenir (yazarken istek gitmez).</div>
+    <div class="sonuc"><b>Seasonal patterns in synthetic data</b><div class="meta">Fisher, E. W., &amp; Other, J. · 2023 · Journal of Science &amp; Society</div>
+      <div class="eylem"><span class="cip y">PDF açık erişimde</span><span class="dgm ana kucuk">PDF'yi oku</span><span class="dgm kucuk">Çalışmaya ekle</span><span class="dgm duz kucuk">Kaynağa git ↗</span></div></div>
+    <div class="sonuc"><b>Regional climate signals in survey data</b><div class="meta">Kaya, A. · 2021 · Synthetic Review</div>
+      <div class="eylem"><span class="cip n">PDF bulunamadı</span><span class="dgm kucuk">Çalışmaya ekle</span><span class="dgm duz kucuk">PDF yükle</span></div></div>
+  </div></div>
+</div>
+
+<div class="blok"><span class="etiket">2 · Editör + PDF okuyucu (1440 px)</span>
+<div class="ekran ed">
+  <div class="ray"></div>
+  <div class="belge"><div class="kagit"><h3>1. Giriş</h3>
+    <p>Mevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır: “Seasonal variation explained most of the observed difference across the three regions.” <span class="atif">(Fisher &amp; Other, 2023, s. 4)</span><span class="imlec"></span></p>
+    <p style="color:var(--s)">Belge ortada kalır. PDF sağda açılır, bölücü sürüklenebilir, ölçüleri kaydedilir. İmleç PDF'ye geçerken kaydedilir ve alıntı oraya girer.</p></div></div>
+  <div class="bolucu" title="Sürükleyerek genişlet"></div>
+  <div class="pdf">
+    <div class="pdf-ust"><span class="ad">Fisher &amp; Other (2023) · Seasonal patterns…</span><span class="dgm kucuk">‹ 1/12 ›</span><span class="dgm kucuk">Genişliğe sığdır</span><span class="dgm kucuk">⋯</span><span class="dgm kucuk">✕</span></div>
+    <div class="durum"><span class="cip y">Kaynak kaydı: eşleşti (DOI)</span><span class="cip y">PDF: bulundu</span><span class="cip n">Alıntı: henüz yok</span></div>
+    <div class="sayfa"><div class="pdfk">
+      <b>Seasonal patterns in synthetic data</b><br><span style="color:#666">Edward W. Fisher and Jane Other</span><br><br>
+      Abstract. <span class="sec">Seasonal variation explained most of the observed difference across the three regions.</span> A second sentence closes the synthetic abstract for testing. The remaining paragraphs describe the sampling frame and the regional weights used in the survey…
+    </div>
+      <div class="arac"><span>Alıntı ekle</span><span>Yalnızca atıf</span><span>AI'a sor</span><span>Kopyala</span></div>
+      <div class="onay"><div class="sat"><b>İmlece eklenecek</b><span class="cip y">PDF s. 1'de birebir</span></div>
+        <i>“Seasonal variation explained most of the observed difference across the three regions.”</i>
+        <div class="sat"><span>Atıf: <b>(Fisher &amp; Other, 2023, s. <u>  4  </u>)</b></span><span class="alt">basılı sayfa · isteğe bağlı</span></div>
+        <div class="sat"><span class="dgm duz kucuk">Vazgeç</span><span class="dgm ana kucuk">Ekle ↵</span></div></div>
+    </div>
+    <div class="pdf-alt">Seçim kelime ortasında bitebilir; eklenen metin, seçilen metnin ta kendisidir. ⋯ menüsünde: kaynak bağı, PDF içinde ara, Arvo AI sohbeti.</div>
+  </div>
+</div>
+<div class="not">Bugün 1440 px'te PDF paneli 520 px, okuma alanı 344 px yüksekliğinde (sayfa 641 px, iç kaydırma). Seçim yapılınca alan 277 px'e, alıntı formu açılınca 181 px'e iniyor. Öneride form yerine seçimin yanında küçük bir onay kutusu açılıyor; okuma alanı küçülmüyor.</div>
+</div>
+
+<div class="blok"><span class="etiket">3 · Üç ayrı durum (atıf kartı ve PDF üst şeridi)</span>
+<div class="dr">
+  <div class="ekran"><h2>Kaynak kaydı</h2><dl><dt>Ne demek</dt><dd>Künye bir dizinde (DOI / Crossref) doğrulandı mı</dd><dt>Değerler</dt><dd><span class="cip y">Eşleşti</span> <span class="cip u">Eksik alan: cilt, sayfa</span> <span class="cip n">Doğrulanamadı</span></dd></dl></div>
+  <div class="ekran"><h2>PDF</h2><dl><dt>Ne demek</dt><dd>Bu kaynağın tam metni uygulamada okunabilir mi</dd><dt>Değerler</dt><dd><span class="cip y">Bulundu</span> <span class="cip f">Aranıyor…</span> <span class="cip n">Açık erişimde yok · Yükle</span></dd></dl></div>
+  <div class="ekran"><h2>Alıntı</h2><dl><dt>Ne demek</dt><dd>Belgedeki alıntı PDF metninde birebir geçiyor mu</dd><dt>Değerler</dt><dd><span class="cip y">PDF s. 1'de birebir</span> <span class="cip u">PDF'de bulunamadı</span> <span class="cip n">Alıntı yok</span></dd></dl></div>
+</div>
+<div class="not">Tek bir "doğrulandı" ya da yüzde yok. APA puanı, uyarıları hariç tuttuğunu yanında yazar: "Biçim uyarısı 1 · puana katılmaz".</div>
+</div>
+
+</div></body></html>

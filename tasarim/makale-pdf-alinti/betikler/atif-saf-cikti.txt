@@ -1,0 +1,9 @@
+CROSSREF kayit: {"kimlik":"10.1/x","baslik":"Seasonal patterns","yazarlar":["Edward W. Fisher","Jane Other"],"yil":2023,"tur":"article","dergi":"Journal of Science &amp; Society","doi":"10.1/x","url":"https://doi.org/10.1/x","atifSayisi":null,"acikErisim":false,"acikErisimUrl":null,"saglayici":"crossref"}
+saklanan authors: Edward W. Fisher, Jane Other
+splitAuthors: ["Edward W. Fisher, Jane Other"]
+cslYazarlari: [{"family":"Edward W. Fisher","given":"Jane Other"}]
+APA atıf: (Edward W. Fisher, 2023)
+APA atıf (; ile): (Fisher ve Other, 2023)
+issues: [{"field":"author_format","message":"Yazar formatı APA7'ye uymuyor olabilir: \"Edward W. Fisher, Jane Other\" (beklenen: \"Soyad, A.\")","severity":"warning"},{"field":"doi","message":"Dergi makalesi için DOI/URL bulunamadı (varsa eklenmeli).","severity":"warning"}]
+score: 100
+OPENALEX: 

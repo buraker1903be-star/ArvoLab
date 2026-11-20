@@ -1,0 +1,247 @@
+{
+  "tohum.depo": 200,
+  "tohum": {
+    "PR": "01befbbd-8ffa-4728-b154-681a22a803c8",
+    "FISHER": "e1d9d8f7-f32c-4bc4-ade5-961b4c1e7fc8",
+    "PDF": "3b4033a8-92fe-497b-ae97-9d6536f8f238"
+  },
+  "R1.kaynaklar.1440": {
+    "sayfa": "1440/1440",
+    "tasan": [],
+    "icKaydirma": [
+      "article.gb-kart.gb-sutun 1048/1040"
+    ]
+  },
+  "R1.kaynaklar.1280": {
+    "sayfa": "1280/1280",
+    "tasan": [],
+    "icKaydirma": [
+      "article.gb-kart.gb-sutun 984/976"
+    ]
+  },
+  "R1.kaynaklar.390": {
+    "sayfa": "458/390",
+    "tasan": [
+      "div.kaynak-ekle-menu r=583",
+      "a.kaynak-ekle-oge r=578",
+      "span. r=525",
+      "b. r=525",
+      "small. r=525",
+      "button.kaynak-ekle-oge r=578"
+    ],
+    "icKaydirma": [
+      "div.cluster 504/390"
+    ]
+  },
+  "R2.pdf.1280.acilis": {
+    "panel": {
+      "w": 382,
+      "h": 762,
+      "sh": 760,
+      "ch": 760
+    },
+    "alan": {
+      "w": 380,
+      "h": 344,
+      "sh": 483,
+      "ch": 344
+    },
+    "tuval": {
+      "w": 354,
+      "h": 459,
+      "sh": 459,
+      "ch": 459
+    },
+    "alt": {
+      "w": 380,
+      "h": 179,
+      "sh": 178,
+      "ch": 178
+    },
+    "kagit": {
+      "w": 785,
+      "h": 459,
+      "sh": 540,
+      "ch": 540
+    },
+    "dugmeler": 10
+  },
+  "R2.pdf.1280.secim": {
+    "secildi": "Seasonal variation explained most of the observed difference across the three regions.",
+    "panel": {
+      "w": 382,
+      "h": 762,
+      "sh": 760,
+      "ch": 760
+    },
+    "alan": {
+      "w": 380,
+      "h": 277,
+      "sh": 483,
+      "ch": 277
+    },
+    "tuval": {
+      "w": 354,
+      "h": 459,
+      "sh": 459,
+      "ch": 459
+    },
+    "alt": {
+      "w": 380,
+      "h": 246,
+      "sh": 245,
+      "ch": 245
+    },
+    "kagit": {
+      "w": 785,
+      "h": 459,
+      "sh": 540,
+      "ch": 540
+    },
+    "dugmeler": 12
+  },
+  "R2.pdf.1440.acilis": {
+    "panel": {
+      "w": 520,
+      "h": 762,
+      "sh": 760,
+      "ch": 760
+    },
+    "alan": {
+      "w": 518,
+      "h": 344,
+      "sh": 665,
+      "ch": 344
+    },
+    "tuval": {
+      "w": 495,
+      "h": 641,
+      "sh": 641,
+      "ch": 641
+    },
+    "alt": {
+      "w": 518,
+      "h": 179,
+      "sh": 178,
+      "ch": 178
+    },
+    "kagit": {
+      "w": 804,
+      "h": 470,
+      "sh": 540,
+      "ch": 540
+    },
+    "dugmeler": 10
+  },
+  "R2.pdf.1440.secim": {
+    "secildi": "Seasonal variation explained most of the observed difference across the three regions.",
+    "panel": {
+      "w": 520,
+      "h": 762,
+      "sh": 760,
+      "ch": 760
+    },
+    "alan": {
+      "w": 518,
+      "h": 277,
+      "sh": 665,
+      "ch": 277
+    },
+    "tuval": {
+      "w": 495,
+      "h": 641,
+      "sh": 641,
+      "ch": 641
+    },
+    "alt": {
+      "w": 518,
+      "h": 246,
+      "sh": 245,
+      "ch": 245
+    },
+    "kagit": {
+      "w": 804,
+      "h": 470,
+      "sh": 540,
+      "ch": 540
+    },
+    "dugmeler": 12
+  },
+  "R3.pmOnce": {
+    "from": 68,
+    "to": 68,
+    "sonuc": 69,
+    "onceki": "tır"
+  },
+  "R3.imlecOnce": {
+    "metin": 60,
+    "ofset": 60
+  },
+  "R3.secilen": "Seasonal variation explained most of the observed difference across the three regions.",
+  "R3.pmSecimSonrasi": {
+    "from": 68,
+    "to": 68,
+    "sonuc": 69,
+    "onceki": "tır"
+  },
+  "R3.alintiDugmesi": 1,
+  "R3.form": {
+    "panel": {
+      "w": 520,
+      "h": 762,
+      "sh": 919,
+      "ch": 760
+    },
+    "alan": {
+      "w": 518,
+      "h": 181,
+      "sh": 665,
+      "ch": 181
+    },
+    "tuval": {
+      "w": 495,
+      "h": 641,
+      "sh": 641,
+      "ch": 641
+    },
+    "alt": {
+      "w": 518,
+      "h": 342,
+      "sh": 577,
+      "ch": 341
+    },
+    "kagit": {
+      "w": 804,
+      "h": 470,
+      "sh": 540,
+      "ch": 540
+    },
+    "dugmeler": 13
+  },
+  "R3.belge1": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır“Seasonal variation explained most of the observed difference across the three regions.” (Edward W. Fisher, 2023)\n\nKaynakça\n\nEdward W. Fisher, Jane Other (2023). Seasonal patterns in synthetic data. Journal of Science &amp; Society. https://doi.org/10.5555/fisher.2023",
+  "R3.belge2": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır“Seasonal variation explained most of the observed difference across the three regions.” (Edward W. Fisher, 2023) (Edward W. Fisher, 2023)\n\nKaynakça\n\nEdward W. Fisher, Jane Other (2023). Seasonal patterns in synthetic data. Journal of Science &amp; Society. https://doi.org/10.5555/fisher.2023",
+  "R3.fisherKunyeSayisi": 1,
+  "R3.bildirimler": [
+    "Bu belgenin bazı biçim bilgileri eski bir kayıt hatası nedeniyle kaybolmuş.\nBaşlık düzeylerini (H1–H3), hizalamayı ve şekil/tablo başlıklarını kontrol edin; düzelttiğiniz hâl artık eksiksiz kaydedilir.\nWord dosyanız varsa “Word'den aktar → Yerine koy” ile metni tüm biçimiyle yeniden alabilirsiniz (mevcut hâl önce sürüm olarak saklanır).\nResimlerim\nWord'den aktar\nAnladım",
+    "Seçim PDF metninde doğrulanıyor…",
+    "!\nİşlem tamamlanamadı\n(Edward W. Fisher, 2023) eklendi; künyede eksik: cilt, sayı, sayfa aralığı. Literatür'den kaynağı tamamlayın.",
+    "(Edward W. Fisher, 2023) eklendi.\nİşlem başarıyla tamamlandı."
+  ],
+  "R4.uc": {
+    "durum": 200,
+    "tur": "application/pdf",
+    "ek": "attachment; filename=\"kaynak.pdf\""
+  },
+  "R5.ai": {
+    "sonra": {
+      "belge": "Giriş\n\nAkran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor (Demir, 2019).\n\nKaynakça\n\nEdward W. Fisher, Jane Other (2023). Seasonal patterns in synthetic data. Journal of Science &amp; Society. https://doi.org/10.5555/fisher.2023",
+      "koyEtkin": false,
+      "ekleMetni": "Eklendi"
+    },
+    "geri": {
+      "belge": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır“Seasonal variation explained most of the observed difference across the three regions.” (Edward W. Fisher, 2023) (Edward W. Fisher, 2023)\n\nKaynakça\n\nEdward W. Fisher, Jane Other (2023). Seasonal patterns in synthetic data. Journal of Science &amp; Society. https://doi.org/10.5555/fisher.2023",
+      "koyEtkin": false,
+      "ekleMetni": "Eklendi"
+    }
+  }
+}
