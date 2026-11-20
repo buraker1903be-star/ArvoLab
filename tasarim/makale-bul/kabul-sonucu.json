@@ -1,0 +1,65 @@
+[
+  {
+    "ad": "ilk açılışta tek alan + Ara + Filtreler; filtre alanları kapalı",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "arama sonuç getirir (canlı dizin)",
+    "gecti": true,
+    "ayrinti": {
+      "satirSayisi": 12
+    }
+  },
+  {
+    "ad": "sonuçlar için PDF kendiliğinden indirilmez (başlangıç: aranmadı)",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "etkin filtre çip olarak görünür",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "çip × ile kalkar",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "PDF'yi oku: çalışmadaki hazır PDF çekmecede açılır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "kaynak çalışmaya 'Okunacak' olarak eklendi",
+    "gecti": true,
+    "ayrinti": {
+      "eklenen": "1"
+    }
+  },
+  {
+    "ad": "Geri al yeni eklenen kaydı siler",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "önceden var olan kayıtta Geri al yok, kayıt korunur, ikinci kopya yok",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "başka sonuç: durum aranıyor'dan kesin bir duruma geçer (bulundu/bulunamadı/servis hatası)",
+    "gecti": true,
+    "ayrinti": {
+      "son": "bulunamadi"
+    }
+  },
+  {
+    "ad": "sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  }
+]
