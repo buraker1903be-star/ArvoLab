@@ -65,7 +65,7 @@ describe("görünürlük", () => {
     /* İç ekibin günde bir kez açtığı sayfalar, öğrencinin her gün
        gördüğü simgelerin arasına girmemeli. */
     const dock = docktakiler(uygulamalar).map((u) => u.key);
-    for (const gizli of ["asistan", "ekip"]) {
+    for (const gizli of ["asistan"]) {
       assert.ok(!dock.includes(gizli), gizli);
     }
     assert.ok(dock.includes("analiz"));
@@ -75,11 +75,12 @@ describe("görünürlük", () => {
     /* Başlatıcıda da görünmemeli: adresini bilmeden bulunamayan bir
        sayfa, menüde görünüp açılmayan sayfadan iyidir. */
     const ogrenci = gorunenUygulamalar(uygulamalar, "client").map((u) => u.key);
-    assert.ok(!ogrenci.includes("ekip"));
+    assert.ok(!ogrenci.includes("asistan"));
     assert.ok(ogrenci.includes("tez"));
 
     const kurucu = gorunenUygulamalar(uygulamalar, "founder").map((u) => u.key);
-    assert.ok(kurucu.includes("ekip"));
+    assert.ok(kurucu.includes("asistan"));
+    assert.ok(!kurucu.includes("ekip"), "Ekip Yönetimi 20.11.2026'da kalktı");
   });
 
   test("rolü olmayan ziyaretçide kısıtlı uygulama yok", () => {
@@ -138,7 +139,9 @@ describe("Ctrl+K araması", () => {
     // Palet uygulamaları komutHedefleri'nden alıyor (osSayfalari artık
     // yalnızca gerçek alt bölümleri döndürüyor, 14.11.2026).
     const sayfalar = komutHedefleri(uygulamalar);
-    assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
+    assert.ok(sayfalar.some((s) => s.href === "/dashboard/asistan"));
+    // Ekip Yönetimi 20.11.2026'da kalktı (ArvoOS'un işi); aramaya da dönmemeli.
+    assert.ok(!sayfalar.some((s) => s.href === "/dashboard/team"));
     // Yönlenen eski adresler (sekmeli dönemin bölümleri) aramada çıkmıyor:
     // Destek ve Kaynaklar uygulamanın kendisiyle aranıyor.
     assert.ok(!sayfalar.some((s) => s.href === "/dashboard/support" || s.href === "/dashboard/citations"));
@@ -199,7 +202,7 @@ test("telefonda alt çubuk + Daha fazla, personel araçları dışında bütün 
   assert.equal(cubuk.length + dahaFazlasi(hepsi).length + personelAraclari(hepsi).length, hepsi.length);
   const daha = dahaFazlasi(hepsi).map((u) => u.key);
   for (const k of ["analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"]) assert.ok(daha.includes(k), k);
-  for (const k of ["asistan", "ekip"]) assert.ok(!daha.includes(k), k);
+  for (const k of ["asistan"]) assert.ok(!daha.includes(k), k);
 });
 
 test("ekran sınıfı kırılımları", () => {

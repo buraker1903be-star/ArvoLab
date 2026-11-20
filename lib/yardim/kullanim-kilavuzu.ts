@@ -596,15 +596,15 @@ const BOLUMLER: KilavuzBolumu[] = [
   },
   {
     id: "yonetim",
-    baslik: { tr: "İç ekip için: ekip ve kayıtlar", en: "For the internal team: team and logs" },
+    baslik: { tr: "İç ekip için: asistan kayıtları", en: "For the internal team: assistant logs" },
     ozet: {
-      tr: "Kullanıcıların rollerini ve erişimini yönetir, asistan kayıtlarını incelersiniz. Kurumlar ve kurum üyeliği ArvoOS'tan gelir.",
-      en: "You manage users' roles and access, and review assistant logs. Institutions and institution membership come from ArvoOS.",
+      tr: "Asistan kayıtlarını incelersiniz. Kurumlar, üyelik, davet ve roller ArvoOS'tan gelir.",
+      en: "You review assistant logs. Institutions, membership, invitations and roles come from ArvoOS.",
     },
     adimlar: [
       {
-        tr: "Hesap menüsünün \"Ekip araçları\" bölümünden \"Ekip Yönetimi\"ne girin; \"Kullanıcı davet et\" ile hesap açın, rolü satırdan kaydedin. Kurum bağı ArvoOS'taki üye listesinden kendiliğinden kurulur, burada değiştirilmez.",
-        en: "Open \"Team Management\" from the \"Team tools\" section of the account menu; open accounts with \"Invite user\" and save the role on each row. The institution link is set up automatically from the ArvoOS member list and is not changed here.",
+        tr: "Üyelik, davet ve roller ArvoOS'ta yönetilir; ArvoLab'da ekip ekranı yoktur. Kurum bağı ArvoOS'taki üye listesinden kendiliğinden kurulur.",
+        en: "Membership, invitations and roles are managed in ArvoOS; ArvoLab has no team screen. The institution link is set up automatically from the ArvoOS member list.",
       },
       {
         tr: "\"Asistan Kayıtları\" her asistan çalışmasını, kullanıcı puanlarını ve model karşılaştırmasını gösterir.",

@@ -48,7 +48,7 @@ describe("rol bazlı görünürlük değişmedi", () => {
     const ogrenci = personelAraclari(gorunenUygulamalar(labUygulamalari(), "client")).map((u) => u.key);
     assert.deepEqual(ogrenci, []);
     const kurucu = personelAraclari(gorunenUygulamalar(labUygulamalari(), "founder")).map((u) => u.key);
-    assert.ok(kurucu.includes("ekip") && kurucu.includes("asistan"));
+    assert.ok(kurucu.includes("asistan") && !kurucu.includes("ekip"));
   });
   test("hiçbir uygulama düşmüyor: her biri ana gezinmede, bir grupta ya da hesap menüsünde, tam bir yerde", () => {
     const hepsi = gorunenUygulamalar(labUygulamalari(), "founder");

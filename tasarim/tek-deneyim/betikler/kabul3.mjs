@@ -1,7 +1,7 @@
 // Tek ana deneyim kabulü, ÜÇÜNCÜ tur (20.11.2026, güncellenmiş ürün kararı). YEREL, SENTETİK veri (tohum.mjs).
 // Ölçülen: doçentlik modülü ve eski adresleri, Yönetim/kurum seçici/personel görünümünün yokluğu, herkes için
 // aynı Ana Sayfa / Çalışmalarım / Yeni çalışma, personelin kurum lisansından erişimi (açık ve kapalı lisans),
-// Ekip Yönetimi'nde kurum atama/oluşturma yokluğu, geçici uzman kuyruğunun dürüst notu.
+// Ekip Yönetimi'nin (davet, rol, erişim) tamamen yokluğu, uzman kuyruğunun dürüst notu.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -121,9 +121,9 @@ for (const rol of HER_ROL) {
   const kendi = KENDI[rol];
   const baskalari = BASKA.filter((x) => x !== kendi);
   kayit(`${rol}: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması`,
-    yonetim.every(Boolean) && serit === 0 && sayac === 0 && listeSayac === 0 && !/Yönetim|Kurum seç|Bütün kurumlar/.test(menu.replace("Ekip Yönetimi", ""))
+    yonetim.every(Boolean) && serit === 0 && sayac === 0 && listeSayac === 0 && !/Yönetim|Kurum seç|Bütün kurumlar/.test(menu)
       && anaYazi.includes(kendi) && listeYazi.includes(kendi) && baskalari.every((x) => !anaYazi.includes(x) && !listeYazi.includes(x)) && hata.length === 0,
-    { yonetim, anaSinif, serit, sayac, listeSayac, menudeYonetim: /Yönetim/.test(menu.replace("Ekip Yönetimi", "")), hata });
+    { yonetim, anaSinif, serit, sayac, listeSayac, menudeYonetim: /Yönetim/.test(menu), hata });
   await c.close();
 }
 
@@ -147,20 +147,16 @@ for (const rol of HER_ROL) {
   await c.close();
 }
 
-// 4) Ekip Yönetimi: kurum oluşturma ve kurum atama yok; rol ve erişim yönetimi duruyor
+// 4) Ekip Yönetimi yok: üyelik, davet ve rol ArvoOS'ta (20.11.2026). Eski adres Ana Sayfa'ya iner.
 {
   const { c, s, hata } = await baglam("kurucu");
   await s.goto("/dashboard/team"); await yuklendi(s);
-  const kurumEkle = await s.getByRole("button", { name: /Kurum ekle/ }).count();
-  const kurumSec = await s.locator('select[name="organizationId"]').count();
-  await s.locator(`a[href*="${T.hesaplar.kurumlu.id}"]`).first().click().catch(() => {});
-  await s.waitForTimeout(1500);
-  const kurumSec2 = await s.locator('select[name="organizationId"]').count();
+  const yol = new URL(s.url()).pathname;
+  const davet = await s.getByRole("button", { name: /davet/i }).count();
   const rolSec = await s.locator('select[name="role"]').count();
-  await s.screenshot({ path: `${G}/kurucu-ekip-yonetimi.png`, animations: "disabled" });
-  kayit("kurucu: Ekip Yönetimi'nde 'Kurum ekle' ve kurum seçimi yok; rol seçimi duruyor", kurumEkle === 0 && kurumSec === 0 && kurumSec2 === 0 && rolSec > 0 && hata.length === 0, { kurumEkle, kurumSec, kurumSec2, rolSec, hata });
+  kayit("kurucu: /dashboard/team Ana Sayfa'ya yönlenir; davet ve rol seçimi yok", yol === "/dashboard" && davet === 0 && rolSec === 0 && hata.length === 0, { yol, davet, rolSec, hata });
   const menu = await hesapMenusuMetni(s);
-  kayit("kurucu: hesap menüsünde 'Ekip araçları' (Asistan Kayıtları, Ekip Yönetimi); Yönetim ve doçentlik yok", /Ekip araçları/.test(menu) && /Asistan Kayıtları/.test(menu) && /Ekip Yönetimi/.test(menu) && !/Yönetim|Doçentlik/.test(menu.replace("Ekip Yönetimi", "")), { menu: menu.slice(0, 300) });
+  kayit("kurucu: hesap menüsünde yalnızca 'Teknik araçlar' → Asistan Kayıtları; Ekip Yönetimi, Yönetim ve doçentlik yok", /Teknik araçlar/.test(menu) && /Asistan Kayıtları/.test(menu) && !/Ekip Yönetimi|Yönetim|Doçentlik/.test(menu), { menu: menu.slice(0, 300) });
   await c.close();
 }
 
@@ -173,7 +169,7 @@ for (const rol of HER_ROL) {
   await pencere.locator('textarea[name="message"]').fill(`TEK-UZMAN-${ek} sentetik soru`);
   await pencere.locator('button[type="submit"]').first().click();
   const kaydedildi = await bekle(async () => psql(`select count(*) from public.consultancy_requests where message like ${q(`TEK-UZMAN-${ek}%`)}`) === "1");
-  kayit("kurumlu: Uzmana sor talebi ArvoLab'da kaydedildi (ArvoOS'a iletilmiyor; geçici yol)", kaydedildi, {});
+  kayit("kurumlu: Uzmana sor talebi ArvoLab'da kaydedildi (ArvoOS bağlantısı henüz kurulmadı)", kaydedildi, {});
   await c.close();
 }
 {
@@ -194,8 +190,21 @@ for (const rol of HER_ROL) {
   const id = await yeniCalisma(s, baslik);
   await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
   const [sahip, tur] = psql(`select owner_id, project_type from public.academic_projects where id='${id}'`).split("|");
+  // Kayıt → yeniden açma: yazılan metin veritabanına iner ve sayfa baştan açılınca editörde durur.
+  const metin = `Kayit denemesi ${rol} ${ek}`;
+  const editorAdresi = s.url();
+  await s.locator(".ProseMirror").first().click();
+  await s.keyboard.type(metin);
+  let kaydedildi = false;
+  for (let i = 0; i < 30 && !kaydedildi; i++) {
+    await s.waitForTimeout(1000);
+    kaydedildi = psql(`select count(*) from public.project_manuscripts where project_id='${id}' and plain_text like '%${metin}%'`) === "1";
+  }
+  await s.goto(editorAdresi); await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+  const yenidenAcildi = (await s.locator(".ProseMirror").first().innerText()).includes(metin);
   await s.goto("/dashboard/editor"); await yuklendi(s);
-  kayit(`${rol}: Yeni çalışma → sahibi kendisi, tez, editör açıldı, kişisel listede`, sahip === T.hesaplar[rol].id && tur === "thesis" && (await ana(s)).includes(baslik) && hata.length === 0, { id, hata });
+  kayit(`${rol}: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede`,
+    sahip === T.hesaplar[rol].id && tur === "thesis" && kaydedildi && yenidenAcildi && (await ana(s)).includes(baslik) && hata.length === 0, { id, kaydedildi, yenidenAcildi, hata });
   await c.close();
 }
 

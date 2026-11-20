@@ -145,8 +145,8 @@ describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
     assert.match(gb, /@media \(max-width: 760px\) \{\s*\.calismalar-ozet dd \{ overflow: visible; white-space: normal; overflow-wrap: anywhere; \}/);
   });
   test("ölçü listesinde dl yalnızca dt/dd taşır (span ve form dd içinde)", () => {
-    /* personel-calisma-karti.tsx 20.11.2026'da kaldırıldı (personelin kurum listesi kalktı). */
-    for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx", "app/dashboard/team/page.tsx"]) {
+    /* personel-calisma-karti.tsx ve Ekip Yönetimi 20.11.2026'da kaldırıldı. */
+    for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx"]) {
       const s = oku(dosya);
       const dl = s.slice(s.indexOf('<dl className="tez-olcumler calisma-olcumler">'), s.indexOf("</dl>", s.indexOf('<dl className="tez-olcumler')));
       // dd ve small içindeki span'lar dışında doğrudan span kalmamalı: hepsi tez-olcu-not oldu.

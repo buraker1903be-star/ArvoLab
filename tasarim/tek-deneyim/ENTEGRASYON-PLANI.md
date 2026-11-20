@@ -1,200 +1,201 @@
-# ArvoLab ↔ ArvoOS entegrasyon planı (taslak, onay bekliyor)
+# ArvoLab ↔ ArvoOS entegrasyon planı (2. sürüm, 20.11.2026)
 
-20.11.2026. Bu belge bir **plan**dır. ArvoOS deposunda hiçbir şey yazılmadı, ArvoLab'da yeni bir geçici akış geliştirilmedi.
-Merge ve dağıtım yok. Erişim kuralları (past_due, deneme süresi) **kendiliğinden değiştirilmedi**; ayrı bölümde karar bekliyor.
+Bu belge bir **plan**dır, 20.11.2026'daki kararlarla revize edildi. ArvoOS deposunda bu plan için hiçbir şey yazılmadı; ArvoOS
+değişiklikleri **ayrı PR'larda** hazırlanacak (sıra: bölüm 6). Production migration'ı ve veri dönüşümü hiçbir adımda onaysız yapılmaz.
 
-## 1. Hedef
+## 1. Kararlar (kurum sahibi, 20.11.2026)
 
-| Konu | Sahibi | ArvoLab'da ne kalır |
-|---|---|---|
-| Üyelik, davet, rol, ekip yönetimi | ArvoOS | Hiçbir ekran ve işlem yok; yalnızca ArvoOS'un yansıttığı bilgi okunur |
-| Lisans ve kurum hakkı | ArvoOS | Yansıtılmış lisans + üyelikten sunucuda doğrulanan hak |
-| Talep (Uzmana sor) | ArvoOS Talepler | Talep formu, kullanıcının yazışması ve durum (ArvoOS'tan döner) |
-| İş ve görevlendirme | ArvoOS İşler | Personelin **kendisine yetkilendirilmiş** işin çalışması |
-| Akademik çalışma | ArvoLab | Editör, kaynaklar, denetimler |
-| Teknik asistan kayıtları | ArvoLab (teknik iç ekip) | Operasyon yönetimi değil, ürün ve model kalitesi aracı olarak kalır |
+| # | Karar |
+|---|---|
+| K1 | Tek Çalışmalarım ekranı, tek editör. İş yetkisi olan personelde "Kişisel / İşlerim" yalnızca bir **filtre**; ayrı personel paneli yok. "Kaldığınız yer" erişilebilir son kişisel **veya** iş çalışmasını açar. |
+| K2 | Bütün Uzmana sor taleplerinin hedefi **AkademikMerkez**. Talebi açan gerçek kullanıcı korunur; kurum sahibi talebin yazarı gibi kaydedilmez; sistem aktarımı ayrı aktör olarak kaydedilir. |
+| K3 | Teknik yetki normal kurum üyeliğinden **ayrı**, açıkça verilir, kapsamı sınırlıdır. Teknik ekip bayrağı sınırsız `system_admin`'e dönüştürülmez. |
+| K4 | İş erişimi görev kapsamından gelir. İşten ya da kurum üyeliğinden çıkarılan kişinin o işin belge, kaynak, dosya ve yazma erişimi kapanır. Kişisel çalışmaların sahipliği korunur. |
+| K5 | Üyelik ve iş yetkisi eşitlemesi **atomik ve sürümlü**. Yarım kalan eşitleme, iletişim hatası ya da eski bir mesaj hak silmez, kaldırılmış hakkı yeniden açmaz. |
+| K6 | E-posta yalnızca **ilk** hesap eşleştirmesinde kullanılır; kalıcı bağ değişmeyen kimliklerle (ArvoOS `auth.users.id` + kurum kimliği). |
+| K7 | Talep ve mesaj aktarımında tekrar deneme, yinelenmeme ve sıra dışı güncelleme kuralları açıkça tanımlı (4.4). |
+| K8 | Eski kurum bağları ve atamalar için **eşleştirme raporu**; doğrulanmamış kayıt otomatik dönüştürülmez. |
+| K9 | Lisans: `past_due` **kapalı**; deneme erişimi `trial_ends_at` ile sınırlı. İki uygulama ve iki veritabanı aynı kuralı uygular. |
 
-İlke: bir personel ArvoLab'da yalnızca **kendi kişisel çalışmalarını** ve **ArvoOS'ta kendisine verilmiş işlerin çalışmalarını** görür. Kurumun
-bütün çalışmalarına rol üzerinden erişim olmaz. Üyeliği biten ya da pasifleşen personelin kurum hakkı ve iş yetkileri düşer.
+Ekip Yönetimi, davet, rol değiştirme ve erişim durdurma ArvoLab'dan kaldırıldı (PR #113). Asistan kayıtları operasyon
+yönetiminden ayrı, teknik araç olarak kalır.
 
 ## 2. Bugünkü durum (kodda doğrulandı)
 
-- **Üyelik:** ArvoOS `pushArvolabMembers` etkin `organization_memberships` e-postalarını ArvoLab'daki `arvoos_members`'a yazar. ArvoLab bağı
-  onaylı e-postayla kurar (`arvoos_uyeligini_bagla`) ama **hiç geri almaz**: üyelikten çıkan kişinin `profiles.organization_id` değeri kalır.
-- **Lisans kapanınca** ArvoOS üye listesini **tamamen siler** (`lib/arvolab.ts`, lisans açık değilse delete). Geri alma bu silmeye
-  bağlanırsa lisans kesintisi bütün personeli kurumdan koparır ve onları bireysel deneme/ödeme yoluna düşürür.
-- **Rol:** ArvoLab'da roller (controller, academic_manager, expert, employee) Ekip Yönetimi'nden elle veriliyor. ArvoOS rolü yansıtmıyor.
-- **Kurum geneli okuma:** `can_view_project`, `can_write_project` ve `academic_projects` select politikası
-  `gozetim_kapsami(kurum, [controller, academic_manager])` ile kurumun bütün çalışmalarını açıyor; `assignee_id` de erişim veriyor.
-  Arayüz bunu artık kullanmıyor ama **API üzerinden okuma hâlâ açık**.
-- **Uzmana sor:** `consultancy_requests` ArvoLab içinde kalıyor; ArvoOS'a çağrı yok, ArvoOS'ta talebi üründen alan uç yok.
-- **İşler:** ArvoOS'ta `operation_workflows` + `operation_workflow_assignees(workflow_id, employee_id)` +
-  `operation_steps.assigned_employee_id`; çalışan `hr_employees(user_id, email, employment_status)`. ArvoLab'da işle bağ yok.
+- **Kimlik:** ArvoOS üyeliği `organization_memberships(organization_id, user_id, role, is_active)` (ayrı satır kimliği yok; kalıcı
+  anahtar `(organization_id, user_id)`), çalışan `hr_employees(id, user_id null, email, employment_status)`.
+- **Üye listesi:** ArvoOS `pushArvolabMembers` etkin üyelerin e-postasını ArvoLab `arvoos_members`'a yazar; lisans açık değilse listeyi
+  **siler**. ArvoLab bağı onaylı e-postayla kurar (`arvoos_uyeligini_bagla`), **hiç geri almaz**. Eşitleme sürümsüz.
+- **Kurum geneli okuma:** `can_view_project`, `can_write_project`, `academic_projects` select politikası controller/academic_manager'a
+  `gozetim_kapsami` ile kurumun bütün çalışmalarını açıyor; `assignee_id` de erişim veriyor. Arayüzde kullanılmıyor, API'de açık.
+- **Kaynak ve dosya:** `literature_sources(owner_id, project_id null)` kişinin kütüphanesi; `kaynak_pdfleri(project_id)` ve
+  `project-files` deposu çalışmaya bağlı (`can_view_project`).
+- **Talep:** ArvoOS `crm_opportunities.created_by` NOT NULL (`auth.users`, RESTRICT); dış kaynak/dış kimlik sütunu ve üründen talep
+  alan uç yok. ArvoLab'da `consultancy_requests` + `destek_mesajlari` içinde kalıyor.
+- **Lisans:** ArvoOS `past_due`'yu açık, ArvoLab kapalı sayıyor; ArvoLab `trial_ends_at` almıyor.
 
 ## 3. Bileşenler
 
-### A. Üyelik yaşam döngüsü ve hakkın geri alınması
+### A. Kimlik bağı (K6)
+- ArvoLab `arvoos_kimlik_baglari(arvolab_user_id pk, arvoos_user_id unique, eslesme_yontemi, eslesme_at, eslestiren)`.
+- İlk eşleştirme: ArvoOS anlık görüntüsündeki `(arvoos_user_id, email)` ile ArvoLab'da **onaylı** e-postası birebir aynı olan TEK hesap.
+  Birden çok aday ya da onaysız e-posta → bağ kurulmaz, raporlanır.
+- Sonrası yalnızca `arvoos_user_id`: e-posta değişse de haklar aynı kalır; e-postası başkasına geçen hesap hak kazanmaz.
 
+### B. Üyelik eşitlemesi, sürümlü ve atomik (K5, K4)
 **ArvoOS**
-1. Üye listesinin anlamı değişir: "lisansı açık kurumun üyeleri" değil, **"kurumun etkin üyeleri"**. Lisans kapanınca liste
-   **silinmez**; kapı zaten yansıtılmış lisanstan kapanıyor. (`pushArvolabMembers`'taki "lisans açık değilse sil" dalı kalkar.)
-2. Üyelik kaldırılınca ya da pasifleşince (`organization_memberships.is_active=false`, `hr_employees.employment_status` ayrıldı)
-   anında `syncArvolabMembers` çağrılır. Bugün İK/ekip işlemlerinden çağrılıyor; pasifleştirme ve silme yollarının hepsi kapsanmalı.
-   Cron eşitlemesi yedek olarak kalır.
-3. Listeye satır başına `uyelik_durumu` (`aktif`) ve `guncellendi` gönderilir; ArvoLab tarafında "bu e-posta artık listede yok" kararı
-   tam liste yazımından sonra verilir (bugünkü "eski damgalı satırları sil" yöntemi korunur).
+1. `urun_esitleme_surumleri(organization_id, konu, surum bigint)`: üyelik, çalışan durumu ve iş atamasındaki her değişiklik **aynı
+   işlemde** tetikleyiciyle sürümü artırır (konu `uyelik`, `is:<workflow_id>`, `teknik`).
+2. Anlık görüntü ve sürüm **tek REPEATABLE READ işleminde** okunur. Okuma hatası boş liste üretmez, fırlatır.
+3. Lisans kapanınca liste **silinmez** (kapı yansıtılmış lisanstan kapanır). Üyelik kapanınca anında gönderim, cron yedek; sonuç
+   `synced | not_configured | failed`, `lib/urun-yansitma.ts` tablosunda.
 
-**ArvoLab** (migration + PGlite testi)
-1. `profiles`'a `kurum_bagi_kaynagi` (`arvoos` | `eski_elle`) ve `kurum_bagi_at`. Var olan bağlar `eski_elle` işaretlenir;
-   `arvoos_uyeligini_bagla` yeni bağları `arvoos` yazar.
-2. `arvoos_members` silme tetikleyicisi (security definer, yalnızca servis rolünden gelen silmede çalışır):
-   aynı kurum ve e-postayla `kurum_bagi_kaynagi='arvoos'` olan profilin `organization_id`'si NULL'a çekilir, iş yetkileri (C) kapanır.
-   Rol tetikleyicisinin istisnası bugünkü bağlama istisnasıyla aynı dar bayrakla.
-3. `eski_elle` bağlar için tek seferlik karar: listede olmayanlar raporlanır, otomatik kopartılmaz (Faz 1 sonunda ayrı onay).
-4. Erişim isteğe göre hesaplandığı için (lib/access.ts) kesilme bir sonraki istekte geçerli olur; açık oturum ayrıca kapatılmaz.
-5. Testler: üyelik silinince bağ kopar; lisans kapanınca bağ **kopmaz**, kapı kapanır; elle bağlar dokunulmaz; başka kurumun satırı etkilenmez.
+**ArvoLab** — RPC `arvoos_uyelik_esitle(p_org, p_surum, p_uyeler jsonb, p_adet, p_bos_onayli)`, security definer, yalnızca `service_role`, tek işlem:
+- `p_surum <= saklı sürüm` → değişiklik yok, `eski_surum` (eski ya da tekrar mesaj; kaldırılmış hak geri gelmez).
+- `jsonb_array_length(p_uyeler) <> p_adet` → `reddedildi` (kesik gövde). Boş liste yalnızca `p_bos_onayli = true`.
+- Küme tam değişir; listeden düşen `arvoos_user_id` için kurum bağı (yalnızca `kurum_bagi_kaynagi = 'arvoos'`) kalkar ve o kurumdaki
+  **iş yetkileri** kapanır; sürüm yazılır. Hata olursa tamamı geri alınır, gönderici aynı ya da daha yeni görüntüyü yeniden gönderir.
+- Kişisel çalışmalar etkilenmez (`owner_id` aynı); kurum bağı kalkan kişi bireysel kullanıcı kurallarına döner.
+- `profiles.kurum_bagi_kaynagi` (`arvoos` | `eski_elle`); mevcutlar `eski_elle`, otomatik dokunulmaz (G).
 
-### B. Ekip Yönetimi, davet ve rol ArvoLab'dan çıkar
+### C. Teknik yetki (K3)
+- ArvoLab `teknik_yetkiler(id, arvolab_user_id, kapsam, veren, verildi_at, bitis_at null, geri_alindi_at null)`; kapsamlar sayılı
+  ve dar (`asistan_kayitlari.oku`, `asistan_kayitlari.disa_aktar`); yeni kapsam kod değişikliğiyle eklenir.
+- `teknik_yetki_var(kapsam)`; Asistan Kayıtları sayfası ve eylemleri buna bağlanır. `system_admin`/`founder` hiçbir bayraktan türetilmez.
+- Kurum üyeliği teknik yetki vermez, üyeliğin bitmesi teknik yetkiyi düşürmez (ayrı kayıt, ayrı geri alma).
+- ArvoOS: platform ekranında (yalnızca kurucu) kişi + kapsam + bitiş; RPC `arvoos_teknik_yetki_yaz`, B ile aynı sürüm kuralı.
+
+### D. İş yetkisi ve iş çalışması (K1, K4)
+**ArvoOS**
+- Yetkili küme: `operation_workflow_assignees` + adımlardaki `assigned_employee_id` → `hr_employees.user_id`. `user_id`'siz çalışan
+  yetki alamaz, raporlanır. İş/atama/çalışan değişince işin anlık görüntüsü gönderilir; arşiv/iptal → boş küme.
+- İş kartında "ArvoLab'da aç" (`/dashboard/isler/<workflowId>`); bağlantı yetki vermez.
 
 **ArvoLab**
-1. `/dashboard/team` sayfası, `app/actions/team.ts` (getAllProfiles, updateUserRole, inviteUser, setUserAccess), hesap menüsündeki
-   "Ekip Yönetimi" ve Ctrl+K girişi kaldırılır; eski adres Ana Sayfa'ya yönlenir. Kullanılmayan `"use server"` uçları silinir.
-2. Rollerin anlamı daralır: herkes `client`; `system_admin`/`founder` yalnızca **teknik iç ekip** (asistan kayıtları, iç araçlar).
-   Personel rolleri (controller, academic_manager, expert, employee) erişim kararında kullanılmaz (bkz. D).
-3. Asistan Kayıtları kalır; görüntüleyen rol listesi (`KAYIT_ROLLERI`) teknik iç ekiple sınırlanır.
-4. Teknik iç ekip nasıl belirlenecek: **karar gerekli** (bkz. 6). Öneri: ArvoOS'taki Arvo platform kurumunun üyeleri için
-   `arvoos_members.urun_rolu='teknik'` yansıtılır, ArvoLab bunu `system_admin`'e eşler; ArvoLab'da rol değiştiren ekran olmaz.
+- `arvoos_isleri(workflow_id pk, organization_id, baslik, durum, surum, guncellendi)`,
+  `arvoos_is_yetkileri(workflow_id, arvoos_user_id, organization_id, pk(workflow_id, arvoos_user_id))`; yazma yalnızca
+  `arvoos_is_esitle(p_workflow, p_org, p_surum, p_baslik, p_durum, p_yetkililer, p_adet, p_bos_onayli)`.
+- `academic_projects.arvoos_is_id` (tekil, null = kişisel). İş çalışmasını yalnızca ilk yetkili açılışta sunucu oluşturur.
+- Erişim tek fonksiyonda: `is_yetkisi_var(project_id)` = kimlik bağı + etkin satır + profilin kurumu = işin kurumu.
+  Proje, yazım, sürüm, `kaynak_pdfleri`, `project-files` politikalarında iş çalışması için **yalnızca** bu; `owner_id` iş
+  çalışmasında hak vermez.
+- Kaynak: iş çalışmasına bağlı `literature_sources` satırı çalışmanın erişimini izler; kişisel kütüphane kişinin kalır.
+- Arayüz: tek Çalışmalarım + tek editör; yetkisi olanda "Tümü / Kişisel / İşlerim" filtresi; "Kaldığınız yer" ikisinden erişilebilir en son.
 
+### E. Kurum geneli okumanın kapanması
+- `gozetim_kapsami(..., [controller, academic_manager])` ve `assignee_id` erişimi proje/yazım/dosya politikalarından çıkar; destek
+  politikalarındaki gözetim F'de kuyruk kalkınca çıkar. PGlite'ta "eskiden görüyordu, artık görmüyor" + meşru akış.
+- **Sıra şartı:** D canlıda ve yürüyen işler yansımış olmadan uygulanmaz.
+
+### F. Uzmana sor → AkademikMerkez Talepler (K2, K7)
 **ArvoOS**
-1. Davet ve rol: ArvoLab hesabı açmak için ArvoOS'taki mevcut "ArvoLab'a git" (sihirli bağlantı + onaylı hesap) kullanılır;
-   ayrı davet ekranı gerekmez. Teknik ekip bayrağı (öneri) üye listesine eklenir.
-
-### C. İş yetkisi: personel kendisine verilen işi ArvoLab'da açar
-
-**ArvoOS**
-1. Bir iş (`operation_workflows`) için yetkili kişi kümesi: `operation_workflow_assignees` + işin adımlarındaki
-   `assigned_employee_id`'ler (hangisinin sayılacağı **karar**: yalnızca iş sorumluları mı, adım sorumluları da mı).
-   Çalışan → e-posta: `hr_employees.email` ya da `user_id` → auth e-postası (üye listesiyle aynı kaynak).
-2. Yetki değiştiğinde (atama, çıkarma, iş arşivlendi/iptal, çalışan pasif) ArvoLab'a yansıtma: `pushArvolabIsYetkileri(workflowId)`,
-   üç hâlli sonuç (`synced | not_configured | failed`) ve `lib/urun-yansitma.ts` tablosuna satır. Cron yedeği.
-3. İş kartına "ArvoLab'da aç" bağlantısı: `https://<arvolab>/dashboard/isler/<workflowId>`. Bağlantı yetki vermez; yetki ArvoLab'da
-   yansıtılmış satırdan doğrulanır.
-
-**ArvoLab** (migration + RLS + PGlite testleri)
-1. Tablolar (RLS açık, yazma yalnızca servis rolü; okuma kişinin kendi satırı):
-   - `arvoos_isleri(workflow_id pk, organization_id, baslik, musteri_gorunen_ad, durum, project_id null, guncellendi)`
-   - `arvoos_is_yetkileri(workflow_id, email, organization_id, aktif, guncellendi, pk(workflow_id, email))`
-2. İşi açma: `/dashboard/isler/[workflowId]` sunucuda yetkiyi doğrular (aktif yetki + profilin kurumu = işin kurumu + kurum lisansı açık).
-   İşin çalışması yoksa oluşturulur: `academic_projects` + yeni sütun `arvoos_is_id` (tekil), `organization_id` = işin kurumu.
-3. Erişim kuralı tek yerde: `public.is_yetkisi_var(project_id)` (aktif yetki, e-posta = çağıranın onaylı e-postası, kurum eşleşmesi).
-   `can_view_project`, `can_write_project` ve `academic_projects` select politikası: **iş çalışmasında** yalnızca `is_yetkisi_var`;
-   sahiplik iş çalışmasında hak vermez (yetkisi kalkan açan personel erişimini kaybeder). Kişisel çalışmada bugünkü sahiplik kuralı.
-   Depo (`project-files`) ve alt tablolar `can_view_project` üzerinden zaten bağlı; `calisma_klasoru` gözden geçirilir.
-4. Arayüz: Çalışmalarım'da iki ayrı bölüm: **Kişisel** ve **İşlerim (AkademikMerkez)**. Ana Sayfa'nın "Kaldığınız yer"i yalnızca kişisel
-   çalışmalardan (ya da karar: ikisinden; bkz. 6). Yeni çalışma her zaman kişisel; iş çalışması yalnızca ArvoOS'tan açılır.
-5. Testler: yetkili açar ve yazar; yetkisi kalkınca okuyamaz/yazamaz (API dahil); başka işin çalışması görünmez; başka kurumun işi
-   görünmez; e-postası onaysız hesap yetkiden yararlanamaz; kişisel çalışmalar etkilenmez.
-
-### D. Kurum geneli okumanın kapanması
-
-**ArvoLab** (migration; sıkılaştırma, gevşetme değil)
-1. `can_view_project`, `can_write_project` ve `academic_projects` select politikasından `gozetim_kapsami(..., [controller, academic_manager])`
-   çıkar; `assignee_id` erişimi de (C'deki iş yetkisine taşınır). İç ekip için kurumlar arası görüş: **karar** (bkz. 6).
-2. Aynı ilke kurumla sınırlı öteki okuma politikalarına uygulanır (uzman talepleri, destek yazışması, dosyalar): liste migration
-   sırasında `gozetim_kapsami` çağrılarından çıkarılır, her biri için PGlite'ta "eskiden görüyordu, artık görmüyor" senaryosu yazılır.
-3. **Sıra şartı:** C canlıda ve personelin yürüttüğü işler yansıtılmış olmadan D uygulanırsa personel çalıştığı tezlere erişimi kaybeder.
-
-### E. Uzmana sor → ArvoOS Talepler, yanıt ve durum ArvoLab'a döner
-
-**ArvoOS**
-1. Migration: `crm_opportunities`'a `external_source text`, `external_id text`, kısmi tekil dizin `(organization_id, external_source, external_id)`.
-2. Migration: ürün yazışması için `crm_urun_yazismalari(id, organization_id, opportunity_id, yon gelen|giden, metin, yazan_kullanici, yazan_adi,
-   olusturuldu, urun_ref)` (RLS, yetki `lib/yetkiler.ts` anahtarlarıyla: ör. `crm.talep.urun_yanitla`).
-3. Uç: `POST /api/bridge/talep` (`kopruYetkili(req, "arvolab")`, admin istemci). Gövde ve cevap 4. bölümde. Talep `stage:'lead'`,
-   `source:'ArvoLab'`, aktör kurumun etkin sahibi (`created_by` NOT NULL), panel bildirimi (`dedupeKey = externalId`).
-4. Uç: `POST /api/bridge/talep-mesaj` (kullanıcının sonraki mesajları ArvoOS'a).
-5. CRM talep ekranında "ArvoLab'a yanıtla" ve durum değişikliği; ikisi ArvoLab'a yazılır: servis anahtarıyla ArvoLab RPC'si
-   `arvoos_talep_guncelle(external_id, durum, yanit?)`, üç hâlli sonuç ve yeniden deneme (cron).
-6. Hedef kurum: bütün "Uzmana sor" talepleri AkademikMerkez'e mi gider (bireysel kullanıcılarınki dahil)? **Karar** (bkz. 6).
-   Öneri: ArvoLab ortam değişkeni `ARVOOS_UZMAN_KURUMU` (kimlik), kurum bağı olan kullanıcıda da aynı hedef.
+1. `crm_opportunities`: `external_source`, `external_id` (kısmi tekil dizin), `talep_eden jsonb`, `aktaran text` (`'arvolab-kopru'`),
+   `durum_surumu bigint`.
+2. `created_by`: köprü satırında NULL olabilir; kısıt `created_by is not null or external_source is not null`. Talep kurum sahibine ya
+   da personele yazılmaz; `created_by` okuyan ekranlar "ArvoLab üzerinden: <talep eden>" gösterir.
+3. `crm_urun_yazismalari(id, organization_id, opportunity_id, yon, sira, dis_mesaj_id unique, metin, yazan jsonb, olusturuldu)`; RLS;
+   yanıt yetkisi `crm.talep.urun_yanitla`.
+4. Uçlar (`kopruYetkili(req, "arvolab")`): `POST /api/bridge/talep`, `POST /api/bridge/talep-mesaj`. Hedef kurum sabit
+   (`ARVOLAB_UZMAN_KURUMU`, AkademikMerkez); gövdedeki kurum eşleşmezse `409`.
+5. Yanıt/durum CRM ekranından; ArvoLab RPC `arvoos_talep_guncelle`, giden kutusu + yeniden deneme.
 
 **ArvoLab**
-1. Migration: `consultancy_requests`'e `arvoos_talep_id`, `arvoos_durumu` (`gonderildi | gonderilemedi | kopru_kapali`),
-   `arvoos_gonderildi_at`, `arvoos_son_hata`; dışarıdan gelen durum için `durum_kaynagi`.
-2. `createConsultancyRequest` kaydı yazar, sonra köprüyü çağırır (`lib/subscription.ts`'teki uç/sağlık kaydı yeniden kullanılır).
-   Köprü düşerse talep kaybolmaz; satır `gonderilemedi` kalır, cron yeniden dener. Kullanıcı ekranı durumu dürüstçe söyler.
-3. RPC `arvoos_talep_guncelle` (security definer, yalnızca `service_role`): durum ve uzman yanıtını `destek_mesajlari`'na
-   `taraf='uzman'`, `yazan_adi`=ArvoOS'taki ad olarak yazar; koruma tetikleyicileri bu yolu tanır.
-4. Kullanıcının sonraki mesajı `talep-mesaj` ucuyla ArvoOS'a gider.
-5. **Geçiş:** ArvoOS uçları canlıda doğrulanınca ArvoLab'daki personel kuyruğu (`destek-kuyruklari.tsx` uzman kuyrukları, Üstlen/Tamamla
-   işlemleri) kaldırılır; açık talepler tek seferlik betikle ArvoOS'a aktarılır (`externalId` yinelemeyi önler).
-6. Bildirim: yanıt gelince kullanıcıya ArvoLab bildirimi (bugün yok; kılavuz bu yüzden düzeltildi).
+1. `consultancy_requests`: `arvoos_talep_id`, `arvoos_gonderim` (`bekliyor | gonderildi | kalici_hata`), `arvoos_deneme`,
+   `arvoos_sonraki_deneme_at`, `arvoos_son_hata`, `arvoos_durum_surumu`.
+2. `destek_mesajlari`: `sira` (talep başına artan), `dis_mesaj_id unique null`, `arvoos_gonderim`.
+3. Talep önce yazılır (`bekliyor`), sonra gönderilir; düşerse kaybolmaz, cron dener; ekran durumu söyler.
+4. ArvoOS uçları canlıda doğrulanınca personel kuyruğu kalkar; açık talepler tek seferlik ve **onaylı** aktarımla gider.
 
-### F. Lisans durumu uyuşmazlıkları (karar bekliyor, değiştirilmedi)
+### G. Eski kayıtlar: eşleştirme raporu (K8)
+- Salt okunur `scripts/arvoos-eslestirme-raporu.mjs` (iki projeden okur, yazmaz):
+  `eski_elle` bağlar → aynı kurumda etkin üyelik + onaylı e-posta birebir ise **doğrulanabilir**, değilse **doğrulanamadı**;
+  `assignee_id` atamaları → yalnızca **öneri** (iki tarafta ortak kimlik yok); personel rolleri → iş/teknik yetki önerisi.
+- Çıktı CSV + özet; dönüşüm yalnızca kayıt kayıt onayla.
 
-| Konu | ArvoOS | ArvoLab | Etki |
-|---|---|---|---|
-| `past_due` | Açık sayar (`lib/arvolab.ts` ACIK_LISANSLAR, `uygulama/arvolab/route.ts`, `kopya-denetimi.ts`, `kurum-lisansi-erisim.ts`) | Kapalı sayar (`lib/license-decision.ts`, `subscription_open`) | ArvoOS kişiyi ArvoLab'a yönlendirir, ArvoLab ödeme/kapalı ekranı gösterir. Ayrıca ArvoOS üye listesini korur, ArvoLab kapatır |
-| Deneme süresi | `trialing` + `trial_ends_at` geçince kapalı | `trial_ends_at` yansıtılmıyor; `trialing` + boş dönem sonu süresiz açık | Denemesi biten kurum ArvoLab'da açık kalır |
+### H. Lisans kuralı (K9)
+- Açık = `active` **veya** (`trialing` **ve** `trial_ends_at > now()`), mevcut dönem sonu kuralıyla birlikte. `past_due`, süresi
+  dolmuş deneme ve diğerleri kapalı.
+- ArvoLab: `organizations.trial_ends_at`; `lib/license-decision.ts` ve `subscription_open` birlikte değişir.
+- ArvoOS: `ACIK_LISANSLAR`'dan `past_due` çıkar; `uygulama/arvolab/route.ts`, `kopya-denetimi.ts`, `kurum-lisansi-erisim.ts` tek
+  yardımcıyı kullanır; `trial_ends_at` köprüyle gider.
+- Ortak örnek tablosu `tests/fixtures/lisans-kurali.json` iki depoda; TS ve SQL aynı tabloya karşı sınanır.
+- Etki: bugün `past_due` olan kurumların personeli kapanır; yayından önce liste çıkarılır.
 
-Seçenekler: (1) `past_due` iki tarafta açık (ödeme toleransı) ya da iki tarafta kapalı; (2) `trial_ends_at` yansıtılır ve iki taraf aynı
-kuralı kullanır. Karar sonrası iki taraf aynı sabiti/testi alır; ArvoLab'da uygulama + veritabanı kapısı birlikte değişir.
+## 4. Veri sözleşmeleri
 
-## 4. Sözleşmeler (öneri)
-
-**Üye listesi (ArvoOS → ArvoLab, servis anahtarı, mevcut tablo genişler):**
-`arvoos_members(email pk, organization_id, full_name, synced_at, + uyelik_durumu text, + urun_rolu text null)`
-
-**İş yetkisi (ArvoOS → ArvoLab, servis anahtarı):**
+### 4.1 Üyelik (ArvoOS → ArvoLab `arvoos_uyelik_esitle`)
 ```json
-{ "workflow_id": "uuid", "organization_id": "uuid", "baslik": "…", "musteri_gorunen_ad": "…", "durum": "in_progress",
-  "yetkililer": [{ "email": "…", "aktif": true }] }
+{ "p_org": "uuid", "p_surum": 1842, "p_adet": 1, "p_bos_onayli": false,
+  "p_uyeler": [ { "arvoos_user_id": "uuid", "email": "yalnizca-ilk-eslesme@ornek.org", "ad": "…" } ] }
 ```
-Yazım: upsert iş + yetkili kümesini tam liste olarak değiştir (listede olmayan `aktif=false`).
+Dönüş: `{"sonuc": "uygulandi" | "eski_surum" | "reddedildi", "surum": 1842, "kaldirilan": 0, "eklenen": 1}`.
 
-**Talep (ArvoLab → ArvoOS):** `POST /api/bridge/talep`, `x-arvo-bridge-secret`
+### 4.2 İş (ArvoOS → ArvoLab `arvoos_is_esitle`)
 ```json
-{ "product": "arvolab", "externalId": "<consultancy_requests.id>", "targetOrganizationId": "uuid",
-  "requester": { "arvolabUserId": "uuid", "fullName": "…", "email": "…" }, "requesterOrganizationId": "uuid|null",
-  "requestType": "analysis|statistics|methodology|editing|full_review|ethics|other", "message": "…",
-  "projectTitle": "…", "locale": "tr" }
+{ "p_workflow": "uuid", "p_org": "uuid", "p_surum": 77, "p_baslik": "…", "p_durum": "in_progress",
+  "p_adet": 1, "p_bos_onayli": false, "p_yetkililer": [ { "arvoos_user_id": "uuid" } ] }
 ```
-Cevap: `200 {"yazildi": true, "opportunityId": "…"}` · `200 {"yazildi": false, "sebep": "zaten var", "opportunityId": "…"}` ·
-`400 invalid_request` · `401 unauthorized` · `404 organization_not_found` · `503 unavailable` · `500 create_failed`.
 
-**Yanıt/durum (ArvoOS → ArvoLab):** RPC `arvoos_talep_guncelle(p_external_id uuid, p_durum text, p_yanit text, p_yazan_adi text, p_mesaj_id text)`;
-`p_mesaj_id` yineleme anahtarı.
+### 4.3 Teknik yetki (ArvoOS → ArvoLab `arvoos_teknik_yetki_yaz`)
+```json
+{ "p_surum": 12, "p_adet": 1, "p_yetkiler": [ { "arvoos_user_id": "uuid", "kapsam": "asistan_kayitlari.oku", "bitis_at": null } ] }
+```
 
-## 5. Bağımlılık sırası
+### 4.4 Talep ve mesaj
+**ArvoLab → ArvoOS** `POST /api/bridge/talep`
+```json
+{ "product": "arvolab", "externalId": "<consultancy_requests.id>", "hedefKurum": "<AkademikMerkez id>",
+  "talepEden": { "arvolabUserId": "uuid", "arvoosUserId": "uuid|null", "ad": "…", "email": "…" },
+  "talepEdenKurum": "uuid|null", "tur": "analysis|statistics|methodology|editing|full_review|ethics|other",
+  "mesaj": "…", "calismaBasligi": "…", "olusturuldu": "ISO", "dil": "tr" }
+```
+Cevap: `200 {"yazildi": true, "opportunityId"}` · `200 {"yazildi": false, "sebep": "zaten_var", "opportunityId"}` · `400` · `401` ·
+`409 hedef_kurum_uyusmuyor` · `503` · `500`.
 
-| Faz | İş | Taraf | Önce gereken |
-|---|---|---|---|
-| 0 | 6. bölümdeki kararlar | Kurum sahibi | — |
-| 1 | A: üyelik geri alma (liste anlamı, anında eşitleme; ArvoLab bağ kaynağı + silme tetikleyicisi) | ArvoOS → ArvoLab | 0 (eski elle bağlar kararı) |
-| 2 | B: Ekip Yönetimi/davet/rol kaldırma; teknik ekip bayrağı | ArvoLab (+ ArvoOS bayrak) | 1 |
-| 3 | C: iş yetkisi yansıtması (ArvoOS), iş tabloları + `is_yetkisi_var` + "İşlerim" (ArvoLab) | İki taraf; önce ArvoLab tabloları, sonra ArvoOS yazımı | 1 |
-| 4 | D: kurum geneli okumanın kapanması | ArvoLab | 3 canlıda ve yürüyen işler yansıtılmış |
-| 5 | E: Uzmana sor → Talepler; yanıt/durum dönüşü; ArvoLab personel kuyruğunun kaldırılması | Önce ArvoOS migration + uçlar, sonra ArvoLab gönderimi, sonra dönüş, en son kuyruk kaldırma | 0 (hedef kurum); 3 ile paralel yürüyebilir |
-| 6 | F: durum kuralı hizalaması | İki taraf aynı anda | 0 |
+`POST /api/bridge/talep-mesaj`: `{ "externalId", "mesajId", "sira", "metin", "yazan", "olusturuldu" }` →
+`200 yazildi | zaten_var` · `409 talep_yok`.
 
-Her fazda: migration `npm run db:new` ile, yeni fonksiyonlarda `revoke … from public, anon, authenticated` + gereken `grant`,
-PGlite'ta meşru akış ve saldırı senaryoları, yerel yığında tarayıcı kabulü, ArvoOS'ta `check:schema` ve katalog yenileme.
-ArvoOS ve ArvoLab migration'ları canlıya **ArvoLab tablosu önce** sırasıyla çıkar (yazan taraf okuyacak tablo hazır olmadan yazmaz).
+**ArvoOS → ArvoLab** `arvoos_talep_guncelle`
+```json
+{ "p_external_id": "uuid", "p_durum_surumu": 5, "p_durum": "open|accepted|completed|cancelled",
+  "p_mesajlar": [ { "dis_mesaj_id": "uuid", "sira": 4, "metin": "…", "yazan_adi": "…", "olusturuldu": "ISO" } ] }
+```
 
-## 6. Karar gerekenler
+**Kurallar**
+- *Yinelenmeme:* talep `(external_source, external_id)`, mesaj `mesajId`/`dis_mesaj_id` tekil; tekrar "zaten var" döner, yazılmaz;
+  gönderici bunu başarı sayar.
+- *Tekrar deneme:* 1, 5, 15, 60 dk, sonra saatlik; 24 saatte `kalici_hata` + kullanıcıya "iletilemedi" + destek bildirimi.
+  `400/401` hemen `kalici_hata`.
+- *Sıra:* mesajlar talep başına `sira`'ya göre gönderilir ve gösterilir; önceki iletilmeden sonraki gönderilmez; talepten önce gelen
+  mesaj `409 talep_yok` alıp bekler.
+- *Sıra dışı durum:* `p_durum_surumu <= saklı` → durum değişmez (mesajlar yinelenmeden eklenir); `completed`/`cancelled` yalnızca
+  daha yüksek sürümlü açık "yeniden aç" ile döner.
+- *Aktör:* ArvoOS'ta yazar `talep_eden`, aktaran `'arvolab-kopru'`; ArvoLab'da uzman yanıtı `taraf = 'uzman'`, `yazan_adi` ArvoOS'taki ad.
 
-1. Teknik iç ekip ArvoLab'da nasıl tanınacak (öneri: ArvoOS üye listesinde `urun_rolu='teknik'`)?
-2. İç ekip (founder/system_admin) kurumların çalışmalarını görmeye devam edecek mi, yoksa onlar da yalnızca iş yetkisiyle mi?
-3. İş yetkisi: yalnızca iş sorumluları mı, adım sorumluları da mı?
-4. Ana Sayfa'nın "Kaldığınız yer"i iş çalışmalarını da kapsasın mı?
-5. Uzmana sor hedefi: bireysel kullanıcılar dahil hepsi AkademikMerkez'e mi?
-6. Eski elle verilmiş kurum bağları (ArvoOS listesinde olmayanlar): rapor sonrası kopartılsın mı?
-7. Eski `assignee_id` atamaları: iş yetkisine taşınsın mı, düşsün mü?
-8. `past_due` ve deneme süresi kuralı (F).
+## 5. PR #113'ün durumu
 
-## 7. Bu PR'daki durum
+**Tamamlandı (ArvoLab, migration yok):** doçentlik, Yönetim, kurum seçici, kurum atama ve Ekip Yönetimi (davet, rol, erişim durdurma)
+kaldırıldı, eski adresler Ana Sayfa'ya iner; kurucu, personel ve bireysel kullanıcı aynı Ana Sayfa / Çalışmalarım / Yeni çalışma /
+editörü kullanır; personel kurum lisansından ve ArvoOS üye listesinden sunucuda doğrulanan hakla girer.
 
-- Kaldırılanlar (doçentlik, Yönetim, kurum seçici, kurum atama) bu plana uygun.
-- **Henüz duran ve plana göre kalkacaklar:** Ekip Yönetimi sayfası, davet, rol değiştirme ve erişim durdurma (B); destek sayfasındaki
-  personel uzman kuyruğu (E-5). Bunlar "yeni geçici akış geliştirme" kapsamına girmesin diye bu turda dokunulmadı.
-- Uzman kuyruğundaki not ve kılavuz metni "ArvoLab'da yanıtla" kararı varmış gibi yazılmıştı; düzeltildi: hedef ArvoOS, bağlantı henüz yok.
+**Entegrasyon olarak henüz yok:** A–H'nin hiçbiri. Uzmana sor ArvoLab içinde kalıyor (ekran bunu söylüyor), iş yetkisi yok, üyelik
+geri alma yok, lisans uyuşmazlığı duruyor, kurum geneli okuma API'de açık.
+
+## 6. Uygulama sırası ve PR'lar
+
+| Sıra | PR | Depo | İçerik | Önce gereken |
+|---|---|---|---|---|
+| 0 | L0 | ArvoLab | G: salt okunur eşleştirme raporu | — |
+| 1 | L1 | ArvoLab | A + B: kimlik bağı, `arvoos_uyelik_esitle`, bağ kaynağı; PGlite (eski sürüm, kesik gövde, boş liste, kaldırılan hakkın dönmemesi) | #113 |
+| 2 | O1 | ArvoOS | B: sürüm tablosu + tetikleyiciler, tutarlı anlık görüntü, lisans kapanınca silmeme, anında gönderim | L1 canlıda |
+| 3 | L2 + O2 | ikisi | C: teknik yetki tablosu/RPC + Asistan Kayıtları; ArvoOS platform ekranı | L1 |
+| 4 | L3 | ArvoLab | D: iş tabloları, `arvoos_is_esitle`, `is_yetkisi_var`, politikalar, `/dashboard/isler/[id]`, filtre | L1 |
+| 5 | O3 | ArvoOS | D: iş anlık görüntüsü gönderimi, "ArvoLab'da aç" | L3 canlıda, O1 |
+| 6 | L4 | ArvoLab | E: kurum geneli okumanın kapanması | L3 + O3 canlıda |
+| 7 | O4 | ArvoOS | F: dış kaynak sütunları, `created_by` kısıtı, ürün yazışması, uçlar, yanıt/durum gönderimi | — (L3 ile paralel) |
+| 8 | L5 | ArvoLab | F: giden kutusu, gönderim, `arvoos_talep_guncelle`, mesaj sırası | O4 canlıda |
+| 9 | L6 | ArvoLab | F-4: personel kuyruğunun kaldırılması + onaylı tek seferlik aktarım | L5 doğrulandı |
+| 10 | L7 + O5 | ikisi | H: önce ArvoLab `trial_ends_at`, sonra ArvoOS gönderimi, sonra iki kural aynı pencerede | `past_due` listesi onaylandı |
+
+Her PR'da: `npm run db:new`, yeni fonksiyonlarda `revoke … from public, anon, authenticated` + gereken `grant`, PGlite'ta meşru akış
+ve saldırı senaryoları, yerel tarayıcı kabulü; ArvoOS'ta `check:schema` + katalog yenileme. Canlıya çıkışta okuyacak tablo yazandan önce.

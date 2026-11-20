@@ -104,13 +104,14 @@ export default async function KullaniciMenusu({
             bağlamak sayfada aynı id'yi iki kez üretirdi.
           */
           /*
-            "Ekip araçları": asistan kayıtları ve ekip yönetimi (iç ekip).
-            20.11.2026'ya kadar başlığı "Yönetim"di ve kurum ekranı ile
-            doçentlik puanı da buradaydı; ikisi de kalktı.
+            "Teknik araçlar": yalnızca asistan kayıtları (teknik iç ekip).
+            20.11.2026'ya kadar başlığı önce "Yönetim", sonra "Ekip
+            araçları"ydı; kurum ekranı, doçentlik puanı ve Ekip Yönetimi
+            de buradaydı, üçü de kalktı (üyelik ve rol ArvoOS'ta).
           */
-          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Ekip araçları", en: "Team tools" })}>
+          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Teknik araçlar", en: "Technical tools" })}>
             <small className="os-kullanici-bolum" aria-hidden="true">
-              {t({ tr: "Ekip araçları", en: "Team tools" })}
+              {t({ tr: "Teknik araçlar", en: "Technical tools" })}
             </small>
             {personelAraclari.map((b) => (
               <Link key={b.key} href={b.href}>

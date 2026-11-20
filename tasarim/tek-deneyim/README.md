@@ -15,7 +15,7 @@ duruyor). Güncel kabul: `betikler/kabul3.mjs`.
 | Doçentlik | Modül, puanlama ekranları, ÜAK tablosu, yazdırma dökümü, "Doçentlik dosyası oluştur" ve menü/Ctrl+K girişleri kaldırıldı. `/dashboard/associate-professorship` ve `/print/docentlik` Ana Sayfa'ya yönlenir. Sunucu yeni doçentlik dosyasını kabul etmez. |
 | Yönetim | `/dashboard/yonetim` ve `/dashboard/yonetim/calismalar` yok (bulunamadı). Onay / onayı geri alma işlemleri, personel sayaçları, dikkat kartları ve toplu tutarsızlık taraması kalktı. |
 | Kurum seçici | İç ekibin kurum seçicisi, "Yalnızca X gösteriliyor" şeridi ve kurum çerezi kalktı. Destek kuyrukları, ekip listesi, geri bildirim ve faturalar artık seçime göre süzülmüyor. |
-| Kurum değiştirme | Ekip Yönetimi'nde "Kurum ekle", kişinin kurumunu değiştirme ve davette kurum seçimi kalktı. Kurum ve kurum bağı yalnızca ArvoOS'tan gelir (bkz. personel erişimi). |
+| Kurum değiştirme, Ekip Yönetimi | Ekip Yönetimi sayfası (davet, rol değiştirme, erişim durdurma, kurum atama) tamamen kalktı; `/dashboard/team` Ana Sayfa'ya iner. Üyelik, davet, rol ve kurum bağı yalnızca ArvoOS'tan gelir. Hesap menüsünde yalnızca "Teknik araçlar → Asistan Kayıtları" kaldı. |
 | Ana deneyim | Ana Sayfa, Çalışmalarım ve Yeni çalışma herkes için aynı; yalnızca kişinin kendi çalışmaları. Yeni çalışma üç türlü (tez, makale, proje). |
 | Personel erişimi | Kural kodda açık: `lib/erisim-yolu.ts`. Kuruma bağlı her hesap (rol fark etmez) kurum lisansından geçer, bireysel ödemeye hiç sorulmaz. Personel rolü tek başına hak vermez. Bağsız personelin kapalı erişim ekranı nedenini söyler. |
 | Uzmana sor | Hedef: talep AkademikMerkez'in ArvoOS Talepler bölümüne ulaşır, yanıt ve durum ArvoLab'a döner (`ENTEGRASYON-PLANI.md`). Bugün talepler hâlâ ArvoLab'da kaydediliyor; bu bir karar değil, bağlantının henüz olmamasının sonucu. Personelin kuyruğu "bu bağlantı henüz kurulmadı" diyor. Kılavuzdaki "zil simgesiyle haber verilir" cümlesi kaldırıldı: kodda böyle bir bildirim yok. |
@@ -100,7 +100,7 @@ Kurumlar ArvoOS'tan yansıtılmış gibi (`synced_at` dolu); K kurumunun lisans�
 | Dört hesap türü | Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; menüde kurum/Yönetim yok; Ana Sayfa ve Çalışmalarım'da yalnızca kendi çalışması |
 | Personel, açık lisans (controller, Kurum A) | Panel açık |
 | Personel, kapalı lisans (employee, Kurum K) | Erişim kapalı; "Kartla öde" yok; ArvoOS lisans yolu gösteriliyor |
-| Ekip Yönetimi (kurucu) | "Kurum ekle" ve kurum seçimi yok; rol seçimi duruyor; menüde "Ekip araçları" |
+| Ekip Yönetimi (kurucu) | Sayfa yok, eski adres Ana Sayfa'ya iner; davet ve rol seçimi yok; menüde yalnızca "Teknik araçlar" |
 | Uzmana sor | Talep ArvoLab'da kaydediliyor (ArvoOS bağlantısı yok); personelin kuyruğunda "bağlantı henüz kurulmadı" notu ve kendi kurumunun talebi |
 | Yeni çalışma, dört hesap türü | Sahibi kendisi, tez, editör açıldı, kişisel listede |
 

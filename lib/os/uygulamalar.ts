@@ -20,7 +20,6 @@
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import { ceviriciKur, type Cevirici } from "@/lib/dil";
-import { ADMIN_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
@@ -177,7 +176,7 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       kurum ekranı yok, görevlendirme ve operasyon ArvoOS'ta.
     */
     { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI, yer: "yonetim" },
-    { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ADMIN_ROLES, yer: "yonetim" },
+    /* Ekip Yönetimi 20.11.2026'da kalktı: üyelik, davet ve rol ArvoOS'ta. */
     /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
   ];
 }

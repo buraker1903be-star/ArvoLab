@@ -180,7 +180,7 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    kayitliCevabiDenetle) da kapısız: kullanıcının kendi asistan kayıtlarını
  *    okur ve eklemeden önce güncel kütüphaneye karşı denetler; model
  *    çağrılmaz, hak tüketilmez, satır yazılmaz.
- *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
+ *  - guidelines.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller
  *    ve expert rollerini de dışarıda bırakırdı.
