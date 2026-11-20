@@ -27,3 +27,19 @@ hesap ve veriyle, `next build` + `next start` üzerinde koşar.
 - Yapay zekâ cevabı yerel model taklidinden gelir. Taklit bu soruda geçerli bir alıntı üretmediği için
   sunucu cevabı reddetti; görüntüdeki hata mesajı bu yüzdendir. Gerçek modelle bu kabulde
   denenmedi.
+
+## Ek tur (20.11.2026, ikinci talimat)
+
+- Telefonda çekmece alt gezinme dahil bütün ekranı örter; arkadaki sayfa kaydırılamaz (kök öğe
+  `data-pdf-tam-ekran`). Başlık sade: kaynak seçici ayrıntılarda, "PDF'e sor" yalnızca simge; üç
+  durum tek satırda ayrı işaretlerle, çipler dokununca açılır.
+- Onay katmanında belgeye eklenecek TAM metin (alıntı + atıf) önizlenir; önizleme "Ekle" ile aynı
+  yoldan, belgeye yazmadan kurulur. PDF sayfası (dosyadaki sıra, atfa girmez) ile basılı sayfa
+  (atıfta, yalnızca kullanıcının yazdığı) ayrı satırlarda.
+- Katman görünür alanın kenarlarına göre yerleşir (sağ kenar, uzun seçim, alt kenar).
+- Kabul 33/33: sentetik PDF + **gerçek iki sütunlu akademik PDF** (TraceMonkey, PLDI 2009; pdf.js'in
+  açık test derlemi). Dosya depoya konmadı; betik `GERCEK_PDF=<yol>` ile koşar. Ölçülenler: sol
+  sütunda üç satırlık seçim sağ sütuna taşmıyor; iki adım yakınlaştırmadan sonra aynı seçim aynı
+  metni veriyor; sunucu alıntıyı PDF metninde doğruluyor ve satır sonu tirelemesini birleştiriyor
+  ("com-pile" → "compile"); eklenen metin doğrulanan dilim ve atıf önizlemesiyle birebir.
+- Telefon klavyesi Playwright'ta görünür alanın daraltılmasıyla ÖYKÜNÜLDÜ (gerçek klavye değil).

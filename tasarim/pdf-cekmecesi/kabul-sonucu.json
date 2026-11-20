@@ -85,7 +85,7 @@
         "x": 592,
         "y": 330,
         "w": 420,
-        "h": 210
+        "h": 266
       },
       "alanOnay": {
         "x": 497,
@@ -96,11 +96,20 @@
     }
   },
   {
-    "ad": "eklenen alıntı seçilenle aynı, önünde boşluk, atıf ardında, kayıtlı konumda",
+    "ad": "onay: tam atıf önizlemesi; basılı sayfa girilince atıf onu taşır, PDF sayfası ayrı ve atfa girmez",
     "gecti": true,
     "ayrinti": {
-      "eklenecek": "“Seasonal variation explained most of the observed difference across the three regions.”",
-      "bas": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır “Seasonal variation explained most of the observed difference across the three regions.” (Fisher ve Other, 2023)\n\nDolgu paragrafı 1: belge kaydırılabili"
+      "onizleme1": "(Fisher ve Other, 2023)",
+      "onizleme2": "(Fisher ve Other, 2023, s. 214)",
+      "sayfalar": "PDF SAYFASI 1 · dosyadaki sıra; atfa girmez\n\nBASILI SAYFA (ATIFTA)"
+    }
+  },
+  {
+    "ad": "eklenen alıntı seçilenle aynı, önünde boşluk, atıf önizlemeyle birebir, kayıtlı konumda",
+    "gecti": true,
+    "ayrinti": {
+      "eklenecek": "“Seasonal variation explained most of the observed difference across the three regions.” ",
+      "bas": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır “Seasonal variation explained most of the observed difference across the three regions.” (Fisher ve Other, 2023, s. 214)\n\nDolgu paragrafı 1: belge kaydı"
     }
   },
   {
@@ -255,19 +264,88 @@
     }
   },
   {
+    "ad": "ekran kenarı: sağ kenardaki seçimde katman görünür alanın içinde",
+    "gecti": true,
+    "ayrinti": {
+      "kenar": {
+        "x": 1035,
+        "y": 371.1640625,
+        "w": 228
+      },
+      "katman": {
+        "x": 839,
+        "y": 393,
+        "w": 419,
+        "h": 74
+      },
+      "alanK": {
+        "x": 441,
+        "y": 196,
+        "w": 830,
+        "h": 695
+      }
+    }
+  },
+  {
+    "ad": "uzun seçim: katman görünür alanda (alta taşmıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "uzun": 2418,
+      "katman2": {
+        "x": 527,
+        "y": 242,
+        "w": 424,
+        "h": 40
+      },
+      "alan2": {
+        "x": 441,
+        "y": 196,
+        "w": 830,
+        "h": 695
+      }
+    }
+  },
+  {
     "ad": "1280: sayfa hatası yok",
     "gecti": true,
     "ayrinti": []
   },
   {
-    "ad": "telefon: çekmece tam ekran (genişlik)",
+    "ad": "telefon: çekmece alt gezinme dahil bütün ekranı örter",
     "gecti": true,
     "ayrinti": {
       "tel": {
         "x": 0,
         "y": 0,
         "w": 390,
-        "h": 600
+        "h": 664
+      },
+      "vp": {
+        "width": 390,
+        "height": 664
+      },
+      "alttaki": true
+    }
+  },
+  {
+    "ad": "telefon: arkadaki sayfa kaydırılamaz",
+    "gecti": true,
+    "ayrinti": {
+      "kok": "hidden",
+      "govde": "hidden",
+      "once": 0,
+      "sonra": 0
+    }
+  },
+  {
+    "ad": "telefon: okuma alanı ekranın en az %70'i",
+    "gecti": true,
+    "ayrinti": {
+      "okuma": {
+        "x": 0,
+        "y": 147,
+        "w": 390,
+        "h": 517
       },
       "vp": {
         "width": 390,
@@ -276,7 +354,64 @@
     }
   },
   {
+    "ad": "telefon: üç durum kısa özette ayrı, ayrıntılar isteğe bağlı açılır",
+    "gecti": true,
+    "ayrinti": {
+      "kisa": "Kayıt\nPDF\nAlıntı",
+      "cipler": [
+        "Kaynak kaydı: bağlı",
+        "PDF: açık",
+        "Alıntı: henüz yok"
+      ]
+    }
+  },
+  {
+    "ad": "telefon klavyesi (öykünme): basılı sayfa kutusu görünür kalır",
+    "gecti": true,
+    "ayrinti": {
+      "secilen": true,
+      "girdi": {
+        "x": 200,
+        "y": 240,
+        "w": 144,
+        "h": 32
+      },
+      "vp2": {
+        "width": 390,
+        "height": 365
+      }
+    }
+  },
+  {
     "ad": "telefon: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "gerçek PDF: sol sütunda çok satırlı seçim sağ sütuna taşmıyor",
+    "gecti": true,
+    "ayrinti": {
+      "secim1": "Dynamic languages such as JavaScript are more difficult to com-\npile than statically typed ones. Since no concrete type information\nis available, traditional compilers need to emit generic code that can\nhandle all possible type combinations at "
+    }
+  },
+  {
+    "ad": "gerçek PDF: yakınlaştırmadan sonra metin katmanı hizalı (aynı seçim, aynı metin)",
+    "gecti": true,
+    "ayrinti": {
+      "secim2": "Dynamic languages such as JavaScript are more difficult to com-\npile than statically typed ones. Since no concrete type information\nis available, traditional compilers need to emit generic code that can\nhandle all possible type combinations at "
+    }
+  },
+  {
+    "ad": "gerçek PDF: alıntı PDF metninde doğrulandı; eklenen metin doğrulanan dilim ve atıf önizlemesiyle aynı",
+    "gecti": true,
+    "ayrinti": {
+      "kanonik": "Dynamic languages such as JavaScript are more difficult to compile than statically typed ones. Since no concrete type information is available, traditional compilers need to emit generic code that can handle all possible type combinations at",
+      "secim1": "Dynamic languages such as JavaScript are more difficult to com-\npile than statically typed ones. Since no concrete type information\nis available, traditional compilers need to emit generic code that can\nhandle all possible type combinations at ",
+      "atifMetni": "(Gal vd., 2009)"
+    }
+  },
+  {
+    "ad": "gerçek PDF: sayfa hatası yok",
     "gecti": true,
     "ayrinti": []
   }

@@ -187,6 +187,7 @@ import {
   collectHeadings,
   insertSections,
   insertFrontMatter,
+  atifIslemi,
   insertCitation,
   atifSirasi,
   oncekiDipnottaVar,
@@ -2652,8 +2653,8 @@ export default function ManuscriptEditor({
   */
   const handleCite = async (
     source: LiteratureSource,
-    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean } = {},
-  ): Promise<{ ok: true } | { ok: false; hata: string }> => {
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean } = {},
+  ): Promise<{ ok: true; atif?: string } | { ok: false; hata: string }> => {
     const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
@@ -2683,6 +2684,23 @@ export default function ManuscriptEditor({
       }
       hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
     }
+    /*
+      ÖNİZLEME (20.11.2026, PDF çekmecesinin onay katmanı): atıf, eklenecek
+      işlemin AYNISIYLA ama gönderilmeyen bir işlemde kurulur; belgeye hiçbir
+      şey yazılmaz. Önizlenen metin, "Ekle"de yazılanla aynı yoldan gelir
+      (aynı stil, kalıp, sayfa, konum); ayrı bir biçimleyiciyle tahmin edilmez.
+    */
+    if (secenek.onizle) {
+      const { citation } = atifIslemi(editor.state.tr, source, style, {
+        sayfa: secenek.sayfa,
+        erisimTarihi: bugun,
+        kalip: ornekKalibi(ornekAtif),
+        dil: belgeDili,
+        hazir,
+        konum,
+      });
+      return { ok: true, atif: citation };
+    }
     const { citation, addedReference } = insertCitation(editor, source, style, {
       sayfa: secenek.sayfa,
       erisimTarihi: bugun,
@@ -2710,7 +2728,7 @@ export default function ManuscriptEditor({
           : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
-    return { ok: true };
+    return { ok: true, atif: citation };
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
   const handlePrint = async () => {

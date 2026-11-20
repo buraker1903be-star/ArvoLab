@@ -50,7 +50,12 @@ function pdfjsYukle(): Promise<Pdf> {
 }
 
 /** kutu: seçimin sayfa alanındaki (kaydırılan içerik) dikdörtgeni; seçim araç çubuğu onun altına konur. */
-export type PdfSecimi = { sayfa: number; metin: string; kutu?: { sol: number; ust: number; alt: number; genislik: number } };
+export type PdfSecimi = {
+  sayfa: number;
+  metin: string;
+  /** Seçimin ve o anki GÖRÜNÜR alanın sayfa alanındaki (kaydırılan içerik) konumu; katman kenarlara göre yerleşir. */
+  kutu?: { sol: number; ust: number; alt: number; genislik: number; alan: { sol: number; ust: number; genislik: number; yukseklik: number } };
+};
 /*
   Okuma konumu: PDF başına tutulur (kaynak-pdf-paneli.tsx), çekmece yeniden
   açılınca geri yüklenir. 20.11.2026'dan beri sayfa içi kaydırma da
@@ -425,7 +430,13 @@ export default function PdfGoruntuleyici({
         const r = secim.rangeCount ? secim.getRangeAt(0).getBoundingClientRect() : null;
         const a = kap.getBoundingClientRect();
         const kutu = r
-          ? { sol: r.left - a.left + kap.scrollLeft, ust: r.top - a.top + kap.scrollTop, alt: r.bottom - a.top + kap.scrollTop, genislik: r.width }
+          ? {
+              sol: r.left - a.left + kap.scrollLeft,
+              ust: r.top - a.top + kap.scrollTop,
+              alt: r.bottom - a.top + kap.scrollTop,
+              genislik: r.width,
+              alan: { sol: kap.scrollLeft, ust: kap.scrollTop, genislik: kap.clientWidth, yukseklik: kap.clientHeight },
+            }
           : undefined;
         onSecim({ sayfa: sayfaNo, metin, kutu });
       }, 0);
