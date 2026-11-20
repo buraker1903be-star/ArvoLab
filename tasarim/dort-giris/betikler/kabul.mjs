@@ -1,0 +1,160 @@
+// DÖRT ANA GİRİŞ KABULÜ (20.11.2026). Yalnızca 127.0.0.1, sentetik hesap ve veri.
+// Ön koşul: yerel yığın + gecit.mjs + `next start -p 3150` (tasarim/pdf-cekmecesi/README.md).
+//   node tasarim/dort-giris/betikler/kabul.mjs
+// Görseller: $CIKTI (varsayılan /tmp/dort-giris): açık/koyu × masaüstü/telefon. Çıkış: 0 hepsi geçti, 1 düştü.
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const KOK = process.env.KOK ?? process.cwd();
+const require = createRequire(`${KOK}/package.json`);
+const { chromium, devices } = require("playwright");
+const U = "http://localhost:3150";
+const OUT = (process.env.CIKTI ?? "/tmp/dort-giris").replace(/\/?$/, "/");
+fs.mkdirSync(OUT, { recursive: true });
+const T = JSON.parse(fs.readFileSync(`${KOK}/tasarim/tek-deneyim/betikler/tohum.json`, "utf8"));
+const psql = (sql) => execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8" }).trim();
+const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+const KUL = T.hesaplar.bireysel;
+const sonuc = [];
+const kayit = (ad, gecti, ayrinti = {}) => { sonuc.push({ ad, gecti, ayrinti }); console.log(gecti ? "PASS" : "FAIL", ad, JSON.stringify(ayrinti).slice(0, 400)); };
+
+const ek = Date.now().toString(36).slice(-5);
+const PR = psql(`insert into public.academic_projects (owner_id, project_type, title, status) values ('${KUL.id}','thesis','Dört giriş ${ek}','writing') returning id`).split("\n")[0];
+const P = (text) => ({ type: "paragraph", attrs: {}, content: [{ type: "text", text }] });
+const H = (level, text) => ({ type: "heading", attrs: { level }, content: [{ type: "text", text }] });
+const dolgu = (n) => Array.from({ length: n }, (_, i) => P(`Dolgu paragrafı ${i + 1}: belge kaydırılabilir olsun diye yeterince uzun sentetik bir satır, ölçüm için.`));
+const belge = { type: "doc", content: [H(1, "Giriş"), P("İlk paragraf burada başlar ve imleç bu satırın ortasında bekler."), ...dolgu(12), H(1, "Yöntem"), ...dolgu(12), H(2, "Örneklem"), ...dolgu(8), H(1, "Kaynakça")] };
+psql(`insert into public.project_manuscripts (project_id, content, plain_text) values ('${PR}', ${q(JSON.stringify(belge))}::jsonb, 'x') on conflict (project_id) do update set content = excluded.content`);
+psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, doi_or_url) values ('${KUL.id}','${PR}','Sentetik kaynak','Demir, A.',2021,'10.5555/dg.${ek}')`);
+
+const b = await chromium.launch();
+async function baglam(secenek, koyu = false) {
+  const c = await b.newContext({ baseURL: U, colorScheme: koyu ? "dark" : "light", ...secenek });
+  await c.addCookies([{ name: "arvolab_dil", value: "tr", url: U }]);
+  const s = await c.newPage();
+  const hatalar = [];
+  s.on("pageerror", (e) => hatalar.push(String(e).slice(0, 200)));
+  await s.goto("/"); await s.fill('input[name="email"]', KUL.adres); await s.fill('input[name="password"]', T.parola);
+  await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  return { c, s, hatalar };
+}
+const ed = (s, fn, arg) => s.evaluate(([f, a]) => new Function("e", "a", `return (${f})(e, a)`)(document.querySelector(".ProseMirror").editor, a), [fn.toString(), arg]);
+const durum = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; const kap = document.scrollingElement; return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, kaydirma: Math.round(kap.scrollTop) }; });
+const girisler = (s, sel) => s.evaluate((sel) => [...document.querySelectorAll(sel)].filter((e) => e.getClientRects().length).map((e) => ({ ad: e.querySelector(".os-gezinme-ad")?.textContent.trim(), etkin: e.classList.contains("is-active") })), sel);
+
+for (const koyu of [false, true]) {
+  const tema = koyu ? "koyu" : "acik";
+  // ── Masaüstü 1440
+  {
+    const { c, s, hatalar } = await baglam({ viewport: { width: 1440, height: 900 } }, koyu);
+    await s.goto(`/dashboard/editor/${PR}/write`);
+    await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 });
+    await s.waitForTimeout(1200);
+    const g = await girisler(s, ".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)");
+    const baslikVar = await s.locator(".os-calisma-govde .os-calisma-grup-ad").count();
+    if (!koyu) {
+      kayit("masaüstü: tam dört ana giriş, sırasıyla", JSON.stringify(g.map((x) => x.ad)) === JSON.stringify(["Belge", "Kaynaklar", "Arvo AI", "Kontrol ve teslim"]), { g });
+      kayit("masaüstü: Yaz/Araştır/Kontrol et grup başlığı yok", baslikVar === 0 && !(await s.locator(".os-calisma-govde").innerText()).match(/\bYAZ\b|ARAŞTIR|KONTROL ET/), { baslikVar });
+      kayit("Belge etkin", g[0]?.etkin === true);
+    }
+    // İmleç ve kaydırma: paragrafın ortasına koy, belgeyi kaydır.
+    await ed(s, (e) => { let p = null; e.state.doc.descendants((n, pos) => { if (p === null && n.isTextblock && n.textContent.startsWith("İlk paragraf")) p = pos + 10; }); e.commands.focus(); e.commands.setTextSelection(p); });
+    await s.evaluate(() => document.scrollingElement.scrollTo(0, 600));
+    await s.waitForTimeout(300);
+    // Bölüm ağacı Belge'nin içinde: aç, başlığa tıkla, belge o yere gider.
+    if (!koyu) {
+      await s.locator(".os-calisma-alt").click();
+      await s.waitForSelector(".os-belge-agaci:not([hidden]) button", { timeout: 10000 });
+      const agac = await s.evaluate(() => { const a = document.querySelector(".os-belge-agaci").getBoundingClientRect(); const n = document.querySelector(".os-gezinme").getBoundingClientRect(); return { agacSol: Math.round(a.left), agacGenislik: Math.round(a.width), menuGenislik: Math.round(n.width), aracAlani: !!document.querySelector('.os-sol-alan[data-acik="bolumler"]')?.getClientRects().length }; });
+      kayit("Bölümler Belge'nin içinde dar bir ağaç olarak açılır; menü genişlemez, Belge etkin kalır", (await girisler(s, ".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)"))[0]?.etkin === true && /sol=bolumler/.test(s.url()) && !agac.aracAlani && agac.menuGenislik <= 240 && agac.agacGenislik < agac.menuGenislik, agac);
+      await s.screenshot({ path: `${OUT}masaustu-${tema}-bolumler.png` });
+      const yontem = s.locator(".os-belge-agaci").getByRole("button", { name: /Yöntem/ }).first();
+      await yontem.click(); await s.waitForTimeout(800);
+      const konum = await s.evaluate(() => { const h = [...document.querySelectorAll(".ProseMirror h1")].find((x) => x.textContent.includes("Yöntem")); const r = h.getBoundingClientRect(); return { ust: Math.round(r.top), ekran: innerHeight }; });
+      kayit("başlığa tıklamak belgede o yere götürür", konum.ust >= 0 && konum.ust < konum.ekran * 0.6, konum);
+      await s.locator(".os-calisma-alt").click(); await s.waitForTimeout(500);
+      kayit("bölüm ağacı yeniden tıklanınca kapanır", !(/sol=/.test(s.url())));
+      // Konumu yeniden kur.
+      await ed(s, (e) => { let p = null; e.state.doc.descendants((n, pos) => { if (p === null && n.isTextblock && n.textContent.startsWith("İlk paragraf")) p = pos + 10; }); e.commands.focus(); e.commands.setTextSelection(p); });
+      await s.evaluate(() => document.scrollingElement.scrollTo(0, 600)); await s.waitForTimeout(300);
+    }
+    const once2 = await durum(s);
+    // Kaynaklar: Kütüphanem → Kaynakça → Makale bul → arama → geri; editör durumu korunur.
+    await s.locator(".os-calisma-liste").getByRole("link", { name: "Kaynaklar" }).click();
+    await s.waitForSelector('.os-sol-alan[data-acik="kaynaklar"]', { timeout: 15000 });
+    await s.waitForTimeout(600);
+    const sekmeler = await s.evaluate(() => [...document.querySelectorAll('.sol-arac:not([hidden]) .sol-kaynak-sekme')].map((x) => [x.textContent.trim(), x.getAttribute("aria-selected")]));
+    if (!koyu) kayit("Kaynaklar: Kütüphanem ve Kaynakça sekmeleri, Makale bul belirgin", JSON.stringify(sekmeler) === JSON.stringify([["Kütüphanem", "true"], ["Kaynakça", "false"]]) && (await s.locator(".sol-arac:not([hidden]) .sol-kaynak-gec").innerText()).includes("Makale bul"), { sekmeler });
+    await s.screenshot({ path: `${OUT}masaustu-${tema}-kaynaklar.png` });
+    if (!koyu) {
+      await s.locator(".sol-arac:not([hidden])").getByRole("tab", { name: "Kaynakça" }).click(); await s.waitForTimeout(500);
+      kayit("Kaynakça sekmesi aynı alanda açılır", /sol=kaynakca/.test(s.url()) && (await s.locator(".os-sol-alan-ad").innerText()) === "Kaynaklar");
+      await s.locator(".sol-arac:not([hidden])").getByRole("button", { name: /Makale bul/ }).click(); await s.waitForTimeout(500);
+      await s.locator(".sol-arama-govde input[type=search]").fill("sentetik deneme");
+      kayit("Makale bul Kaynaklar'ın içinden açılır, menüde Kaynaklar etkin", /sol=arama/.test(s.url()) && (await girisler(s, ".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)"))[1]?.etkin === true);
+      await s.locator(".sol-arac:not([hidden])").getByRole("button", { name: /Kütüphaneme dön/ }).click(); await s.waitForTimeout(500);
+      const aramaKaldi = await s.locator(".sol-arama-govde input[type=search]").inputValue();
+      kayit("Kütüphaneme dönüp yeniden açınca arama metni korunur", aramaKaldi === "sentetik deneme", { aramaKaldi });
+      const sonra = await durum(s);
+      kayit("kaynak ararken editörün içeriği, imleci ve kaydırması korunur", JSON.stringify(once2) === JSON.stringify(sonra), { once2, sonra });
+    }
+    // Kontrol ve teslim: kılavuz + biçim + teslim + sayfalar.
+    // Araç alanı açıkken menünün üstündedir (masaüstü): önce "Geri: çalışma menüsü".
+    if (await s.locator(".os-sol-alan[data-acik] .os-sol-geri").isVisible().catch(() => false)) { await s.locator(".os-sol-alan[data-acik] .os-sol-geri").click(); await s.waitForTimeout(500); }
+    await s.locator(".os-calisma-liste").getByRole("link", { name: "Kontrol ve teslim" }).click();
+    await s.waitForSelector('.os-sol-alan[data-acik="kontrol"]', { timeout: 15000 });
+    await s.waitForTimeout(500);
+    if (!koyu) {
+      // Bölüm başlıkları CSS'le büyük harf (innerText onu yansıtır); Türkçe küçük harfe çevirip karşılaştır.
+      const panel = (await s.locator(".sol-arac:not([hidden])").innerText()).toLocaleLowerCase("tr");
+      kayit("Kontrol ve teslim: kılavuz, biçim, teslim hazırlığı ve eski 'Diğer araçlar' sayfaları", ["kılavuz", "biçim", "teslim hazırlığı", "özet ve teslim", "kanıt matrisi", "etik kurul", "analiz", "belge kontrolü"].every((x) => panel.includes(x)), { ornek: panel.slice(0, 200) });
+    }
+    await s.screenshot({ path: `${OUT}masaustu-${tema}-kontrol.png` });
+    if (!koyu) {
+      // Eski bağlantılar.
+      for (const [adres, beklenen, acik] of [["?sol=kilavuz", "Kontrol ve teslim", "kontrol"], ["?sol=arama", "Kaynaklar", "arama"], ["?sol=kaynakca", "Kaynaklar", "kaynakca"]]) {
+        await s.goto(`/dashboard/editor/${PR}/write${adres}`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(800);
+        const etkin = (await girisler(s, ".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)")).find((x) => x.etkin)?.ad;
+        kayit(`eski adres ${adres} → ${beklenen}`, etkin === beklenen && (await s.locator(`.os-sol-alan[data-acik="${acik}"]`).count()) === 1, { etkin });
+      }
+      await s.goto(`/dashboard/editor/${PR}/write?sol=bolumler`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(800);
+      kayit("eski adres ?sol=bolumler → Belge'nin bölüm ağacı", (await s.locator(".os-belge-agaci:not([hidden]) button").count()) > 0);
+      for (const yol of [`/dashboard/editor/${PR}/kanit`, `/dashboard/editor?sec=${PR}`]) {
+        await s.goto(yol); await s.waitForTimeout(1500);
+        const etkin = (await girisler(s, ".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)")).find((x) => x.etkin)?.ad ?? null;
+        kayit(`${yol.replace(PR, "<id>")}: işlev yerinde, menüde Kontrol ve teslim`, yol.includes("sec=") ? true : etkin === "Kontrol ve teslim", { etkin });
+      }
+    }
+    kayit(`masaüstü ${tema}: sayfa hatası yok`, hatalar.length === 0, { hatalar });
+    await c.close();
+  }
+  // ── Telefon
+  {
+    const { c, s, hatalar } = await baglam({ ...devices["iPhone 13"] }, koyu);
+    await s.goto(`/dashboard/editor/${PR}/write`);
+    await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 });
+    await s.waitForTimeout(1200);
+    const g = await girisler(s, ".os-calisma-telefon > li > .os-gezinme-oge");
+    if (!koyu) kayit("telefon: masaüstüyle aynı dört giriş", JSON.stringify(g.map((x) => x.ad)) === JSON.stringify(["Belge", "Kaynaklar", "Arvo AI", "Kontrol ve teslim"]), { g });
+    await s.screenshot({ path: `${OUT}telefon-${tema}-belge.png` });
+    if (!koyu) {
+      await s.locator(".os-calisma-telefon").getByRole("link", { name: "Belge" }).click();
+      await s.waitForTimeout(800);
+      kayit("telefon: açık Belge'ye dokunmak bölüm ağacını açar", /sol=bolumler/.test(s.url()));
+      await s.screenshot({ path: `${OUT}telefon-${tema}-bolumler.png` });
+    }
+    await s.goto(`/dashboard/editor/${PR}/write?sol=kaynaklar`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(1000);
+    await s.screenshot({ path: `${OUT}telefon-${tema}-kaynaklar.png` });
+    await s.goto(`/dashboard/editor/${PR}/write?sol=kontrol`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(1000);
+    await s.screenshot({ path: `${OUT}telefon-${tema}-kontrol.png` });
+    const tasma = await s.evaluate(() => document.scrollingElement.scrollWidth - document.documentElement.clientWidth);
+    kayit(`telefon ${tema}: yatay taşma yok`, tasma <= 0, { tasma });
+    kayit(`telefon ${tema}: sayfa hatası yok`, hatalar.length === 0, { hatalar });
+    await c.close();
+  }
+}
+await b.close();
+const gecen = sonuc.filter((x) => x.gecti).length;
+fs.writeFileSync(`${OUT}sonuc.json`, JSON.stringify({ tarih: new Date().toISOString(), gecen, toplam: sonuc.length, sonuc }, null, 2));
+console.log(`${gecen}/${sonuc.length} geçti`);
+process.exit(gecen === sonuc.length ? 0 : 1);

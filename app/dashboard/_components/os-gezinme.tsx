@@ -32,18 +32,17 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import {
   ALT_CUBUK,
+  solAracBasligi,
   adrestekiCalisma,
   anaUygulamalar,
   aracUygulamalari,
   calismaBaglantilari,
-  calismaGrupAdi,
   dahaFazlasi,
   etkinBaglanti,
   etkinUygulama,
   solAracOku,
   yardimUygulamalari,
   type BaglamBaglantisi,
-  type CalismaGrubu,
   type CalismaIkon,
   type OsUygulama,
 } from "@/lib/os/uygulamalar";
@@ -69,15 +68,14 @@ const CALISMA_IKONLARI: Record<CalismaIkon, LucideIcon> = {
   kaynakca: Quote,
   kilavuz: ListChecks,
 };
-const CALISMA_GRUPLARI: CalismaGrubu[] = ["yaz", "arastir", "kontrol", "diger"];
 /*
-  Telefonda çalışmanın içindeyken alt çubuk: Belge, Araştır (makale arama),
-  Arvo AI ve "Çalışma" — onaylı prototipin dört sekmesi (görsel uyum,
-  19.11.2026). Eskiden beş sekmeydi: "Çalışmalar" (geri) ve "Kaynaklar"
-  da alttaydı. Geri dönüş üst çubukta (header-title.tsx); Kaynaklar ve
-  öteki araçlar "Çalışma" yaprağında, hiçbirine erişim kaybolmadı.
+  Telefonda çalışmanın içindeyken alt çubuk: masaüstüyle AYNI dört giriş
+  (Belge, Kaynaklar, Arvo AI, Kontrol ve teslim; 20.11.2026) ve genel
+  bölümler için "Daha fazla". Eskiden telefonda Belge, Araştır, Arvo AI
+  ve "Çalışma" yaprağı vardı; masaüstünde dokuz öğe üç başlık altındaydı ve
+  iki ekran aynı çalışmayı farklı anlatıyordu. Geri dönüş üst çubukta
+  (header-title.tsx).
 */
-const CALISMA_ALT_CUBUK = ["yazim", "arama", "ai"];
 
 /*
   UYARLANIR GEZİNME (Phase 3, 04.11.2026; Signature OS 5 / Phase 3,
@@ -156,9 +154,23 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const solsuz = new URLSearchParams(sorgu.toString());
   solsuz.delete("sol");
   const solGeriAdresi = solsuz.toString() ? `${yol}?${solsuz.toString()}` : yol;
-  const solAracOgesi = solArac ? calismaOgeleri.find((b) => b.key === solArac) : undefined;
-  const solAracAdi = solAracOgesi?.label ?? "";
-  const SolAracSimgesi = solAracOgesi ? CALISMA_IKONLARI[solAracOgesi.ikon] : PanelLeftOpen;
+  const solAracAdi = solArac ? solAracBasligi(solArac, t) : "";
+  const SolAracSimgesi = solArac === "bolumler" ? CALISMA_IKONLARI.bolumler : solArac === "kontrol" || solArac === "kilavuz" ? CALISMA_IKONLARI.kontrol : solArac ? CALISMA_IKONLARI.kaynaklar : PanelLeftOpen;
+  /*
+    BÖLÜM AĞACI Belge'nin İÇİNDE (20.11.2026). Eskiden "Bölümler" menüde
+    ayrı bir öğeydi. Şimdi Belge'nin altında açılıp kapanan bir alt öğe:
+    adreste yine ?sol=bolumler (eski bağlantılar çalışır), başlığa tıklamak
+    belgede o yere gider, bölüm işlemleri (eksik bölümleri ekle, durum)
+    aynı araçta. Telefonda zaten açık olan "Belge"ye yeniden dokunmak ağacı
+    açıp kapatır; masaüstünde Belge'nin altındaki "Bölümler" satırı.
+  */
+  const bolumAcik = solArac === "bolumler";
+  const bolumAdresi = (() => {
+    const q = new URLSearchParams(sorgu.toString());
+    if (bolumAcik) q.delete("sol");
+    else q.set("sol", "bolumler");
+    return q.toString() ? `${yol}?${q.toString()}` : yol;
+  })();
 
   /*
     Grupların oturum içi seçimi o anki ADRESE bağlı: başka sayfaya geçince
@@ -240,21 +252,43 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const calismaOgesi = (b: BaglamBaglantisi, telefon = false) => {
     const Ikon = CALISMA_IKONLARI[b.ikon];
     const acik = calismaEtkin?.key === b.key;
+    // Telefonda açık Belge'ye dokunmak bölüm ağacını açar/kapatır (masaüstünde ayrı satır var).
+    const belgeAgaci = telefon && yazimEkrani && b.key === "yazim" && acik;
     return (
       <li key={b.key} data-alt-cubuk={telefon || undefined}>
         <Link
-          href={b.href}
+          href={belgeAgaci ? bolumAdresi : b.href}
           className={acik ? "os-gezinme-oge is-active" : "os-gezinme-oge"}
           aria-current={acik ? "page" : undefined}
-          title={b.label}
-          scroll={!b.href.includes("?sol=") && !b.href.includes("?sag=")}
+          aria-label={b.label}
+          aria-expanded={belgeAgaci ? bolumAcik : undefined}
+          title={belgeAgaci ? t({ tr: bolumAcik ? "Bölüm ağacını kapat" : "Bölüm ağacını aç", en: bolumAcik ? "Close section tree" : "Open section tree" }) : b.label}
+          scroll={!b.href.includes("?sol=") && !b.href.includes("?sag=") && !belgeAgaci}
         >
           <Ikon size={20} aria-hidden="true" />
           <span className="os-gezinme-ad">{b.label}</span>
           <span className="os-gezinme-kisa" aria-hidden="true">
-            {b.key === "yazim" ? t({ tr: "Belge", en: "Document" }) : b.key === "arama" ? t({ tr: "Araştır", en: "Research" }) : b.label}
+            {b.key === "kontrol" ? t({ tr: "Kontrol", en: "Review" }) : b.label}
           </span>
         </Link>
+        {!telefon && b.key === "yazim" && yazimEkrani ? (
+          <Link
+            href={bolumAdresi}
+            scroll={false}
+            className={bolumAcik ? "os-gezinme-oge os-calisma-alt is-active" : "os-gezinme-oge os-calisma-alt"}
+            aria-expanded={bolumAcik}
+            title={t({ tr: "Bölüm ağacı", en: "Section tree" })}
+          >
+            <ChevronDown size={16} aria-hidden="true" className="os-gezinme-takim-ok" />
+            <span className="os-gezinme-ad">{t({ tr: "Bölümler", en: "Sections" })}</span>
+          </Link>
+        ) : null}
+        {/*
+          Açık kenar çubuğunda bölüm ağacı BURAYA, Belge'nin hemen altına yerleşir
+          (editör portal ile; manuscript-editor.tsx). Dar çubukta, tablette ve
+          telefonda yer olmadığı için aynı ağaç sol araç alanında açılır.
+        */}
+        {!telefon && b.key === "yazim" && yazimEkrani ? <div id="belge-agaci-yuva" className="os-belge-agaci" hidden={!bolumAcik} /> : null}
       </li>
     );
   };
@@ -267,49 +301,12 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
       </span>
     </Link>
   );
-  /*
-    "Diğer araçlar" kenar çubuğunda kapalı başlar (prototipteki yoğunluk);
-    etkin sayfa o gruptaysa açık gelir, kullanıcının açıp kapatması oturum
-    boyunca hatırlanır. Telefonun "Çalışma" sayfasında her grup açık.
-  */
-  const ikincilEtkin = calismaEtkin?.grup === "diger";
-  const [ikincilAcikSecim, setIkincilAcikSecim] = useState<boolean | null>(null);
-  const ikincilAcik = ikincilAcikSecim ?? ikincilEtkin;
-  const calismaGruplari = (sinif: string, katlanir = false) =>
-    CALISMA_GRUPLARI.map((grup) => {
-      const uyeler = calismaOgeleri.filter((b) => b.grup === grup);
-      if (!uyeler.length) return null;
-      const ad = calismaGrupAdi(grup, t);
-      if (grup === "diger" && katlanir) {
-        return (
-          <div className={`${sinif} os-calisma-ikincil`} key={grup}>
-            <button
-              type="button"
-              className="os-gezinme-oge os-calisma-ikincil-bas"
-              aria-expanded={ikincilAcik}
-              aria-controls="os-calisma-ikincil-liste"
-              onClick={() => setIkincilAcikSecim(!ikincilAcik)}
-            >
-              <Ellipsis size={20} aria-hidden="true" />
-              <span className="os-gezinme-ad">{ad}</span>
-              <ChevronDown size={16} aria-hidden="true" className="os-gezinme-takim-ok" />
-            </button>
-            <ul id="os-calisma-ikincil-liste" className="os-gezinme-liste" aria-label={ad} hidden={!ikincilAcik}>
-              {uyeler.map((b) => calismaOgesi(b))}
-            </ul>
-          </div>
-        );
-      }
-      return (
-        <div className={sinif} key={grup}>
-          <h2 className="os-calisma-grup-ad">{ad}</h2>
-          <ul className="os-gezinme-liste" aria-label={ad}>
-            {uyeler.map((b) => calismaOgesi(b))}
-          </ul>
-        </div>
-      );
-    });
-
+  /* Dört ana giriş, grup başlığı yok (20.11.2026; lib/os/uygulamalar.ts). */
+  const calismaListesi = (
+    <ul className="os-gezinme-liste os-calisma-liste" aria-label={t({ tr: "Bu çalışma", en: "This work" })}>
+      {calismaOgeleri.map((b) => calismaOgesi(b))}
+    </ul>
+  );
   const dahaUygulamalari = dahaFazlasi(uygulamalar);
   const dahaEtkin = dahaUygulamalari.some((u) => u.key === etkin?.key);
 
@@ -362,9 +359,9 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
         {calisma ? (
           <>
             {/*
-              ÇALIŞMA DÜZEYİ. Telefonda alt çubuk: Belge, Araştır, Arvo AI ve
-              "Çalışma" (bu çalışmanın bütün bölümleri, aşağıdaki pencere);
-              geri dönüş üst çubukta. Masaüstü ve tablette gruplar.
+              ÇALIŞMA DÜZEYİ. Her ekranda aynı dört giriş; telefonda alt
+              çubukta, yanında genel bölümler için "Daha fazla". Geri dönüş
+              telefonda üst çubukta.
             */}
             <div className="os-gezinme-govde os-calisma-govde">
               <div className="os-calisma-ust">
@@ -376,10 +373,10 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
                   </strong>
                 </div>
               </div>
-              {calismaGruplari("os-calisma-grup", true)}
+              {calismaListesi}
             </div>
             <ul className="os-gezinme-liste os-calisma-telefon">
-              {calismaOgeleri.filter((b) => CALISMA_ALT_CUBUK.includes(b.key)).map((b) => calismaOgesi(b, true))}
+              {calismaOgeleri.map((b) => calismaOgesi(b, true))}
             </ul>
           </>
         ) : (
@@ -402,16 +399,16 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               type="button"
               className={dahaEtkin ? "os-gezinme-oge os-gezinme-daha is-active" : "os-gezinme-oge os-gezinme-daha"}
               aria-haspopup="dialog"
-              title={calisma ? t({ tr: "Çalışmanın bütün bölümleri", en: "All sections of this work" }) : t({ tr: "Daha fazla", en: "More" })}
+              title={t({ tr: "Daha fazla", en: "More" })}
               onClick={() => {
                 setYaprakTam(false);
                 pencere.current?.showModal();
               }}
             >
               <Ellipsis size={20} aria-hidden="true" />
-              <span className="os-gezinme-ad">{calisma ? t({ tr: "Çalışma", en: "Work" }) : t({ tr: "Daha fazla", en: "More" })}</span>
+              <span className="os-gezinme-ad">{t({ tr: "Daha fazla", en: "More" })}</span>
               <span className="os-gezinme-kisa" aria-hidden="true">
-                {calisma ? t({ tr: "Çalışma", en: "Work" }) : t({ tr: "Daha fazla", en: "More" })}
+                {t({ tr: "Daha", en: "More" })}
               </span>
             </button>
           </li>
@@ -487,16 +484,15 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
           </button>
         ) : null}
         <header className="os-daha-bas">
-          <h2>{calisma ? t({ tr: "Bu çalışma", en: "This work" }) : t({ tr: "Bütün bölümler", en: "All sections" })}</h2>
+          <h2>{t({ tr: "Bütün bölümler", en: "All sections" })}</h2>
           <button type="button" className="os-icon-btn" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={() => pencere.current?.close()}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>
         {calisma ? (
-          /* Çalışmanın içinde: önce bu çalışmanın bölümleri (gruplarıyla), sonra genel bölümler. */
+          /* Çalışmanın içinde: dört giriş alt çubukta; burada çalışmanın adı ve genel bölümler. */
           <div className="os-daha-calisma" onClick={(olay) => (olay.target as HTMLElement).closest("a") && pencere.current?.close()}>
             {calisma.baslik ? <p className="os-daha-calisma-ad">{calisma.baslik}</p> : null}
-            {calismaGruplari("os-daha-grup")}
             <h2 className="os-calisma-grup-ad">{t({ tr: "Genel", en: "General" })}</h2>
           </div>
         ) : null}

@@ -178,7 +178,7 @@ export default async function KaynaklarPage({
           */}
           <nav className="calisma-sekmeleri kaynak-sekmeleri" aria-label={t({ tr: "Kaynaklar ve kaynakça", en: "Sources and reference list" })}>
             <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}`} aria-current={kaynakcaSekmesi ? undefined : "page"}>
-              {t({ tr: "Kaynaklar", en: "Sources" })}
+              {t({ tr: "Kütüphanem", en: "My library" })}
               {kaynaklar.length ? <span className="kaynak-sekme-sayi">{kaynaklar.length}</span> : null}
             </Link>
             <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}&sekme=kaynakca`} aria-current={kaynakcaSekmesi ? "page" : undefined}>

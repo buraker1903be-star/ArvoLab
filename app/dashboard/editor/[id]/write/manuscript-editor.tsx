@@ -78,9 +78,10 @@ import {
   TableCellsSplit,
   Sparkles,
   FileText,
+  ArrowLeft,
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
 import { adrestekiPdf, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
@@ -103,7 +104,7 @@ import {
   SOL_ALAN_GENISLET_OLAYI,
   type OlcekTercihi,
 } from "@/lib/calisma-alani-yerlesimi";
-import { sagPanelOku, solAracOku, type SagPanel, type SolArac } from "@/lib/os/uygulamalar";
+import { kontrolSayfalari, sagPanelOku, solAracOku, type SagPanel, type SolArac } from "@/lib/os/uygulamalar";
 import { GEZINME_DAR, GEZINME_OZNITELIGI } from "@/lib/os5/gezinme";
 import { gezinmeAbone } from "@/app/_components/gezinme";
 
@@ -881,7 +882,13 @@ export default function ManuscriptEditor({
     window.addEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
     return () => window.removeEventListener(SOL_ALAN_GENISLET_OLAYI, ac);
   }, [solGenisAnahtari]);
-  const karar = ekran ? yerlesimKarari({ ekran, solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik, solGenisIstendi }) : null;
+  /*
+    Bölüm ağacı açık kenar çubuğunda menünün içinde, Belge'nin altında
+    (20.11.2026, os-gezinme.tsx #belge-agaci-yuva): orada araç alanı
+    açılmaz, yerleşim de araç yokmuş gibi hesaplanır.
+  */
+  const agacMenude = solArac === "bolumler" && ekran >= 1200 && !kullaniciDar;
+  const karar = ekran ? yerlesimKarari({ ekran, solArac: agacMenude ? null : solArac, sagPanel: sag, sagGenislik: sag ? sagGenislikleri[sag] : 0, kenarDar: kullaniciDar, inceleme: incelemeAcik, solGenisIstendi }) : null;
   const solAlanDar = karar?.kenar === "aracDar";
   useEffect(() => {
     const kok = document.documentElement;
@@ -983,11 +990,65 @@ export default function ManuscriptEditor({
   const [acilanAraclar, setAcilanAraclar] = useState<SolArac[]>([]);
   if (solArac && !acilanAraclar.includes(solArac)) setAcilanAraclar([...acilanAraclar, solArac]);
   const [solYuva, setSolYuva] = useState<HTMLElement | null>(null);
+  const [agacYuva, setAgacYuva] = useState<HTMLElement | null>(null);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- yuva gezinmenin DOM'unda; ancak çizimden sonra bulunur
     setSolYuva(document.getElementById("sol-alan-yuva"));
+    setAgacYuva(document.getElementById("belge-agaci-yuva"));
   }, [solArac]);
   /* Dar ekranda araç belgenin üstünde: bir başlığa gidince ya da atıf ekleyince belge görünsün diye araç kapanır. */
+  /*
+    KAYNAKLAR'IN SEKMELERİ (20.11.2026). Kütüphanem, Kaynakça ve Makale bul
+    aynı sol aracın üç görünümü; geçiş yalnızca adresteki `sol` değerini
+    değiştirir (yumuşak geçiş, kaydırmasız). Sayfa yeniden yüklenmez, editör sökülmez:
+    içerik, imleç ve kaydırma yerinde kalır. Düğmeler odağı editörden
+    çalmaz (onMouseDown); bir kez açılan görünüm gizlenir, sökülmez
+    (arama sonucu ve liste konumu korunur).
+  */
+  /*
+    replaceState yetmiyor: adres değişiyor ama Next useSearchParams'ı
+    güncellemiyor; gezinme ve araç alanı eski sekmede kalıyordu (kabulde
+    ölçüldü). Menüdeki bağlantılarla aynı yumuşak geçiş kullanılır.
+  */
+  const gezinmeYonlendirici = useRouter();
+  const solGorunumAc = (arac: SolArac) => {
+    const u = new URL(window.location.href);
+    u.searchParams.set("sol", arac);
+    gezinmeYonlendirici.replace(u.pathname + u.search + u.hash, { scroll: false });
+  };
+  const kaynakSekmeleri = (etkin: "kaynaklar" | "kaynakca" | "arama") => (
+    <div className="sol-kaynak-sekmeleri">
+      <div className="sol-kaynak-sekme-satiri" role="tablist" aria-label={t({ tr: "Kaynaklar", en: "Sources" })}>
+        {(
+          [
+            ["kaynaklar", t({ tr: "Kütüphanem", en: "My library" })],
+            ["kaynakca", t({ tr: "Kaynakça", en: "References" })],
+          ] as const
+        ).map(([arac, ad]) => (
+          <button
+            key={arac}
+            type="button"
+            role="tab"
+            aria-selected={etkin === arac}
+            className="sol-kaynak-sekme"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => solGorunumAc(arac)}
+          >
+            {ad}
+          </button>
+        ))}
+      </div>
+      {etkin === "arama" ? (
+        <button type="button" className="projects-filter-button button-compact sol-kaynak-gec" onMouseDown={(e) => e.preventDefault()} onClick={() => solGorunumAc("kaynaklar")}>
+          <ArrowLeft size={14} aria-hidden="true" /> {t({ tr: "Kütüphaneme dön", en: "Back to my library" })}
+        </button>
+      ) : (
+        <button type="button" className="projects-primary-button button-compact sol-kaynak-gec" onMouseDown={(e) => e.preventDefault()} onClick={() => solGorunumAc("arama")}>
+          <Search size={14} aria-hidden="true" /> {t({ tr: "Makale bul", en: "Find papers" })}
+        </button>
+      )}
+    </div>
+  );
   const solAraciKapatDarsa = () => {
     if (window.innerWidth >= 1200) return;
     const u = new URL(window.location.href);
@@ -2893,7 +2954,8 @@ export default function ManuscriptEditor({
         SOL ARAÇLAR: çalışma gezinmesinin yuvasına (os-gezinme.tsx). Bir kez
         açılan araç söküLMEZ; gizlenir.
       */}
-      {solYuva
+      {/* Bölüm ağacı: açık kenar çubuğunda menünün içine, değilse sol araç alanına. */}
+      {(agacMenude ? agacYuva : solYuva)
         ? createPortal(
             <>
               {acilanAraclar.includes("bolumler") ? (
@@ -2911,8 +2973,16 @@ export default function ManuscriptEditor({
                   />
                 </div>
               ) : null}
+            </>,
+            (agacMenude ? agacYuva : solYuva) as HTMLElement,
+          )
+        : null}
+      {solYuva
+        ? createPortal(
+            <>
               {acilanAraclar.includes("kaynaklar") ? (
                 <div className="sol-arac" hidden={solArac !== "kaynaklar"}>
+                  {kaynakSekmeleri("kaynaklar")}
                   <SolKaynaklar
                     projectId={projectId}
                     gorunur={solArac === "kaynaklar"}
@@ -2930,6 +3000,7 @@ export default function ManuscriptEditor({
               ) : null}
               {acilanAraclar.includes("arama") ? (
                 <div className="sol-arac" hidden={solArac !== "arama"}>
+                  {kaynakSekmeleri("arama")}
                   <SolArama
                     projectId={projectId}
                     projeAdi={projectDefaults?.title ?? ""}
@@ -2955,6 +3026,7 @@ export default function ManuscriptEditor({
               */}
               {acilanAraclar.includes("kaynakca") ? (
                 <div className="sol-arac" hidden={solArac !== "kaynakca"}>
+                  {kaynakSekmeleri("kaynakca")}
                   <div className="sol-arac-govde">
                     <p className="sol-arac-satir">
                       <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
@@ -3015,8 +3087,13 @@ export default function ManuscriptEditor({
                   </div>
                 </div>
               ) : null}
-              {acilanAraclar.includes("kilavuz") ? (
-                <div className="sol-arac" hidden={solArac !== "kilavuz"}>
+              {/*
+                KONTROL VE TESLİM (20.11.2026): kılavuz, biçim, teslim hazırlığı ve
+                eskiden menüde "Diğer araçlar"da duran sayfalar tek yerde. Eski
+                ?sol=kilavuz adresi buraya düşer (lib/os/uygulamalar.ts: solAracOku).
+              */}
+              {acilanAraclar.includes("kontrol") ? (
+                <div className="sol-arac" hidden={solArac !== "kontrol"}>
                   <div className="sol-arac-govde">
                     {guideline ? (
                       <>
@@ -3093,6 +3170,27 @@ export default function ManuscriptEditor({
                         {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
                       </button>
                     </div>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}>
+                      <h3>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</h3>
+                      <p className="sol-arac-bos">
+                        {t({
+                          tr: "Zorunlu bölümler, kılavuz uyumu, kaynakça ve teslim tarihi Özet ve teslim sayfasında birlikte görünür; dışa aktarma üst çubuktaki “Dışa aktar”da.",
+                          en: "Required sections, guideline compliance, references and the due date are shown together on the Overview and submission page; export is under “Export” in the top bar.",
+                        })}
+                      </p>
+                    </section>
+                    <section className="sol-arac-bolum" aria-label={t({ tr: "Bu çalışmanın sayfaları", en: "Pages of this work" })}>
+                      <h3>{t({ tr: "Bu çalışmanın sayfaları", en: "Pages of this work" })}</h3>
+                      <ul className="sol-sayfa-listesi">
+                        {kontrolSayfalari({ id: projectId, baslik: "", tur: projectDefaults?.projectType ?? "" }, t).map((sayfa) => (
+                          <li key={sayfa.key}>
+                            <Link href={sayfa.href} className="link-button">
+                              {sayfa.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
                   </div>
                 </div>
               ) : null}
@@ -3926,7 +4024,7 @@ export default function ManuscriptEditor({
           KILAVUZ YOK ŞERİDİ KALKTI (19.11.2026, kabul turu 2): eskiden kılavuzu
           olmayan tezde belgenin üstünde kalıcı bir satırdı ("Bu çalışmaya bağlı
           kılavuz yok · Kılavuzumu yükle · Kurumu seç"). İçeriği ve iki bağlantısı
-          çalışma menüsündeki "Kılavuz ve biçim" aracında (sol=kilavuz).
+          çalışma menüsündeki "Kontrol ve teslim" aracında (sol=kontrol; eski sol=kilavuz da oraya düşer).
         */}
 
       {guideline && syncMode === "offer" ? (

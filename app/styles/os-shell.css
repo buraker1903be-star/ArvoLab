@@ -434,6 +434,24 @@
   color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
 }
 .os-calisma-geri { color: var(--muted); }
+/*
+  Dört ana giriş (20.11.2026): grup başlığı yok. Belge'nin altındaki
+  "Bölümler" girintili bir alt satır; yalnızca açık kenar çubuğunda görünür
+  (rayda ve telefonda açık "Belge"ye yeniden dokunmak ağacı açar/kapatır).
+*/
+.os-calisma-liste { display: flex; flex-direction: column; gap: 2px; }
+.os-calisma-liste > li { display: flex; flex-direction: column; gap: 2px; }
+.os-calisma-alt, .os-belge-agaci { display: none; }
+@media (min-width: 1200px) {
+  html:not([data-gezinme="dar"]) .os-calisma-alt.os-gezinme-oge {
+    display: flex; min-height: var(--os5-gezinme-alt); padding-left: calc(var(--os5-gezinme-ic) + 20px); font-size: var(--os5-fs-meta);
+  }
+  .os-calisma-alt[aria-expanded="false"] .os-gezinme-takim-ok { transform: rotate(-90deg); }
+  html:not([data-gezinme="dar"]) .os-belge-agaci:not([hidden]) {
+    display: flex; flex-direction: column; max-height: 50vh; min-height: 0; overflow-y: auto;
+    margin: 2px 0 var(--s-2) calc(var(--os5-gezinme-ic) + 12px); border-left: 1px solid var(--os5-kenar-cizgi);
+  }
+}
 
 @media (max-width: 760px) {
   .os-calisma-govde { display: none; }
@@ -510,10 +528,16 @@
 
 @media (min-width: 1200px) {
   .os-sol-alan { top: var(--topbar-height); left: 0; bottom: 0; width: var(--os5-kenar-genis); border-right: 1px solid var(--os5-kenar-cizgi); border-top: 1px solid var(--os5-kenar-cizgi); }
-  .os-root:has(> .os-sol-alan[data-acik="bolumler"]),
   .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]),
   .os-root:has(> .os-sol-alan[data-acik="kaynakca"]),
-  .os-root:has(> .os-sol-alan[data-acik="kilavuz"]) { --os5-kenar-genis: 300px; }
+  .os-root:has(> .os-sol-alan[data-acik="kontrol"]) { --os5-kenar-genis: 300px; }
+  /*
+    Bölüm ağacı açık kenar çubuğunda menünün İÇİNDE, Belge'nin altında
+    (20.11.2026): araç alanı açılmaz, menü genişlemez. Dar çubukta yer
+    olmadığı için eskisi gibi araç alanında açılır.
+  */
+  html:not([data-gezinme="dar"]) .os-sol-alan[data-acik="bolumler"] { display: none; }
+  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik="bolumler"]) { --os5-kenar-genis: 300px; }
   .os-root:has(> .os-sol-alan[data-acik="arama"]) { --os5-kenar-genis: 372px; }
   /* Kullanıcı kenar çubuğunu daraltmış olsa da araç kendi genişliğinde açılır; içerik onunla kayar. */
   html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .os-gezinme { width: var(--os5-kenar-genis); }
