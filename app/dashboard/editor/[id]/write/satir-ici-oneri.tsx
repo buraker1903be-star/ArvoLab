@@ -5,7 +5,8 @@ import type { Editor } from "@tiptap/react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { oneriTemizle } from "@/lib/ai/yazim-metni";
-import { kabulEdilenOneri, oneriGoster } from "@/lib/tiptap-satir-ici-oneri";
+import { etkinOneri, kabulEdilenOneri, oneriGoster } from "@/lib/tiptap-satir-ici-oneri";
+import { otomatikIzin } from "@/lib/oneri-siniri";
 import { collectHeadings } from "./editor-navigation";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -26,9 +27,41 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 
   Cevap geldiğinde belge değişmişse (öğrenci yazmaya devam etti) öneri
   gösterilmez: eski konuma ait öneri yanlış yere düşerdi.
+
+  20.11.2026 düzeltmeleri (canlıda "Öneri çalışmıyor" şikâyeti):
+    - Alt+/ konumu tuşa basıldığı ANDA okuyordu. ProseMirror imleci
+      selectionchange ile SONRADAN günceller: öğrenci tıklayıp hemen
+      Alt+/'a basınca istek eski konumla gidiyor, cevap gelince
+      oneriGoster konum tutmadığı için öneriyi sessizce düşürüyordu
+      (sunucu cevabı vermiş, ekranda hiçbir şey yok). Okuma bir sonraki
+      göreve ertelendi.
+    - Otomatik yol 80 karakterden önce hiç çalışmıyordu; ilk cümlesini
+      yazan öğrenci hiçbir şey görmüyordu. Eşik 40.
+    - Otomatik istek uçuştayken gelen yeni duraksama yutuluyordu; artık
+      cevap dönünce bir kez yeniden kurulur. Otomatik yolun kendi sıklık
+      sınırı var (lib/oneri-siniri.ts): saatlik hak sohbetle ortak.
+    - Editör odakta değilse (öğrenci araç çubuğuna, panele geçti)
+      otomatik istek gitmez, gelen cevap da gösterilmez.
 */
-const BEKLEME_MS = 1_800;
-const EN_AZ_OTOMATIK = 80;
+const BEKLEME_MS = 1_500;
+const EN_AZ_OTOMATIK = 40;
+const SINIR_ANAHTARI = "arvolab:otomatik-oneri-zamanlari";
+
+function zamanlariOku(): number[] {
+  try {
+    const ham = JSON.parse(window.localStorage.getItem(SINIR_ANAHTARI) ?? "[]");
+    return Array.isArray(ham) ? ham.filter((z): z is number => typeof z === "number") : [];
+  } catch {
+    return [];
+  }
+}
+function zamanlariYaz(zamanlar: number[]) {
+  try {
+    window.localStorage.setItem(SINIR_ANAHTARI, JSON.stringify(zamanlar));
+  } catch {
+    // Depolama kapalıysa sınır yalnızca bu sekmenin belleğinde kalır (aşağıdaki ref).
+  }
+}
 
 export function useSatirIciOneri({
   editor,
@@ -43,11 +76,22 @@ export function useSatirIciOneri({
 }) {
   const t = useCeviri();
   const istekte = useRef(false);
+  const bekleyen = useRef(false);
   const sonKonum = useRef<string | null>(null);
+  const bellekZamanlar = useRef<number[]>([]);
+  const tavanSoylendi = useRef(false);
+  // Bekleyen turu kuran zamanlayıcı en güncel iste'yi çağırsın (kendi içinden çağrı yerine).
+  const isteRef = useRef<(elle: boolean) => Promise<void>>(async () => undefined);
 
   const iste = useCallback(
-    async (elle: boolean) => {
-      if (!editor || istekte.current) return;
+    async (elle: boolean): Promise<void> => {
+      if (!editor || editor.isDestroyed) return;
+      if (istekte.current) {
+        // Uçuştaki istek bitince yeniden denenir (otomatik yol); elle istek ikinciyi göndermez.
+        if (!elle) bekleyen.current = true;
+        return;
+      }
+      if (!elle && (!editor.isFocused || etkinOneri(editor.state))) return;
       const { selection, doc } = editor.state;
       if (!selection.empty) return;
       const $bas = selection.$head;
@@ -62,6 +106,24 @@ export function useSatirIciOneri({
       // Otomatik yol aynı yer için ikinci kez istemez (öğrenci öneriyi Esc ile reddetmiş olabilir).
       const anahtar = `${konum}:${oncesi.slice(-60)}`;
       if (!elle && sonKonum.current === anahtar) return;
+      if (!elle) {
+        const karar = otomatikIzin([...zamanlariOku(), ...bellekZamanlar.current], Date.now());
+        if (!karar.izin) {
+          if (karar.neden === "saatlik" && !tavanSoylendi.current) {
+            tavanSoylendi.current = true;
+            showToast(
+              "info",
+              t({
+                tr: "Otomatik öneri bu saat için duraklatıldı; asistan hakkınız sohbet için korunuyor. Alt+/ ile istemeye devam edebilirsiniz.",
+                en: "Automatic suggestions are paused for this hour to save your assistant credits for chat. You can still press Alt+/.",
+              }),
+            );
+          }
+          return;
+        }
+        bellekZamanlar.current = karar.zamanlar;
+        zamanlariYaz(karar.zamanlar);
+      }
       sonKonum.current = anahtar;
       istekte.current = true;
       try {
@@ -75,7 +137,8 @@ export function useSatirIciOneri({
           }
           return;
         }
-        if (editor.state.doc !== doc) return;
+        if (editor.isDestroyed || editor.state.doc !== doc) return;
+        if (!elle && !editor.isFocused) return;
         const metin = oneriTemizle(cevap.metin ?? "", oncesi);
         if (!metin) {
           if (elle) showToast("error", t({ tr: "Burada önerecek bir devam bulunamadı.", en: "No continuation to suggest here." }));
@@ -87,10 +150,19 @@ export function useSatirIciOneri({
         if (elle) showToast("error", t({ tr: "Asistana ulaşılamadı.", en: "Couldn't reach the assistant." }));
       } finally {
         istekte.current = false;
+        if (bekleyen.current) {
+          bekleyen.current = false;
+          // Bu arada yazıldıysa yeni konum için bir tur daha; değişmediyse aynı anahtar istek göndermez.
+          window.setTimeout(() => void isteRef.current(false), BEKLEME_MS);
+        }
       }
     },
     [editor, projectId, otomatigiKapat, t],
   );
+
+  useEffect(() => {
+    isteRef.current = iste;
+  }, [iste]);
 
   // Kısayol ve kabul kaydı: her zaman.
   useEffect(() => {
@@ -98,7 +170,8 @@ export function useSatirIciOneri({
     const tus = (e: KeyboardEvent) => {
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "/" || e.code === "Slash")) {
         e.preventDefault();
-        void iste(true);
+        // Bir sonraki görevde oku: imleç değişikliği (selectionchange) önce işlensin.
+        window.setTimeout(() => void iste(true), 0);
       }
     };
     const islem = ({ transaction }: { transaction: Parameters<typeof kabulEdilenOneri>[0] }) => {

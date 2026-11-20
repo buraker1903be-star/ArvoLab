@@ -5,6 +5,7 @@ import { aiHataMesaji, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
+import { bulguIddiasi, ilkCumle } from "@/lib/ai/yazim-metni";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 import { belgeDili } from "@/lib/belge-dili";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
@@ -166,6 +167,26 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
                 en: `The text wasn't shown because the assistant wrote a number that isn't in the context (${ayrinti}). Add the data to your request or text and try again.`,
               }),
       };
+    }
+
+    /*
+      Satır içi önerinin bulgu denetimi (20.11.2026). Gösterilecek olan
+      yalnızca ilk cümle (istemci ilkCumle ile keser), denetlenen de o.
+      Red nedeni sütununun izinli değerleri arasında "bulgu" yok; yeni
+      değer için migration açmak yerine neden boş, ayrıntı bulgulara
+      yazılıyor (kayıt yine "rejected" ve sayılabilir).
+    */
+    if (gorev === "tamamla") {
+      const iddia = bulguIddiasi(ilkCumle(sonuc.metin.replace(/\s+/g, " ").trim()), oncesi ?? "");
+      if (iddia) {
+        await asistanKaydet({ ...ortak, durum: "rejected", model: yanit.model, cikti: yanit.metin, bulgular: { gorev, neden: "bulgu", ayrinti: [iddia] } });
+        return {
+          hata: t({
+            tr: `Öneri, metinde dayanağı olmayan bir bulgu iddiası taşıdığı için gösterilmedi ("${iddia.slice(0, 60)}").`,
+            en: `The suggestion wasn't shown because it claimed a finding with no basis in your text ("${iddia.slice(0, 60)}").`,
+          }),
+        };
+      }
     }
 
     /*

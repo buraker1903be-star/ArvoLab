@@ -3353,7 +3353,25 @@ export default function ManuscriptEditor({
             })}
             metin={t({ tr: "Öneri", en: "Suggest" })}
             active={otomatikOneri}
-            onClick={() => otomatikOneriAyarla(!otomatikOneri)}
+            onClick={() => {
+              /*
+                Geri bildirim (20.11.2026): düğme eskiden yalnızca modu
+                sessizce değiştiriyordu; tıklayan öğrenci bir öneri
+                bekliyor, hiçbir şey görmüyor ve "çalışmıyor" diyordu.
+              */
+              const acik = !otomatikOneri;
+              otomatikOneriAyarla(acik);
+              showToast(
+                "info",
+                acik
+                  ? t({
+                      tr: "Otomatik öneri açık: paragrafın sonunda yazmayı bıraktığınızda gri bir devam görünür. Tab (telefonda “Ekle”) kabul eder, Esc kapatır.",
+                      en: "Automatic suggestions on: when you pause at the end of a paragraph a grey continuation appears. Tab (“Add” on phones) accepts, Esc dismisses.",
+                    })
+                  : t({ tr: "Otomatik öneri kapalı. Alt+/ ile istediğiniz an öneri isteyebilirsiniz.", en: "Automatic suggestions off. Press Alt+/ any time for a suggestion." }),
+              );
+              editor?.commands.focus();
+            }}
           >
             <WandSparkles size={16} />
           </ToolbarButton>

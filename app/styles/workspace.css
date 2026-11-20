@@ -216,6 +216,19 @@
 .search-match { border-radius: 2px; background: color-mix(in srgb, var(--warning) 35%, transparent); }
 /* Satır içi öneri (03.11.2026): belgede değil, süsleme; gri ve seçilemez. Tab kabul eder. */
 .satir-ici-oneri { color: var(--muted); pointer-events: none; user-select: none; }
+/*
+  Dokunmatik kabul (20.11.2026): telefonda Tab yok. "Ekle" yalnızca kaba
+  işaretçide görünür; masaüstünde Tab kabul eder, düğme yer kaplamaz.
+*/
+.satir-ici-oneri-kap { user-select: none; }
+.satir-ici-oneri-ekle { display: none; }
+@media (pointer: coarse) {
+  .satir-ici-oneri-ekle {
+    display: inline-flex; align-items: center; min-height: 32px; margin-left: 6px; padding: 0 10px;
+    border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface);
+    color: var(--primary-ink); font: inherit; font-size: var(--fs-sm); font-weight: 600; vertical-align: middle; cursor: pointer;
+  }
+}
 /* Geçerli eşleşme lacivert (Phase 4.2; eskiden yeşil %45). Lacivert
    yeşilden koyu: %45'te altındaki metin okunmuyordu, %22 ile çerçeve yeter. */
 .search-match.is-current { background: color-mix(in srgb, var(--primary-ink) 22%, transparent); outline: 1px solid var(--primary-ink); }

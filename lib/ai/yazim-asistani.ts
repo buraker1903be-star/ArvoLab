@@ -91,10 +91,14 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   /*
     Satır içi tamamlama (03.11.2026, Jenni'nin imza özelliği): editörde
     gri öneri, kabul Tab ile kullanıcının. Kısa tutulur: uzun öneri hem
-    pahalı hem okunmadan kabul edilir.
+    pahalı hem okunmadan kabul edilir. 20.11.2026: "en çok iki cümle"
+    idi; artık imleçteki cümlenin devamı, en çok BİR kısa cümle (istemci
+    de ilk cümle sonunda keser, lib/ai/yazim-metni.ts). Bulgu ve sonuç
+    ilanı yasağı açıkça yazıldı: sayı ve atıf yapısal olarak denetleniyor
+    ama "bulgular gösterdi" sayısız da kurulabiliyor.
   */
   tamamla:
-    "İmleçten önceki metni kaldığı yerden sürdür: cümle yarımsa önce onu tamamla, toplamda EN ÇOK iki cümle yaz. 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Bağlam yeterli değilse 'metin' alanını boş bırak.",
+    "İmleçten önceki metni kaldığı yerden sürdür: yalnızca imlecin bulunduğu cümleyi tamamla ya da, cümle bitmişse, onu izleyen EN ÇOK BİR kısa cümle yaz (yaklaşık 20 sözcük). 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Metinde geçmeyen sayı, bulgu, sonuç ya da istatistik iddiası ('bulgular gösterdi', 'anlamlı fark bulundu') ve atıf ekleme. Bağlam yeterli değilse 'metin' alanını boş bırak.",
 };
 
 export const YAZIM_ISTEMI = `Sen ArvoLab'ın akademik yazım asistanısın. Türkiye'deki üniversitelerde tez ve makale yazan öğrencilere yazarken yardım ediyorsun.
