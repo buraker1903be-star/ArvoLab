@@ -5,6 +5,7 @@ import type { OsIkon } from "@/lib/os/uygulamalar";
 import { ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import DilSecici from "@/app/_components/dil-secici";
+import { KomutPaletiAcOgesi } from "./os-komut-paleti";
 
 /*
   KULLANICI MENÜSÜ (ArvoOS'taki OsKullaniciMenusu).
@@ -96,6 +97,8 @@ export default async function KullaniciMenusu({
             <LifeBuoy size={16} aria-hidden="true" />
             {t({ tr: "Destek", en: "Support" })}
           </Link>
+          {/* Üst çubuktaki arama kutusu kalktı (20.11.2026); palete buradan ve Ctrl+K ile ulaşılır. */}
+          <KomutPaletiAcOgesi className="os-kullanici-komut" />
         </nav>
         {personelAraclari.length ? (
           /*
