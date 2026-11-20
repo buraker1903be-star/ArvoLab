@@ -80,7 +80,8 @@ import {
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { SolArama, SolBolumler, SolKaynaklar, kaynaginPdfi, type KaynakPdfi } from "./sol-araclar";
+import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
+import { adrestekiPdf, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
 import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
@@ -716,6 +717,32 @@ export default function ManuscriptEditor({
   }, []);
   /* Kaynaklar aracından "PDF'i aç": panel o PDF'le açılır (anahtar aynı PDF'e ikinci basışı da iletir). */
   const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number; sayfa?: number; pasaj?: string } | null>(null);
+  /*
+    DIŞARIDAN "PDF'i oku" (20.11.2026, M5): Kaynakça penceresi ve Kaynaklar
+    sayfası PDF'i artık yeni sekmede ham dosya olarak açmıyor, editörün
+    çekmecesine bu adresle geliyor (?sag=pdf&pdf=<id>&sayfa=<n>,
+    lib/kaynak-durumu editorPdfAdresi). Eskiden imzalı depo adresi yeni
+    sekmede açılıyordu: pasaj seçmek, alıntı eklemek, AI'a sormak orada
+    yoktu ve öğrenci aynı PDF'i iki ayrı yerde okuyordu. İstek bir kez
+    işlenir, sonra adresten silinir (yenileme aynı sayfaya geri atmasın).
+  */
+  const pdfAdresi = adres.get("pdf");
+  const sayfaAdresi = adres.get("sayfa");
+  const pdfIstegi = adrestekiPdf(pdfAdresi, sayfaAdresi);
+  const [islenenPdfIstegi, setIslenenPdfIstegi] = useState<string | null>(null);
+  if (pdfIstegi && `${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}` !== islenenPdfIstegi) {
+    setIslenenPdfIstegi(`${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}`);
+    setAcilacakPdf({ id: pdfIstegi.id, anahtar: -1, sayfa: pdfIstegi.sayfa });
+    if (sag !== "pdf") setSag("pdf");
+  }
+  useEffect(() => {
+    if (!pdfAdresi && !sayfaAdresi) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("pdf");
+    u.searchParams.delete("sayfa");
+    if (pdfIstegi) u.searchParams.set("sag", "pdf");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  }, [pdfAdresi, sayfaAdresi, pdfIstegi]);
 
   /*
     ATIF KARTI (K3-A) ve SEÇİM İŞLEMLERİ: iki ayrı durum, aynı anda açılmaz
@@ -4175,7 +4202,7 @@ export default function ManuscriptEditor({
           durum={atifKarti}
           projectId={projectId}
           kaynaklar={kartVerisi?.kaynaklar ?? []}
-          pdfBul={(k) => (kartVerisi ? kaynaginPdfi(k, kartVerisi.pdfler) : null)}
+          pdfBul={(k) => (kartVerisi ? pdfEslesmesi(k, kartVerisi.pdfler) : { tur: "yok" })}
           kunye={kartVerisi?.kunye ?? new Map()}
           pasajlar={dogrulanmisPasajlar}
           yukleniyor={kartYukleniyor}

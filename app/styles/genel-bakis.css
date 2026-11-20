@@ -956,7 +956,26 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Eksik künye: sarı ve önünde uyarı işareti; gri metin arasında gözden kaçıyordu */
 .kaynak-eksik { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-weight: 550; }
 .kaynak-eksik::before { content: "⚠ "; }
-.kaynak-satiri-eylem { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+/* flex: none satırın eylem kümesini içerik genişliğine kilitliyordu; "PDF'i oku" eklenince dar ekranda satırdan taşıyordu (M5). */
+.kaynak-satiri-eylem { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; max-width: 100%; }
+.kaynak-satiri .gb-satir-govde b { overflow-wrap: anywhere; }
+/*
+  Dar ekranda satır sütuna dönüyor (components.css) ve bu dosyadaki
+  align-items: flex-start gövdeyi İÇERİK genişliğine bırakıyordu: uzun yazar
+  listesi (nowrap) satırı 390 px'te 828 px'e çıkarıp sayfayı yana kaydırıyordu
+  (M5, kabulde ölçüldü). Gövde satırın genişliğine uyar; künye üç noktayla kesilir.
+*/
+.kaynak-satiri > .gb-satir-govde { align-self: stretch; max-width: 100%; }
+/* Üç nokta dar ekranda künye satırının sonundaki DOI bağlantısını da gizliyordu: orada satır sarılır. */
+@media (max-width: 640px) {
+  .kaynak-satiri .gb-satir-govde small { white-space: normal; overflow-wrap: anywhere; }
+}
+/* PDF durumu (lib/kaynak-durumu): DOI eşleşmesi ve belirsizlik onay renginde değil. */
+.kaynak-pdf-durumu[data-ton="tamam"] { color: var(--success); }
+.kaynak-pdf-durumu[data-ton="uyari"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+/* ?kaynak= ile gelinen kayıt: öğrenci listede aramasın (M5). */
+.kaynak-satiri[data-odak="true"] { background: var(--primary-soft); box-shadow: inset 3px 0 0 var(--primary-ink); }
+.kaynak-satiri[data-odak="true"]:focus-visible { outline: 2px solid var(--primary-ink); outline-offset: -2px; }
 .kaynak-onizleme li { display: grid; gap: 2px; }
 .kaynak-disa-aktar { display: grid; gap: 12px; }
 .kaynakca-onizleme { max-height: 340px; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); font-size: var(--fs-sm); }
