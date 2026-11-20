@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -51,7 +52,7 @@ const yollar = (projectId: string) => {
   revalidatePath(`/dashboard/editor/${projectId}/makale`);
   revalidatePath(`/dashboard/editor/${projectId}`);
   // Kanıt matrisi Çalışmalarım'daki karttan da pencere olarak açılıyor.
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 
 /** Veritabanı hatasını kullanıcının anlayacağı cümleye çevirir. */

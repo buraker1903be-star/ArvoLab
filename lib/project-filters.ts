@@ -77,8 +77,12 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
   };
 }
 
-/** Filtrenin adresi (/dashboard/editor?…): filtre çubuğu ve personel sayaçları aynı adresi kurar. */
-export function filtreAdresi(filters: ProjectFilters): string {
+/**
+ * Filtrenin adresi. `taban` listenin kendisi; bugün tek liste var
+ * (Çalışmalarım, /dashboard/editor). PR #113'te bir süre Yönetim'deki kurum
+ * listesi de bu parametreyle süzülüyordu; o liste 20.11.2026'da kalktı.
+ */
+export function filtreAdresi(filters: ProjectFilters, taban = "/dashboard/editor"): string {
   const p = new URLSearchParams();
   if (filters.q) p.set("q", filters.q);
   if (filters.status !== "tumu") p.set("durum", filters.status);
@@ -87,7 +91,7 @@ export function filtreAdresi(filters: ProjectFilters): string {
   if (filters.comments !== "tumu") p.set("yorum", filters.comments);
   if (filters.ethics !== "tumu") p.set("etik", filters.ethics);
   const sorgu = p.toString();
-  return sorgu ? `/dashboard/editor?${sorgu}` : "/dashboard/editor";
+  return sorgu ? `${taban}?${sorgu}` : taban;
 }
 
 export function isFiltered(filters: ProjectFilters): boolean {

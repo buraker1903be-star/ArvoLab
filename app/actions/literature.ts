@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -15,7 +16,7 @@ const PAGE_PATH = "/dashboard/literature";
    kart sayıları ve pencere içeriği eskimesin. */
 const yenile = () => {
   revalidatePath(PAGE_PATH);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 const STATUSES = ["to_review", "read", "used"];
 const SOURCE_TYPES = ["article", "book", "chapter", "thesis", "report", "website", "other"];

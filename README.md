@@ -261,7 +261,7 @@ akademik operasyon paneli.
   metadata'da DEĞİL (proje dosyası Bölüm 3.1 ile uyumlu). Yeni kullanıcı
   kaydında otomatik `employee` rolüyle profil satırı açılır; rol
   yükseltmeleri yalnızca SQL/servis anahtarıyla yapılmalıdır.
-- **Akademik Çalışmalar** — tez/makale/proje/doçentlik dosyası kayıtları
+- **Akademik Çalışmalar** — tez/makale/proje kayıtları (doçentlik dosyası türü 20.11.2026'dan beri yeni açılmıyor; var olanlar duruyor)
   (`academic_projects`), kurum/atanan çalışan/Kontrolör onayı alanlarıyla.
   Kontrolör, Yönetici, Sistem Yöneticisi ve Kurucu rolleri kurumdaki
   tüm çalışmaları görüp yönetebilir; Çalışan/Uzman yalnızca kendi/atandığı
@@ -439,7 +439,7 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Kontrolör onay akışı (Kontrolör/Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
 - [x] Doküman yükleme (DOCX/PDF) + otomatik kaynakça/atıf analizi
 - [x] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü (zorunlu bölüm ve kaynakça sistemi denetimi)
-- [x] Doçentlik puan hesaplayıcı (yönetilebilir kriterler + kullanıcı beyanına göre toplam puan)
+- [x] Doçentlik puan hesaplayıcı (yönetilebilir kriterler + kullanıcı beyanına göre toplam puan) — 20.11.2026'da ürün kararıyla kaldırıldı
 - [x] "Uzmandan destek iste" talep akışı (açık talepler, üstlenme, tamamlama)
 - [x] ArvoLab Orijinallik Ön-Kontrolü (erişilebilir belge havuzuyla shingle-tabanlı benzerlik taraması — Turnitin değildir)
 - [x] APA 7 kaynakça doğrulama
@@ -522,7 +522,7 @@ yöneticiye sunulur, onaylanan sürüm etkinleşir) birebir uyumludur.
 | Analiz Merkezi | `/dashboard/analysis` | Veri yükleyip test çalıştırma, SPSS çıktısı biçimlendirme, MAXQDA kod kontrolü |
 | Belge Kontrol | `/dashboard/documents` | DOCX/PDF yükleme + analiz + kılavuz uyumu + orijinallik |
 | Kılavuzlar | `/dashboard/guidelines` | Üniversite tez yazım kılavuzları |
-| Doçentlik Puan Sorgulama | `/dashboard/associate-professorship` | Puan hesaplayıcı |
+| ~~Doçentlik Puan Sorgulama~~ | `/dashboard/associate-professorship` | 20.11.2026'da kaldırıldı; adres Ana Sayfa'ya yönlenir, veriler veritabanında duruyor |
 | Uzman Desteği | `/dashboard/expert-requests` | Akademik danışmanlık talebi |
 | Uygulama Destek Talep | `/dashboard/support` | Teknik/uygulama destek talebi (yeni) |
 

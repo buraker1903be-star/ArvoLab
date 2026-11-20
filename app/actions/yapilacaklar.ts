@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { ceviri } from "@/lib/dil-sunucu";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -18,8 +18,7 @@ import { yapilacakGirdisi, type Yapilacak } from "@/lib/yapilacaklar";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const yenile = () => {
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
 };
 
 /** Açık (tamamlanmamış) yapılacaklar; okunamazsa boş liste ve log. */

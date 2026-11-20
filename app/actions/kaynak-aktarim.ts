@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -34,7 +35,7 @@ import { ceviri } from "@/lib/dil-sunucu";
 
 const yenile = () => {
   revalidatePath("/dashboard/literature");
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 
 const TURLER = ["article", "book", "chapter", "thesis", "report", "website", "other"];

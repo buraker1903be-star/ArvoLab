@@ -30,13 +30,14 @@ const { chromium } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
 const ROL = process.argv[3] ?? "client";
+/* 20.11.2026: Doçentlik Puanı ve Yönetim kalktı; personel (employee) öğrenciyle aynı menüyü görür. */
 const PERSONEL = {
   client: [],
-  employee: [["Doçentlik Puanı", "/dashboard/associate-professorship"]],
-  system_admin: [["Doçentlik Puanı", "/dashboard/associate-professorship"], ["Asistan Kayıtları", "/dashboard/asistan"], ["Ekip Yönetimi", "/dashboard/team"]],
+  employee: [],
+  system_admin: [["Asistan Kayıtları", "/dashboard/asistan"], ["Ekip Yönetimi", "/dashboard/team"]],
 }[ROL];
 if (!PERSONEL) throw new Error(`bilinmeyen rol: ${ROL}`);
-const PERSONEL_ADRESLERI = ["/dashboard/associate-professorship", "/dashboard/asistan", "/dashboard/team"];
+const PERSONEL_ADRESLERI = ["/dashboard/asistan", "/dashboard/team"];
 const HESAP = ["Ayarlar", "Abonelik ve Kredi", "Destek"];
 const DAHA = ["Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"];
 const ANA = ["/dashboard", "/dashboard/editor", "/dashboard/literature"];

@@ -40,14 +40,15 @@ describe("rol bazlı görünürlük değişmedi", () => {
   const layout = oku("app/dashboard/layout.tsx");
   test("gezinme listeyi kendisi kurmuyor: layout'ta rolle süzülmüş listeyi alıyor", () => {
     assert.doesNotMatch(yorumsuz(gezinme), /labUygulamalari\(|gorunenUygulamalar\(/);
-    assert.match(layout, /const uygulamalar = gorunenUygulamalar\(labUygulamalari\(t\), gorunum\.onizleme \? undefined : profile\?\.role/);
+    // Önizleme 20.11.2026'da kalktı (lib/kisisel-calismalar.ts): liste her zaman gerçek rolle süzülür.
+    assert.match(layout, /const uygulamalar = gorunenUygulamalar\(labUygulamalari\(t\), profile\?\.role/);
     assert.match(layout, /<OsGezinme uygulamalar=\{uygulamalar\}/);
   });
   test("öğrenci personel aracı görmez; kurucu görür (Phase 5.1d-3: hesap menüsünde)", () => {
     const ogrenci = personelAraclari(gorunenUygulamalar(labUygulamalari(), "client")).map((u) => u.key);
     assert.deepEqual(ogrenci, []);
     const kurucu = personelAraclari(gorunenUygulamalar(labUygulamalari(), "founder")).map((u) => u.key);
-    assert.ok(kurucu.includes("ekip") && kurucu.includes("asistan"));
+    assert.ok(kurucu.includes("asistan") && !kurucu.includes("ekip"));
   });
   test("hiçbir uygulama düşmüyor: her biri ana gezinmede, bir grupta ya da hesap menüsünde, tam bir yerde", () => {
     const hepsi = gorunenUygulamalar(labUygulamalari(), "founder");

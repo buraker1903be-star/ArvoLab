@@ -32,11 +32,12 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     durumu ve iki yolu (Kılavuzumu yükle, Kurumu seç) çalışma menüsündeki
     "Kılavuz ve biçim" aracında. İki yolun da kaybolmadığını sabitler.
   */
-  test("kılavuz yok şeridi editörde yok; iki yol Kılavuz ve biçim aracında", () => {
+  test("kılavuz yok şeridi editörde yok; yükleme yolu Kılavuz ve biçim aracında, kurum seçimi yok", () => {
     assert.doesNotMatch(editor, /className="kilavuz-satiri"/);
     const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kilavuz")'), editor.indexOf('acilanAraclar.includes("kilavuz")') + 6000);
     assert.match(arac, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
-    assert.match(arac, /href=\{editHref\}/);
+    // "Kurumu seç" 20.11.2026'da kalktı: kılavuz isteğe bağlı, ArvoLab kurum seçtirmiyor.
+    assert.doesNotMatch(arac, /href=\{editHref\}|Kurumu seç/);
     assert.match(arac, /setGuidelineOpen\(true\)/);
   });
   test("Bul ve Odak modu kaldırılmadı: Belge menüsünde", () => {
@@ -96,7 +97,7 @@ describe("düz yüzey: birincil düğmede gradyan ve gölge yok", () => {
 });
 
 describe("ikinci tur: yeni kullanıcı ve çalışma özeti", () => {
-  const sayfa = oku("app/dashboard/page.tsx");
+  const sayfa = oku("app/dashboard/ana-sayfa-icerik.tsx");
   test("yeni kullanıcı: tek açıklama, tek birincil, rehber isteğe bağlı", () => {
     const bas = sayfa.slice(sayfa.indexOf("{yeniKullanici ? ("), sayfa.indexOf(") : ogrenciGorunumu && resume ? ("));
     assert.match(bas, /<details className="pw-rehber">/);
@@ -145,7 +146,8 @@ describe("erişilebilirlik bulguları (axe, 18.11.2026)", () => {
     assert.match(gb, /@media \(max-width: 760px\) \{\s*\.calismalar-ozet dd \{ overflow: visible; white-space: normal; overflow-wrap: anywhere; \}/);
   });
   test("ölçü listesinde dl yalnızca dt/dd taşır (span ve form dd içinde)", () => {
-    for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx", "app/dashboard/editor/personel-calisma-karti.tsx", "app/dashboard/team/page.tsx"]) {
+    /* personel-calisma-karti.tsx ve Ekip Yönetimi 20.11.2026'da kaldırıldı. */
+    for (const dosya of ["app/dashboard/editor/calisma-durum-karti.tsx"]) {
       const s = oku(dosya);
       const dl = s.slice(s.indexOf('<dl className="tez-olcumler calisma-olcumler">'), s.indexOf("</dl>", s.indexOf('<dl className="tez-olcumler')));
       // dd ve small içindeki span'lar dışında doğrudan span kalmamalı: hepsi tez-olcu-not oldu.

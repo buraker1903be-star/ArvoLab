@@ -8,8 +8,8 @@ import { calismaAdresi } from "@/lib/calisma-karti";
   Öğrenci bu sayfayı 26.10.2026'dan beri görmüyordu; personel de artık
   görmüyor. Özet, eksikler, kılavuz, etik, literatür, kaynakça, analiz,
   teslim hazırlığı, teslim paketi ve atıf stili düzeltmesi Çalışmalarım'daki
-  kartta (öğrencide calisma-durum-karti.tsx, personelde
-  personel-calisma-karti.tsx). Adres kalkmadı: eski bağlantılar ve yer
+  kartta (calisma-durum-karti.tsx; personelin ayrı kartı 20.11.2026'da
+  kalktı). Adres kalkmadı: eski bağlantılar ve yer
   imleri çalışma seçili olarak Çalışmalarım'a iner; ?kilavuz=1 (yeni tezde
   kılavuz eşleşmediyse) kılavuz penceresini açar.
 */

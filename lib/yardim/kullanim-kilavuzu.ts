@@ -110,8 +110,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Click \"Create and write\" to open the editor. If you have a Word draft, choose \"Import a Word file\"; the work is created and the import window opens.",
       },
       {
-        tr: "Üniversite, anabilim dalı, teslim tarihi ve tez yazım kılavuzu başlangıçta sorulmaz; hepsini sonra çalışmanın içinden eklersiniz. Kılavuzu editördeki \"Kılavuzumu yükle\" bağlantısından yükleyin: ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
-        en: "University, department, due date and the thesis writing guideline aren't asked at the start; you add them later from inside the work. Upload your guideline from the \"Upload my guideline\" link in the editor: ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
+        tr: "Üniversite, anabilim dalı, teslim tarihi ve tez yazım kılavuzu başlangıçta sorulmaz; hepsini sonra çalışmanın içinden eklersiniz. Kılavuz isteğe bağlıdır; varsa editördeki \"Kılavuz yükle\" bağlantısından yükleyin: ArvoLab kuralları (kaynakça sistemi, zorunlu bölümler, sayfa sınırları) çıkarır, siz kontrol edip \"Kurallarımı uygula\" dersiniz.",
+        en: "University, department, due date and the thesis writing guideline aren't asked at the start; you add them later from inside the work. The guideline is optional; if you have one, upload it from the \"Upload guideline\" link in the editor: ArvoLab extracts the rules (citation style, required sections, page limits); you review them and click \"Apply my rules\".",
       },
     ],
     notlar: [
@@ -515,8 +515,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     },
     adimlar: [
       {
-        tr: "\"Uzmana sor\" ile çalışmanızı ve konuyu (analiz, istatistik, metodoloji, dil/biçim) seçip mesajınızı yazın. Yanıt aynı yazışmada gelir, zil simgesiyle haber verilir.",
-        en: "Use \"Ask an expert\" to choose your work and the topic (analysis, statistics, methodology, language/format) and write your message. The reply arrives in the same thread and the bell notifies you.",
+        tr: "\"Uzmana sor\" ile çalışmanızı ve konuyu (analiz, istatistik, metodoloji, dil/biçim) seçip mesajınızı yazın. Yanıt aynı yazışmada, Destek sayfasında görünür.",
+        en: "Use \"Ask an expert\" to choose your work and the topic (analysis, statistics, methodology, language/format) and write your message. The reply appears in the same thread on the Support page.",
       },
       {
         tr: "Bir hata, erişim sorunu ya da ödeme sorusu için \"Bize yaz\"ı kullanın.",
@@ -570,56 +570,41 @@ const BOLUMLER: KilavuzBolumu[] = [
   },
   {
     id: "personel",
-    baslik: { tr: "Personel için: takip ve onay", en: "For staff: tracking and approval" },
+    baslik: { tr: "Personel için", en: "For staff" },
+    /*
+      20.11.2026'ya kadar bu bölüm personelin ayrı ekranlarını anlatıyordu:
+      Ana Sayfa'da kurumun "Dikkat isteyenler" kartı, Çalışmalarım'da onay
+      ve sorumlu süzgeçleri, etik işareti. O ekranlar kalktı (ArvoLab tek
+      tip ürün; görevlendirme ve operasyon ArvoOS'ta). Kılavuz yalnızca
+      gerçekten var olanı anlatır.
+    */
     ozet: {
-      tr: "Kurumunuzdaki çalışmaları izler, uzman taleplerini yanıtlar ve teslim onayı verirsiniz. Yalnızca kendi kurumunuzun verisini görürsünüz.",
-      en: "You follow your institution's works, answer expert requests and approve submissions. You only see your own institution's data.",
+      tr: "ArvoLab'ı herkesle aynı arayüzle kullanırsınız: Ana Sayfa ve Çalışmalarım yalnızca kendi çalışmalarınızı gösterir. Görevlendirme ve iş takibi ArvoOS'ta yapılır.",
+      en: "You use ArvoLab with the same interface as everyone else: Home and My works show only your own works. Assignment and job tracking happen in ArvoOS.",
     },
     adimlar: [
       {
-        tr: "Ana Sayfa'daki \"Dikkat isteyenler\" kartı teslimi geçen, yaklaşan, sorumlusu olmayan ve onay bekleyen çalışmalara götürür.",
-        en: "The \"Needs attention\" card on Home takes you to overdue, upcoming, unassigned and awaiting-approval works.",
+        tr: "Kendi çalışmanızı Çalışmalarım'daki \"Yeni çalışma\" ile açın; editör, kaynaklar ve denetimler herkesteki gibidir.",
+        en: "Open your own work with \"New work\" in My works; the editor, sources and checks are the same as for everyone.",
       },
       {
-        tr: "Çalışmalarım'da süzgeçlerle (Durum, Teslim, Aşama, Sorumlu, \"Yalnızca onay bekleyenler\") listeyi daraltın.",
-        en: "In My works, narrow the list with the filters (Status, Due, Stage, Assignee, \"Only awaiting approval\").",
-      },
-      {
-        tr: "Destek sayfasında \"Kuyruklar\" görünümü açık uzman taleplerini ve size atananları gösterir.",
-        en: "On the Support page, the \"Queues\" view shows open expert requests and the ones assigned to you.",
-      },
-      {
-        tr: "Çalışmalarım'da bir çalışmayı seçince sağdaki kartta öğrencinin gördüğü pencerelerin aynısı açılır: kılavuz, literatür, kaynakça, kanıt matrisi, etik kurul ve analiz. Teslim hazırlığı da orada.",
-        en: "Selecting a work in My works shows, on the right, the same windows the student sees: guideline, literature, references, evidence matrix, ethics and analysis. Submission readiness is there too.",
-      },
-      {
-        tr: "Ana Sayfa'daki \"Etik kurul sorunu\" maddesi, verisi onaydan önce toplanmış ya da başvurusu reddedilmiş çalışmaları açar; listede bu çalışmalar kırmızı kalkanla işaretlidir.",
-        en: "The \"Ethics approval problem\" item on Home opens works whose data was collected before approval or whose application was rejected; in the list they carry a red shield.",
-      },
-      {
-        tr: "Çalışmanın durumunu \"Çalışma ayarları\"ndan değiştirebilirsiniz (Kontrolör ve üstü).",
-        en: "You can change a work's status from \"Work settings\" (Controller and above).",
-      },
-    ],
-    notlar: [
-      {
-        tr: "Doçentlik Puanı aracı gezinmede \"Diğer\" başlığının altında (tablet ve telefonda \"Daha fazla\"da) durur; ÜAK duyurusunun yerini tutmaz.",
-        en: "The Associate Professorship Score tool is under \"More\" in the navigation; it does not replace the official ÜAK announcement.",
+        tr: "Uzman talepleri bugün ArvoLab'ın Destek sayfasındaki \"Kuyruklar\" görünümünde duruyor. Hedef, talebin ArvoOS'un Talepler bölümüne ulaşması ve yanıtın ArvoLab'a dönmesi; bu bağlantı henüz kurulmadı.",
+        en: "Expert requests are currently in the \"Queues\" view of ArvoLab's Support page. The goal is for requests to reach the Requests section in ArvoOS and for replies to come back to ArvoLab; that link is not set up yet.",
       },
     ],
     roller: STAFF_ROLES,
   },
   {
     id: "yonetim",
-    baslik: { tr: "İç ekip için: ekip ve kayıtlar", en: "For the internal team: team and logs" },
+    baslik: { tr: "İç ekip için: asistan kayıtları", en: "For the internal team: assistant logs" },
     ozet: {
-      tr: "Kurumları ve kullanıcıları yönetir, asistan kayıtlarını incelersiniz.",
-      en: "You manage institutions and users, and review assistant logs.",
+      tr: "Asistan kayıtlarını incelersiniz. Kurumlar, üyelik, davet ve roller ArvoOS'tan gelir.",
+      en: "You review assistant logs. Institutions, membership, invitations and roles come from ArvoOS.",
     },
     adimlar: [
       {
-        tr: "\"Diğer\" → \"Ekip Yönetimi\"nde \"Kurum ekle\" ve \"Kullanıcı davet et\" ile hesap açın; rol ve kurumu satırdan kaydedin.",
-        en: "In \"More\" → \"Team Management\", open accounts with \"Add institution\" and \"Invite user\"; save role and institution on each row.",
+        tr: "Üyelik, davet ve roller ArvoOS'ta yönetilir; ArvoLab'da ekip ekranı yoktur. Kurum bağı ArvoOS'taki üye listesinden kendiliğinden kurulur.",
+        en: "Membership, invitations and roles are managed in ArvoOS; ArvoLab has no team screen. The institution link is set up automatically from the ArvoOS member list.",
       },
       {
         tr: "\"Asistan Kayıtları\" her asistan çalışmasını, kullanıcı puanlarını ve model karşılaştırmasını gösterir.",

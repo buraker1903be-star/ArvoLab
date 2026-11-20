@@ -47,9 +47,9 @@ export default async function KilavuzPenceresi({
       : t({ tr: "Kendi yüklediğiniz kılavuz kullanılıyor", en: "Using the guideline you uploaded" })
     : kilavuzOkunamadi
       ? t({ tr: "Kılavuz aranamadı; sayfayı yenileyin", en: "Couldn't look up the guideline; refresh the page" })
-      : calisma.university
-        ? t({ tr: "Onaylı kılavuz yok — kendi kılavuzunuzu yükleyin", en: "No approved guideline — upload your own" })
-        : t({ tr: "Çalışma ayarlarından kurumu girin", en: "Enter the institution in the work settings" });
+      : /* Kılavuz isteğe bağlı (20.11.2026). Eskiden kurumsuz çalışmada not
+           "Çalışma ayarlarından kurumu girin" diyordu; ArvoLab artık kurum seçtirmiyor. */
+        t({ tr: "Yazım kılavuzunuz varsa yükleyebilirsiniz", en: "If you have a writing guideline, you can upload it" });
 
   return (
     <PanelDrawer
@@ -57,7 +57,7 @@ export default async function KilavuzPenceresi({
         kisa
           ? uygulanan
             ? t({ tr: "Kılavuz", en: "Guideline" })
-            : t({ tr: "Kılavuzu yükle", en: "Upload guideline" })
+            : t({ tr: "Kılavuz yükle", en: "Upload guideline" })
           : t({ tr: "Yazım kılavuzu", en: "Writing guideline" })
       }
       triggerNote={kisa ? undefined : not}

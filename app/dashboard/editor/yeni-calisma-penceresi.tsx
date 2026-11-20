@@ -34,8 +34,14 @@ function telefonAbone(degisti: () => void) {
   İki çıkış: "Oluştur ve yaz" editörü açar; "Word dosyasından içe aktar"
   çalışmayı oluşturup editörü içe aktarma penceresi açık hâlde açar
   (?ice=1). Kaynakça sistemi tezde kılavuzdan, diğerlerinde varsayılan
-  APA 7 — sonradan "Bilgileri düzenle"den değişir. Personelin tam formu
-  ayrı (personel-yeni-calisma-penceresi.tsx).
+  APA 7 — sonradan "Bilgileri düzenle"den değişir.
+
+  TEK BİLEŞEN (20.11.2026, tek ana deneyim kararı; lib/kisisel-calismalar.ts). Bütün
+  giriş noktaları — Ana Sayfa, Çalışmalarım, boş durum, Ctrl+K, eski
+  /dashboard/editor/new adresi — bu pencereyi açar (?yeni=1). Eskiden
+  personel ayrı bir pencere görüyordu (personel-yeni-calisma-penceresi.tsx,
+  kaldırıldı): üniversite, enstitü ve bölüm seçtiren tam form; kurucu kendi
+  tezini açarken bile Türkiye'deki bir üniversiteyi seçmeye yönleniyordu.
 */
 
 const TURLER = [
@@ -43,9 +49,10 @@ const TURLER = [
   { deger: "article", ad: { tr: "Makale", en: "Article" }, aciklama: { tr: "Dergiye gönderilecek", en: "To be submitted to a journal" } },
   { deger: "project", ad: { tr: "Proje", en: "Project" }, aciklama: { tr: "Ödev, rapor, proje", en: "Assignment, report, project" } },
 ] as const;
-/* Doçentlik dosyası türü öğrencinin penceresinde yok: doçentlik modülü
-   personelin (kurum sahibinin kararı, 26.10.2026). Personelin tam formu
-   (new/yeni-calisma-formu.tsx) bu türü sunmaya devam ediyor. */
+/* Doçentlik dosyası türü burada yok: doçentlik puanı kendi modülünde
+   (/dashboard/associate-professorship, kurum sahibinin kararı 26.10.2026).
+   Bu türdeki mevcut çalışmalar açılmaya ve düzenlenmeye devam ediyor;
+   yeni oluşturma yolu personelin eski formuyla birlikte kalktı (20.11.2026). */
 
 type Tur = (typeof TURLER)[number]["deger"];
 
@@ -110,8 +117,8 @@ export default function YeniCalismaPenceresi({
       kicker={t({ tr: "Yeni çalışma", en: "New work" })}
       title={t({ tr: "Yeni çalışma başlatın", en: "Start a new work" })}
       description={t({
-        tr: "Başlamak için ad ve tür yeter. Kurum, teslim tarihi ve yazım kılavuzu çalışmanın içinden, istediğiniz zaman eklenir.",
-        en: "A title and a type are enough to start. Institution, due date and writing guideline can be added from inside the work at any time.",
+        tr: "Başlamak için ad, tür ve belge dili yeter. Teslim tarihi ve yazım kılavuzu çalışmanın içinden, istediğiniz zaman eklenir.",
+        en: "A title, a type and a document language are enough to start. A due date and writing guideline can be added from inside the work at any time.",
       })}
       basaridaKapan={false}
       acik={acik}

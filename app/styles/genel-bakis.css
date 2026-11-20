@@ -609,7 +609,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ayar-govde b { color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
 .ayar-govde small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .ayar-satir > :is(a, button, .drawer-trigger) { flex: none; }
-/* Doçentlik: grup başına puanlar toplamın altında tek satır çip */
+/* Yeni çalışma penceresinin tür kartları: üç tür tek satırda (yeni-calisma-penceresi.tsx). */
 .analiz-kartlari[data-boy="tur"] { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
 /* Abonelik ve kredi: aylık hak çubuğu ve paket kartları */
 .kredi-cubugu { width: 100%; height: 8px; border: 0; border-radius: 999px; overflow: hidden; background: var(--surface-2); appearance: none; }
@@ -795,9 +795,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .fatura-belgeler a:hover { text-decoration: underline; }
 
 /* ============================================================
-   ÇALIŞMALARIM (personel): üstte sayaç-filtreler, solda öğrenci adlı
-   liste, sağda seçili çalışmanın ayrıntısı ve denetimi
-   (personel-calisma-karti.tsx, lib/personel-sayaclari.ts).
+   SAYAÇ ŞERİDİ (.personel-sayaclar): bugün Destek'in geçici uzman
+   kuyruğunda (destek-kuyruklari.tsx). Eskiden personelin Çalışmalarım'ında
+   ve Ana Sayfa'sında da vardı; o ekranlar 20.11.2026'da kalktı.
    ============================================================ */
 .personel-sayaclar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .personel-sayac {
@@ -878,18 +878,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .destek-mesaj-kutu { margin: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--ink); line-height: var(--lh-metin); }
 @media (max-width: 760px) { .destek-sayaclar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Doçentlik Puanı: gruplara göre dağılım, grup başlıkları (associate-professorship) */
-.docentlik-dagilim { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.docentlik-dagilim li { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: var(--fs-sm); }
-.docentlik-dagilim span { overflow: hidden; color: var(--ink-soft); text-overflow: ellipsis; white-space: nowrap; }
-.docentlik-dagilim b { min-width: 40px; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
-.docentlik-dagilim progress { width: 100%; height: 8px; border: 0; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); appearance: none; }
-.docentlik-dagilim progress::-webkit-progress-bar { background: var(--surface-2); border-radius: var(--r-pill); }
-.docentlik-dagilim progress::-webkit-progress-value { background: var(--secondary); border-radius: var(--r-pill); }
-.docentlik-dagilim progress::-moz-progress-bar { background: var(--secondary); border-radius: var(--r-pill); }
-.docentlik-grup { display: grid; gap: 4px; }
-.docentlik-grup-baslik { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
-.docentlik-grup-baslik .muted { font-size: var(--fs-micro); font-weight: 600; }
 /* Ana sayfa (personel): Çalışmalarım sayaçları + kuyruk sayaçları tek satırda (6–8 kutu) */
 .ana-sayaclar { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .ana-sayaclar .personel-sayac { padding: 8px 12px; }
@@ -923,23 +911,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .yazisma-form textarea { width: 100%; resize: vertical; }
 .yazisma-form-alt { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .yazisma-coz { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: var(--fs-sm); }
-/* Doçentlik hedefleri: hedefi olan grupta eksik puan çubuğun altında; çubuk tona göre renklenir. */
-.docentlik-dagilim small { grid-column: 2 / -1; margin-top: -4px; color: var(--warning); font-size: var(--fs-micro); }
-.docentlik-dagilim li[data-tone="warning"] progress::-webkit-progress-value { background: var(--warning); }
-.docentlik-dagilim li[data-tone="warning"] progress::-moz-progress-bar { background: var(--warning); }
-.docentlik-dagilim li[data-tone="success"] progress::-webkit-progress-value { background: var(--success); }
-.docentlik-dagilim li[data-tone="success"] progress::-moz-progress-bar { background: var(--success); }
 .kaynakca-puan b small { color: var(--muted); font-size: 0.55em; font-weight: 600; }
-/* ÜAK tabloları (doçentlik): satırın eylemleri alta sarılabilir; temel alan çipleri. */
-.uak-satir { flex-wrap: wrap; }
-.uak-notlar { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: var(--fs-sm); }
-.uak-alanlar { display: flex; flex-wrap: wrap; gap: 6px; }
-.uak-alanlar .chip { padding: 4px 10px; border-radius: var(--r-pill); text-decoration: none; }
-.uak-alanlar .chip[aria-current="true"] { --tone: var(--ink); --tone-soft: var(--primary-soft); }
-/* Doçentlik toplam şartları (toplam / doktora sonrası) ve tavan notu. */
-.docentlik-sartlar { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--ink-soft); font-size: var(--fs-sm); }
-.docentlik-sartlar li[data-tone="warning"] { color: var(--warning); }
-.docentlik-sartlar li[data-tone="success"] { color: var(--success); }
 
 /* Analiz: sütun seçimi onay kutularıyla (sutun-secimi.tsx) ve gruplu yöntem kartları */
 .sutun-secimi { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }

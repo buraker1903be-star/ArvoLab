@@ -1,7 +1,6 @@
 "use server";
 
 import { ceviri } from "@/lib/dil-sunucu";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -82,15 +81,12 @@ export async function getMySupportRequests(): Promise<ListeSonucu<AppSupportRequ
 
 export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportRequest>> {
   const supabase = await createClient();
-  const kurum = await seciliKurum();
-  // İç ekibin kurum seçimi: talebi açanın kurumuna göre (lib/kurum-secimi.ts).
-  if (kurum && !kurum.kullanicilar.length) return listeBasarili([]);
-  let sorgu = supabase
+  /* İç ekibin kurum seçicisi 20.11.2026'da kalktı (ArvoLab tek tip ürün; operasyon ArvoOS'ta): kuyruk RLS'in gösterdiği bütün açık talepler. */
+  const { data, error } = await supabase
     .from("app_support_requests")
     .select("id, requested_by, subject, message, category, priority, status, created_at, admin_note, answered_at")
-    .neq("status", "resolved");
-  if (kurum) sorgu = sorgu.in("requested_by", kurum.kullanicilar);
-  const { data, error } = await sorgu.order("created_at", { ascending: true });
+    .neq("status", "resolved")
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error(error);

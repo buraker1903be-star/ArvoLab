@@ -11,17 +11,18 @@
   - OKUNAMAYAN liste yeni kullanıcı SAYILMAZ. Geçici bir arızada "hoş
     geldiniz, ilk çalışmanızı oluşturun" demek, çalışmaları duran birine
     hepsinin gittiğini söylemektir (lib/liste-sonucu.ts).
-  - PERSONEL yeni kullanıcı sayılmaz. Onlar için sıfır sayaç gerçek bir
-    bilgidir ("bekleyen iş yok"), eksik bir kurulum değil.
+
+  20.11.2026'ya kadar personel de hiçbir koşulda yeni kullanıcı
+  sayılmıyordu: onun ana sayfası kurumun sayaçlarıydı ve sıfır sayaç
+  gerçek bir bilgiydi. Artık herkesin ana sayfası kendi çalışmaları;
+  hiç çalışması olmayan personel de "ilk çalışmanızı oluşturun" görür.
 */
 
 export function ilkKullanim(durum: {
   calismaSayisi: number;
   /** Çalışma listesi okunamadı. */
   okunamadi: boolean;
-  /** Kullanıcı personel rollerinden birinde. */
-  personel: boolean;
 }): boolean {
-  if (durum.okunamadi || durum.personel) return false;
+  if (durum.okunamadi) return false;
   return durum.calismaSayisi === 0;
 }

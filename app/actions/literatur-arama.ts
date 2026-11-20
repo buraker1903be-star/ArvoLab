@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
@@ -12,7 +13,7 @@ const PAGE_PATH = "/dashboard/literature";
    kart sayıları ve pencere içeriği eskimesin. */
 const yenile = () => {
   revalidatePath(PAGE_PATH);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 const EN_KISA_SORGU = 3;
 const EN_UZUN_SORGU = 300;

@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { calismaAdresi, eksikSatirlari, filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId, yeniCalismaAdresi } from "@/lib/calisma-karti";
 
-test("filtreler personelde hep, öğrencide yalnızca uzun listede", () => {
-  assert.equal(filtrelerGorunsun(1, false), false);
-  assert.equal(filtrelerGorunsun(3, false), false);
-  assert.equal(filtrelerGorunsun(4, false), true);
-  assert.equal(filtrelerGorunsun(1, true), true);
+test("filtreler yalnızca uzun listede (herkes için aynı kural)", () => {
+  assert.equal(filtrelerGorunsun(1), false);
+  assert.equal(filtrelerGorunsun(3), false);
+  assert.equal(filtrelerGorunsun(4), true);
 });
 
 test("hedef varsa yüzde gerçek yazımdan; elle girilen değer ezilir", () => {

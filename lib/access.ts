@@ -4,7 +4,8 @@ import type { Metin } from "./dil";
 import { createClient } from "@/lib/supabase/server";
 import { getLicenseState } from "@/lib/license";
 import { ensureSubscription } from "@/lib/subscription";
-import { ADMIN_ROLES, type UserRole } from "@/lib/project-labels";
+import type { UserRole } from "@/lib/project-labels";
+import { bagsizPersonel, erisimYolu } from "@/lib/erisim-yolu";
 import { loadCurrentProfile } from "@/lib/current-profile";
 import type { BillingPlan } from "@/lib/billing-plan";
 import type { KrediPaketi } from "@/lib/kredi-paketleri";
@@ -34,6 +35,11 @@ export interface AccessState {
   krediPaketleri: KrediPaketi[];
   /** Bireysel abonede kart saklama/otomatik yenileme açık mı (ArvoOS'un anahtarı); diğerlerinde false. */
   kartSaklama: boolean;
+  /**
+   * Rolü personel ama profili hiçbir kuruma bağlı değil (lib/erisim-yolu.ts).
+   * Bireysel yola düşer; kapalı erişim ekranı nedenini söyler. Hak VERMEZ.
+   */
+  bagsizPersonel?: boolean;
 }
 
 const open = (kind: AccessKind, status: string): AccessState => ({
@@ -52,9 +58,11 @@ const accessFor = cache(async function accessFor(
   organizationId: string | null,
   fullName: string | null
 ): Promise<AccessState> {
-  if (ADMIN_ROLES.includes(role)) return open("staff", "internal");
+  /* Yol rolden değil kurum bağından (lib/erisim-yolu.ts): personel rolü tek başına hak vermez. */
+  const yol = erisimYolu(role, organizationId);
+  if (yol === "ic-ekip") return open("staff", "internal");
 
-  if (organizationId) {
+  if (yol === "kurum" && organizationId) {
     const license = await getLicenseState(organizationId);
     return {
       blocked: license.blocked,
@@ -70,16 +78,18 @@ const accessFor = cache(async function accessFor(
     };
   }
 
+  const bagsiz = bagsizPersonel(role, organizationId);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return open("individual", "unknown");
+  if (!user?.email) return { ...open("individual", "unknown"), bagsizPersonel: bagsiz };
 
   // Kimlik profilden gelir (auth çağrısı yalnızca e-posta için); ikisi aynı kullanıcıdır.
   const subscription = await ensureSubscription({ id, email: user.email, fullName });
   // ArvoOS'a ulaşılamadı: engelleme.
-  if (!subscription) return open("individual", "unreachable");
+  if (!subscription) return { ...open("individual", "unreachable"), bagsizPersonel: bagsiz };
 
   return {
+    bagsizPersonel: bagsiz,
     blocked: !subscription.access,
     kind: "individual",
     status: subscription.status,
@@ -132,7 +142,7 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * Crossref sorgusu; 12.11.2026'ya kadar kapısızdı, artık saatlik hakla da sınırlı:
  * lib/doi-sorgu-siniri.ts), literaturAramasiYap ve aramaKaydiniEkle (OpenAlex/
  * Crossref literatür araması ve sonucu kütüphaneye ekleme), addManuscriptComment,
- * addScoreEntry, createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
+ * createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
  * kılavuz yüklemesi; PDF/OCR çözümlemesi), tasEkle ve taslakTakvimOlustur (tez takvimi;
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
@@ -170,7 +180,7 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  *    kayitliCevabiDenetle) da kapısız: kullanıcının kendi asistan kayıtlarını
  *    okur ve eklemeden önce güncel kütüphaneye karşı denetler; model
  *    çağrılmaz, hak tüketilmez, satır yazılmaz.
- *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
+ *  - guidelines.ts, guideline-scan.ts, universities.ts: personel
  *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
  *    ve founder olduğu için buraya kapı koymak academic_manager, controller
  *    ve expert rollerini de dışarıda bırakırdı.

@@ -27,9 +27,8 @@ export function missingCoverFields(cover: Partial<CoverPage>, dil: Dil = "tr"): 
 export type ChecklistStatus = "ok" | "warning" | "todo";
 
 export type ChecklistAction =
-  | "link-guideline"
-  /* Kurum seçili ama katalogda karşılığı yok: öğrenci kendi kılavuzunu
-     yükleyebiliyor (app/actions/calisma-kilavuzu.ts). */
+  /* Kılavuz yükleme (app/actions/calisma-kilavuzu.ts). 20.11.2026'ya kadar
+     bir de "link-guideline" (Kurum seç) vardı; kaldırıldı, aşağıya bakın. */
   | "upload-guideline"
   | "insert-sections"
   | "open-issues"
@@ -46,6 +45,12 @@ export interface ChecklistItem {
   status: ChecklistStatus;
   detail: string;
   action?: { id: ChecklistAction; label: string };
+  /*
+    İsteğe bağlı madde (20.11.2026): teslim hazırlığı sayısına girmez ve
+    "Şimdi" işi olarak seçilmez. Bugün yalnızca kılavuz maddesi böyle;
+    kılavuzsuz yazma ve dışa aktarma tamamen çalışıyor.
+  */
+  optional?: boolean;
 }
 
 export interface SubmissionChecklist {
@@ -58,12 +63,10 @@ export interface ChecklistInput {
   isThesis: boolean;
   hasGuideline: boolean;
   /*
-    Çalışmada kurum bilgisi girili mi. "Kılavuz yok" iki ayrı durum ve
-    çözümleri FARKLI: kurum girilmemişse kurumu seçmek yeter, kurum
-    girilmiş ama katalogda karşılığı yoksa seçmek hiçbir şey
-    değiştirmez — orada tek yol kendi kılavuzunu yüklemek. İkisine
-    aynı şeyi söylemek, öğrenciyi işe yaramayan bir ekrana
-    göndermekti.
+    Çalışmada kurum bilgisi girili mi. 20.11.2026'ya kadar kılavuzsuz
+    tezde metni değiştiriyordu (kurumsuz → "Kurum seç"); kılavuz isteğe
+    bağlı olunca iki durum aynı cümleyi alıyor. Çağıranlar hâlâ verdiği
+    için alan kalıyor.
   */
   hasInstitution?: boolean;
   /** Uygulanan kurallar insan onayından geçti mi (lib/guideline-rules.ts). */
@@ -102,6 +105,15 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
   const t = (tr: string, ing: string) => (en ? ing : tr);
   const items: ChecklistItem[] = [];
 
+  /*
+    KILAVUZ İSTEĞE BAĞLI (20.11.2026). Eskiden kılavuzu olmayan tezde bu
+    madde "yapılacak"tı ve kurumu girilmemiş kullanıcıyı "Kurum seç"e
+    gönderiyordu: Çalışmalarım'da "Şimdi" satırının işi kurum seçmek
+    oluyordu. ArvoLab artık kurum seçtirmiyor (kurum bağı ArvoOS'tan
+    gelir) ve kılavuz olmadan yazma ve dışa aktarma eksiksiz çalışıyor.
+    Madde kalıyor ama isteğe bağlı: sayıya girmez, "Şimdi" olmaz, tek
+    eylemi kılavuz yüklemek. hasInstitution artık metni değiştirmiyor.
+  */
   if (input.isThesis) {
     items.push(
       input.hasGuideline
@@ -109,26 +121,20 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
             id: "guideline",
             label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
             status: "ok",
+            optional: true,
             detail:
               input.guidelineVerified === false
                 ? t("Kendi yüklediğiniz kılavuz uygulanıyor; kurumunuzun onayından geçmedi.", "The guideline you uploaded is being applied; it has not been approved by your institution.")
                 : t("Kılavuz bağlı; biçim kuralları kendiliğinden uygulanıyor.", "A guideline is linked; its formatting rules are applied automatically."),
           }
-        : input.hasInstitution
-          ? {
-              id: "guideline",
-              label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
-              status: "todo",
-              detail: t("Kurumunuzun kılavuzu katalogda yok. Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatalım.", "Your institution's guideline is not in the catalog. Upload your own guideline; we will read the rules and ask you to confirm them."),
-              action: { id: "upload-guideline", label: t("Kılavuzumu yükle", "Upload my guideline") },
-            }
-          : {
-              id: "guideline",
-              label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
-              status: "todo",
-              detail: t("Çalışmaya kılavuz bağlı değil; kurumunuzu seçince kurallar kendiliğinden uygulanır.", "No guideline is linked to this work; once you select your institution, its rules are applied automatically."),
-              action: { id: "link-guideline", label: t("Kurum seç", "Select institution") },
-            }
+        : {
+            id: "guideline",
+            label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
+            status: "warning",
+            optional: true,
+            detail: t("Yazım kılavuzunuz varsa yükleyebilirsiniz.", "If you have a writing guideline, you can upload it."),
+            action: { id: "upload-guideline", label: t("Kılavuz yükle", "Upload guideline") },
+          }
     );
   }
 
@@ -318,5 +324,7 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
     items.push({ id: "ethics", label: t("Etik kurul", "Ethics approval"), status: input.etik.durum, detail: input.etik.detay[dil] });
   }
 
-  return { items, done: items.filter((item) => item.status === "ok").length, total: items.length };
+  // İsteğe bağlı maddeler sayılmaz: kılavuz yüklemek teslim hazırlığını "eksik" göstermemeli.
+  const sayilan = items.filter((item) => !item.optional);
+  return { items, done: sayilan.filter((item) => item.status === "ok").length, total: sayilan.length };
 }

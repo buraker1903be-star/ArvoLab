@@ -1,0 +1,264 @@
+[
+  {
+    "ad": "kurucu: doçentlik adresleri Ana Sayfa'ya iniyor; hesap menüsünde ve Ctrl+K'da doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "sonuc": {
+        "/dashboard/associate-professorship": "/dashboard",
+        "/print/docentlik": "/dashboard"
+      },
+      "menuda": false,
+      "palette": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: doçentlik adresleri Ana Sayfa'ya iniyor; hesap menüsünde ve Ctrl+K'da doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "sonuc": {
+        "/dashboard/associate-professorship": "/dashboard",
+        "/print/docentlik": "/dashboard"
+      },
+      "menuda": false,
+      "palette": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: var olan doçentlik dosyası editörde açılıyor, Çalışmalarım'da 'Doçentlik dosyası' etiketiyle duruyor",
+    "gecti": true,
+    "ayrinti": {
+      "editorAcildi": true
+    }
+  },
+  {
+    "ad": "Yeni çalışma penceresi üç türlü; doçentlik türü elle gönderilse de sunucu doçentlik dosyası açmıyor",
+    "gecti": true,
+    "ayrinti": {
+      "turSayisi": 3,
+      "acilan": "0",
+      "turu": ""
+    }
+  },
+  {
+    "ad": "kurucu: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel (controller, Kurum A, lisans açık ve ArvoOS'tan yansıtılmış): panel açık, abonelik ekranı yok",
+    "gecti": true,
+    "ayrinti": {
+      "kapaliEkran": 0
+    }
+  },
+  {
+    "ad": "personel (employee, Kurum K, lisans kapalı): erişim kapalı, bireysel 'Kartla öde' YOK, kurum lisansı yolu gösteriliyor",
+    "gecti": true,
+    "ayrinti": {
+      "kapali": true,
+      "kartlaOde": 0,
+      "kurumYolu": true
+    }
+  },
+  {
+    "ad": "kurucu: /dashboard/team Ana Sayfa'ya yönlenir; davet ve rol seçimi yok",
+    "gecti": true,
+    "ayrinti": {
+      "yol": "/dashboard",
+      "davet": 0,
+      "rolSec": 0,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurucu: hesap menüsünde yalnızca 'Teknik araçlar' → Asistan Kayıtları; Ekip Yönetimi, Yönetim ve doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "menu": "DKDeniz KurucuKurucu DilTürkçeEnglishAyarlarAbonelik ve KrediDestekTeknik araçlarAsistan KayıtlarıÇıkış yap Güvenli oturum"
+    }
+  },
+  {
+    "ad": "kurumlu: Uzmana sor talebi ArvoLab'da kaydedildi (ArvoOS bağlantısı henüz kurulmadı)",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "personel: uzman kuyruğunda 'ArvoOS Talepler … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi listede ve açılınca mesajı görünüyor",
+    "gecti": true,
+    "ayrinti": {
+      "not": true,
+      "satirVar": true,
+      "talepGorunur": true,
+      "kurumdakiAcikTalep": 2
+    }
+  },
+  {
+    "ad": "kurucu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "fd7b37f5-43e9-4f4e-8370-eb5bf155d896",
+      "kaydedildi": true,
+      "yenidenAcildi": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurucu: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "kurucu: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
+    }
+  },
+  {
+    "ad": "personel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "ea3577d5-27e6-4e62-8c2c-eb36bb23a09d",
+      "kaydedildi": true,
+      "yenidenAcildi": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "personel: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
+    }
+  },
+  {
+    "ad": "kurumlu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "2da78642-42eb-4bb8-98cf-651baafb37a5",
+      "kaydedildi": true,
+      "yenidenAcildi": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "kurumlu: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
+    }
+  },
+  {
+    "ad": "bireysel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "83c03863-545b-42d3-a079-2c529113f7b3",
+      "kaydedildi": true,
+      "yenidenAcildi": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: kurum seçmeden Word dışa aktarma çalışıyor (dosya indi, yazılan metni taşıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "indi": true,
+      "wordMetni": true
+    }
+  },
+  {
+    "ad": "bireysel: Çalışmalarım'da 'Kurum seç' yok; kılavuz isteğe bağlı ve 'Şimdi' işi değil",
+    "gecti": true,
+    "ayrinti": {
+      "kurumSec": false,
+      "istegeBagli": true,
+      "simdi": "ŞİMDİ\nKapak sayfası\nWord ve PDF çıktısında kapak sayfası yok.\nKapağı ekle"
+    }
+  }
+]

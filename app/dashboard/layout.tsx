@@ -5,13 +5,9 @@ import { sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
-import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
-import { GORUNUM_ETIKETI, onizleyebilir } from "@/lib/onizleme";
-import { gorunumSec } from "@/app/actions/onizleme";
-import ActionForm from "./action-form";
+import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
-import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
@@ -28,10 +24,6 @@ import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import { kurumSec } from "@/app/actions/kurum-secimi";
-import { getOrganizations } from "@/app/actions/team";
-import { ADMIN_ROLES } from "@/lib/project-labels";
 
 /* Menüye uygulamanın yalnızca bağlantı için gereken alanları gider (roller, yollar gitmez). */
 const menuBaglantisi = ({ key, label, href, ikon }: OsUygulama) => ({ key, label, href, ikon });
@@ -69,36 +61,21 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     getAccessState(profile),
     profile && !profile.silme_talebi_at ? sozlesmeOnayGerekli({ id: profile.id, role: profile.role }) : Promise.resolve(false),
   ]);
-  // Görünüm önizlemesi yalnızca iç ekipte (lib/onizleme.ts).
-  const gorunum = await sayfaGorunumu({
-    rol: profile?.role,
-    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
-    kurumVar: Boolean(profile?.organization_id),
-  });
   /*
-    Rolü yetmeyen uygulamalar dock'tan da başlatıcıdan da düşer. Öğrenci
-    önizlemesinde ROL YOK sayılır: eskiden önizlemede de Ekip Yönetimi,
-    Ürün Ölçümü ve Kılavuz Kataloğu başlatıcıda görünüyordu, öğrencinin
-    göremeyeceği şeyler. Yetki değişmiyor; sayfaların kendi kapısı gerçek rolle.
+    Rolü yetmeyen uygulamalar gezinmeden ve başlatıcıdan düşer. Eskiden iç
+    ekip "öğrenci görünümünü önizlerken" rol yok sayılıyordu; önizleme
+    20.11.2026'da kalktı (lib/kisisel-calismalar.ts): herkesin ana deneyimi
+    aynı. Kurum seçici (iç ekip kurumlar arasında geçiş yapıyordu) ve
+    Yönetim sayfası da aynı gün kalktı: ArvoLab tek tip bir araştırma ve
+    yazma ürünü; operasyon ArvoOS'ta.
   */
-  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), gorunum.onizleme ? undefined : profile?.role, await aktifDil());
-  /*
-    Kurum seçici yalnızca iç ekipte (lib/kurum-secimi.ts): kurucu birden çok
-    kurumun sahibi ve ekranlar kurumları karışık listeliyordu. Kurum listesi
-    okunamazsa seçici çizilmez; seçim görünümü süzer, yetkiyi değil.
-  */
-  const icEkip = Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
-  const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
-  const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), profile?.role);
   // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
   const hesapMenusu = {
     ad: userName,
     rol: roleLabel,
     basHarf: initials,
     cikis: logout,
-    gorunum: onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined,
-    kurumlar: icEkip && kurumlar.length > 1 ? kurumlar : undefined,
-    seciliKurumId: kurum?.id ?? null,
     /*
       Hesap menüsünün bağlantıları gezinmeyle AYNI süzülmüş listeden
       (uygulamalar): menü ile kenar çubuğu ayrı ayrı rol kararı verip
@@ -149,47 +126,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <Suspense>
           <OsBolumSeridi uygulamalar={uygulamalar} />
         </Suspense>
-
-        {/*
-          Önizleme açıkken her sayfada görünür: unutulan bir önizleme
-          yöneticiye kendi işlerinin (onay, atama) kaybolduğunu düşündürürdü.
-        */}
-        {/* Seçili kurum her sayfada görünür: unutulan bir süzgeç diğer kurumun işlerini "kaybolmuş" gösterirdi. */}
-        {kurum ? (
-          <div className="onizleme-serit" role="status">
-            <span>
-              {t({ tr: "Yalnızca", en: "Showing only" })} <b>{kurum.ad}</b>
-              {t({
-                tr: " gösteriliyor: çalışmalar, ekip, destek kuyrukları ve ana sayfa bu kuruma göre süzülü.",
-                en: ": works, team, support queues and the home page are filtered to this institution.",
-              })}
-            </span>
-            <ActionForm action={kurumSec}>
-              <input type="hidden" name="kurum" value="" />
-              <button type="submit" className="projects-filter-button button-compact">
-                {t({ tr: "Bütün kurumları göster", en: "Show all institutions" })}
-              </button>
-            </ActionForm>
-          </div>
-        ) : null}
-        {gorunum.onizleme ? (
-          <div className="onizleme-serit" role="status">
-            <span>
-              {t({ tr: "", en: "You are previewing the " })}
-              <b>{t(GORUNUM_ETIKETI[gorunum.onizleme])}</b>
-              {t({
-                tr: " görünümünü önizliyorsunuz. Veriler sizin; rolünüz ve yetkileriniz değişmedi.",
-                en: " view. The data is yours; your role and permissions are unchanged.",
-              })}
-            </span>
-            <ActionForm action={gorunumSec}>
-              <input type="hidden" name="gorunum" value="personel" />
-              <button type="submit" className="projects-filter-button button-compact">
-                {t({ tr: "Personel görünümüne dön", en: "Back to staff view" })}
-              </button>
-            </ActionForm>
-          </div>
-        ) : null}
 
         <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>

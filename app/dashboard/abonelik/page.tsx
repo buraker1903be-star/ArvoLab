@@ -1,7 +1,6 @@
 import SozlesmeOnayi from "../_components/sozlesme-onayi";
 import { odemeSonrasiOnayVar, sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { logout } from "@/app/actions/auth";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
 import { Gift, History, Infinity as Sinirsiz, Lock, Plus, RefreshCw, Sparkles, Wallet } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
@@ -69,8 +68,8 @@ const HATA: Record<string, Metin> = {
     en: "Your institution administrator buys your institution's credits.",
   },
   platform: {
-    tr: "Seçili kurum ArvoOS'un kendisi; ArvoOS kendi kredisi için ödeme almaz ve iç ekip krediye tabi değil. Bir müşteri kurumu adına almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
-    en: "The selected institution is ArvoOS itself; ArvoOS does not take payment for its own credits and the internal team is not subject to credits. To buy for a customer institution, select it under Institution in the profile menu.",
+    tr: "Kurumunuz ArvoOS'un kendisi; ArvoOS kendi kredisi için ödeme almaz ve iç ekip krediye tabi değil.",
+    en: "Your institution is ArvoOS itself; ArvoOS does not take payment for its own credits and the internal team is not subject to credits.",
   },
   deneme: {
     tr: "Deneme süresinde ek kredi satılmaz: deneme hakkı krediyle değil kullanım sayısıyla ölçülür. Aboneliğinizi başlattıktan sonra ek kredi alabilirsiniz.",
@@ -137,11 +136,14 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const deneme = await denemeAsistanHakkim(ctx.user.id, dil);
 
   /* Faturalar: bireysel abone kendi ödemelerini, kurumda yalnızca kurum yöneticisi kurumunkileri görür. */
-  /* İç ekip: kurum seçicide seçili kurum, yoksa kendi kurumu (lib/kurum-secimi.ts). */
-  const seciliKurumu = access.kind === "staff" ? await seciliKurum() : null;
-  const kapsam = faturalamaKapsami(access.kind, ctx.role, seciliKurumu?.id ?? ctx.organizationId);
-  let faturaKurumu: string | null = seciliKurumu?.ad ?? null;
-  if (access.kind === "staff" && !faturaKurumu && ctx.organizationId) {
+  /*
+    İç ekip: kendi kurumu. 27.10–20.11.2026 arasında kurum seçiciyle bir
+    müşteri kurumu adına kredi alıp faturalarını görebiliyordu; seçici
+    kalktı (ArvoLab başka kurumlara kiralanmıyor, kurum ödemeleri ArvoOS'ta).
+  */
+  const kapsam = faturalamaKapsami(access.kind, ctx.role, ctx.organizationId);
+  let faturaKurumu: string | null = null;
+  if (access.kind === "staff" && ctx.organizationId) {
     const { data: kendi } = await ctx.supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
     faturaKurumu = kendi?.name ?? null;
   }
@@ -264,8 +266,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               {t({ tr: "", en: "Showing invoices for " })}
               <b>{faturaKurumu}</b>
               {t({
-                tr: " faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.",
-                en: ". For another institution's, change the Institution selection in the profile menu.",
+                tr: " faturaları gösteriliyor.",
+                en: ".",
               })}
             </p>
           ) : null}
@@ -390,8 +392,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           {platformKurumu ? (
             <p className="hint">
               {t({
-                tr: "Seçili kurum ArvoOS'un kendisi; kendi kredisi satılmaz. Bir müşteri kurumu adına kredi almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
-                en: "The selected institution is ArvoOS itself; its own credits are not sold. To buy credits for a customer institution, select it under Institution in the profile menu.",
+                tr: "Kurumunuz ArvoOS'un kendisi; kendi kredisi satılmaz.",
+                en: "Your institution is ArvoOS itself; its own credits are not sold.",
               })}
             </p>
           ) : null}

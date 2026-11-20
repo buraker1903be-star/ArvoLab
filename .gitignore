@@ -17,3 +17,7 @@ next-env.d.ts
 # Yerel denemelerde proje koklerine dusebiliyor; depoya girmemeli (~10 MB).
 *.traineddata
 *.traineddata.gz
+
+# Tek ana deneyim kabulü: rastgele şifreli yerel tohum ve oturumlar (tasarim/tek-deneyim/README.md)
+tasarim/tek-deneyim/betikler/tohum.json
+tasarim/tek-deneyim/betikler/oturum-*.json

@@ -1,16 +1,12 @@
 "use server";
 
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import { yeniCalismaAdresi } from "@/lib/calisma-karti";
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { secilenBelgeDili } from "@/lib/belge-dili";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
-import { calismaOzeti } from "@/app/actions/calisma-merkezi";
-import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { calismaKilavuzu, kilavuzGorunenAdi } from "@/lib/guideline-rules";
 import { getUniversities, type University } from "@/app/actions/universities";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -21,15 +17,10 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 import {
   OVERSIGHT_ONLY_STATUSES,
-  OVERSIGHT_ROLES,
   PROJECT_STATUSES,
   isOversightRole,
 } from "@/lib/project-labels";
 
-const OVERSIGHT_ONLY: Metin = {
-  tr: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız.",
-  en: "You need the Controller role or higher for this action.",
-};
 const PRIORITIES = ["low", "normal", "high", "urgent"];
 const RESEARCH_METHODS = ["quantitative", "qualitative", "mixed", "review"];
 // Stil listesi tek yerde: lib/atif/stiller.ts. Kopyalanınca yeni stil
@@ -82,7 +73,14 @@ export interface AcademicProject {
   created_at: string;
 }
 
-const PROJECT_TYPES = ["thesis", "article", "project", "associate-professorship"];
+/*
+  Yeni çalışma türleri. "associate-professorship" (doçentlik dosyası)
+  20.11.2026'da çıktı: doçentlik modülü ArvoLab'dan kaldırıldı ve tek
+  oluşturma yolu onunla gitti. Var olan doçentlik dosyaları açılıp
+  düzenlenmeye devam ediyor (etiket lib/project-labels.ts, kapak
+  manuscript-editor.tsx); yalnızca yenisi açılamıyor.
+*/
+const PROJECT_TYPES = ["thesis", "article", "project"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Kurum alanları: ad (kapak sayfası ve listeler için) + kimlik (kılavuz eşleştirmesi için).
@@ -107,10 +105,13 @@ function readInstitution(formData: FormData) {
 }
 
 /*
-  Kaydın kendisi; iki giriş noktası paylaşıyor. createProject (personelin
-  tam formu, /dashboard/editor/new) kayıttan sonra yönlendiriyor;
-  yeniCalisma (öğrencinin "Yeni çalışma" penceresi) kimliği geri veriyor,
-  pencere açık kalıp kılavuz yükleme adımına geçiyor.
+  Kaydın kendisi. Tek giriş noktası: "Yeni çalışma" penceresi
+  (editor/yeni-calisma-penceresi.tsx → yeniCalisma). 20.11.2026'ya kadar
+  personelin ayrı, üniversite/enstitü/bölüm seçtiren bir formu vardı
+  (createProject, kaldırıldı); kurum alanları artık yalnızca "Bilgileri
+  düzenle"den yazılıyor, buradaki readInstitution o yüzden duruyor ve
+  boş formda hepsi NULL kalıyor. Mevcut kurum ve kılavuz kayıtları
+  değişmiyor.
 */
 async function calismaKaydet(
   formData: FormData,
@@ -175,18 +176,8 @@ async function calismaKaydet(
     return { error: t(stilKisiti(error) ?? { tr: "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin.", en: "An error occurred while saving; please try again." }) };
   }
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   return { id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) };
-}
-
-// Hatalar formun içinde gösterilir (yazılanlar kaybolmaz); başarıda editör açılır.
-export async function createProject(formData: FormData): Promise<ActionResult> {
-  const sonuc = await calismaKaydet(formData);
-  if ("error" in sonuc) return sonuc;
-  /* Kılavuzu eşleşen tez doğrudan editöre; eşleşmeyen tez kılavuz
-     penceresine, makale dergi bilgilerine (lib/calisma-karti.ts). */
-  redirect(yeniCalismaAdresi(sonuc));
 }
 
 /*
@@ -219,6 +210,10 @@ export async function komutCalismalari(): Promise<{ id: string; title: string; p
   const { data, error } = await ctx.supabase
     .from("academic_projects")
     .select("id, title, project_type")
+    /* Yalnızca kendi çalışmaları (20.11.2026, lib/kisisel-calismalar.ts): eskiden RLS'in
+       gösterdiği her satır geliyordu ve kurucunun "çalışma aç" listesi
+       kurumların tezleriyle doluyordu. */
+    .eq("owner_id", ctx.user.id)
     .order("updated_at", { ascending: false })
     .limit(50);
   if (error) {
@@ -235,20 +230,21 @@ export async function getProjects(): Promise<ListeSonucu<AcademicProject>> {
   } = await supabase.auth.getUser();
   // Oturum yoksa gerçekten kayıt yoktur; bu bir okuma arızası değil.
   if (!user) return listeBasarili([]);
-  /* İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer. */
-  const kurum = await seciliKurum();
-
-  let sorgu = supabase
+  /*
+    YALNIZCA KENDİ ÇALIŞMALARI (lib/kisisel-calismalar.ts), veritabanında süzülür.
+    Eskiden liste RLS'in gösterdiği her satırdı: gözetim rolündeki personel
+    kurumun bütün çalışmalarını kendi listesi gibi görüyordu, iç ekip de
+    kurum seçiciyle süzüyordu. 20.11.2026'dan beri personel ve kurum ekranı
+    yok; RLS'in gözetim için açtığı okuma yetkisi değişmedi, yalnızca bu
+    listede kullanılmıyor.
+  */
+  const { data, error } = await supabase
     .from("academic_projects")
     .select(
       "id, owner_id, organization_id, assignee_id, guideline_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
-    );
-  /* organization_id'siz eski satırlar sahibinin kurumuyla eşlenir (RLS'teki kuralın aynısı). */
-  if (kurum)
-    sorgu = kurum.kullanicilar.length
-      ? sorgu.or(`organization_id.eq.${kurum.id},owner_id.in.(${kurum.kullanicilar.join(",")})`)
-      : sorgu.eq("organization_id", kurum.id);
-  const { data, error } = await sorgu.order("created_at", { ascending: false });
+    )
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("[projeler] liste okunamadı:", error.message);
@@ -399,7 +395,7 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
     return { error: t({ tr: "Atıf stili güncellenemedi. Tekrar deneyin.", en: "The citation style could not be updated. Try again." }) };
   }
 
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { success: true };
 }
 
@@ -487,89 +483,22 @@ export async function updateProject(projectId: string, formData: FormData): Prom
   }
   if (!data?.length) return { error: t({ tr: "Bu çalışmayı düzenleme yetkiniz yok.", en: "You don't have permission to edit this work." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   // Düzenleme sayfası da yeni değerlerle çizilsin; form kayıttan sonra bu değerlerle yeniden kurulur (action-form.tsx).
   revalidatePath(`/dashboard/editor/${projectId}/edit`);
   return { success: true };
 }
 
 
-// Yalnızca Kontrolör / Yönetici / Sistem Yöneticisi / Kurucu rolleri
-// bir çalışmayı onaylayabilir (proje dosyası 6.2 "Biçim" aşaması onayı).
-// Veritabanında guard_academic_project_update tetikleyicisi de bunu zorunlu
-// kılar; buradaki kontrol kullanıcıya erken/anlaşılır bir hata mesajı vermek içindir.
-export async function approveProject(projectId: string): Promise<ActionResult> {
-  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
-  if ("error" in auth) return { error: auth.error };
-  const t = await ceviri();
-
-  const { data, error } = await auth.supabase
-    .from("academic_projects")
-    .update({
-      controller_approved_by: auth.user.id,
-      controller_approved_at: new Date().toISOString(),
-      status: "ready",
-    })
-    .eq("id", projectId)
-    .select("id");
-
-  if (error) {
-    console.error(error);
-    return { error: t({ tr: "Onaylanırken bir hata oluştu.", en: "An error occurred while approving." }) };
-  }
-  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
-
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
-  revalidatePath(`/dashboard/editor/${projectId}`);
-
-  /*
-    Onay verildi; şimdi kontrolöre ekosistemin bulduklarını söylüyoruz.
-    Denetimler zaten yapılmış durumda ama çalışma merkezinde duruyor ve onay
-    listeden veriliyor — merkeze girmediyse hiçbirini görmemiş oluyor.
-    Uyarı ENGELLEMEZ: kuralın dışına çıkmayı bilerek seçmiş olabilir.
-    Okunamazsa sessiz geçilir, onay zaten verildi.
-  */
-  try {
-    const ozet = await calismaOzeti(projectId);
-    // Okunamadıysa uyarı hesaplanmaz; onay zaten verildi, sessiz geçiliyor.
-    const uyari = ozet && ozet !== CALISMA_OKUNAMADI
-      ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik, dil: await aktifDil() })
-      : null;
-    if (uyari) return { success: true, warning: uyari };
-  } catch (hata) {
-    console.error("[onay] uyarı hesaplanamadı:", hata instanceof Error ? hata.message : hata);
-  }
-
-  return { success: true };
-}
-
-export async function revokeApproval(projectId: string): Promise<ActionResult> {
-  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
-  if ("error" in auth) return { error: auth.error };
-  const t = await ceviri();
-
-  const { data, error } = await auth.supabase
-    .from("academic_projects")
-    .update({
-      controller_approved_by: null,
-      controller_approved_at: null,
-      status: "revision",
-    })
-    .eq("id", projectId)
-    .select("id");
-
-  if (error) {
-    console.error(error);
-    return { error: t({ tr: "İşlem sırasında bir hata oluştu.", en: "An error occurred during the operation." }) };
-  }
-  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
-
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
-  return { success: true };
-}
+/*
+  KONTROLÖR ONAYI (approveProject, revokeApproval) 20.11.2026'da kaldırıldı:
+  onay düğmeleri yalnızca personelin kurum listesindeydi (Çalışmalarım'ın
+  personel düzeni, sonra Yönetim) ve o ekran kalktı; görevlendirme ve
+  operasyon ArvoOS'ta. "use server" dosyasında kullanılmayan her export
+  dışarıdan çağrılabilir bir uç nokta olarak kalırdı. Sütunlar
+  (controller_approved_*) ve tetikleyici kuralı yerinde; eski onaylar
+  duruyor.
+*/
 
 /*
   SORUMLU ATAMASI (assignProject, getAssignableStaff) 03.11.2026'da
@@ -597,7 +526,6 @@ export async function deleteProject(projectId: string): Promise<ActionResult> {
   }
   if (!data?.length) return { error: t({ tr: "Bu çalışmayı silme yetkiniz yok.", en: "You don't have permission to delete this work." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   return { success: true };
 }

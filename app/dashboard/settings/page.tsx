@@ -5,8 +5,8 @@ import { YEREL } from "@/lib/dil";
 import { redirect } from "next/navigation";
 import { Cpu, Download, FileCheck2, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
-import { ADMIN_ROLES, ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
-import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
+import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import { personelRolu } from "@/lib/kisisel-calismalar";
 import PanelDrawer from "../_components/panel-drawer";
 import { aiKurulumu, aiKurulumSorunu } from "@/lib/ai/saglayici";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
@@ -107,11 +107,8 @@ export default async function SettingsPage() {
     Asistan sunucusu bilgisi PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci
     düzenini önizlerken görmemeli (lib/onizleme.ts).
   */
-  const gorunum = await sayfaGorunumu({
-    rol: ctx.role ?? undefined,
-    personelRolu: ctx.role ? STAFF_ROLES.includes(ctx.role) : false,
-    kurumVar: Boolean(ctx.organizationId),
-  });
+  /* Önizleme 20.11.2026'da kalktı (lib/kisisel-calismalar.ts): karar gerçek rolden. */
+  const gorunum = { personel: personelRolu(ctx.role) };
 
   /*
     Açıklama role göre. Eskiden herkese "Rol ve kurum değişiklikleri

@@ -153,8 +153,26 @@ export default async function DestekKuyruklari({
     (tur === "uzman-acik" && acikOkunamadi) ||
     (tur === "uzman-bana" && banaOkunamadi);
 
+  const uzmanKuyrugu = tur === "uzman-acik" || tur === "uzman-bana";
   return (
     <>
+      {/*
+        HEDEF ARVOOS (20.11.2026, kurum sahibinin kararı): "Uzmana sor"
+        talepleri AkademikMerkez'in ArvoOS'taki Talepler bölümüne ulaşacak,
+        yanıt ve durum ArvoLab'a dönecek; bu kuyruk o zaman kalkacak. ArvoOS'ta
+        talebi üründen alan uç henüz yok (plan: tasarim/tek-deneyim/
+        ENTEGRASYON-PLANI.md). Bu not kuyruğun ArvoOS'a bağlıymış gibi
+        görünmemesi için; ArvoLab'da yanıtlamak bir karar değil, bugünkü
+        durum.
+      */}
+      {uzmanKuyrugu ? (
+        <p className="alert" data-tone="info" role="note">
+          {t({
+            tr: "Uzman talepleri ArvoOS'un Talepler bölümüne aktarılacak; yanıt ve durum oradan ArvoLab'a dönecek. Bu bağlantı henüz kurulmadı.",
+            en: "Expert requests will be forwarded to the Requests section in ArvoOS; replies and status will come back to ArvoLab from there. That link is not set up yet.",
+          })}
+        </p>
+      ) : null}
       <nav className="personel-sayaclar destek-sayaclar" aria-label={t({ tr: "Kuyruklar", en: "Queues" })}>
         {KUYRUK_SIRASI.filter((k) => erisilebilir.includes(k)).map((k) => (
           <Link

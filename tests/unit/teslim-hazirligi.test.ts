@@ -187,19 +187,19 @@ test("teslim hazırlığı", async (t) => {
       projectType: "thesis",
       citationStyle: "apa7",
     });
-    assert.equal(liste.total, liste.items.length);
+    // İsteğe bağlı maddeler (kılavuz, 20.11.2026) sayıya girmez.
+    assert.equal(liste.total, liste.items.filter((i) => !i.optional).length);
     assert.ok(liste.done >= 0 && liste.done <= liste.total);
   });
 });
 
-test("kılavuz maddesi iki ayrı çıkmazı ayırıyor", () => {
+test("kılavuz isteğe bağlı: kurum seçtirmez, sayıya girmez (20.11.2026)", () => {
   /*
-    "Kılavuz yok" iki durum ve çözümleri FARKLI:
-    - kurum girilmemişse kurumu seçmek yeter,
-    - kurum girilmiş ama katalogda karşılığı yoksa seçmek hiçbir şeyi
-      değiştirmez; tek yol kendi kılavuzunu yüklemek.
-    İkisine aynı şeyi söylemek öğrenciyi işe yaramayan bir ekrana
-    göndermekti.
+    Eskiden kılavuzsuz tezde madde "yapılacak"tı ve kurumu girilmemiş
+    kullanıcıyı "Kurum seç"e gönderiyordu; Çalışmalarım'ın "Şimdi" satırı
+    kurum seçtiriyordu. Kurum bağı artık ArvoOS'tan geliyor ve kılavuz
+    olmadan yazma/dışa aktarma çalışıyor: iki durumda da tek eylem kılavuz
+    yüklemek, madde teslim hazırlığı sayısına girmez.
   */
   const madde = (girdi: ChecklistInput) =>
     buildSubmissionChecklist(girdi).items.find((i) => i.id === "guideline");
@@ -218,13 +218,19 @@ test("kılavuz maddesi iki ayrı çıkmazı ayırıyor", () => {
     saveState: "saved",
   };
 
-  const kurumsuz = madde({ ...ortak, hasGuideline: false, hasInstitution: false });
-  assert.equal(kurumsuz?.action?.id, "link-guideline");
-  assert.match(kurumsuz?.detail ?? "", /kurumunuzu seçince/i);
-
-  const kurumlu = madde({ ...ortak, hasGuideline: false, hasInstitution: true });
-  assert.equal(kurumlu?.action?.id, "upload-guideline");
-  assert.match(kurumlu?.detail ?? "", /kendi kılavuzunuzu yükleyin/i);
+  for (const hasInstitution of [false, true]) {
+    const m = madde({ ...ortak, hasGuideline: false, hasInstitution });
+    assert.equal(m?.action?.id, "upload-guideline", String(hasInstitution));
+    assert.equal(m?.action?.label, "Kılavuz yükle");
+    assert.equal(m?.detail, "Yazım kılavuzunuz varsa yükleyebilirsiniz.");
+    assert.equal(m?.optional, true);
+    assert.notEqual(m?.status, "todo");
+    assert.doesNotMatch(JSON.stringify(m), /Kurum seç|kurumunuzu seç/i);
+  }
+  // Sayıya girmiyor: toplam yalnızca zorunlu maddeler.
+  const kilavuzsuz = buildSubmissionChecklist({ ...ortak, hasGuideline: false });
+  assert.equal(kilavuzsuz.total, kilavuzsuz.items.filter((i) => i.id !== "guideline").length);
+  assert.equal(kilavuzsuz.done, kilavuzsuz.items.filter((i) => i.id !== "guideline" && i.status === "ok").length);
 });
 
 test("doğrulanmamış kılavuz hazır maddesinde de söyleniyor", () => {
@@ -270,7 +276,7 @@ test("teslim kontrol listesi İngilizce", () => {
   };
   const liste = buildSubmissionChecklist(girdi, "en");
   const bul = (id: string) => liste.items.find((i) => i.id === id)!;
-  assert.equal(bul("guideline").action?.label, "Select institution");
+  assert.equal(bul("guideline").action?.label, "Upload guideline");
   assert.equal(bul("sections").detail, "3/4 sections present. Missing: Results.");
   assert.equal(bul("pages").detail, "≈ 40 pages; the guideline requires at least 60 pages.");
   assert.equal(bul("structure").detail, "1 serious issue, 2 warnings found.");

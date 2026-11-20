@@ -65,7 +65,7 @@ describe("görünürlük", () => {
     /* İç ekibin günde bir kez açtığı sayfalar, öğrencinin her gün
        gördüğü simgelerin arasına girmemeli. */
     const dock = docktakiler(uygulamalar).map((u) => u.key);
-    for (const gizli of ["asistan", "ekip"]) {
+    for (const gizli of ["asistan"]) {
       assert.ok(!dock.includes(gizli), gizli);
     }
     assert.ok(dock.includes("analiz"));
@@ -75,11 +75,12 @@ describe("görünürlük", () => {
     /* Başlatıcıda da görünmemeli: adresini bilmeden bulunamayan bir
        sayfa, menüde görünüp açılmayan sayfadan iyidir. */
     const ogrenci = gorunenUygulamalar(uygulamalar, "client").map((u) => u.key);
-    assert.ok(!ogrenci.includes("ekip"));
+    assert.ok(!ogrenci.includes("asistan"));
     assert.ok(ogrenci.includes("tez"));
 
     const kurucu = gorunenUygulamalar(uygulamalar, "founder").map((u) => u.key);
-    assert.ok(kurucu.includes("ekip"));
+    assert.ok(kurucu.includes("asistan"));
+    assert.ok(!kurucu.includes("ekip"), "Ekip Yönetimi 20.11.2026'da kalktı");
   });
 
   test("rolü olmayan ziyaretçide kısıtlı uygulama yok", () => {
@@ -131,14 +132,16 @@ describe("Ctrl+K araması", () => {
     assert.equal(aramaAnahtari("LİTERATÜR"), aramaAnahtari("literatür"));
     assert.equal(aramaAnahtari("KAYNAKÇA"), aramaAnahtari("kaynakça"));
     assert.equal(aramaAnahtari("Analiz"), "analiz");
-    assert.ok(aramaAnahtari("Doçentlik Puanı").includes(aramaAnahtari("docentlik")));
+    assert.ok(aramaAnahtari("Çalışmalarım").includes(aramaAnahtari("calismalarim")));
   });
 
   test("başlatıcıya ayrılmış uygulamalar da aranabiliyor", () => {
     // Palet uygulamaları komutHedefleri'nden alıyor (osSayfalari artık
     // yalnızca gerçek alt bölümleri döndürüyor, 14.11.2026).
     const sayfalar = komutHedefleri(uygulamalar);
-    assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
+    assert.ok(sayfalar.some((s) => s.href === "/dashboard/asistan"));
+    // Ekip Yönetimi 20.11.2026'da kalktı (ArvoOS'un işi); aramaya da dönmemeli.
+    assert.ok(!sayfalar.some((s) => s.href === "/dashboard/team"));
     // Yönlenen eski adresler (sekmeli dönemin bölümleri) aramada çıkmıyor:
     // Destek ve Kaynaklar uygulamanın kendisiyle aranıyor.
     assert.ok(!sayfalar.some((s) => s.href === "/dashboard/support" || s.href === "/dashboard/citations"));
@@ -162,20 +165,14 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     assert.equal(kaynaklar.bolumler, undefined);
   });
 
-  test("doçentlik yalnızca personelin başlatıcısında; kılavuz kataloğu kaldırıldı", () => {
-    // Doçentlik puanı öğrencinin işi değil. Kılavuz kataloğu 26.10.2026'da
-    // kaldırıldı: kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
-    assert.equal(uygulamalar.some((u) => u.href === "/dashboard/guidelines"), false);
-    const personelSayfalari = ["/dashboard/associate-professorship"];
-    const ogrenci = komutHedefleri(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
-    // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
-    const rolsuz = komutHedefleri(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
-    for (const href of personelSayfalari) {
-      assert.ok(!ogrenci.includes(href), href);
-      assert.ok(!rolsuz.includes(href), href);
-      for (const rol of ["employee", "academic_manager", "controller", "expert", "system_admin", "founder"]) {
-        assert.ok(komutHedefleri(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
-      }
+  test("kılavuz kataloğu, doçentlik ve Yönetim kaldırıldı: hiçbir rolün paletinde yok", () => {
+    // Kılavuz kataloğu 26.10.2026'da (kılavuz her çalışmaya kullanıcının
+    // kendisi yüklüyor), doçentlik ve Yönetim 20.11.2026'da kalktı (ArvoLab
+    // tek tip araştırma ve yazma ürünü). Eski adresler Ana Sayfa'ya iner.
+    const kaldirilan = ["/dashboard/guidelines", "/dashboard/associate-professorship", "/dashboard/yonetim"];
+    for (const rol of ["client", undefined, "employee", "academic_manager", "controller", "expert", "system_admin", "founder"]) {
+      const hedefler = komutHedefleri(gorunenUygulamalar(uygulamalar, rol)).map((s) => s.href);
+      for (const href of kaldirilan) assert.ok(!hedefler.includes(href), `${rol} ${href}`);
     }
   });
 
@@ -185,11 +182,6 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
   });
 });
 
-test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
-  // ÜAK puanı Türk akademik sistemine ait; İngilizce arayüzde karşılığı yok.
-  assert.ok(gorunenUygulamalar(labUygulamalari(), "expert", "tr").some((u) => u.key === "docentlik"));
-  assert.equal(gorunenUygulamalar(labUygulamalari(), "expert", "en").some((u) => u.key === "docentlik"), false);
-});
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
 import { ALT_CUBUK, anaUygulamalar, aracUygulamalari, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, personelAraclari, yardimUygulamalari } from "@/lib/os/uygulamalar";
@@ -210,7 +202,7 @@ test("telefonda alt çubuk + Daha fazla, personel araçları dışında bütün 
   assert.equal(cubuk.length + dahaFazlasi(hepsi).length + personelAraclari(hepsi).length, hepsi.length);
   const daha = dahaFazlasi(hepsi).map((u) => u.key);
   for (const k of ["analiz", "belge", "destek", "ayarlar", "yardim", "abonelik"]) assert.ok(daha.includes(k), k);
-  for (const k of ["docentlik", "asistan", "ekip"]) assert.ok(!daha.includes(k), k);
+  for (const k of ["asistan"]) assert.ok(!daha.includes(k), k);
 });
 
 test("ekran sınıfı kırılımları", () => {

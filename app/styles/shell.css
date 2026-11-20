@@ -237,14 +237,6 @@
 .os-kullanici-gorunum button[aria-pressed="true"] { color: var(--primary-ink); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .os-kullanici-gorunum button:hover { background: var(--surface-2); } }
 
-/* Önizleme şeridi: her sayfada, üst çubuğun altında */
-.onizleme-serit {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  padding: 8px 32px; border-bottom: 1px solid color-mix(in srgb, var(--primary-ink) 35%, var(--line));
-  background: var(--primary-soft); color: var(--ink); font-size: var(--fs-sm);
-}
-.onizleme-serit b { color: var(--primary-ink); }
-@media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }
 
 /* ============================================================
    ÜST ÇUBUK DİL MENÜSÜ (premium çalışma alanı, 17.11.2026;
