@@ -1,0 +1,172 @@
+[
+  {
+    "ad": "kurucu: Yeni çalışma oluşturuldu, sahibi kendisi, editör açıldı, yeniden yüklemede kalıcı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "97875a5c-4c51-49bc-91d9-f4e482cc17ce",
+      "sahipDogru": true,
+      "tur": "thesis",
+      "org": null,
+      "kaydedildi": true,
+      "kalici": true,
+      "listede": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: Yeni çalışma oluşturuldu, sahibi kendisi, editör açıldı, yeniden yüklemede kalıcı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "f88a426e-94ec-428c-b224-f3aef385782c",
+      "sahipDogru": true,
+      "tur": "thesis",
+      "org": "d4bf731a-f650-4a01-b276-43958fb3e826",
+      "kaydedildi": true,
+      "kalici": true,
+      "listede": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu: Yeni çalışma oluşturuldu, sahibi kendisi, editör açıldı, yeniden yüklemede kalıcı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "6f95eb1d-c0bf-43b8-8fcc-e3671fb3d5b8",
+      "sahipDogru": true,
+      "tur": "thesis",
+      "org": "d4bf731a-f650-4a01-b276-43958fb3e826",
+      "kaydedildi": true,
+      "kalici": true,
+      "listede": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: Yeni çalışma oluşturuldu, sahibi kendisi, editör açıldı, yeniden yüklemede kalıcı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "83b773b1-c3a3-419e-8427-8bc75ece0b41",
+      "sahipDogru": true,
+      "tur": "thesis",
+      "org": null,
+      "kaydedildi": true,
+      "kalici": true,
+      "listede": true,
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: Word'den içe aktar — örnek .docx editöre geldi, kaydedildi, yeniden yüklemede kalıcı",
+    "gecti": true,
+    "ayrinti": {
+      "iceAcik": true,
+      "geldi": true,
+      "kaydedildi": true,
+      "basliklar": [
+        "Giriş",
+        "Yöntem"
+      ],
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurucu: kurum seçimi hesap menüsünde yok, kişisel ekranlarda şerit yok",
+    "gecti": true,
+    "ayrinti": {
+      "menuKurum": false,
+      "anaSeritOnce": 0
+    }
+  },
+  {
+    "ad": "kurucu: Kurum A seçiliyken Yönetim şeridi 'Yalnızca' diyor ve listede B kurumu yok",
+    "gecti": true,
+    "ayrinti": {
+      "secildi": true,
+      "deger": "d4bf731a-f650-4a01-b276-43958fb3e826"
+    }
+  },
+  {
+    "ad": "kurucu: Kurum A seçiliyken kendi çalışmaları Ana Sayfa ve Çalışmalarım'da, şerit yok; seçimdeyken açılan çalışma da kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "anaSerit": 0,
+      "listeSerit": 0,
+      "anaKendi": true,
+      "listedeKendi": [
+        true,
+        true
+      ],
+      "secimdeYeni": "8b259acd-0b5d-4520-be63-ccbdd588bfea",
+      "secimdeListede": true
+    }
+  },
+  {
+    "ad": "kurucu: sayfa hatası yok (kurum seçimi)",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "personel: doçentlik dosyası modülden oluşturuldu (tür associate-professorship), kişisel listede; ortak pencere 3 seçenekli",
+    "gecti": true,
+    "ayrinti": {
+      "tur": "associate-professorship",
+      "listede": true,
+      "turSayisi": 3,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu öğrenci: doçentlik dosyası düğmesi yok",
+    "gecti": true,
+    "ayrinti": {
+      "dugme": 0
+    }
+  },
+  {
+    "ad": "personel: Onayla → Yönetim listesi ve genel bakış sayacı yenilemeden düştü",
+    "gecti": true,
+    "ayrinti": {
+      "onayOnce": 1,
+      "genelOnay": 0,
+      "geriAlGorundu": true,
+      "tamYukleme": 0
+    }
+  },
+  {
+    "ad": "personel: Onayı geri al → kart 'Revizyonda' ve 'Onayla' yenilemeden döndü; onay kuyruğu büyümedi (liste ve genel bakış); veritabanında onay silindi",
+    "gecti": true,
+    "ayrinti": {
+      "geriAlindi": true,
+      "kuyrukListe": 0,
+      "genelOnay2": 0,
+      "dbGeri": "revision|true",
+      "tamYukleme": 0
+    }
+  },
+  {
+    "ad": "personel: Bilgileri düzenle → yeni başlık listede ve genel bakışta, yenilemeden",
+    "gecti": true,
+    "ayrinti": {
+      "listedeYeni": true,
+      "genelYeni": true,
+      "tamYukleme": 0
+    }
+  },
+  {
+    "ad": "personel: sayfa hatası yok (yenileme akışı)",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "kurucu: Çalışmayı sil → listeden ve sayaçtan yenilemeden düştü, genel bakışta yok, veritabanında yok",
+    "gecti": true,
+    "ayrinti": {
+      "aktifOnce": 194,
+      "silindi": true,
+      "genelYok": true,
+      "dbYok": true,
+      "tamYukleme": 0,
+      "hata": []
+    }
+  }
+]

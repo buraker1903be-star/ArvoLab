@@ -3,7 +3,7 @@
     "ad": "kurucu: ana sayfa kişisel, yalnızca kendi çalışması",
     "gecti": true,
     "ayrinti": {
-      "h1": "Günaydın, Deniz",
+      "h1": "İyi günler, Deniz",
       "anaGorulen": [
         "kurucu"
       ],
@@ -111,7 +111,7 @@
     "ad": "personel: ana sayfa kişisel, yalnızca kendi çalışması",
     "gecti": true,
     "ayrinti": {
-      "h1": "Günaydın, Ece",
+      "h1": "İyi günler, Ece",
       "anaGorulen": [
         "personel"
       ],
@@ -210,7 +210,7 @@
     "ad": "kurumlu: ana sayfa kişisel, yalnızca kendi çalışması",
     "gecti": true,
     "ayrinti": {
-      "h1": "Günaydın, Arda",
+      "h1": "İyi günler, Arda",
       "anaGorulen": [
         "kurumlu"
       ],
@@ -294,7 +294,7 @@
     "ad": "bireysel: ana sayfa kişisel, yalnızca kendi çalışması",
     "gecti": true,
     "ayrinti": {
-      "h1": "Günaydın, Selin",
+      "h1": "İyi günler, Selin",
       "anaGorulen": [
         "bireysel"
       ],
@@ -440,22 +440,22 @@
     "ad": "personel: öğrencinin çalışması Yönetim listesinde seçili açılır (Özet ve teslim, eski adres)",
     "gecti": true,
     "ayrinti": {
-      "u1": "/dashboard/yonetim/calismalar?sec=3f390399-dbdb-4fb1-a4ae-ab251ee92d1f",
-      "u2": "/dashboard/yonetim/calismalar?sec=3f390399-dbdb-4fb1-a4ae-ab251ee92d1f"
+      "u1": "/dashboard/yonetim/calismalar?sec=fcbbc153-77d0-4e6a-8b4e-381c3ad8bf0a",
+      "u2": "/dashboard/yonetim/calismalar?sec=fcbbc153-77d0-4e6a-8b4e-381c3ad8bf0a"
     }
   },
   {
     "ad": "personel: kendi çalışması kişisel listede seçili açılır",
     "gecti": true,
     "ayrinti": {
-      "u": "/dashboard/editor?sec=f320e50c-492d-4215-875b-e3bad455de1c"
+      "u": "/dashboard/editor?sec=7e2653db-d206-40ae-b469-ba3826b05493"
     }
   },
   {
     "ad": "kurumlu öğrenci: başkasının çalışma kimliğiyle Yönetim'e yönlenmez ve o çalışmayı görmez",
     "gecti": true,
     "ayrinti": {
-      "u": "/dashboard/editor?sec=9b066548-280b-4434-b173-4e38b7599d69"
+      "u": "/dashboard/editor?sec=3296903f-6ca5-490d-a11f-44446c6386ca"
     }
   }
 ]

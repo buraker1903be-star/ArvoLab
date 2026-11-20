@@ -13,8 +13,8 @@
 
   Artık herkes aynı araştırma ve yazma arayüzünü kullanıyor: Ana Sayfa ve
   Çalışmalarım YALNIZCA kullanıcının KENDİ çalışmalarını gösterir
-  (kisiselCalismalar). Kurumun çalışmaları, onay, sorumlu atama ve
-  kuyruklar ayrı bir alanda (/dashboard/yonetim): yetkili kişi oraya
+  (kisiselCalismalar). Kurumun çalışmaları, onay ve kuyruklar ayrı bir
+  alanda (/dashboard/yonetim): yetkili kişi oraya
   açıkça girer. Yetkiler ve veri sınırları DEĞİŞMEDİ — Yönetim'de görülen
   satırları yine RLS seçiyor (gözetim kurumla sınırlı, kurumlar arası
   görüş yalnızca iç ekipte); burası yalnızca hangi ekranda çizileceğini

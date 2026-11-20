@@ -38,7 +38,28 @@ async function kancaCalistir(eylem) {
   return { durum: sonuc.durum, govde: sonuc.govde.toString().slice(0, 400) };
 }
 
+// Supabase'in Kong'u tarayıcıdan gelen isteklere CORS başlıklarını kendisi
+// ekliyor; GoTrue/PostgREST/storage-api tek başına eklemiyor. Eskiden geçit
+// bunu taklit etmiyordu: tarayıcıdaki Supabase istemcisinin her çağrısı
+// (Word içe aktarmada getUser + storage yüklemesi) ön uçuş isteğinde
+// "No 'Access-Control-Allow-Origin'" ile düşüyor, akış yerelde hiç
+// sınanamıyordu (20.11.2026, PR #113 kabulü). Yalnızca 127.0.0.1'de dinler.
+function corsBasliklari(istek) {
+  return {
+    "access-control-allow-origin": istek.headers.origin ?? "*",
+    "access-control-allow-credentials": "true",
+    "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
+    "access-control-allow-headers": istek.headers["access-control-request-headers"] ?? "authorization,apikey,content-type,x-client-info,x-upsert,cache-control",
+    "access-control-expose-headers": "content-range,x-total-count,content-length",
+    "access-control-max-age": "600",
+  };
+}
+
 const sunucu = http.createServer(async (istek, cevap) => {
+  if (istek.method === "OPTIONS" && istek.headers.origin) {
+    cevap.writeHead(204, corsBasliklari(istek)).end();
+    return;
+  }
   const parcalar = [];
   for await (const p of istek) parcalar.push(p);
   const govde = Buffer.concat(parcalar);
@@ -71,7 +92,9 @@ const sunucu = http.createServer(async (istek, cevap) => {
     const basliklar = { ...sonuc.basliklar };
     delete basliklar["content-length"];
     delete basliklar["transfer-encoding"];
-    cevap.writeHead(sonuc.durum, { ...basliklar, "content-length": String(sonuc.govde.length) }).end(sonuc.govde);
+    // Hedef servis kendi CORS başlığını yazdıysa ezilmez; yazmadıysa Kong'unki eklenir.
+    const cors = istek.headers.origin && !basliklar["access-control-allow-origin"] ? corsBasliklari(istek) : {};
+    cevap.writeHead(sonuc.durum, { ...basliklar, ...cors, "content-length": String(sonuc.govde.length) }).end(sonuc.govde);
   } catch (hata) {
     cevap.writeHead(502, { "content-type": "text/plain" }).end(String(hata));
   }

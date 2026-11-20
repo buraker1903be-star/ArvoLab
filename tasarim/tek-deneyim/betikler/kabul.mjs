@@ -9,7 +9,7 @@ const URL0 = process.argv[2] ?? "http://localhost:3150";
 const T = JSON.parse(fs.readFileSync(`${D}tohum.json`, "utf8"));
 const BASLIK = { kurucu: "Kurucunun kendi tezi", personel: "Personelin kendi makalesi", kurumlu: "Kurumlu öğrencinin tezi", bireysel: "Bireysel abonenin tezi", bkurumu: "B kurumundaki öğrencinin tezi" };
 const ROLLER = ["kurucu", "personel", "kurumlu", "bireysel"];
-const G = `${D}gorseller`; fs.mkdirSync(G, { recursive: true });
+const G = `${D}../gorseller`; fs.mkdirSync(G, { recursive: true });
 const b = await chromium.launch();
 const sonuc = []; const kayit = (ad, gecti, ayrinti) => { sonuc.push({ ad, gecti, ayrinti }); console.log(gecti ? "PASS" : "FAIL", ad, JSON.stringify(ayrinti).slice(0, 300)); };
 
@@ -128,7 +128,7 @@ for (const rol of ROLLER) for (const dil of ["tr", "en"]) for (const tema of ["l
   }
   await c.close();
 }
-fs.writeFileSync(`${D}sonuc.json`, JSON.stringify(sonuc, null, 2));
+fs.writeFileSync(`${D}../kabul-sonucu.json`, JSON.stringify(sonuc, null, 2));
 const gecen = sonuc.filter((x) => x.gecti).length;
 console.log(`\nTOPLAM ${gecen}/${sonuc.length}`);
 await b.close();
