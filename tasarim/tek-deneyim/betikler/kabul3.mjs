@@ -32,6 +32,7 @@ const yeniCalisma = async (s, baslik, cikis = "yaz") => {
   await s.locator("button:visible", { hasText: /^\s*Yeni çalışma\s*$/ }).first().click();
   const f = s.locator(".yeni-calisma-formu"); await f.waitFor({ state: "visible" });
   await f.locator('input[name="title"]').fill(baslik);
+  if (s.goruntuAdi) await s.screenshot({ path: `${G}/${s.goruntuAdi}-yeni-calisma.png`, animations: "disabled" });
   await Promise.all([s.waitForURL(/\/dashboard\/editor\/[0-9a-f-]{36}\/write/, { timeout: 60000 }), f.locator(`button[value="${cikis}"]`).click()]);
   return s.url().match(/editor\/([0-9a-f-]{36})/)[1];
 };
@@ -187,6 +188,7 @@ for (const rol of HER_ROL) {
 for (const rol of HER_ROL) {
   const { c, s, hata } = await baglam(rol);
   const baslik = `TEK3-YENI-${rol}-${ek}`;
+  s.goruntuAdi = rol;
   const id = await yeniCalisma(s, baslik);
   await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
   const [sahip, tur] = psql(`select owner_id, project_type from public.academic_projects where id='${id}'`).split("|");
@@ -202,6 +204,7 @@ for (const rol of HER_ROL) {
   }
   await s.goto(editorAdresi); await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
   const yenidenAcildi = (await s.locator(".ProseMirror").first().innerText()).includes(metin);
+  await s.screenshot({ path: `${G}/${rol}-editor-yeniden-acildi.png`, animations: "disabled" });
   await s.goto("/dashboard/editor"); await yuklendi(s);
   kayit(`${rol}: Yeni çalışma → sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede`,
     sahip === T.hesaplar[rol].id && tur === "thesis" && kaydedildi && yenidenAcildi && (await ana(s)).includes(baslik) && hata.length === 0, { id, kaydedildi, yenidenAcildi, hata });

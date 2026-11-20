@@ -102,7 +102,7 @@ Kurumlar ArvoOS'tan yansıtılmış gibi (`synced_at` dolu); K kurumunun lisans�
 | Personel, kapalı lisans (employee, Kurum K) | Erişim kapalı; "Kartla öde" yok; ArvoOS lisans yolu gösteriliyor |
 | Ekip Yönetimi (kurucu) | Sayfa yok, eski adres Ana Sayfa'ya iner; davet ve rol seçimi yok; menüde yalnızca "Teknik araçlar" |
 | Uzmana sor | Talep ArvoLab'da kaydediliyor (ArvoOS bağlantısı yok); personelin kuyruğunda "bağlantı henüz kurulmadı" notu ve kendi kurumunun talebi |
-| Yeni çalışma, dört hesap türü | Sahibi kendisi, tez, editör açıldı, kişisel listede |
+| Yeni çalışma, dört hesap türü | Sahibi kendisi, tez, editör açıldı, yazılan metin kaydedildi ve yeniden açınca duruyor, kişisel listede |
 
 Yeniden koşmak (depo kökünde, yerel yığın, geçit ve `next start -p 3150` açıkken):
 
