@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, Search } from "lucide-react";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar } from "@/lib/citation-format";
+import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
+import { yazarBicimiBelirsiz } from "@/lib/kaynak-duzeltme";
+import KaynakDuzeltme from "./kaynak-duzeltme";
 
 /*
   KAYNAKLAR SAYFASINDAKİ LİSTE — İŞLENEBİLİR (27.10.2026, kurum sahibinin
@@ -125,9 +128,10 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
             return (
               <li key={k.id} className="gb-satir kaynak-satiri">
                 <span className="gb-satir-govde">
-                  <b>{k.title}</b>
+                  <b>{htmlVarliklariniCoz(k.title)}</b>
                   <small>
-                    {[k.authors || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year, k.container_title].filter(Boolean).join(" · ")}
+                    {/* Eski kayıtlarda "&amp;" kalmış olabilir; ekranda çözülür (lib/html-varlik.ts). */}
+                    {[htmlVarliklariniCoz(k.authors) || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year, htmlVarliklariniCoz(k.container_title)].filter(Boolean).join(" · ")}
                     {adres ? (
                       <>
                         {" · "}
@@ -138,6 +142,10 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
                     ) : null}
                   </small>
                   {eksik.length ? <small className="kaynak-eksik">{t({ tr: "Kaynakça için eksik:", en: "Missing for the reference list:" })} {eksik.join(", ")}</small> : null}
+                  {yazarBicimiBelirsiz(k.authors) ? (
+                    <small className="kaynak-eksik">{t({ tr: "Yazar biçimi belirsiz (ad önce ya da “and/et al.” ile yazılmış).", en: "Author format is ambiguous (given name first, or “and/et al.”)." })}</small>
+                  ) : null}
+                  {/10\.\d{4,9}\//.test(k.doi_or_url ?? "") && (eksik.length || yazarBicimiBelirsiz(k.authors)) ? <KaynakDuzeltme kaynakId={k.id} baslik={k.title} /> : null}
                 </span>
                 <span className="kaynak-satiri-eylem">
                   <span className="status-pill" data-tone={ETIKET[durum].ton}>

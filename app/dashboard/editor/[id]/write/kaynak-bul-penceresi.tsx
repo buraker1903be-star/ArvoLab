@@ -88,7 +88,9 @@ export default function KaynakBulPenceresi({
       const meta = kayit.doi ? (await lookupDoi(kayit.doi).catch(() => ({ metadata: undefined }))).metadata : undefined;
       const sonuc = await createCitationSource({
         title: meta?.title ?? kayit.baslik,
-        authors: meta?.authors ?? (kayit.yazarlar.length ? kayit.yazarlar.join("; ") : null),
+        /* DOI künyesi yoksa sağlayıcının yapılandırılmış adı; o da yoksa adlar
+           "; " ile ve ters çevrilmeden (soyadı tahmin edilmez). */
+        authors: meta?.authors ?? kayit.kunyeYazarlari ?? (kayit.yazarlar.length ? kayit.yazarlar.join("; ") : null),
         year: meta?.year ?? (kayit.yil ? String(kayit.yil) : null),
         sourceType: meta?.sourceType ?? kayit.tur,
         doiOrUrl: kayit.doi ? `https://doi.org/${kayit.doi}` : kayit.url,

@@ -174,6 +174,7 @@ export default function LiteraturBulucu({
       const sonuc = await aramaKaydiniEkle({
         baslik: kayit.baslik,
         yazarlar: kayit.yazarlar,
+        kunyeYazarlari: kayit.kunyeYazarlari,
         yil: kayit.yil,
         tur: kayit.tur,
         dergi: kayit.dergi,

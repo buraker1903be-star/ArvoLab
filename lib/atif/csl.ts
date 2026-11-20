@@ -1,5 +1,5 @@
 import CSL from "citeproc";
-import { splitAuthors, type CitableSource } from "@/lib/citation-format";
+import { kaynakMetniniCoz, splitAuthors, type CitableSource } from "@/lib/citation-format";
 import type { Dil } from "@/lib/dil";
 import { ustSimge, type CslKodu } from "./csl-kimlik";
 
@@ -44,7 +44,9 @@ export function cslYazarlari(authors: string | null) {
 
 const DOI = /^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)?(10\.\d{4,9}\/\S+)$/i;
 
-export function cslOgesi(kaynak: CitableSource & { erisimTarihi?: Date | null }, id = "k"): Record<string, unknown> {
+export function cslOgesi(hamKaynak: CitableSource & { erisimTarihi?: Date | null }, id = "k"): Record<string, unknown> {
+  /* Eski kayıtlardaki "&amp;" citeproc'ta "&amp;amp;" olup künyeye "&amp;" diye giriyordu. */
+  const kaynak = kaynakMetniniCoz(hamKaynak);
   const yil = /\d{4}/.exec(kaynak.year ?? "")?.[0];
   const baglanti = kaynak.doi_or_url?.trim() ?? "";
   const doi = DOI.exec(baglanti)?.[1];
