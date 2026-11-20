@@ -1281,6 +1281,36 @@ export default function ManuscriptEditor({
   });
 
   /*
+    KAYITLI İMLEÇ (20.11.2026): öğrencinin editörde son bıraktığı yer. Odak
+    PDF'e geçtiğinde editör seçimi hâlâ duruyor ama bir sonraki odak
+    olayında (focus()) neyin geri yükleneceği tarayıcıya bağlı; otomatik
+    sınamada alıntı bir karakter önceye girdi. Çekmeceden gelen alıntı bu
+    konuma yazılır. Belge bu arada değişirse (başka sekme değil, aynı
+    editördeki işlem) konum işlemin eşlemesiyle kaydırılır.
+  */
+  const kayitliImlec = useRef<{ from: number; to: number } | null>(null);
+  useEffect(() => {
+    if (!editor) return;
+    const kaydet = () => {
+      if (editor.isFocused) kayitliImlec.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    };
+    const esle = ({ transaction }: { transaction: import("@tiptap/pm/state").Transaction }) => {
+      const k = kayitliImlec.current;
+      if (!k || !transaction.docChanged) return;
+      kayitliImlec.current = { from: transaction.mapping.map(k.from, -1), to: transaction.mapping.map(k.to, 1) };
+    };
+    kaydet();
+    editor.on("selectionUpdate", kaydet);
+    editor.on("focus", kaydet);
+    editor.on("transaction", esle);
+    return () => {
+      editor.off("selectionUpdate", kaydet);
+      editor.off("focus", kaydet);
+      editor.off("transaction", esle);
+    };
+  }, [editor]);
+
+  /*
     PDF paneli kapanınca odak BELGEYE, kullanıcının bıraktığı konuma döner
     (4. tur, 18.11.2026). Eskiden odak kapatma düğmesinde kalıyordu (düğme
     sökülünce sayfanın gövdesine düşüyordu): seçim korunuyordu ama yazmaya
@@ -2583,7 +2613,19 @@ export default function ManuscriptEditor({
       .insertContent(satirlar.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })))
       .run();
   };
-  const handleCite = async (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
+  /*
+    Sonuç döner (20.11.2026): PDF çekmecesi atıf üretilemediğinde açık kalıp
+    hatayı göstersin. Eskiden dönüş yoktu; panel alıntıyı önceden yazıp
+    başarısız atıftan sonra "eklendi" gibi kapanıyordu.
+    alinti: atıftan önce tırnak içinde yazılır, atıfla AYNI işlemde
+    (editor-navigation.ts atifIslemi). kayitliKonum: çekmeceden gelen
+    ekleme, öğrencinin editörde bıraktığı yere yazılır.
+  */
+  const handleCite = async (
+    source: LiteratureSource,
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean } = {},
+  ): Promise<{ ok: true } | { ok: false; hata: string }> => {
+    const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
     let hazir: { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean } | undefined;
@@ -2605,8 +2647,10 @@ export default function ManuscriptEditor({
         erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
       }).catch(() => ({ hata: t({ tr: "Atıf stili sunucusuna ulaşılamadı.", en: "Couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
       if (sonuc.hata || !sonuc.atif) {
-        showToast("error", sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." }));
-        return;
+        /* Belge DEĞİŞMEDİ: alıntı da atıf da yazılmadı (ikisi aynı işlemde). */
+        const hata = sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." });
+        showToast("error", hata);
+        return { ok: false, hata };
       }
       hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
     }
@@ -2616,12 +2660,16 @@ export default function ManuscriptEditor({
       kalip: ornekKalibi(ornekAtif),
       dil: belgeDili,
       hazir,
+      alinti: secenek.alinti,
+      konum,
     });
-    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
+    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
+       Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
+       ekleme kırmızı "İşlem tamamlanamadı" başlığıyla gösteriliyordu (20.11.2026). */
     const eksik = addedReference ? eksikAlanlar(source, dil) : [];
     const eksikMetni = eksik.join(", ");
     showToast(
-      eksik.length ? "error" : "success",
+      eksik.length ? "info" : "success",
       eksik.length
         ? t({
             tr: `${citation} eklendi; künyede eksik: ${eksikMetni}. Literatür'den kaynağı tamamlayın.`,
@@ -2632,6 +2680,7 @@ export default function ManuscriptEditor({
           : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
+    return { ok: true };
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
   const handlePrint = async () => {
