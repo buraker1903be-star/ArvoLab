@@ -13,27 +13,24 @@ import type { Tone } from "@/lib/status-tone";
 export default function ProjectFilters({
   filters,
   statuses,
-  personel,
   total,
   shown,
   filtered,
-  taban = "/dashboard/editor",
 }: {
   filters: Filters;
   statuses: { value: string; label: string; tone?: Tone }[];
-  /** Personel görünümü: arama öğrenci adını da kapsar. */
-  personel: boolean;
   total: number;
   shown: number;
   filtered: boolean;
-  /** Süzülen liste: Çalışmalarım ya da Yönetim'deki kurum listesi (lib/yonetim.ts). */
-  taban?: string;
 }) {
+  /* Süzülen liste her zaman Çalışmalarım. 20.11.2026'ya kadar personelin kurum listesi de bu çubuğu kullanıyordu (öğrenci adıyla arama, ayrı taban). */
+  const taban = "/dashboard/editor";
   const t = useCeviri();
 
   /*
-    "Onay bekleyenler" ve "yorumu olanlar" filtreleri ana sayfadaki dikkat
-    kartlarından geliyor; çubukta kendi seçicileri yok. İkisi de GİZLİ ALANLA
+    "Onay bekleyenler" ve "yorumu olanlar" filtreleri eskiden personelin
+    dikkat kartlarından geliyordu (kartlar 20.11.2026'da kalktı; eski yer
+    imleri hâlâ getirebilir); çubukta kendi seçicileri yok. İkisi de GİZLİ ALANLA
     taşınıyor, yoksa kullanıcı sıralamayı değiştirdiği anda form adresi
     sıfırdan kurar ve filtre sessizce düşerdi — liste büyür, sebebi
     görünmezdi. Yanlarındaki çip hem filtrenin açık olduğunu söylüyor hem de
@@ -45,11 +42,7 @@ export default function ProjectFilters({
     <Form action={taban} className="project-filters" role="search" aria-label={t({ tr: "Çalışmaları filtrele", en: "Filter works" })}>
       <label className="project-filter-search">
         <Search size={15} aria-hidden="true" />
-        <input type="search" name="q" defaultValue={filters.q} placeholder={
-            personel
-              ? t({ tr: "Başlık, öğrenci ya da üniversite ara", en: "Search title, student or university" })
-              : t({ tr: "Başlık ya da üniversite ara", en: "Search title or university" })
-          }
+        <input type="search" name="q" defaultValue={filters.q} placeholder={t({ tr: "Başlık ya da üniversite ara", en: "Search title or university" })}
           aria-label={t({ tr: "Çalışma ara", en: "Search works" })} maxLength={100} />
       </label>
       {/* Durum seçenekleri üç grupta: teslim tarihine göre süzgeçler ile

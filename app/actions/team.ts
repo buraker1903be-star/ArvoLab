@@ -2,7 +2,6 @@
 
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -90,7 +89,6 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
   const auth = await requireRole(ADMIN_ROLES);
   if ("error" in auth) return { members: [], directoryAvailable: false };
 
-  const kurum = await seciliKurum();
   /*
     Sayfa sayfa: PostgREST tek yanıtta en çok 1000 satır döndürüyor.
     Eskiden tek sorgu vardı; 1000'i aşan kurulumda liste ve başlıktaki
@@ -100,10 +98,11 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
     const SAYFA = 1000;
     const satirlar: Omit<TeamMember, "email" | "disabled" | "pendingInvite" | "lastSignInAt">[] = [];
     for (let bas = 0; bas < 50_000; bas += SAYFA) {
-      let sorgu = auth.supabase.from("profiles").select("id, full_name, role, organization_id, created_at");
-      // İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer.
-      if (kurum) sorgu = sorgu.eq("organization_id", kurum.id);
-      const { data, error } = await sorgu.order("created_at", { ascending: false }).order("id").range(bas, bas + SAYFA - 1);
+      /* İç ekibin kurum seçicisi 20.11.2026'da kalktı (ArvoLab tek tip ürün; operasyon ArvoOS'ta); liste bütün kullanıcılar. */
+      const { data, error } = await auth.supabase
+        .from("profiles")
+        .select("id, full_name, role, organization_id, created_at")
+        .order("created_at", { ascending: false }).order("id").range(bas, bas + SAYFA - 1);
       if (error) return { data: null, error };
       satirlar.push(...((data ?? []) as typeof satirlar));
       if ((data?.length ?? 0) < SAYFA) break;
@@ -178,44 +177,17 @@ export async function updateUserRole(userId: string, role: string): Promise<Upda
   return { success: true };
 }
 
-export async function updateUserOrganization(userId: string, organizationId: string): Promise<UpdateResult> {
-  const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
-  if ("error" in auth) return { error: auth.error };
-  const t = await ceviri();
-
-  const { data, error } = await auth.supabase
-    .from("profiles")
-    .update({ organization_id: organizationId || null })
-    .eq("id", userId)
-    .select("id");
-
-  if (error) {
-    console.error(error);
-    return { error: t({ tr: "Kurum güncellenirken bir hata oluştu.", en: "Something went wrong while updating the institution." }) };
-  }
-  if (!data?.length) return { error: t({ tr: "Kullanıcı bulunamadı.", en: "User not found." }) };
-
-  revalidatePath(PAGE_PATH);
-  return { success: true };
-}
-
-export async function createOrganization(formData: FormData): Promise<UpdateResult> {
-  const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
-  if ("error" in auth) return { error: auth.error };
-  const t = await ceviri();
-
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: t({ tr: "Kurum adı zorunludur.", en: "Institution name is required." }) };
-
-  const { error } = await auth.supabase.from("organizations").insert({ name });
-  if (error) {
-    console.error(error);
-    return { error: t({ tr: "Kurum oluşturulurken bir hata oluştu.", en: "Something went wrong while creating the institution." }) };
-  }
-
-  revalidatePath(PAGE_PATH);
-  return { success: true };
-}
+/*
+  KURUM ATAMA VE KURUM OLUŞTURMA (updateUserOrganization, createOrganization)
+  20.11.2026'da kaldırıldı (kurum sahibinin kararı: ArvoLab'da çok kurumlu
+  yönetim ve kurum değiştirme yok; personelin hakkı ArvoOS'un doğruladığı
+  kurum lisansından gelir). Elle açılan kurum ArvoOS'tan yansıtılmadığı için
+  lisans kapısı onu süresiz açık sayıyordu; elle bağ da ArvoOS üyeliği
+  olmadan kurum lisansı veriyordu. Kurum kaydı ve üye listesi ArvoOS'tan
+  yansıtılır, bağı veritabanı kurar (arvoos_uyeligini_bagla). "use server"
+  dosyasında kullanılmayan her export dışarıdan çağrılabilir bir uç nokta
+  olarak kalırdı.
+*/
 
 // Davet e-postasındaki bağlantı /auth/confirm üzerinden şifre belirleme
 // sayfasına gelir. Supabase "Invite user" e-posta şablonunun token_hash
@@ -228,7 +200,6 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const role = String(formData.get("role") ?? "client");
-  const organizationId = String(formData.get("organizationId") ?? "") || null;
 
   if (!EMAIL_PATTERN.test(email)) return { error: t({ tr: "Geçerli bir e-posta adresi girin.", en: "Enter a valid email address." }) };
   if (!ALL_ROLES.includes(role as UserRole)) return { error: t({ tr: "Geçersiz rol.", en: "Invalid role." }) };
@@ -295,8 +266,10 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
 
   /*
     Profil satırını kayıt tetikleyicisi (handle_new_user) açar ve rolü YAZMAZ:
-    rol sütun varsayılanından gelir. Rol ve kurum, yöneticinin kendi oturumuyla
-    atanır (RLS + rol tetikleyicisi geçerli kalır). Rol HER ZAMAN açıkça yazılır.
+    rol sütun varsayılanından gelir. Rol yöneticinin kendi oturumuyla atanır
+    (RLS + rol tetikleyicisi geçerli kalır). Rol HER ZAMAN açıkça yazılır.
+    Kurum ATANMAZ (20.11.2026): e-posta ArvoOS'un üye listesindeyse bağı
+    veritabanı onaylı e-postayla kendisi kurar.
     Eskiden "Üye / Öğrenci" (client) davetinde güncelleme atlanıyordu, varsayılanın
     client olduğu sanılıyordu; Production'da varsayılan 'employee' çıktı (RC06,
     17.11.2026) ve öğrenci olarak davet edilen kişi Personel oluyordu.
@@ -305,14 +278,14 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   if (invitedId) {
     const { error: profileError } = await auth.supabase
       .from("profiles")
-      .update({ role, organization_id: organizationId })
+      .update({ role })
       .eq("id", invitedId);
     if (profileError) {
       console.error(profileError);
       return {
         error: t({
-          tr: "Davet gönderildi ancak rol/kurum atanamadı; aşağıdaki listeden elle atayın.",
-          en: "The invitation was sent, but the role/institution could not be assigned; set it manually in the list below.",
+          tr: "Davet gönderildi ancak rol atanamadı; aşağıdaki listeden elle atayın.",
+          en: "The invitation was sent, but the role could not be assigned; set it manually in the list below.",
         }),
       };
     }

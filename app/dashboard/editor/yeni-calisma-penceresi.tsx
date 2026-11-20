@@ -36,7 +36,7 @@ function telefonAbone(degisti: () => void) {
   (?ice=1). Kaynakça sistemi tezde kılavuzdan, diğerlerinde varsayılan
   APA 7 — sonradan "Bilgileri düzenle"den değişir.
 
-  TEK BİLEŞEN (20.11.2026, tek ana deneyim kararı; lib/yonetim.ts). Bütün
+  TEK BİLEŞEN (20.11.2026, tek ana deneyim kararı; lib/kisisel-calismalar.ts). Bütün
   giriş noktaları — Ana Sayfa, Çalışmalarım, boş durum, Ctrl+K, eski
   /dashboard/editor/new adresi — bu pencereyi açar (?yeni=1). Eskiden
   personel ayrı bir pencere görüyordu (personel-yeni-calisma-penceresi.tsx,

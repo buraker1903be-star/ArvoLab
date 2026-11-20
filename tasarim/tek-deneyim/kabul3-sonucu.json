@@ -1,0 +1,187 @@
+[
+  {
+    "ad": "kurucu: doçentlik adresleri Ana Sayfa'ya iniyor; hesap menüsünde ve Ctrl+K'da doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "sonuc": {
+        "/dashboard/associate-professorship": "/dashboard",
+        "/print/docentlik": "/dashboard"
+      },
+      "menuda": false,
+      "palette": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: doçentlik adresleri Ana Sayfa'ya iniyor; hesap menüsünde ve Ctrl+K'da doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "sonuc": {
+        "/dashboard/associate-professorship": "/dashboard",
+        "/print/docentlik": "/dashboard"
+      },
+      "menuda": false,
+      "palette": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: var olan doçentlik dosyası editörde açılıyor, Çalışmalarım'da 'Doçentlik dosyası' etiketiyle duruyor",
+    "gecti": true,
+    "ayrinti": {
+      "editorAcildi": true
+    }
+  },
+  {
+    "ad": "Yeni çalışma penceresi üç türlü; doçentlik türü elle gönderilse de sunucu doçentlik dosyası açmıyor",
+    "gecti": true,
+    "ayrinti": {
+      "turSayisi": 3,
+      "acilan": "0",
+      "turu": ""
+    }
+  },
+  {
+    "ad": "kurucu: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: Yönetim adresleri bulunamadı; kurum şeridi ve sayaç yok; hesap menüsünde kurum/Yönetim yok; yalnızca kendi çalışması",
+    "gecti": true,
+    "ayrinti": {
+      "yonetim": [
+        true,
+        true
+      ],
+      "anaSinif": "dashboard-page gb gb-ana-sayfa os5-ana",
+      "serit": 0,
+      "sayac": 0,
+      "listeSayac": 0,
+      "menudeYonetim": false,
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel (controller, Kurum A, lisans açık ve ArvoOS'tan yansıtılmış): panel açık, abonelik ekranı yok",
+    "gecti": true,
+    "ayrinti": {
+      "kapaliEkran": 0
+    }
+  },
+  {
+    "ad": "personel (employee, Kurum K, lisans kapalı): erişim kapalı, bireysel 'Kartla öde' YOK, kurum lisansı yolu gösteriliyor",
+    "gecti": true,
+    "ayrinti": {
+      "kapali": true,
+      "kartlaOde": 0,
+      "kurumYolu": true
+    }
+  },
+  {
+    "ad": "kurucu: Ekip Yönetimi'nde 'Kurum ekle' ve kurum seçimi yok; rol seçimi duruyor",
+    "gecti": true,
+    "ayrinti": {
+      "kurumEkle": 0,
+      "kurumSec": 0,
+      "kurumSec2": 0,
+      "rolSec": 2,
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurucu: hesap menüsünde 'Ekip araçları' (Asistan Kayıtları, Ekip Yönetimi); Yönetim ve doçentlik yok",
+    "gecti": true,
+    "ayrinti": {
+      "menu": "DKDeniz KurucuKurucu DilTürkçeEnglishAyarlarAbonelik ve KrediDestekEkip araçlarıAsistan KayıtlarıEkip YönetimiÇıkış yap Güvenli oturum"
+    }
+  },
+  {
+    "ad": "kurumlu: Uzmana sor talebi ArvoLab'da kaydedildi (ArvoOS'a iletilmiyor; geçici yol)",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "personel: uzman kuyruğunda 'Geçici kuyruk … bağlantı henüz kurulmadı' notu; kendi kurumunun talebi görünüyor",
+    "gecti": true,
+    "ayrinti": {
+      "not": true,
+      "talepGorunur": true
+    }
+  },
+  {
+    "ad": "kurucu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "4d9925cb-0f6b-4d11-9bbc-9831e7c201e7",
+      "hata": []
+    }
+  },
+  {
+    "ad": "personel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "caa16952-36be-4ac5-8e74-dfa7082af9e2",
+      "hata": []
+    }
+  },
+  {
+    "ad": "kurumlu: Yeni çalışma → sahibi kendisi, tez, editör açıldı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "7d0b2799-804b-43c1-ae72-b491542c01e4",
+      "hata": []
+    }
+  },
+  {
+    "ad": "bireysel: Yeni çalışma → sahibi kendisi, tez, editör açıldı, kişisel listede",
+    "gecti": true,
+    "ayrinti": {
+      "id": "5b82dea7-d206-42a3-974f-de4b14f8e23c",
+      "hata": []
+    }
+  }
+]

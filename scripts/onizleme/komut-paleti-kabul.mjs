@@ -30,12 +30,13 @@ const TEZ = "00000000-0000-4000-8000-0000000000b1";
 /* Rolün görmesi gereken uygulamalar (lib/os/uygulamalar.ts + gorunenUygulamalar). */
 const TEMEL = ["Ana Sayfa", "Çalışmalarım", "Kaynaklar", "Analiz Merkezi", "Belge Kontrol", "Destek", "Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi"];
 const BEKLENEN = {
-  client: { var: TEMEL, yok: ["Doçentlik Puanı", "Asistan Kayıtları", "Ekip Yönetimi"] },
-  employee: { var: [...TEMEL, "Doçentlik Puanı"], yok: ["Asistan Kayıtları", "Ekip Yönetimi"] },
-  system_admin: { var: [...TEMEL, "Doçentlik Puanı", "Asistan Kayıtları", "Ekip Yönetimi"], yok: [] },
+  /* 20.11.2026: Doçentlik Puanı ve Yönetim kalktı; hiçbir rolde görünmemeli. */
+  client: { var: TEMEL, yok: ["Doçentlik Puanı", "Yönetim", "Asistan Kayıtları", "Ekip Yönetimi"] },
+  employee: { var: TEMEL, yok: ["Doçentlik Puanı", "Yönetim", "Asistan Kayıtları", "Ekip Yönetimi"] },
+  system_admin: { var: [...TEMEL, "Asistan Kayıtları", "Ekip Yönetimi"], yok: ["Doçentlik Puanı", "Yönetim"] },
 }[ROL];
 if (!BEKLENEN) throw new Error(`bilinmeyen rol: ${ROL}`);
-const MUKERRER_BES = ["Doçentlik Puanı", "Kullanım Kılavuzu", "Abonelik ve Kredi", "Asistan Kayıtları", "Ekip Yönetimi"];
+const MUKERRER_BES = ["Kullanım Kılavuzu", "Abonelik ve Kredi", "Asistan Kayıtları", "Ekip Yönetimi"];
 
 const sonuclar = [];
 async function senaryo(ad, govde) {
@@ -150,7 +151,7 @@ await senaryo(`[${ROL}] hızlı işlemler yerinde (yeni çalışma, kaynak, anal
 await senaryo(`[${ROL}] ok tuşları seçimi değiştirir; Enter seçili komutun adresine gider`, async () => {
   const { ctx, sayfa } = await sayfaAc();
   await ctrlK(sayfa);
-  const hedef = ROL === "system_admin" ? ["Ekip Yönetimi", "/dashboard/team"] : ROL === "employee" ? ["Doçentlik Puanı", "/dashboard/associate-professorship"] : ["Abonelik ve Kredi", "/dashboard/abonelik"];
+  const hedef = ROL === "system_admin" ? ["Ekip Yönetimi", "/dashboard/team"] : ["Abonelik ve Kredi", "/dashboard/abonelik"];
   await ara(sayfa, hedef[0]);
   const once = await sayfa.evaluate(() => document.querySelector("[role=option][aria-selected=true] .os-palette-label")?.textContent);
   bekle(once === hedef[0], `ilk seçili: ${once}`);

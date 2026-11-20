@@ -74,8 +74,8 @@ export async function krediSatinAl(formData: FormData) {
   ArvoOS paneline gönderiliyordu.
 
   Yetki faturaları görmekle AYNI karar (faturalamaKapsamim): kurumun
-  Akademik Yöneticisi kendi kurumu için, iç ekip kurum seçicide seçtiği
-  kurum için. Köprü kurumu kimliğiyle tanıyor, kişiyi tanımıyor; bu
+  Akademik Yöneticisi ve iç ekip kendi kurumu için (iç ekibin kurum
+  seçicisi 20.11.2026'da kalktı). Köprü kurumu kimliğiyle tanıyor, kişiyi tanımıyor; bu
   denetim burada yapılmazsa herhangi bir kurum üyesi (ya da işlemi
   doğrudan çağıran biri) başka bir kurum adına ödeme bağlantısı açabilirdi.
   Kurum kimliği formdan ALINMAZ, kapsamdan gelir.

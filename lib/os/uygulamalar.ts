@@ -19,12 +19,12 @@
 */
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
-import { ceviriciKur, type Cevirici, type Dil } from "@/lib/dil";
-import { ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
+import { ceviriciKur, type Cevirici } from "@/lib/dil";
+import { ADMIN_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
-  | "kilavuz" | "docentlik" | "destek" | "settings" | "apps" | "abonelik";
+  | "kilavuz" | "destek" | "settings" | "apps" | "abonelik";
 
 /** altYollar: bölümün kendi yolu dışında onu etkin sayan yollar. */
 export type Bolum = { key: string; href: string; label: string; altYollar?: string[] };
@@ -123,22 +123,17 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
     { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"], yer: "arac" },
     { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"], yer: "arac" },
     /*
-      Kılavuz kataloğu ve doçentlik dock'tan çıktı: öğrencinin kılavuzu
-      çalışma merkezinde zaten görünüyor, katalog çoğunlukla personelin
-      sayfası; doçentlik puanı ayrı bir kullanıcı kitlesinin aracı.
-      İkisi de "Tüm uygulamalar"da ve Ctrl+K'da.
-    */
-    /*
       Kılavuz Kataloğu KALDIRILDI (26.10.2026, kurum sahibinin kararı):
       kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
       Eski adres ana sayfaya yönleniyor (app/dashboard/guidelines/page.tsx).
     */
     /*
-      DOÇENTLİK PUANI YALNIZCA PERSONELDE (26.10.2026, kurum sahibinin
-      isteği: "öğrencilerin görmesine gerek yok"). Doçent adayı akademisyen
-      ayrı bir kitle; öğrencinin başlatıcısında yer kaplamamalı.
+      Doçentlik Puanı KALDIRILDI (20.11.2026, kurum sahibinin ürün kararı:
+      ArvoLab tek tip, editör odaklı bir araştırma ve yazma ürünü). Eskiden
+      personelin başlatıcısında ve Ctrl+K'da duruyordu. Eski adresler Ana
+      Sayfa'ya yönleniyor (next.config.ts redirects); tablolar ve
+      kayıtlar veritabanında duruyor, silinmedi.
     */
-    { key: "docentlik", label: t({ tr: "Doçentlik Puanı", en: "Associate Professorship Score" }), kisa: t({ tr: "Doçentlik", en: "Assoc. Prof." }), href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES, yer: "yonetim" },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
       olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de
@@ -177,24 +172,10 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
       sayfayı başlatıcıda göremiyordu (AGENTS.md'deki kural).
     */
     /*
-      YÖNETİM (20.11.2026, tek ana deneyim kararı; lib/yonetim.ts). Kurumun
-      çalışmaları, onay, sorumlu atama ve kuyruklar kişinin kendi Ana
-      Sayfa'sından ve Çalışmalarım'ından çıktı; yetkili kişi buraya hesap
-      menüsünün Yönetim bölümünden ya da Ctrl+K'dan AÇIKÇA girer. Roller
-      sayfanın kapısıyla aynı kaynaktan (STAFF_ROLES, app/dashboard/yonetim/kapi.ts).
+      Yönetim (kurumun çalışmaları, onay, kuyruklar) PR #113'te bir süre
+      buradaydı; 20.11.2026'daki güncel ürün kararıyla kalktı: ArvoLab'da
+      kurum ekranı yok, görevlendirme ve operasyon ArvoOS'ta.
     */
-    {
-      key: "yonetim",
-      label: t({ tr: "Yönetim", en: "Management" }),
-      href: "/dashboard/yonetim",
-      ikon: "apps",
-      yollar: ["/dashboard/yonetim"],
-      yalnizBaslatici: true,
-      roller: STAFF_ROLES,
-      yer: "yonetim",
-      /* Bölüm yok (modüller tek sayfa, sekme şeridi çizilmez): genel bakışın
-         başlığındaki "Çalışmalar" düğmesi kurum listesine götürür. */
-    },
     { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI, yer: "yonetim" },
     { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ADMIN_ROLES, yer: "yonetim" },
     /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
@@ -202,18 +183,13 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
 }
 
 /*
-  YALNIZCA TÜRKİYE'DE ANLAMLI UYGULAMALAR (28.10.2026). Doçentlik puanı
-  ÜAK'ın Türk akademik sistemine ait; İngilizce arayüzdeki kullanıcıya
-  göstermek, başka ülkedeki bir akademisyene kendi sisteminde karşılığı
-  olmayan bir araç sunmak olurdu.
+  Rolü olmayan (ya da yetkisi yetmeyen) kullanıcıdan gizlenen uygulamalar
+  düşer. 28.10–20.11.2026 arasında bir de dil süzgeci vardı: yalnızca
+  Türkçe arayüzde anlamlı olan Doçentlik Puanı İngilizcede gizleniyordu.
+  Modül kaldırılınca süzgecin konusu kalmadı.
 */
-const YALNIZ_TURKCE = new Set(["docentlik"]);
-
-/** Rolü olmayan (ya da yetkisi yetmeyen) kullanıcıdan ve başka dildeki kullanıcıdan gizlenen uygulamalar düşer. */
-export function gorunenUygulamalar(uygulamalar: OsUygulama[], rol: string | undefined, dil: Dil = "tr"): OsUygulama[] {
-  return uygulamalar.filter(
-    (u) => (!u.roller || (!!rol && u.roller.includes(rol))) && (dil === "tr" || !YALNIZ_TURKCE.has(u.key)),
-  );
+export function gorunenUygulamalar(uygulamalar: OsUygulama[], rol: string | undefined): OsUygulama[] {
+  return uygulamalar.filter((u) => !u.roller || (!!rol && u.roller.includes(rol)));
 }
 
 /**
@@ -280,7 +256,7 @@ export type OsSayfa = { label: string; href: string; uygulama: string };
  *
  * Eskiden (14.11.2026'ya kadar) "yalnızca başlatıcıda" duran uygulamalar da
  * buraya eklenirdi; palet ise bütün uygulamaları ayrıca listelediği için
- * Doçentlik Puanı, Kullanım Kılavuzu, Abonelik ve Kredi, Asistan Kayıtları
+ * Doçentlik Puanı (kaldırıldı), Kullanım Kılavuzu, Abonelik ve Kredi, Asistan Kayıtları
  * ve Ekip Yönetimi Ctrl+K'da İKİ kez çıkıyordu. Ekleme, dock'un uygulamaları
  * gösterip başlatıcının göstermediği dönemden kalmaydı; palet bütün
  * uygulamaları listelemeye başlayınca gereksizleşti.
@@ -434,7 +410,7 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
     { key: "ai", label: "Arvo AI", href: `${yazim}?sag=ai`, grup: "arastir", ikon: "ai" },
     { key: "kaynakca", label: t({ tr: "Kaynakça", en: "References" }), href: `${yazim}?sol=kaynakca`, grup: "kontrol", ikon: "kaynakca" },
     { key: "kilavuz", label: t({ tr: "Kılavuz ve biçim", en: "Guideline and format" }), href: `${yazim}?sol=kilavuz`, grup: "kontrol", ikon: "kilavuz" },
-    { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" }, /* Başkasının çalışmasıysa Çalışmalarım yetkiliyi Yönetim'deki listeye geçirir (calisma-listesi.tsx). */
+    { key: "merkez", label: t({ tr: "Özet ve teslim", en: "Overview and submission" }), href: `/dashboard/editor?sec=${id}`, grup: "kontrol", ikon: "ozet" }, /* Başkasının çalışmasıysa Çalışmalarım'da seçili görünmez (liste yalnızca kişinin kendi çalışmaları). */
     { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "diger", ikon: "kanit" },
     ...(calisma.tur === "article"
       ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "diger" as const, ikon: "makale" as const }]

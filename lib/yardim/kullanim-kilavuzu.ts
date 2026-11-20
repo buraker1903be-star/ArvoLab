@@ -515,8 +515,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     },
     adimlar: [
       {
-        tr: "\"Uzmana sor\" ile çalışmanızı ve konuyu (analiz, istatistik, metodoloji, dil/biçim) seçip mesajınızı yazın. Yanıt aynı yazışmada gelir, zil simgesiyle haber verilir.",
-        en: "Use \"Ask an expert\" to choose your work and the topic (analysis, statistics, methodology, language/format) and write your message. The reply arrives in the same thread and the bell notifies you.",
+        tr: "\"Uzmana sor\" ile çalışmanızı ve konuyu (analiz, istatistik, metodoloji, dil/biçim) seçip mesajınızı yazın. Yanıt aynı yazışmada, Destek sayfasında görünür.",
+        en: "Use \"Ask an expert\" to choose your work and the topic (analysis, statistics, methodology, language/format) and write your message. The reply appears in the same thread on the Support page.",
       },
       {
         tr: "Bir hata, erişim sorunu ya da ödeme sorusu için \"Bize yaz\"ı kullanın.",
@@ -570,41 +570,26 @@ const BOLUMLER: KilavuzBolumu[] = [
   },
   {
     id: "personel",
-    baslik: { tr: "Personel için: takip ve onay", en: "For staff: tracking and approval" },
+    baslik: { tr: "Personel için", en: "For staff" },
+    /*
+      20.11.2026'ya kadar bu bölüm personelin ayrı ekranlarını anlatıyordu:
+      Ana Sayfa'da kurumun "Dikkat isteyenler" kartı, Çalışmalarım'da onay
+      ve sorumlu süzgeçleri, etik işareti. O ekranlar kalktı (ArvoLab tek
+      tip ürün; görevlendirme ve operasyon ArvoOS'ta). Kılavuz yalnızca
+      gerçekten var olanı anlatır.
+    */
     ozet: {
-      tr: "Kurumunuzdaki çalışmaları izler, uzman taleplerini yanıtlar ve teslim onayı verirsiniz. Yalnızca kendi kurumunuzun verisini görürsünüz.",
-      en: "You follow your institution's works, answer expert requests and approve submissions. You only see your own institution's data.",
+      tr: "ArvoLab'ı herkesle aynı arayüzle kullanırsınız: Ana Sayfa ve Çalışmalarım yalnızca kendi çalışmalarınızı gösterir. Görevlendirme ve iş takibi ArvoOS'ta yapılır.",
+      en: "You use ArvoLab with the same interface as everyone else: Home and My works show only your own works. Assignment and job tracking happen in ArvoOS.",
     },
     adimlar: [
       {
-        tr: "Ana Sayfa'daki \"Dikkat isteyenler\" kartı teslimi geçen, yaklaşan, sorumlusu olmayan ve onay bekleyen çalışmalara götürür.",
-        en: "The \"Needs attention\" card on Home takes you to overdue, upcoming, unassigned and awaiting-approval works.",
+        tr: "Kendi çalışmanızı Çalışmalarım'daki \"Yeni çalışma\" ile açın; editör, kaynaklar ve denetimler herkesteki gibidir.",
+        en: "Open your own work with \"New work\" in My works; the editor, sources and checks are the same as for everyone.",
       },
       {
-        tr: "Çalışmalarım'da süzgeçlerle (Durum, Teslim, Aşama, Sorumlu, \"Yalnızca onay bekleyenler\") listeyi daraltın.",
-        en: "In My works, narrow the list with the filters (Status, Due, Stage, Assignee, \"Only awaiting approval\").",
-      },
-      {
-        tr: "Destek sayfasında \"Kuyruklar\" görünümü açık uzman taleplerini ve size atananları gösterir.",
-        en: "On the Support page, the \"Queues\" view shows open expert requests and the ones assigned to you.",
-      },
-      {
-        tr: "Çalışmalarım'da bir çalışmayı seçince sağdaki kartta öğrencinin gördüğü pencerelerin aynısı açılır: kılavuz, literatür, kaynakça, kanıt matrisi, etik kurul ve analiz. Teslim hazırlığı da orada.",
-        en: "Selecting a work in My works shows, on the right, the same windows the student sees: guideline, literature, references, evidence matrix, ethics and analysis. Submission readiness is there too.",
-      },
-      {
-        tr: "Ana Sayfa'daki \"Etik kurul sorunu\" maddesi, verisi onaydan önce toplanmış ya da başvurusu reddedilmiş çalışmaları açar; listede bu çalışmalar kırmızı kalkanla işaretlidir.",
-        en: "The \"Ethics approval problem\" item on Home opens works whose data was collected before approval or whose application was rejected; in the list they carry a red shield.",
-      },
-      {
-        tr: "Çalışmanın durumunu \"Çalışma ayarları\"ndan değiştirebilirsiniz (Kontrolör ve üstü).",
-        en: "You can change a work's status from \"Work settings\" (Controller and above).",
-      },
-    ],
-    notlar: [
-      {
-        tr: "Doçentlik Puanı aracı gezinmede \"Diğer\" başlığının altında (tablet ve telefonda \"Daha fazla\"da) durur; ÜAK duyurusunun yerini tutmaz.",
-        en: "The Associate Professorship Score tool is under \"More\" in the navigation; it does not replace the official ÜAK announcement.",
+        tr: "Uzman talepleri şimdilik ArvoLab'ın Destek sayfasındaki \"Kuyruklar\" görünümünde. Bu geçici: talepler ArvoOS'un Talepler bölümüne taşınacak.",
+        en: "Expert requests are, for now, in the \"Queues\" view of ArvoLab's Support page. This is temporary: requests will move to the Requests section in ArvoOS.",
       },
     ],
     roller: STAFF_ROLES,
@@ -613,13 +598,13 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "yonetim",
     baslik: { tr: "İç ekip için: ekip ve kayıtlar", en: "For the internal team: team and logs" },
     ozet: {
-      tr: "Kurumları ve kullanıcıları yönetir, asistan kayıtlarını incelersiniz.",
-      en: "You manage institutions and users, and review assistant logs.",
+      tr: "Kullanıcıların rollerini ve erişimini yönetir, asistan kayıtlarını incelersiniz. Kurumlar ve kurum üyeliği ArvoOS'tan gelir.",
+      en: "You manage users' roles and access, and review assistant logs. Institutions and institution membership come from ArvoOS.",
     },
     adimlar: [
       {
-        tr: "\"Diğer\" → \"Ekip Yönetimi\"nde \"Kurum ekle\" ve \"Kullanıcı davet et\" ile hesap açın; rol ve kurumu satırdan kaydedin.",
-        en: "In \"More\" → \"Team Management\", open accounts with \"Add institution\" and \"Invite user\"; save role and institution on each row.",
+        tr: "Hesap menüsünün \"Ekip araçları\" bölümünden \"Ekip Yönetimi\"ne girin; \"Kullanıcı davet et\" ile hesap açın, rolü satırdan kaydedin. Kurum bağı ArvoOS'taki üye listesinden kendiliğinden kurulur, burada değiştirilmez.",
+        en: "Open \"Team Management\" from the \"Team tools\" section of the account menu; open accounts with \"Invite user\" and save the role on each row. The institution link is set up automatically from the ArvoOS member list and is not changed here.",
       },
       {
         tr: "\"Asistan Kayıtları\" her asistan çalışmasını, kullanıcı puanlarını ve model karşılaştırmasını gösterir.",

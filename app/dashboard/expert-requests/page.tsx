@@ -31,7 +31,7 @@ import { createClient } from "@/lib/supabase/server";
 import { kuyrukAdresi, TALEPLERIM_ADRESI, type KuyrukTuru } from "@/lib/destek-kuyrugu";
 import DestekKuyruklari from "./destek-kuyruklari";
 import Yazisma from "./yazisma";
-import { yonetimeGirebilir } from "@/lib/yonetim";
+import { personelRolu } from "@/lib/kisisel-calismalar";
 import { statusTone } from "@/lib/status-tone";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
@@ -105,8 +105,8 @@ export default async function DestekPage({
     kuyruğu" ve içlerinde "Üstlen" çıkıyordu — öğrenci bunları hiç
     görmez, önizleme de göstermemeli. Yetki değişmiyor: RLS gerçek rolle.
   */
-  /* Önizleme 20.11.2026'da kalktı (lib/yonetim.ts): karar gerçek rolden. */
-  const gorunum = { personel: yonetimeGirebilir(profile?.role) };
+  /* Önizleme 20.11.2026'da kalktı (lib/kisisel-calismalar.ts): karar gerçek rolden. */
+  const gorunum = { personel: personelRolu(profile?.role) };
   const uzman = gorunum.personel && isExpertEligible(profile?.role);
   const yonetici = gorunum.personel && (profile?.role === "system_admin" || profile?.role === "founder");
   // Geri bildirimleri Yönetici de okur (app/actions/geri-bildirim.ts);

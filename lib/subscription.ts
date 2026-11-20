@@ -281,8 +281,8 @@ export const faturalarim = async (user: { id: string; email: string }) =>
 /* YETKİ ÇAĞIRANDA: köprü kurumu kimliğiyle okuyor, kişiyi tanımıyor — kurum yöneticisi olduğu doğrulanmadan çağrılmamalı. */
 /*
   `platformKurumu` (29.10.2026): kurum ArvoOS'un KENDİSİ. ArvoOS kendi
-  kredisi için ödeme almıyor (platform_self); iç ekip kurum seçicide bir
-  müşteri seçmeyince sayfa kendi kurumunu gösteriyor, paketleri satıyor ve
+  kredisi için ödeme almıyor (platform_self); iç ekibin sayfası kendi
+  kurumunu gösterdiğinde paketleri satıyor ve
   düğmeye basan "ödeme başlatılamadı" görüyordu (29.10.2026 canlı
   günlüğü). İşaret yoksa (eski ArvoOS) false: paketler eskisi gibi çizilir,
   hatayı satın alma işlemi açık bir mesaja çevirir.

@@ -78,10 +78,9 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
 }
 
 /**
- * Filtrenin adresi: filtre çubuğu ve personel sayaçları aynı adresi kurar.
- * `taban` listenin kendisi — kişisel Çalışmalarım (/dashboard/editor) ya da
- * Yönetim'deki kurum listesi (lib/yonetim.ts). Filtre başka listeye
- * götürmemeli: Yönetim'de süzen kişi kendi listesine düşüyordu.
+ * Filtrenin adresi. `taban` listenin kendisi; bugün tek liste var
+ * (Çalışmalarım, /dashboard/editor). PR #113'te bir süre Yönetim'deki kurum
+ * listesi de bu parametreyle süzülüyordu; o liste 20.11.2026'da kalktı.
  */
 export function filtreAdresi(filters: ProjectFilters, taban = "/dashboard/editor"): string {
   const p = new URLSearchParams();

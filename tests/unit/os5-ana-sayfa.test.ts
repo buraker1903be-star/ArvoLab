@@ -68,7 +68,7 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
   });
   test("Danışmanıma gönder kartı çalışma özetinde; 20.11.2026'dan beri herkesin kendi çalışmasında (tek ana deneyim)", () => {
     const ozet = oku("app/dashboard/editor/calisma-listesi.tsx");
-    assert.match(ozet, /\{secili && kapsam === "kisisel" \? \(\s*<DanismanaGonder /);
+    assert.match(ozet, /\{secili \? \(\s*<DanismanaGonder /);
   });
 });
 

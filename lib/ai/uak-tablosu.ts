@@ -5,7 +5,14 @@
   ÜAK'ın bir veri arayüzü yok: başvuru şartları her dönem (mart, ekim)
   temel alan başına PDF olarak yayımlanıyor. Yönetici PDF'i yüklüyor,
   asistan tabloyu ÖNERİYE çeviriyor, yönetici onaylıyor
-  (app/actions/uak-tablosu.ts).
+  (app/actions/uak-tablosu.ts — doçentlik modülüyle birlikte 20.11.2026'da
+  kaldırıldı).
+
+  MODÜL KALDIRILDI AMA BU DOSYA DURUYOR: ai_assistant_runs'taki geçmiş
+  "uak" kayıtları ArvoLab'ın kendi modelini eğitecek verinin parçası ve
+  eğitim kümesi (app/api/asistan/egitim-kumesi) her kaydı kendi istemiyle
+  dışa aktarıyor. İstemi silmek o kayıtları kümeden sessizce düşürürdü.
+  Yeni "uak" çalışması üretilmiyor.
 
   Bu yetenek "asistan denetler, yazmaz" kuralının dışında değil, yanında:
   ürettiği şey öğrencinin metnine girecek bir cümle değil, resmî bir

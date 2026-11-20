@@ -34,6 +34,21 @@ export default async function SubscriptionNotice({ access }: { access: AccessSta
               en: "Your work is safe and has not been deleted; once the subscription is renewed you continue where you left off.",
             })}
           </p>
+          {access.bagsizPersonel ? (
+            /*
+              Personel rolündeki hesap hiçbir kuruma bağlı değil, bu yüzden
+              bireysel yola düştü (lib/erisim-yolu.ts). Ödeme planları
+              gösterilir ama önce nedeni söylenir: personelin hakkı kurum
+              lisansından gelir, bağ ArvoOS'taki üyelikten kurulur. E-posta
+              ya da rol istisnası yok; burada hiçbir şey hak vermez.
+            */
+            <p className="alert" data-tone="info" role="note">
+              {t({
+                tr: "Hesabınız personel rolünde ama bir kuruma bağlı değil. Personelin erişimi kurum lisansından gelir: kurumunuzun ArvoOS'taki üye listesinde kayıtlı e-posta adresinizle giriş yaptığınızdan ve e-postanızı onayladığınızdan emin olun; bağ bir sonraki girişte kendiliğinden kurulur. Sorun sürerse Destek'ten yazın.",
+                en: "Your account has a staff role but is not linked to an institution. Staff access comes from the institution license: make sure you signed in with the email address listed in your institution's ArvoOS members and that the email is confirmed; the link is set up automatically on your next sign-in. If the problem persists, write to Support.",
+              })}
+            </p>
+          ) : null}
           {individual ? (
             access.plans.length > 0 ? (
               <>

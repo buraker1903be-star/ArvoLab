@@ -1,15 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
-import { Ban, Building2, MailPlus, Plus, Search, ShieldAlert, ShieldCheck, UserCog } from "lucide-react";
+import { Ban, MailPlus, Search, ShieldAlert, ShieldCheck, UserCog } from "lucide-react";
 import { getCurrentProfile } from "@/app/actions/profile";
 import {
-  createOrganization,
   getAllProfiles,
   getOrganizations,
   inviteUser,
   setUserAccess,
-  updateUserOrganization,
   updateUserRole,
 } from "@/app/actions/team";
 import { ROLE_LABELS, type UserRole } from "@/lib/project-labels";
@@ -81,17 +79,6 @@ export default async function TeamPage({
     return updateUserRole(userId, role);
   }
 
-  async function handleOrgChange(userId: string, formData: FormData) {
-    "use server";
-    const organizationId = String(formData.get("organizationId") ?? "");
-    return updateUserOrganization(userId, organizationId);
-  }
-
-  async function handleCreateOrganization(formData: FormData) {
-    "use server";
-    return createOrganization(formData);
-  }
-
   async function handleInvite(formData: FormData) {
     "use server";
     return inviteUser(formData);
@@ -109,48 +96,26 @@ export default async function TeamPage({
           <h1>{t({ tr: "Ekip Yönetimi", en: "Team Management" })}</h1>
           <p>
             {t({
-              tr: "Kullanıcıları davet edin, rollerini ve kurumlarını belirleyin. Davetsiz kayıt olanlar",
-              en: "Invite users and set their roles and institutions. People who sign up without an invitation start with the",
+              tr: "Kullanıcıları davet edin ve rollerini belirleyin. Kurum bağı ArvoOS'taki üyelikten gelir, burada değiştirilmez. Davetsiz kayıt olanlar",
+              en: "Invite users and set their roles. The institution link comes from ArvoOS membership and is not changed here. People who sign up without an invitation start with the",
             })}{" "}
             <strong>{t(ROLE_LABELS.client)}</strong>{" "}
             {t({ tr: "rolüyle başlar ve yalnızca kendi çalışmasını görür.", en: "role and see only their own work." })}
           </p>
         </div>
         <div className="cluster">
-          <PanelDrawer
-            triggerLabel={t({ tr: "Kurum ekle", en: "Add institution" })}
-            triggerIcon={<Building2 size={16} aria-hidden="true" />}
-            triggerClassName="projects-filter-button"
-            kicker={t({ tr: "Ekip", en: "Team" })}
-            title={t({ tr: "Yeni kurum ekle", en: "Add a new institution" })}
-            description={t({
-              tr: "Kullanıcıları bir kuruma bağlamak için önce kurumu oluşturun.",
-              en: "Create the institution first to link users to it.",
-            })}
-          >
-            <ActionForm
-              className="project-form-grid"
-              action={handleCreateOrganization}
-              successMessage={t({ tr: "Kurum eklendi.", en: "Institution added." })}
-            >
-              <label className="project-form-full">
-                <span>{t({ tr: "Kurum adı", en: "Institution name" })}</span>
-                <input name="name" type="text" placeholder={t({ tr: "Örn. AkademikMerkez", en: "E.g. AcademicCenter" })} required />
-              </label>
-              {organizations.length > 0 ? (
-                <p className="hint project-form-full">
-                  {t({ tr: "Mevcut kurumlar:", en: "Existing institutions:" })} {organizations.map((o) => o.name).join(", ")}
-                </p>
-              ) : null}
-              <div className="project-form-actions">
-                <button type="submit" className="projects-primary-button">
-                  <Plus size={16} aria-hidden="true" />
-                  {t({ tr: "Kurumu ekle", en: "Add institution" })}
-                </button>
-              </div>
-            </ActionForm>
-          </PanelDrawer>
-
+          {/*
+            "Kurum ekle" ve kişinin kurumunu elle değiştirme 20.11.2026'da
+            kalktı (kurum sahibinin kararı: ArvoLab başka kurumlara
+            kiralanmıyor, çok kurumlu yönetim yok, kurum değiştirme yok).
+            Eskiden ArvoLab'da elle açılan kurum ArvoOS'tan hiç yansıtılmadığı
+            için (synced_at boş) lisans kapısı onu süresiz açık sayıyordu ve
+            yönetici herhangi bir hesabı herhangi bir kuruma bağlayıp kurum
+            lisansından yararlandırabiliyordu. Kurum ve bağ artık yalnızca
+            ArvoOS'tan: kurum kaydını ve üye listesini ArvoOS yansıtır,
+            bağı onaylı e-postayla veritabanı kurar (arvoos_uyeligini_bagla).
+            Var olan bağlar değişmedi.
+          */}
           {directoryAvailable ? (
             <PanelDrawer
               triggerLabel={t({ tr: "Kullanıcı davet et", en: "Invite user" })}
@@ -158,8 +123,8 @@ export default async function TeamPage({
               kicker={t({ tr: "Ekip", en: "Team" })}
               title={t({ tr: "Kullanıcı davet et", en: "Invite user" })}
               description={t({
-                tr: "Davet edilen kişiye şifresini belirleyeceği bir bağlantı gönderilir. Rol ve kurum davetle birlikte atanır.",
-                en: "The invited person receives a link to set their password. The role and institution are assigned with the invitation.",
+                tr: "Davet edilen kişiye şifresini belirleyeceği bir bağlantı gönderilir. Rol davetle birlikte atanır; kurum bağı e-posta ArvoOS'taki üye listesindeyse kendiliğinden kurulur.",
+                en: "The invited person receives a link to set their password. The role is assigned with the invitation; the institution link is set up automatically if the email is in the ArvoOS member list.",
               })}
             >
               <ActionForm
@@ -181,17 +146,6 @@ export default async function TeamPage({
                     {assignableRoles.map((r) => (
                       <option key={r} value={r}>
                         {t(ROLE_LABELS[r])}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{t({ tr: "Kurum", en: "Institution" })}</span>
-                  <select name="organizationId" defaultValue={profile?.organization_id ?? ""}>
-                    <option value="">{t({ tr: "Kurum yok", en: "No institution" })}</option>
-                    {organizations.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
                       </option>
                     ))}
                   </select>
@@ -220,13 +174,11 @@ export default async function TeamPage({
       ) : null}
 
       {kurumOkunamadi ? (
-        /* Eskiden kurum listesinin okunamaması sessizdi: kurum adları boş,
-           kurum seçici gizli, davet formu yalnızca "Kurum yok" sunuyordu ve
-           yönetici farkında olmadan kurumsuz bir Kontrolör davet edebiliyordu. */
+        /* Kurum listesi okunamazsa kullanıcıların kurum adları boş görünür; bu bir arıza, "kurumu yok" demek değil. */
         <p className="alert" data-tone="danger" role="alert">
           {t({
-            tr: "Kurum listesi okunamadı; kurum adları ve kurum seçimi eksik görünür. Davet ya da kurum ataması yapmadan önce sayfayı yenileyin.",
-            en: "The institution list could not be loaded; institution names and selection will look incomplete. Refresh the page before inviting or assigning institutions.",
+            tr: "Kurum listesi okunamadı; kurum adları eksik görünür. Sayfayı yenileyin.",
+            en: "The institution list could not be loaded; institution names will look incomplete. Refresh the page.",
           })}
         </p>
       ) : null}
@@ -415,29 +367,6 @@ export default async function TeamPage({
                       {t({ tr: "Rolü kaydet", en: "Save role" })}
                     </button>
                   </ActionForm>
-                  {organizations.length > 0 ? (
-                    <ActionForm action={handleOrgChange.bind(null, secili.id)} className="personel-denetim-satir" successMessage={t({ tr: "Kurum kaydedildi.", en: "Institution saved." })}>
-                      <label className="personel-ata">
-                        <span className="muted text-sm">{t({ tr: "Kurum", en: "Institution" })}</span>
-                        <select
-                          name="organizationId"
-                          defaultValue={secili.organization_id ?? ""}
-                          className="compact-select"
-                          aria-label={t({ tr: "Kurum", en: "Institution" })}
-                        >
-                          <option value="">{t({ tr: "Kurum yok", en: "No institution" })}</option>
-                          {organizations.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button type="submit" className="projects-filter-button button-compact">
-                        {t({ tr: "Kurumu kaydet", en: "Save institution" })}
-                      </button>
-                    </ActionForm>
-                  ) : null}
                 </section>
 
                 {directoryAvailable && secili.id !== profile?.id ? (

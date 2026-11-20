@@ -17,8 +17,13 @@ const ek = crypto.randomBytes(3).toString("hex");
 const parola = `Td7!${crypto.randomBytes(9).toString("base64url")}`;
 const ileri = new Date(Date.now() + 60 * 864e5).toISOString();
 
-const kurum = (ad) => psql(`insert into public.organizations (name, license_status, current_period_end) values (${q(ad)}, 'active', '${ileri}') returning id`).split("\n")[0];
-const A = kurum(`Kurum A ${ek}`), B = kurum(`Kurum B ${ek}`);
+/*
+  Kurumlar ArvoOS'tan YANSITILMIŞ gibi (synced_at dolu): lisans kapısı gerçekten çalışsın. synced_at boş
+  kurum "henüz bildirilmedi" sayılıp her durumda açık kalırdı ve personel erişimi hiçbir şey ölçmezdi.
+  K kurumunun lisansı KAPALI: oradaki personelin bireysel ödeme yerine kurum lisansı uyarısı görmesi beklenir.
+*/
+const kurum = (ad, durum = "active") => psql(`insert into public.organizations (name, license_status, current_period_end, synced_at) values (${q(ad)}, '${durum}', '${ileri}', now()) returning id`).split("\n")[0];
+const A = kurum(`Kurum A ${ek}`), B = kurum(`Kurum B ${ek}`), K = kurum(`Kurum K ${ek}`, "inactive");
 
 async function hesap(anahtar, ad, rol, org) {
   const adres = `tek-${anahtar}-${ek}@yerel.test`;
@@ -42,6 +47,7 @@ const personel = await hesap("personel", "Ece Kontrolör", "controller", A);
 const kurumlu = await hesap("kurumlu", "Arda Kurumlu", "client", A);
 const bireysel = await hesap("bireysel", "Selin Bireysel", "client", null);
 const digerKurum = await hesap("bkurumu", "Mert BKurumu", "client", B);
+const kapali = await hesap("kapali", "Lale Kapalı", "employee", K);
 psql(`insert into public.individual_subscriptions (user_id, status, current_period_end) values ('${bireysel.id}', 'active', '${ileri}') on conflict (user_id) do update set status = 'active', current_period_end = excluded.current_period_end`);
 
 const C = {
@@ -50,6 +56,8 @@ const C = {
   kurumlu: calisma(kurumlu.id, A, "Kurumlu öğrencinin tezi"),
   bireysel: calisma(bireysel.id, null, "Bireysel abonenin tezi"),
   bkurumu: calisma(digerKurum.id, B, "B kurumundaki öğrencinin tezi"),
+  /* Doçentlik modülü kaldırıldıktan sonra da var olan doçentlik dosyası açılmalı. */
+  docentlik: calisma(personel.id, A, "Personelin eski doçentlik dosyası", "associate-professorship"),
 };
-fs.writeFileSync(new URL("./tohum.json", import.meta.url), JSON.stringify({ parola, kurumlar: { A, B }, hesaplar: { kurucu, personel, kurumlu, bireysel, bkurumu: digerKurum }, calismalar: C }, null, 2));
+fs.writeFileSync(new URL("./tohum.json", import.meta.url), JSON.stringify({ parola, kurumlar: { A, B, K }, hesaplar: { kurucu, personel, kurumlu, bireysel, bkurumu: digerKurum, kapali }, calismalar: C }, null, 2));
 console.log("tohum hazır", ek, Object.keys(C).length, "çalışma");

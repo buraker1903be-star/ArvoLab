@@ -12,7 +12,7 @@ export async function generateMetadata() {
    modelin süresi 150 sn) — 60 sn'de işlem yarıda kesilirdi (02.11.2026). */
 export const maxDuration = 300;
 
-/* Herkesin kendi çalışmaları, aynı düzende (lib/yonetim.ts). */
+/* Herkesin kendi çalışmaları, aynı düzende (lib/kisisel-calismalar.ts). */
 export default function ProjectsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  return <CalismaListesi kapsam="kisisel" searchParams={searchParams} />;
+  return <CalismaListesi searchParams={searchParams} />;
 }

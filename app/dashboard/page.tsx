@@ -6,7 +6,7 @@ export async function generateMetadata() {
   return { title: t({ tr: "Ana Sayfa", en: "Home" }) };
 }
 
-/* Herkesin ana sayfası aynı: yalnızca kendi çalışmaları (lib/yonetim.ts). */
+/* Herkesin ana sayfası aynı: yalnızca kendi çalışmaları (lib/kisisel-calismalar.ts). */
 export default function DashboardPage() {
-  return <AnaSayfaIcerik kapsam="kisisel" />;
+  return <AnaSayfaIcerik />;
 }

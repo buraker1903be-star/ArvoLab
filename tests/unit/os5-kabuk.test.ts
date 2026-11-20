@@ -40,7 +40,7 @@ describe("rol bazlı görünürlük değişmedi", () => {
   const layout = oku("app/dashboard/layout.tsx");
   test("gezinme listeyi kendisi kurmuyor: layout'ta rolle süzülmüş listeyi alıyor", () => {
     assert.doesNotMatch(yorumsuz(gezinme), /labUygulamalari\(|gorunenUygulamalar\(/);
-    // Önizleme 20.11.2026'da kalktı (lib/yonetim.ts): liste her zaman gerçek rolle süzülür.
+    // Önizleme 20.11.2026'da kalktı (lib/kisisel-calismalar.ts): liste her zaman gerçek rolle süzülür.
     assert.match(layout, /const uygulamalar = gorunenUygulamalar\(labUygulamalari\(t\), profile\?\.role/);
     assert.match(layout, /<OsGezinme uygulamalar=\{uygulamalar\}/);
   });

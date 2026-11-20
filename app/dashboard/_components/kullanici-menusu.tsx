@@ -79,10 +79,9 @@ export default async function KullaniciMenusu({
         </div>
         {/*
           "Görünüm" seçimi (Personel / Öğrenci · kurum / Öğrenci · bireysel)
-          20.11.2026'da kalktı: herkesin ana deneyimi aynı, yönetim işleri
-          aşağıdaki Yönetim bölümünde (lib/yonetim.ts).
+          ve iç ekibin kurum seçicisi 20.11.2026'da kalktı: herkesin ana
+          deneyimi aynı (lib/kisisel-calismalar.ts), operasyon ArvoOS'ta.
         */}
-        {/* Kurum seçimi 20.11.2026'dan beri yönetim ekranlarının şeridinde (kurum-seridi.tsx), hesap menüsünde değil. */}
         {/* Çeviri bitene kadar yalnızca iç ekipte (lib/dil.ts, INGILIZCE_YAYINDA). */}
         {INGILIZCE_YAYINDA ? <DilSecici /> : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>
@@ -104,9 +103,14 @@ export default async function KullaniciMenusu({
             (aria-label): menü iki yerleşimde çizildiği için id ile
             bağlamak sayfada aynı id'yi iki kez üretirdi.
           */
-          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Yönetim", en: "Management" })}>
+          /*
+            "Ekip araçları": asistan kayıtları ve ekip yönetimi (iç ekip).
+            20.11.2026'ya kadar başlığı "Yönetim"di ve kurum ekranı ile
+            doçentlik puanı da buradaydı; ikisi de kalktı.
+          */
+          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Ekip araçları", en: "Team tools" })}>
             <small className="os-kullanici-bolum" aria-hidden="true">
-              {t({ tr: "Yönetim", en: "Management" })}
+              {t({ tr: "Ekip araçları", en: "Team tools" })}
             </small>
             {personelAraclari.map((b) => (
               <Link key={b.key} href={b.href}>

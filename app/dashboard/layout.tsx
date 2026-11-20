@@ -7,7 +7,7 @@ import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
-import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
@@ -24,10 +24,6 @@ import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import KurumSeridi from "./_components/kurum-seridi";
-import { getOrganizations } from "@/app/actions/team";
-import { ADMIN_ROLES } from "@/lib/project-labels";
 
 /* Menüye uygulamanın yalnızca bağlantı için gereken alanları gider (roller, yollar gitmez). */
 const menuBaglantisi = ({ key, label, href, ikon }: OsUygulama) => ({ key, label, href, ikon });
@@ -68,18 +64,12 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   /*
     Rolü yetmeyen uygulamalar gezinmeden ve başlatıcıdan düşer. Eskiden iç
     ekip "öğrenci görünümünü önizlerken" rol yok sayılıyordu; önizleme
-    20.11.2026'da kalktı (lib/yonetim.ts): herkesin ana deneyimi aynı,
-    yönetim araçları yalnızca hesap menüsünün Yönetim bölümünde.
+    20.11.2026'da kalktı (lib/kisisel-calismalar.ts): herkesin ana deneyimi
+    aynı. Kurum seçici (iç ekip kurumlar arasında geçiş yapıyordu) ve
+    Yönetim sayfası da aynı gün kalktı: ArvoLab tek tip bir araştırma ve
+    yazma ürünü; operasyon ArvoOS'ta.
   */
-  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), profile?.role, await aktifDil());
-  /*
-    Kurum seçici yalnızca iç ekipte (lib/kurum-secimi.ts): kurucu birden çok
-    kurumun sahibi ve ekranlar kurumları karışık listeliyordu. Kurum listesi
-    okunamazsa seçici çizilmez; seçim görünümü süzer, yetkiyi değil.
-  */
-  const icEkip = Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
-  const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
-  const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), profile?.role);
   // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
   const hesapMenusu = {
     ad: userName,
@@ -136,14 +126,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <Suspense>
           <OsBolumSeridi uygulamalar={uygulamalar} />
         </Suspense>
-
-        {/*
-          Kurum seçimi yalnızca iç ekipte ve yalnızca yönetim ekranlarında
-          (kurum-seridi.tsx, lib/yonetim.ts). Eskiden şerit her sayfadaydı,
-          seçici hesap menüsündeydi: kişisel Ana Sayfa ve Çalışmalarım
-          seçimden bağımsız olduğu hâlde üstlerinde "yalnızca X" yazıyordu.
-        */}
-        {icEkip ? <KurumSeridi kurumlar={kurumlar} seciliKurum={kurum ? { id: kurum.id, ad: kurum.ad } : null} /> : null}
 
         <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>

@@ -1,30 +1,21 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, Plus } from "lucide-react";
+import { FileText, Search, Plus } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
-import { etikKayitlariOku } from "@/lib/etik/oku";
-import { etikTehlikesi } from "@/lib/etik/durum";
-import { trGunAnahtari } from "@/lib/tr-time";
 import { calismaKilavuzlari } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
-import { getProjects, approveProject, revokeApproval } from "@/app/actions/projects";
-import { projectTypeLabel, statusLabel, isOversightRole, PROJECT_STATUSES } from "@/lib/project-labels";
-import { kisiselCalismalar, listeTabani, yonetimeGirebilir, YONETIM_CALISMALAR, type Kapsam } from "@/lib/yonetim";
-import { redirect } from "next/navigation";
+import { getProjects } from "@/app/actions/projects";
+import { projectTypeLabel, statusLabel, PROJECT_STATUSES } from "@/lib/project-labels";
+import { kisiselCalismalar, KISISEL_CALISMALAR } from "@/lib/kisisel-calismalar";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
 import BosDurum from "../_components/bos-durum";
 import { getCurrentProfile } from "@/app/actions/profile";
-import PersonelCalismaKarti from "./personel-calisma-karti";
-import { personelSayaclari } from "@/lib/personel-sayaclari";
 import { statusTone } from "@/lib/status-tone";
-import { topluTutarsizliklar } from "@/app/actions/calisma-merkezi";
-import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
-import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import CalismaDurumKarti from "./calisma-durum-karti";
@@ -33,18 +24,20 @@ import DanismanaGonder from "../_components/danismana-gonder";
 
 
 /*
-  Çalışmalarım ile Yönetim'in çalışma listesi aynı bileşenden (lib/yonetim.ts).
-  "kisisel": herkesin kendi çalışmaları, öğrenci düzeni (iki kart, Yeni
-  çalışma). "yonetim": RLS'in gösterdiği kurum çalışmaları; gözetim rolünde
-  onay, sorumlu, sayaçlar ve filtreler (eski personel düzeni). Eskiden düzeni
-  rol ve önizleme çerezi seçiyordu; kurucunun kendi tezi kurumların
-  tezleriyle aynı listedeydi.
+  ÇALIŞMALARIM HERKES İÇİN AYNI (20.11.2026, kurum sahibinin ürün kararı:
+  ArvoLab tek tip, editör odaklı; kurucu, personel ve bireysel kullanıcı
+  aynı deneyimi kullanır). Yalnızca kişinin kendi çalışmaları, iki kart
+  (liste + seçili çalışmanın durumu), Yeni çalışma.
+
+  Eskiden gözetim rolünde ayrı bir personel düzeni vardı: kurumun bütün
+  çalışmaları, öğrenci adı, onay/onayı geri alma, sayaçlar, toplu
+  tutarsızlık taraması, etik işareti. PR #113 bunu bir süre "Yönetim ·
+  çalışmalar" sayfasına taşıdı; karar güncellenince o da kalktı.
+  Görevlendirme ve operasyon ArvoOS'ta (Talepler, İşler).
 */
 export default async function CalismaListesi({
-  kapsam,
   searchParams,
 }: {
-  kapsam: Kapsam;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await ceviri();
@@ -59,28 +52,13 @@ export default async function CalismaListesi({
         })
       : t({ tr: "henüz yazılmadı", en: "not written yet" });
   const [{ satirlar: gorunenCalismalar, okunamadi }, profile, params] = await Promise.all([
-    getProjects(kapsam),
+    getProjects(),
     getCurrentProfile(),
     searchParams,
   ]);
-  /* Kişisel kapsamda yalnızca kendi çalışmaları; gözetimle görülenler Yönetim'de. */
-  const projects = kapsam === "kisisel" ? kisiselCalismalar(gorunenCalismalar, profile?.id) : gorunenCalismalar;
-  const taban = listeTabani(kapsam);
-  /*
-    Başkasının çalışması seçili gelirse (çalışma içindeki "Özet ve teslim",
-    eski yer imi) yetkili kişi Yönetim'deki listeye geçer: Çalışmalarım artık
-    yalnızca kendi çalışmalarını gösteriyor ve seçim orada boşa düşerdi.
-    Yetkisi olmayan için bir şey değişmez (seçim kendi listesine düşer).
-  */
-  const istenenSecim = typeof params.sec === "string" ? params.sec : null;
-  if (kapsam === "kisisel" && istenenSecim && !projects.some((p) => p.id === istenenSecim) && yonetimeGirebilir(profile?.role)) {
-    const arama = new URLSearchParams();
-    for (const [anahtar, deger] of Object.entries(params)) {
-      if (deger === undefined) continue;
-      for (const tek of Array.isArray(deger) ? deger : [deger]) arama.append(anahtar, tek);
-    }
-    redirect(`${YONETIM_CALISMALAR}?${arama.toString()}`);
-  }
+  /* Yalnızca kendi çalışmaları (sorgu da sahibe göre süzülüyor; burası ikinci emniyet). */
+  const projects = kisiselCalismalar(gorunenCalismalar, profile?.id);
+  const taban = KISISEL_CALISMALAR;
   const [{ stats, openComments }, guidelines] = await Promise.all([
     getWritingStats(
       projects.map((project) => project.id),
@@ -89,68 +67,14 @@ export default async function CalismaListesi({
     // Kartlardaki yazım temposu için uygulanan kılavuzlar (yüklenenler dahil), çalışma kimliğine göre
     createClient().then((supabase) => calismaKilavuzlari(supabase, projects)),
   ]);
-  /*
-    Denetim şeridi, filtreler ve personel metni gözetim rolünde; iç ekip
-    öğrenci düzenini önizlerken bunlar gizlenir (lib/onizleme.ts).
-    Yetkiler değişmiyor: düğmeler gizlense de RLS gerçek rolle çalışıyor.
-  */
-  /* Onay, sayaçlar ve kurum filtreleri yalnızca Yönetim'de ve gözetim rolünde; yetkiyi yine sunucu işlemi ve RLS denetliyor. */
-  const canApprove = kapsam === "yonetim" && isOversightRole(profile?.role);
-  /*
-    Personel listesinde ÖĞRENCİNİN ADI. Eskiden kartlarda yalnızca başlık
-    vardı; "Ekonometri" başlıklı üç tezden hangisinin kimin olduğu
-    çalışmayı açmadan anlaşılmıyordu. Profil okuması RLS'e tabi (aynı
-    kurum); okunamazsa ad boş kalır, liste düşmez.
-  */
-  const sahipAdlari = new Map<string, string>();
-  if (canApprove && projects.length) {
-    const supabase = await createClient();
-    const { data: sahipler, error: sahipHatasi } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", [...new Set(projects.map((project) => project.owner_id))]);
-    if (sahipHatasi) console.error("[calismalar] öğrenci adları okunamadı:", sahipHatasi.message);
-    for (const sahip of sahipler ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
-  }
-  const calismalar = projects.map((project) => ({ ...project, sahip_adi: sahipAdlari.get(project.owner_id) ?? null }));
-  // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
+  // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
-  /*
-    Etik kurul tehlikesi (lib/etik/durum.ts): onaydan önce veri toplama ya da
-    reddedilmiş başvuru. Yalnızca personelde; tek sorgu. Süzmeden ÖNCE
-    okunuyor: "etik=risk" süzgeci (ana sayfanın sayacından gelinir) ve
-    listedeki işaret aynı kümeyi kullanır.
-  */
-  const etikKayitlari = canApprove ? await etikKayitlariOku(await createClient(), calismalar.map((p) => p.id)) : new Map();
-  const etikBugun = trGunAnahtari();
-  const filtreBaglami = {
-    etikRiski: (id: string) => etikTehlikesi(etikKayitlari.get(id), etikBugun),
+  const visible = applyProjectFilters(projects, filters, {
     openComments: (id: string) => openComments.get(id) ?? 0,
     lastEdited: (projectId: string) => stats.get(projectId)?.updatedAt,
     userId: profile?.id,
-  };
-  const visible = applyProjectFilters(calismalar, filters, filtreBaglami);
-  const sayaclar = canApprove ? personelSayaclari(calismalar, filters, filtreBaglami, dil, taban) : [];
+  });
 
-  /*
-    Kontrolör onayı verirken metinle literatürün çelişip çelişmediğini
-    ONAYDAN SONRA öğreniyordu (lib/onay-uyarisi.ts). Burada onaylamadan önce
-    görsün. Tarama tam metin istediği için yalnızca onaysız ve yazılmış
-    çalışmalarda, sınırlı sayıda yapılır (lib/toplu-tutarsizlik.ts); rozet
-    çıkmaması "temiz" demek değil, kesin yargı çalışma merkezinde.
-  */
-  const tutarsizliklar: Map<string, Tutarsizlik[]> = canApprove
-    ? await topluTutarsizliklar(
-        taranacakCalismalar(
-          visible.map((project) => ({
-            id: project.id,
-            onayli: !!project.controller_approved_at,
-            kelime: stats.get(project.id)?.words ?? 0,
-            guncellendi: stats.get(project.id)?.updatedAt ?? null,
-          })),
-        ),
-      )
-    : new Map();
   // Silme yetkisi RLS ile aynı: sahibi ya da Yönetici/Sistem
   // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
   const canDeleteAnyProject =
@@ -186,14 +110,10 @@ export default async function CalismaListesi({
   }
 
   /*
-    ÖĞRENCİ DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği). Solda
-    çalışmalar, sağda seçili çalışmanın durumu ve eksikleri; sayfa tek
-    ekran, kaymasız (lib/calisma-karti.ts). Personel düzeni değişmedi:
-    onlarca çalışmayı onay ve atama şeridiyle tarıyorlar, orada liste
-    kartları gerekiyor.
+    İKİ KART (26.10.2026, kurum sahibinin isteği). Solda çalışmalar, sağda
+    seçili çalışmanın durumu ve eksikleri; sayfa tek ekran, kaymasız
+    (lib/calisma-karti.ts).
   */
-  const ogrenciDuzeni = !canApprove;
-  /* Personel düzeni de iki kart (26.10.2026): seçim ikisinde de aynı kuralla. */
   const seciliId = seciliCalismaId(
     visible.map((project) => project.id),
     typeof params.sec === "string" ? params.sec : null,
@@ -215,7 +135,7 @@ export default async function CalismaListesi({
     Okunamazsa kart "henüz gönderilmedi" gibi davranır, sayfa düşmez.
   */
   const sonBaglantiYaniti =
-    secili && kapsam === "kisisel"
+    secili
       ? await (await createClient())
           .from("manuscript_share_links")
           .select("created_at, last_viewed_at, view_count, expires_at")
@@ -248,16 +168,6 @@ export default async function CalismaListesi({
           en: `Link sent ${once(sonGonderim.olusturuldu)} · not opened yet`,
         })
     : null;
-
-  async function handleApprove(projectId: string) {
-    "use server";
-    return approveProject(projectId);
-  }
-
-  async function handleRevoke(projectId: string) {
-    "use server";
-    return revokeApproval(projectId);
-  }
 
   const calismaSayisi =
     visible.length === projects.length
@@ -313,35 +223,22 @@ export default async function CalismaListesi({
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>{kapsam === "yonetim" ? t({ tr: "Yönetim · çalışmalar", en: "Management · works" }) : t({ tr: "Çalışmalarım", en: "My works" })}</h1>
+          <h1>{t({ tr: "Çalışmalarım", en: "My works" })}</h1>
           <p>
-            {kapsam === "yonetim"
-              ? canApprove
-                ? t({
-                    tr: "Yetkinizin kapsadığı tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve düzenleme sağdaki kartta.",
-                    en: "Thesis, article and project works within your permissions. Select a work; approval and editing are on the card on the right.",
-                  })
-                : t({
-                    tr: "Yetkinizin kapsadığı çalışmalar. Kendi çalışmalarınız Çalışmalarım'da.",
-                    en: "Works within your permissions. Your own works are in My works.",
-                  })
-              : t({
-                  tr: "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin.",
-                  en: "Open your thesis and other works here; continue writing where you left off.",
-                })}
+            {t({
+              tr: "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin.",
+              en: "Open your thesis and other works here; continue writing where you left off.",
+            })}
           </p>
         </div>
-        {/* İkisi de pencere (02.11.2026): öğrenci kendi kılavuzunu ekler, personel kurumu katalogdan seçer. */}
         {/*
           Liste boşken başlıktaki düğme İKİNCİL (Phase 3 stabilizasyonu):
           boş durumun "İlk çalışmayı oluştur"u ile yan yana iki koyu düğme
           aynı pencereyi açıyordu. Pencere ve işlevi aynı; değişen yalnızca
           görünüm. Liste okunamadığında boş durum çizilmiyor, düğme ana kalır.
         */}
-        {/* Tek giriş noktası, tek bileşen (lib/yonetim.ts): Yönetim kişinin kendi çalışmasını açtığı yer değil. Eskiden personel ayrı, üniversite seçtiren bir pencere görüyordu. */}
-        {kapsam === "kisisel" ? (
-          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} triggerClassName={bosListe ? "projects-filter-button" : undefined} />
-        ) : null}
+        {/* Tek giriş noktası, tek bileşen. Eskiden personel ayrı, üniversite seçtiren bir pencere görüyordu (createProject, kaldırıldı). */}
+        <YeniCalismaPenceresi acikBasla={params.yeni === "1"} triggerClassName={bosListe ? "projects-filter-button" : undefined} />
       </section>
 
       {okunamadi ? (
@@ -363,58 +260,25 @@ export default async function CalismaListesi({
            sayfaya başka görünüyordu (bos-durum.tsx). */
         <BosDurum
           ikon={FileText}
-          baslik={
-            kapsam === "yonetim"
-              ? t({ tr: "Yetkinizin kapsadığı çalışma yok", en: "No works within your permissions" })
-              : t({ tr: "Henüz kayıtlı çalışmanız yok", en: "You have no works yet" })
-          }
+          baslik={t({ tr: "Henüz kayıtlı çalışmanız yok", en: "You have no works yet" })}
           /*
             Herkese aynı metin (20.11.2026). Eskiden personele "Üniversitenizi
             seçerek başlayın" deniyordu; ürün artık dünyanın her yerinde
             kullanılıyor ve kurum seçimi başlangıçta istenmiyor.
           */
-          aciklama={
-            kapsam === "yonetim"
-              ? t({
-                  tr: "Kurumunuzdaki kullanıcılar çalışma açtığında burada görünür. Kendi çalışmalarınız Çalışmalarım'da.",
-                  en: "Works appear here when users in your organization create them. Your own works are in My works.",
-                })
-              : t({
-                  tr: "Bir ad, tür ve belge dili seçerek başlayın. Yazım kılavuzunuz varsa çalışmanın içinden ekleyebilirsiniz; kurallar editöre siz onaylayınca uygulanır.",
-                  en: "Start by choosing a name, type and document language. If you have a writing guideline, you can add it from inside the work; its rules are applied to the editor once you approve them.",
-                })
-          }
-          eylem={kapsam === "yonetim" ? undefined : { etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: "/dashboard/editor?yeni=1" }}
+          aciklama={t({
+            tr: "Bir ad, tür ve belge dili seçerek başlayın. Yazım kılavuzunuz varsa çalışmanın içinden ekleyebilirsiniz; kurallar editöre siz onaylayınca uygulanır.",
+            en: "Start by choosing a name, type and document language. If you have a writing guideline, you can add it from inside the work; its rules are applied to the editor once you approve them.",
+          })}
+          eylem={{ etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: "/dashboard/editor?yeni=1" }}
         />
       ) : (
         <>
-        {/*
-          Sayaçlar filtredir: sayı, basınca açılan listenin uzunluğu
-          (lib/personel-sayaclari.ts). Seçili olana yeniden basmak kaldırır.
-        */}
-        {sayaclar.length ? (
-          <nav className="personel-sayaclar" aria-label={t({ tr: "Çalışma durumları", en: "Work statuses" })}>
-            {sayaclar.map((sayac) => (
-              <Link
-                key={sayac.anahtar}
-                href={sayac.href}
-                className="personel-sayac"
-                data-tone={sayac.sayi ? sayac.ton : undefined}
-                aria-current={sayac.secili ? "true" : undefined}
-              >
-                <b>{sayac.sayi}</b>
-                <span>{sayac.etiket}</span>
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-        {filtrelerGorunsun(projects.length, canApprove) ? (
+        {filtrelerGorunsun(projects.length) ? (
         <ProjectFilters
           key={JSON.stringify(filters)}
           filters={filters}
           statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: t(statusLabel(status)), tone: statusTone(status) }))}
-          personel={canApprove}
-          taban={taban}
           total={projects.length}
           shown={visible.length}
           filtered={isFiltered(filters)}
@@ -430,7 +294,7 @@ export default async function CalismaListesi({
             })}
             eylem={{ etiket: t({ tr: "Filtreyi temizle", en: "Clear filter" }), href: taban }}
           />
-        ) : ogrenciDuzeni ? (
+        ) : (
           <>
           {/*
             Seçili çalışmanın sekmeleri (17.11.2026): Özet, Yazım, Kanıt matrisi,
@@ -528,112 +392,10 @@ export default async function CalismaListesi({
                 takvimAc={params.takvim === "1" && params.sec === secili.id}
               />
             ) : null}
-            {secili && kapsam === "kisisel" ? (
+            {secili ? (
               <DanismanaGonder projectId={secili.id} baslik={secili.title} sonGonderim={sonGonderim} sonGonderimMetni={sonGonderimMetni} />
             ) : null}
             </div>
-          </section>
-          </>
-        ) : (
-          /*
-            PERSONEL DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği).
-            Eskiden her çalışma uzun bir karttı (onay, atama, beş düğme,
-            menü) ve onlarca çalışmada sayfa kilometrelerce kayıyordu.
-            Solda öğrenci adıyla liste ve küçük işaretler (yorum, tutarsızlık,
-            onay), sağda seçili çalışmanın ayrıntısı ve denetim eylemleri.
-
-            Seçili çalışmanın sekmeleri personelde de (17.11.2026): telefonda
-            yazım ekranı sekmeleri gizliyor ve geri düğmesi buraya getiriyor.
-            İlk turda sekmeler yalnızca öğrenci düzenindeydi; personel telefonda
-            yazım ekranından Kanıt matrisi ve Etik kurula ulaşamıyordu
-            (gezinme-temizlik-kabul, system_admin).
-          */
-          <>
-          <ListeKonumunuSakla />
-          <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalar", en: "Works" })}>
-            <article className="gb-kart gb-sutun">
-              <header className="gb-kart-bas">
-                <div>
-                  <h2>{t({ tr: "Çalışmalar", en: "Works" })}</h2>
-                  <p>{calismaSayisi}</p>
-                </div>
-              </header>
-              <ul className="gb-liste calisma-secim">
-                {visible.map((project) => {
-                  const yazim = stats.get(project.id);
-                  const due = vade(project.due_date, project.status);
-                  const yorum = openComments.get(project.id) ?? 0;
-                  const tutarsiz = tutarsizliklar.get(project.id)?.length ?? 0;
-                  return (
-                    <li key={project.id}>
-                      <Link
-                        href={secimAdresi(params, project.id, taban)}
-                        className="gb-satir"
-                        aria-current={project.id === seciliId ? "true" : undefined}
-                        scroll={false}
-                      >
-                        <span className="gb-satir-govde">
-                          <b>{project.title}</b>
-                          <small>
-                            {[
-                              project.sahip_adi,
-                              t(projectTypeLabel(project.project_type)),
-                              yazimOzeti(yazim),
-                              due?.label,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </small>
-                        </span>
-                        <span className="personel-isaretler">
-                          {yorum ? (
-                            <span className="personel-isaret" data-tone="warning" title={t({ tr: `${yorum} açık yorum`, en: `${yorum} open comment${yorum === 1 ? "" : "s"}` })}>
-                              <MessageSquare size={13} aria-hidden="true" />
-                              {yorum}
-                            </span>
-                          ) : null}
-                          {tutarsiz ? (
-                            <span className="personel-isaret" data-tone="warning" title={t({ tr: `${tutarsiz} tutarsızlık`, en: `${tutarsiz} inconsistenc${tutarsiz === 1 ? "y" : "ies"}` })}>
-                              <AlertTriangle size={13} aria-hidden="true" />
-                              {tutarsiz}
-                            </span>
-                          ) : null}
-                          {etikTehlikesi(etikKayitlari.get(project.id), etikBugun) ? (
-                            <span className="personel-isaret" data-tone="danger" title={t({ tr: "Etik kurul: tarih ya da onay sorunu", en: "Ethics: date or approval problem" })}>
-                              <ShieldAlert size={13} aria-label={t({ tr: "Etik kurul riski", en: "Ethics risk" })} />
-                            </span>
-                          ) : null}
-                          {project.controller_approved_at ? (
-                            <span className="personel-isaret" data-tone="success" title={t({ tr: "Kontrolör onayı verildi", en: "Controller approval given" })}>
-                              <ShieldCheck size={13} aria-label={t({ tr: "Onaylı", en: "Approved" })} />
-                            </span>
-                          ) : null}
-                          <span className="status-pill" data-tone={statusTone(project.status)}>
-                            {t(statusLabel(project.status))}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </article>
-            {secili ? (
-              <PersonelCalismaKarti
-                key={secili.id}
-                calisma={secili}
-                sahipAdi={secili.sahip_adi}
-                yazim={stats.get(secili.id)}
-                ilerleme={yazimDurumu(secili).ilerleme}
-                tempo={yazimDurumu(secili).pace}
-                due={vade(secili.due_date, secili.status)}
-                acikYorum={openComments.get(secili.id) ?? 0}
-                tutarsizliklar={tutarsizliklar.get(secili.id) ?? []}
-                silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
-                onayla={handleApprove.bind(null, secili.id)}
-                onayiGeriAl={handleRevoke.bind(null, secili.id)}
-              />
-            ) : null}
           </section>
           </>
         )}

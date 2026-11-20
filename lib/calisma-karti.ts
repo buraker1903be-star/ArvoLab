@@ -7,15 +7,15 @@
 import type { Dil, Metin } from "@/lib/dil";
 
 /*
-  Arama, durum, sorumlu ve sıralama filtreleri: personelde her zaman
-  (onlarca çalışmayı yönetiyorlar), öğrencide yalnızca listenin gerçekten
-  aranacak kadar uzun olduğunda. Tek tezi olan öğrenciye dört filtre
-  kutusu, tek kartın üstünde bir form doldurtuyor gibi duruyordu.
+  Arama, durum ve sıralama filtreleri yalnızca liste gerçekten aranacak
+  kadar uzun olduğunda. Tek tezi olan kullanıcıya dört filtre kutusu, tek
+  kartın üstünde bir form doldurtuyor gibi duruyordu. 20.11.2026'ya kadar
+  personelin kurum listesinde her zaman görünüyordu; o liste kalktı.
 */
 export const FILTRE_ESIGI = 4;
 
-export function filtrelerGorunsun(calismaSayisi: number, personel: boolean): boolean {
-  return personel || calismaSayisi >= FILTRE_ESIGI;
+export function filtrelerGorunsun(calismaSayisi: number): boolean {
+  return calismaSayisi >= FILTRE_ESIGI;
 }
 
 export type KartIlerlemesi = { yuzde: number; etiket: string; ipucu: string };

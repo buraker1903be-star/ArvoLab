@@ -32,10 +32,11 @@ describe("hesap menüsü merkezi listeden", () => {
     assert.ok(menu.includes('href="/dashboard/expert-requests"'), "Destek bağlantısı");
   });
 
-  test("Yönetim bölümü yalnızca liste doluysa çizilir; başlık iki dilli, nav'ın adı", () => {
+  test("Ekip araçları bölümü yalnızca liste doluysa çizilir; başlık iki dilli, nav'ın adı", () => {
     assert.match(menu, /\{personelAraclari\.length \? \(/);
-    // 20.11.2026: "Personel Araçları" → "Yönetim" (lib/yonetim.ts); Görünüm seçimi kalktı.
-    assert.match(menu, /aria-label=\{t\(\{ tr: "Yönetim", en: "Management" \}\)\}/);
+    // 20.11.2026: Görünüm seçimi, kurum seçici, Yönetim ve doçentlik kalktı; bölümde iç ekibin iki aracı kaldı.
+    assert.match(menu, /aria-label=\{t\(\{ tr: "Ekip araçları", en: "Team tools" \}\)\}/);
+    assert.doesNotMatch(menu, /kurumSec|KurumSeridi|"Yönetim"/);
     assert.doesNotMatch(menu, /gorunumSec|GORUNUMLER/);
     assert.match(menu, /personelAraclari\.map\(/);
     // Menü iki yerleşimde çiziliyor: id ile bağlamak aynı id'yi iki kez üretirdi.

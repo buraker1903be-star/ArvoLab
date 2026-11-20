@@ -48,7 +48,6 @@ import {
 } from "@/lib/os/uygulamalar";
 import { useCalismaBaglami } from "./calisma-baglami";
 import { listeyeDonusIsaretle, useListeAdresi } from "./liste-donusu";
-import { listeDonusEtiketi } from "@/lib/os/liste-donusu";
 import { grupAcikMi } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
 import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
@@ -259,9 +258,9 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     );
   };
   const geriBaglantisi = (
-    <Link href={listeAdresi} className="os-gezinme-oge os-calisma-geri" title={t(listeDonusEtiketi(listeAdresi))} onClick={listeyeDonusIsaretle}>
+    <Link href={listeAdresi} className="os-gezinme-oge os-calisma-geri" title={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })} onClick={listeyeDonusIsaretle}>
       <ArrowLeft size={20} aria-hidden="true" />
-      <span className="os-gezinme-ad">{t(listeDonusEtiketi(listeAdresi))}</span>
+      <span className="os-gezinme-ad">{t({ tr: "Çalışmalarıma dön", en: "Back to my works" })}</span>
       <span className="os-gezinme-kisa" aria-hidden="true">
         {t({ tr: "Çalışmalar", en: "Works" })}
       </span>

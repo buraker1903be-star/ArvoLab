@@ -1,4 +1,4 @@
-import { BookMarked, BookOpenCheck, ChartNoAxesCombined, FileCheck2, GraduationCap, LayoutDashboard, LayoutGrid, LifeBuoy, PenLine, Quote, Settings, type LucideIcon, CreditCard } from "lucide-react";
+import { BookMarked, BookOpenCheck, ChartNoAxesCombined, FileCheck2, LayoutDashboard, LayoutGrid, LifeBuoy, PenLine, Quote, Settings, type LucideIcon, CreditCard } from "lucide-react";
 import type { OsIkon } from "@/lib/os/uygulamalar";
 
 /*
@@ -19,7 +19,6 @@ const IKONLAR: Record<OsIkon, LucideIcon> = {
   analiz: ChartNoAxesCombined,
   belge: FileCheck2,
   kilavuz: BookMarked,
-  docentlik: GraduationCap,
   destek: LifeBuoy,
   settings: Settings,
   apps: LayoutGrid,

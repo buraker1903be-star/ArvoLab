@@ -2,27 +2,21 @@ import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
 import Link from "next/link";
-import { BookOpen, FileText, LayoutList, PenLine, Plus } from "lucide-react";
+import { BookOpen, FileText, PenLine, Plus } from "lucide-react";
 import { DugmeBaglanti } from "@/app/_components/ui/dugme";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { getProjects } from "@/app/actions/projects";
-import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import { projectTypeLabel, statusLabel, isOversightRole, isExpertEligible, ADMIN_ROLES } from "@/lib/project-labels";
-import { personelSayaclari } from "@/lib/personel-sayaclari";
-import { DEFAULT_PROJECT_FILTERS } from "@/lib/project-filters";
-import { kuyrukAdresi } from "@/lib/destek-kuyrugu";
+import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
-import { computeAttention } from "@/lib/attention";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
-import { etikKaydiOku, etikKayitlariOku } from "@/lib/etik/oku";
-import { etikTehlikesi } from "@/lib/etik/durum";
+import { etikKaydiOku } from "@/lib/etik/oku";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
@@ -30,8 +24,7 @@ import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { hareketSerisi, ilkAd, selamlama, simdi } from "@/lib/genel-bakis";
 import { yazimRitmi } from "@/lib/yazim-ritmi";
-import { kisiselCalismalar, YONETIM_CALISMALAR, KISISEL_CALISMALAR, type Kapsam } from "@/lib/yonetim";
-import { trGunAnahtari } from "@/lib/tr-time";
+import { kisiselCalismalar, KISISEL_CALISMALAR } from "@/lib/kisisel-calismalar";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, SeriKarti } from "./_components/genel-bakis";
 import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
@@ -45,12 +38,17 @@ import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 /*
-  Ana Sayfa ile Yönetim'in genel bakışı aynı bileşenden (lib/yonetim.ts):
-  "kisisel" herkesin ana sayfası — yalnızca kendi çalışmaları, rol ne olursa
-  olsun aynı düzen; "yonetim" kurumun çalışmaları, sayaçlar ve kuyruklar
-  (eski personel düzeni). Eskiden düzeni rol ve önizleme çerezi seçiyordu.
+  HERKESİN ANA SAYFASI AYNI (20.11.2026, kurum sahibinin ürün kararı:
+  ArvoLab tek tip, editör odaklı bir araştırma ve yazma ürünü; kurucu,
+  personel ve bireysel kullanıcı aynı deneyimi kullanır). Yalnızca kişinin
+  KENDİ çalışmaları, rol ne olursa olsun aynı düzen.
+
+  Eskiden personelde ayrı bir düzen vardı: kurumun bütün çalışmaları,
+  onay/sorumlu sayaçları, uzman ve destek kuyrukları, kurum seçici. PR #113
+  bunu bir süre ayrı bir "Yönetim" sayfasına taşıdı; karar güncellenince o
+  sayfa da kalktı. Görevlendirme ve operasyon ArvoOS'ta (Talepler, İşler).
 */
-export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
+export default async function AnaSayfaIcerik() {
   const t = await ceviri();
   const dil = await aktifDil();
   const saatDilimi = await aktifSaatDilimi();
@@ -68,7 +66,7 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
   }
 
   const [{ satirlar: gorunenCalismalar, okunamadi: projelerOkunamadi }, profile] = await Promise.all([
-    getProjects(kapsam),
+    getProjects(),
     getCurrentProfile(),
   ]);
   // Ad profilden: Ayarlar'dan değiştirilen ad yalnızca profiles'a yazılıyor,
@@ -82,26 +80,18 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
   */
   const displayName = profile?.full_name?.trim() || null;
   /*
-    Kişisel kapsamda YALNIZCA kendi çalışmaları. Eskiden personelde liste
-    RLS'in gösterdiği her satırdı: kurucunun ana sayfası kurumların bütün
-    tezleriyle doluyordu ve kendi tezine "kaldığınız yer" çıkmıyordu.
+    YALNIZCA kendi çalışmaları. Eskiden personelde liste RLS'in gösterdiği
+    her satırdı: kurucunun ana sayfası kurumların bütün tezleriyle doluyordu
+    ve kendi tezine "kaldığınız yer" çıkmıyordu. Sorgu da sahibe göre
+    süzülüyor (getProjects); burası ikinci emniyet.
   */
-  const projects = kapsam === "kisisel" ? kisiselCalismalar(gorunenCalismalar, user.id) : gorunenCalismalar;
+  const projects = kisiselCalismalar(gorunenCalismalar, user.id);
   // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
   const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));
-  /*
-    Düzen kapsamdan (lib/yonetim.ts), rolden değil. Yönetim düzeni eski
-    personel düzeni: çok çalışmalı genel bakış, sayaçlar, kuyruklar.
-    Yetkiler değişmedi; satırları yine RLS seçiyor.
-  */
-  const isStaff = kapsam === "yonetim";
-  const [{ stats: writing, openComments }, geriBildirim] = await Promise.all([
-    /* Personelde BÜTÜN çalışmalar: sayaçlar Çalışmalarım'daki filtreyle
-       aynı sayıyı vermeli (teslim edilmiş bir çalışmanın açık yorumu da
-       "Açık yorumlu" filtresinde çıkıyor). */
+  const [{ stats: writing }, geriBildirim] = await Promise.all([
     getWritingStats(
-      (isStaff ? projects : activeProjects).map((p) => p.id),
+      activeProjects.map((p) => p.id),
       user.id
     ),
     // Kullanım geri bildirimi: yalnızca sistemi gerçekten kullanmış kişiye,
@@ -110,8 +100,8 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
   ]);
 
 
-  // Kaldığınız yer: en son yazılan aktif çalışma; hiç yazılmadıysa en yeni aktif çalışma. Personelde yok.
-  const resume = isStaff ? undefined : [...activeProjects]
+  // Kaldığınız yer: en son yazılan aktif çalışma; hiç yazılmadıysa en yeni aktif çalışma.
+  const resume = [...activeProjects]
       .filter((p) => writing.has(p.id))
       .sort((a, b) => writing.get(b.id)!.updatedAt.localeCompare(writing.get(a.id)!.updatedAt))[0] ?? activeProjects[0];
   const resumeStats = resume ? writing.get(resume.id) : undefined;
@@ -141,32 +131,11 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
   const yeniKullanici = ilkKullanim({
     calismaSayisi: projects.length,
     okunamadi: projelerOkunamadi,
-    personel: isStaff,
   });
-  const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
-  const gozetim = isStaff && isOversightRole(profile?.role);
-  const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
-  const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
+  const ogrenciGorunumu = Boolean(resume) && !yeniKullanici;
   const birimSayimi = (tablo: string, durum?: string) => {
     const sorgu = supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", resume!.id);
     return durum ? sorgu.eq("status", durum) : sorgu;
-  };
-  /* Kuyruk sayaçları kurum seçimini bekliyor; o bekleme kendi kolunda kalıyor. */
-  const kuyrukSayilari = async () => {
-    /* Sayaçlar kuyruk listeleriyle AYNI kurum süzgecinden geçer (lib/kurum-secimi.ts); yoksa rozet başka, liste başka sayı söylerdi. */
-    const kurum = await seciliKurum();
-    // Kurumda hiç kullanıcı yoksa hiçbir talep eşleşmemeli: boş dizi PostgREST'te geçersiz, eşleşmeyen bir kimlik veriliyor.
-    const talepSahipleri = kurum ? (kurum.kullanicilar.length ? kurum.kullanicilar : ["00000000-0000-0000-0000-000000000000"]) : null;
-    const uzmanSorgusu = supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open");
-    const destekSorgusu = supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved");
-    return Promise.all([
-      uzmanKuyrugu
-        ? talepSahipleri ? uzmanSorgusu.in("requested_by", talepSahipleri) : uzmanSorgusu
-        : Promise.resolve({ count: null, error: null }),
-      destekKuyrugu
-        ? talepSahipleri ? destekSorgusu.in("requested_by", talepSahipleri) : destekSorgusu
-        : Promise.resolve({ count: null, error: null }),
-    ]);
   };
   const [
     resumeGuideline,
@@ -180,9 +149,6 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
       { count: resumeOkunan },
       { count: resumeKullanilan },
     ],
-    etikKayitlari,
-    [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }],
-    sahipYaniti,
     [hareketYaniti, yorumYaniti],
     ritimYaniti,
   ] = await Promise.all([
@@ -232,23 +198,19 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
         ])
       : Promise.resolve([{ data: null }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }] as const),
     /*
-      Etik kurul sorunu (02.11.2026): yalnızca gözetim rolünde — maddenin açtığı
-      "etik=risk" süzgeci Çalışmalarım'ın personel düzeninde çalışıyor.
-    */
-    gozetim ? etikKayitlariOku(supabase, projects.map((p) => p.id)) : Promise.resolve(null),
-    kuyrukSayilari(),
-    /* Personel listelerinde öğrencinin adı (RLS: kendi kurumu). Okunamazsa ad boş kalır. */
-    isStaff && projects.length
-      ? supabase.from("profiles").select("id, full_name").in("id", [...new Set(projects.map((p) => p.owner_id))])
-      : Promise.resolve({ data: null, error: null }),
-    /*
       Çalışma hareketi (grafik) ve son yorumlar. Sayım veritabanında
       (public.calisma_hareketlerim): satırları çekip burada saymak, satır
       tavanına çarpılan gün grafiği sessizce eksiltirdi.
     */
     Promise.all([
-      // Çok çalışmalı grafik yalnızca personelde; öğrencinin grafiği yazım ritmi.
-      isStaff ? supabase.rpc("calisma_hareketlerim", { p_gun: 14 }) : Promise.resolve({ data: [], error: null }),
+      /*
+        Hareket grafiği yalnızca aktif çalışması olmayan (hepsi teslim
+        edilmiş ya da arşivlenmiş) kullanıcının düzeninde çiziliyor; ötekinin
+        grafiği yazım ritmi. Fonksiyon yalnızca çağıranın KENDİ hareketini
+        sayıyor (auth.uid() süzgeci). 20.11.2026'ya kadar yalnızca personelde
+        çağrılıyordu ve bu düzende grafik her zaman "hareket yok" diyordu.
+      */
+      !ogrenciGorunumu && !yeniKullanici ? supabase.rpc("calisma_hareketlerim", { p_gun: 14 }) : Promise.resolve({ data: [], error: null }),
       activeProjects.length
         ? supabase
             .from("manuscript_comments")
@@ -330,61 +292,7 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
   const readinessGaps = readinessGapsSirali.filter((madde) => madde.id !== sirada?.kaynakMadde);
 
 
-  // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
-  /*
-    Etik kurul sorunu (02.11.2026): yalnızca gözetim rolünde — maddenin açtığı
-    "etik=risk" süzgeci Çalışmalarım'ın personel düzeninde çalışıyor, öteki
-    personelde sayı listeyle eşleşmezdi.
-  */
-  const etikBugunu = trGunAnahtari();
-  const attention = isStaff
-    ? computeAttention(projects, openComments, {
-        dil,
-        taban: YONETIM_CALISMALAR,
-        etikRiski: etikKayitlari ? (id) => etikTehlikesi(etikKayitlari.get(id), etikBugunu) : undefined,
-      })
-    : null;
-
-  /*
-    PERSONEL ANA SAYFASI: SAYAÇLAR VE KUYRUKLAR (27.10.2026). Sayaçlar
-    Çalışmalarım'daki sayaçların AYNISI (lib/personel-sayaclari.ts): sayı,
-    basınca açılan filtreli listenin uzunluğu. Yalnızca gözetim rolünde —
-    filtreler (onay, sorumlu) orada anlamlı. Kuyruk sayıları Destek'in
-    kuyruklarına gidiyor; yalnızca o kuyruğa yetkisi olana.
-  */
-  const sayaclar = gozetim
-    ? personelSayaclari(projects, { ...DEFAULT_PROJECT_FILTERS }, {
-        openComments: (id) => openComments.get(id) ?? 0,
-        lastEdited: (id) => writing.get(id)?.updatedAt,
-        userId: user.id,
-      }, dil, YONETIM_CALISMALAR)
-    : [];
-  if (uzmanHatasi) console.error("[ana sayfa] uzman kuyruğu okunamadı:", uzmanHatasi.message);
-  if (destekHatasi) console.error("[ana sayfa] destek kuyruğu okunamadı:", destekHatasi.message);
-  /* Okunamayan kuyruk "0" demiyor: sayaç çizilmiyor, uyarı satırı söylüyor. */
-  const kuyrukSayaclari = [
-    ...(uzmanKuyrugu && !uzmanHatasi
-      ? [{ anahtar: "uzman", etiket: t({ tr: "Açık uzman talebi", en: "Open expert requests" }), sayi: acikUzman ?? 0, href: kuyrukAdresi("uzman-acik") }]
-      : []),
-    ...(destekKuyrugu && !destekHatasi
-      ? [{ anahtar: "destek", etiket: t({ tr: "Uygulama desteği", en: "App support" }), sayi: acikDestek ?? 0, href: kuyrukAdresi("destek") }]
-      : []),
-  ];
-
-  /* Personel listelerinde öğrencinin adı (RLS: kendi kurumu). Okunamazsa ad boş kalır. */
-  const sahipAdlari = new Map<string, string>();
-  if (sahipYaniti.error) console.error("[ana sayfa] öğrenci adları okunamadı:", sahipYaniti.error.message);
-  for (const sahip of sahipYaniti.data ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
-
-
-  /*
-    ÖĞRENCİNİN TEZ KARTI İÇİN: yazım ritmi (gün başına son kelime sayısı,
-    sayım veritabanında: public.yazim_ritmi) ve kanıt matrisinin iki
-    sayısı. Personelde istenmiyor; onun ana sayfası çok çalışmalı liste.
-  */
-  /* Öğrenci yeni çalışmayı Çalışmalarım'daki pencerede başlatır (kendi
-     kılavuzunu orada ekler); personelin tam formu ayrı sayfada. */
-  // İkisi de pencerede açılıyor (öğrenci ve personel, 02.11.2026).
+  /* Yeni çalışma herkes için aynı pencerede (Çalışmalarım, ?yeni=1). */
   const yeniCalismaHref = "/dashboard/editor?yeni=1";
   if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
 
@@ -398,8 +306,6 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
     projelerOkunamadi ? t({ tr: "çalışmalar", en: "works" }) : "",
     hareketYaniti.error ? t({ tr: "çalışma hareketi", en: "work activity" }) : "",
     yorumYaniti.error ? t({ tr: "yorumlar", en: "comments" }) : "",
-    uzmanHatasi ? t({ tr: "uzman kuyruğu", en: "expert queue" }) : "",
-    destekHatasi ? t({ tr: "destek kuyruğu", en: "support queue" }) : "",
     ritimYaniti.error ? t({ tr: "yazım ritmi", en: "writing rhythm" }) : "",
   ].filter(Boolean);
 
@@ -497,23 +403,10 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
       */}
       <header className="gb-selam">
         <div>
-          {/* Yönetim'de selamlama yok: kişinin değil kurumun ekranı olduğu başlıktan anlaşılsın. */}
-          <h1>
-            {isStaff
-              ? t({ tr: "Yönetim · genel bakış", en: "Management · overview" })
-              : ad ? `${selamlama(simdiAn, dil, saatDilimi)}, ${ad}` : selamlama(simdiAn, dil, saatDilimi)}
-          </h1>
+          <h1>{ad ? `${selamlama(simdiAn, dil, saatDilimi)}, ${ad}` : selamlama(simdiAn, dil, saatDilimi)}</h1>
           {/* Yeni kullanıcıda açıklama tek: aşağıdaki bölümde (ikinci tur). */}
           {yeniKullanici ? null : <p>
-            {isStaff
-                ? /* Personel: kurumun özeti — sayaçların ilk üçü, cümle olarak. */
-                  sayaclar.length
-                  ? sayaclar
-                      .filter((s) => s.anahtar === "aktif" || (s.sayi > 0 && (s.anahtar === "onay" || s.anahtar === "gecikmis")))
-                      .map((s) => `${sayi(s.sayi)} ${s.etiket.toLocaleLowerCase(YEREL[dil])}`)
-                      .join(" · ")
-                  : t({ tr: "Çalışmalar, teslim tarihleri ve gelen yorumlar burada.", en: "Works, due dates and incoming comments are here." })
-              : ogrenciGorunumu
+            {ogrenciGorunumu
                 ? /*
                     Signature OS 5 / Phase 4: teslim günü ve kelime artık çalışma
                     panelinin ölçülerinde. Bu satır onları ikinci kez yazıyordu;
@@ -531,12 +424,6 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
           </p>}
         </div>
         <div className="gb-selam-eylemler">
-          {isStaff ? (
-            <Link href={YONETIM_CALISMALAR} className="projects-primary-button">
-              <LayoutList size={16} aria-hidden="true" />
-              {t({ tr: "Çalışmalar", en: "Works" })}
-            </Link>
-          ) : null}
           {resume && !ogrenciGorunumu ? (
             <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
               <PenLine size={16} aria-hidden="true" />
@@ -555,35 +442,14 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
               <Plus size={16} aria-hidden="true" />
               {t({ tr: "Yeni çalışma", en: "New work" })}
             </DugmeBaglanti>
-          ) : ogrenciGorunumu || yeniKullanici || isStaff ? null : (
-            <Link href={yeniCalismaHref} className={resume || isStaff ? "projects-filter-button" : "projects-primary-button"}>
+          ) : ogrenciGorunumu || yeniKullanici ? null : (
+            <Link href={yeniCalismaHref} className={resume ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
               {t({ tr: "Yeni çalışma", en: "New work" })}
             </Link>
           )}
         </div>
       </header>
-
-      {/*
-        Personelin sayaçları: Çalışmalarım filtreleri ve Destek kuyrukları.
-        Sayı = basınca açılan listenin uzunluğu (lib/personel-sayaclari.ts).
-      */}
-      {sayaclar.length || kuyrukSayaclari.length ? (
-        <nav className="personel-sayaclar ana-sayaclar" aria-label={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}>
-          {sayaclar.map((sayac) => (
-            <Link key={sayac.anahtar} href={sayac.href} className="personel-sayac" data-tone={sayac.sayi ? sayac.ton : undefined}>
-              <b>{sayac.sayi}</b>
-              <span>{sayac.etiket}</span>
-            </Link>
-          ))}
-          {kuyrukSayaclari.map((k) => (
-            <Link key={k.anahtar} href={k.href} className="personel-sayac" data-tone={k.sayi ? "warning" : undefined}>
-              <b>{k.sayi}</b>
-              <span>{k.etiket}</span>
-            </Link>
-          ))}
-        </nav>
-      ) : null}
 
       {okunamayanlar.length ? (
         <p className="alert" role="alert">
@@ -595,8 +461,7 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
       ) : null}
 
       {/* Öğrencide abonelik tez kartının yanındaki kartta; ayrıca üstte tekrar edilmiyor. */}
-      {/* Yönetim'de lisans kartı yok: kişinin kendi aboneliği ana sayfasında. */}
-      {(ogrenciGorunumu && resume) || isStaff ? null : <LicenseCard access={access} />}
+      {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
 
       {yeniKullanici ? (
         /*
@@ -808,14 +673,14 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
 
           <ListeIzgarasi etiket={t({ tr: "Güncel işler", en: "Current work" })}>
             <ListeKarti
-              baslik={isStaff ? t({ tr: "Son düzenlenenler", en: "Recently edited" }) : t({ tr: "Çalışmalarım", en: "My works" })}
+              baslik={t({ tr: "Çalışmalarım", en: "My works" })}
               alt={t({
                 tr: `Aktif ${activeProjects.length} çalışma`,
                 en: `${activeProjects.length} active work${activeProjects.length === 1 ? "" : "s"}`,
               })}
               bos={t({ tr: "Aktif çalışma yok.", en: "No active works." })}
               sayi={calismalarim.length}
-              href={isStaff ? YONETIM_CALISMALAR : KISISEL_CALISMALAR}
+              href={KISISEL_CALISMALAR}
               hrefEtiket={t({ tr: "Tüm çalışmalar", en: "All works" })}
             >
               {calismalarim.map((p) => {
@@ -823,10 +688,9 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
                 return (
                   <ListeSatiri
                     key={p.id}
-                    href={isStaff ? `${YONETIM_CALISMALAR}?sec=${encodeURIComponent(p.id)}` : `/dashboard/editor/${p.id}`}
+                    href={`/dashboard/editor/${p.id}`}
                     baslik={p.title}
                     alt={[
-                      isStaff ? sahipAdlari.get(p.owner_id) : null,
                       t(projectTypeLabel(p.project_type)),
                       yazim
                         ? t({ tr: `${sayi(yazim.words)} kelime, ${once(yazim.updatedAt)}`, en: `${sayi(yazim.words)} words, ${once(yazim.updatedAt)}` })
@@ -852,15 +716,15 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
                 en: "No works with a due date. You can add one in the work settings.",
               })}
               sayi={teslimler.length}
-              href={isStaff ? YONETIM_CALISMALAR : KISISEL_CALISMALAR}
+              href={KISISEL_CALISMALAR}
               hrefEtiket={t({ tr: "Çalışmalara git", en: "Go to works" })}
             >
               {teslimler.map(({ project, due }) => (
                 <ListeSatiri
                   key={project.id}
-                  href={isStaff ? `${YONETIM_CALISMALAR}?sec=${encodeURIComponent(project.id)}` : `/dashboard/editor/${project.id}`}
+                  href={`/dashboard/editor/${project.id}`}
                   baslik={project.title}
-                  alt={[isStaff ? sahipAdlari.get(project.owner_id) : null, project.due_date ? tarih(project.due_date) : null].filter(Boolean).join(" · ") || undefined}
+                  alt={project.due_date ? tarih(project.due_date) : undefined}
                   sag={
                     <span className="status-pill" data-tone={due.tone}>
                       {due.label}
@@ -889,52 +753,26 @@ export default async function AnaSayfaIcerik({ kapsam }: { kapsam: Kapsam }) {
             </ListeKarti>
 
             {/*
-              Dördüncü kart role göre: öğrenciye "şimdi ne yapmalıyım",
-              personele "ne dikkat istiyor". Sayı kartları (aktif,
-              revizyonda, incelemede, analizde) kalktı: yöneticinin bakışı
-              bu listede, tek tezi olan öğrenciye bir şey söylemiyorlardı.
+              Dördüncü kart "şimdi ne yapmalıyım". 20.11.2026'ya kadar
+              personelde bunun yerine kurumun "dikkat isteyenler" listesi
+              çiziliyordu; personel ekranı kalktı (görevlendirme ArvoOS'ta).
             */}
-            {attention ? (
-              <ListeKarti
-                baslik={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}
-                alt={t({ tr: "Gecikmiş, sorumlusuz ya da yanıt bekleyen", en: "Overdue, unassigned or awaiting a reply" })}
-                bos={t({
-                  tr: "Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok.",
-                  en: "No works that are overdue, unassigned, or awaiting approval or a reply.",
-                })}
-                sayi={attention.length}
-              >
-                {attention.slice(0, GENEL_BAKIS_SATIR).map((item) => (
-                  <ListeSatiri
-                    key={item.id}
-                    href={item.href}
-                    baslik={item.label}
-                    sag={
-                      <span className="status-pill" data-tone={item.tone}>
-                        {item.count}
-                      </span>
-                    }
-                  />
-                ))}
-              </ListeKarti>
-            ) : (
-              <ListeKarti
-                baslik={t({ tr: "Sıradaki işler", en: "Next up" })}
-                alt={resume ? resume.title : t({ tr: "Kaldığınız çalışma", en: "Where you left off" })}
-                bos={
-                  sirada?.bitti
-                    ? t({ tr: "Teslim listesinde eksik görünmüyor.", en: "Nothing appears to be missing from the submission checklist." })
-                    : t({ tr: "Şu an bekleyen bir adım yok.", en: "No pending steps right now." })
-                }
-                sayi={siradakiler.length}
-                href={resume ? `/dashboard/editor/${resume.id}` : undefined}
-                hrefEtiket={t({ tr: "Çalışma özeti", en: "Work overview" })}
-              >
-                {siradakiler.map((madde) => (
-                  <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />
-                ))}
-              </ListeKarti>
-            )}
+            <ListeKarti
+              baslik={t({ tr: "Sıradaki işler", en: "Next up" })}
+              alt={resume ? resume.title : t({ tr: "Kaldığınız çalışma", en: "Where you left off" })}
+              bos={
+                sirada?.bitti
+                  ? t({ tr: "Teslim listesinde eksik görünmüyor.", en: "Nothing appears to be missing from the submission checklist." })
+                  : t({ tr: "Şu an bekleyen bir adım yok.", en: "No pending steps right now." })
+              }
+              sayi={siradakiler.length}
+              href={resume ? `/dashboard/editor/${resume.id}` : undefined}
+              hrefEtiket={t({ tr: "Çalışma özeti", en: "Work overview" })}
+            >
+              {siradakiler.map((madde) => (
+                <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />
+              ))}
+            </ListeKarti>
           </ListeIzgarasi>
         </>
       )}

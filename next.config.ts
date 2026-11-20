@@ -181,11 +181,10 @@ const nextConfig: NextConfig = {
     "/api/cron/guideline-refresh": [PDF_WORKER, ...OCR_ISCISI],
     "/dashboard/documents": [PDF_WORKER],
     /*
-      ÜAK tablosu okuma (app/actions/uak-tablosu.ts) ve kaynak PDF'inde
-      başlık eşleşmesi (app/actions/kaynak-pdf.ts) de PDF okuyor. İkisi de
-      listede yoktu: ÜAK PDF'i 27.10.2026'da canlıda okunamadı.
+      Kaynak PDF'inde başlık eşleşmesi (app/actions/kaynak-pdf.ts) de PDF
+      okuyor; listede yoktu. ÜAK tablosu okuma da buradaydı, doçentlik
+      modülüyle birlikte 20.11.2026'da kaldırıldı.
     */
-    "/dashboard/associate-professorship": [PDF_WORKER],
     "/dashboard/citations": [PDF_WORKER],
     /*
       Öğrencinin kendi kılavuzunu yüklemesi (app/actions/calisma-kilavuzu.ts →
