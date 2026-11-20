@@ -1,6 +1,7 @@
 "use client";
 
 import { ornekKalibi } from "@/lib/atif/tyk";
+import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
@@ -80,7 +81,8 @@ import {
 } from "lucide-react";
 import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { SolArama, SolBolumler, SolKaynaklar, kaynaginPdfi, type KaynakPdfi } from "./sol-araclar";
+import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
+import { adrestekiPdf, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
 import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
@@ -716,6 +718,32 @@ export default function ManuscriptEditor({
   }, []);
   /* Kaynaklar aracından "PDF'i aç": panel o PDF'le açılır (anahtar aynı PDF'e ikinci basışı da iletir). */
   const [acilacakPdf, setAcilacakPdf] = useState<{ id: string; anahtar: number; sayfa?: number; pasaj?: string } | null>(null);
+  /*
+    DIŞARIDAN "PDF'i oku" (20.11.2026, M5): Kaynakça penceresi ve Kaynaklar
+    sayfası PDF'i artık yeni sekmede ham dosya olarak açmıyor, editörün
+    çekmecesine bu adresle geliyor (?sag=pdf&pdf=<id>&sayfa=<n>,
+    lib/kaynak-durumu editorPdfAdresi). Eskiden imzalı depo adresi yeni
+    sekmede açılıyordu: pasaj seçmek, alıntı eklemek, AI'a sormak orada
+    yoktu ve öğrenci aynı PDF'i iki ayrı yerde okuyordu. İstek bir kez
+    işlenir, sonra adresten silinir (yenileme aynı sayfaya geri atmasın).
+  */
+  const pdfAdresi = adres.get("pdf");
+  const sayfaAdresi = adres.get("sayfa");
+  const pdfIstegi = adrestekiPdf(pdfAdresi, sayfaAdresi);
+  const [islenenPdfIstegi, setIslenenPdfIstegi] = useState<string | null>(null);
+  if (pdfIstegi && `${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}` !== islenenPdfIstegi) {
+    setIslenenPdfIstegi(`${pdfIstegi.id}:${pdfIstegi.sayfa ?? ""}`);
+    setAcilacakPdf({ id: pdfIstegi.id, anahtar: -1, sayfa: pdfIstegi.sayfa });
+    if (sag !== "pdf") setSag("pdf");
+  }
+  useEffect(() => {
+    if (!pdfAdresi && !sayfaAdresi) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("pdf");
+    u.searchParams.delete("sayfa");
+    if (pdfIstegi) u.searchParams.set("sag", "pdf");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  }, [pdfAdresi, sayfaAdresi, pdfIstegi]);
 
   /*
     ATIF KARTI (K3-A) ve SEÇİM İŞLEMLERİ: iki ayrı durum, aynı anda açılmaz
@@ -4175,7 +4203,7 @@ export default function ManuscriptEditor({
           durum={atifKarti}
           projectId={projectId}
           kaynaklar={kartVerisi?.kaynaklar ?? []}
-          pdfBul={(k) => (kartVerisi ? kaynaginPdfi(k, kartVerisi.pdfler) : null)}
+          pdfBul={(k) => (kartVerisi ? pdfEslesmesi(k, kartVerisi.pdfler) : { tur: "yok" })}
           kunye={kartVerisi?.kunye ?? new Map()}
           pasajlar={dogrulanmisPasajlar}
           yukleniyor={kartYukleniyor}
@@ -4363,18 +4391,22 @@ export default function ManuscriptEditor({
           <section className="sorun-grubu" aria-label={t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}>
             <header>
               <strong>{t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}</strong>
-              {checkResult.atif.referenceSectionFound && checkResult.atif.complianceScore !== null ? (
-                <span
-                  className="status-pill"
-                  data-tone={
-                    checkResult.atif.complianceScore >= 85 ? "success" : checkResult.atif.complianceScore >= 60 ? "warning" : "danger"
-                  }
-                >
-                  {t({
-                    tr: `${checkResult.stil.ad} uyum ${checkResult.atif.complianceScore}/100`,
-                    en: `${checkResult.stil.ad} compliance ${checkResult.atif.complianceScore}/100`,
-                  })}
-                </span>
+              {/* "uyum /100" yerine açık sorun sayısı (20.11.2026): puan biçim
+                  uyarılarını saymadığı için uyarı varken 100 görünüyordu. */}
+              {checkResult.atif.referenceSectionFound ? (
+                (() => {
+                  const ozet = kaynakcaOzeti(checkResult.atif);
+                  return (
+                    <span className="status-pill" data-tone={ozet.ton}>
+                      {ozet.acikSorun
+                        ? t({
+                            tr: `${ozet.kunye} künyede ${ozet.acikSorun} açık sorun`,
+                            en: `${ozet.acikSorun} open ${ozet.acikSorun === 1 ? "issue" : "issues"} in ${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"}`,
+                          })
+                        : t({ tr: `${ozet.kunye} künye · açık sorun yok`, en: `${ozet.kunye} references · no open issues` })}
+                    </span>
+                  );
+                })()
               ) : null}
             </header>
             {!checkResult.atif.referenceSectionFound ? (

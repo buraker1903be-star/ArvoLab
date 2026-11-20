@@ -117,7 +117,7 @@ describe("iki dizinin birleştirilmesi", () => {
     const kayit = (ek: Partial<AramaKaydi>): AramaKaydi => ({
       kimlik: "https://a.example/1",
       baslik: "Aynı Başlık!",
-      yazarlar: [],
+      yazarlar: [], kunyeYazarlari: null,
       yil: 2020,
       tur: "article",
       dergi: null,
@@ -135,7 +135,7 @@ describe("iki dizinin birleştirilmesi", () => {
 
   test("listeler harmanlanır: ikinci dizin dibe gömülmez", () => {
     const yap = (baslik: string, saglayici: AramaKaydi["saglayici"]): AramaKaydi => ({
-      kimlik: baslik, baslik, yazarlar: [], yil: 2020, tur: "article", dergi: null, doi: null,
+      kimlik: baslik, baslik, yazarlar: [], kunyeYazarlari: null, yil: 2020, tur: "article", dergi: null, doi: null,
       url: `https://x.example/${baslik}`, atifSayisi: null, acikErisim: false, acikErisimUrl: null, saglayici,
     });
     const birlesik = kayitlariBirlestir([
@@ -222,7 +222,7 @@ describe("arama akışı", () => {
   */
   test("aynı yayının DOI'li ve DOI'siz kopyası birleşir", () => {
     const temel = (ek: Partial<AramaKaydi>): AramaKaydi => ({
-      kimlik: "k", baslik: "Örgütsel Bağlılık Üzerine", yazarlar: [], yil: 2021, tur: "article",
+      kimlik: "k", baslik: "Örgütsel Bağlılık Üzerine", yazarlar: [], kunyeYazarlari: null, yil: 2021, tur: "article",
       dergi: null, doi: null, url: "https://a.example/1", atifSayisi: null,
       acikErisim: false, acikErisimUrl: null, saglayici: "openalex", ...ek,
     });
@@ -243,7 +243,7 @@ describe("arama akışı", () => {
   */
   test("tek kelimelik başlıklar yanlışlıkla birleştirilmez", () => {
     const yap = (dergi: string, saglayici: AramaKaydi["saglayici"]): AramaKaydi => ({
-      kimlik: dergi, baslik: "Editöryal", yazarlar: [], yil: 2020, tur: "article", dergi,
+      kimlik: dergi, baslik: "Editöryal", yazarlar: [], kunyeYazarlari: null, yil: 2020, tur: "article", dergi,
       doi: null, url: `https://x.example/${dergi}`, atifSayisi: null,
       acikErisim: false, acikErisimUrl: null, saglayici,
     });
@@ -260,7 +260,7 @@ describe("arama akışı", () => {
   */
   test("yıl uzlaştırılır: sayının yılı (OpenAlex) tercih edilir", () => {
     const yap = (yil: number, saglayici: AramaKaydi["saglayici"]): AramaKaydi => ({
-      kimlik: "10.7777/abc", baslik: "Çevrim İçi Önce Yayım", yazarlar: [], yil, tur: "article",
+      kimlik: "10.7777/abc", baslik: "Çevrim İçi Önce Yayım", yazarlar: [], kunyeYazarlari: null, yil, tur: "article",
       dergi: null, doi: "10.7777/abc", url: "https://doi.org/10.7777/abc", atifSayisi: null,
       acikErisim: false, acikErisimUrl: null, saglayici,
     });
