@@ -1,0 +1,54 @@
+[
+  {
+    "ad": "d1440-light",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1440-dark",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1280-light",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1280-dark",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "t390-light",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "t390-dark",
+    "tetikGorunur": false,
+    "HATA": "locator.click: Timeout 30000ms exceeded.",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1220-light-pdf-cekmece",
+    "cekmece": true,
+    "ipucu": true,
+    "escSonrasiPdfAcik": false,
+    "adres": "?sol=kaynaklar",
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1220-dark-pdf-cekmece",
+    "cekmece": true,
+    "ipucu": true,
+    "escSonrasiPdfAcik": false,
+    "adres": "?sol=kaynaklar",
+    "sayfaHatalari": []
+  }
+]

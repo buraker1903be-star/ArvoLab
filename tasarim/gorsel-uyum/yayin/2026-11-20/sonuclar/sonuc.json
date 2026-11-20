@@ -1,0 +1,510 @@
+[
+  {
+    "ad": "d1440-light",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "light",
+        "bg": "rgb(246, 247, 249)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 378,
+        "y": 127,
+        "width": 924,
+        "height": 540
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 1068,
+        "y": 126,
+        "width": 360,
+        "height": 762
+      },
+      "belge": {
+        "x": 259.296875,
+        "y": 127,
+        "width": 785.390625,
+        "height": 459
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 755,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": false,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 1083,
+        "y": 805.9375,
+        "width": 286.296875,
+        "height": 67.0625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "odakModuEsc": {
+      "acildi": true,
+      "ilkEsc": {
+        "pencereKapandi": true,
+        "odakSurdu": true
+      },
+      "ikinciEscCikti": true
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write"
+    ]
+  },
+  {
+    "ad": "d1440-dark",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "dark",
+        "bg": "rgb(15, 22, 38)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 378,
+        "y": 127,
+        "width": 924,
+        "height": 540
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 1068,
+        "y": 126,
+        "width": 360,
+        "height": 762
+      },
+      "belge": {
+        "x": 259.296875,
+        "y": 127,
+        "width": 785.390625,
+        "height": 459
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 755,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": false,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 1083,
+        "y": 805.9375,
+        "width": 286.296875,
+        "height": 67.0625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai"
+    ]
+  },
+  {
+    "ad": "d1280-light",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "light",
+        "bg": "rgb(246, 247, 249)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 298,
+        "y": 127,
+        "width": 924,
+        "height": 480
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 886,
+        "y": 126,
+        "width": 382,
+        "height": 662
+      },
+      "belge": {
+        "x": 77.296875,
+        "y": 127,
+        "width": 785.390625,
+        "height": 408
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 655,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": false,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 923,
+        "y": 705.9375,
+        "width": 286.296875,
+        "height": 67.0625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "odakModuEsc": {
+      "acildi": true,
+      "ilkEsc": {
+        "pencereKapandi": true,
+        "odakSurdu": true
+      },
+      "ikinciEscCikti": true
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write"
+    ]
+  },
+  {
+    "ad": "d1280-dark",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "dark",
+        "bg": "rgb(15, 22, 38)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 298,
+        "y": 127,
+        "width": 924,
+        "height": 480
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 886,
+        "y": 126,
+        "width": 382,
+        "height": 662
+      },
+      "belge": {
+        "x": 77.296875,
+        "y": 127,
+        "width": 785.390625,
+        "height": 408
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 655,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": false,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 923,
+        "y": 705.9375,
+        "width": 286.296875,
+        "height": 67.0625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai"
+    ]
+  },
+  {
+    "ad": "t390-light",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "light",
+        "bg": "rgb(246, 247, 249)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "width": 356,
+        "height": 506.390625
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 780
+      },
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "width": 356,
+        "height": 506.390625
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 642,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": null,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 15,
+        "y": 752.609375,
+        "width": 316.109375,
+        "height": 76.390625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "klavyede": {
+        "istem": {
+          "x": 15,
+          "y": 408.609375,
+          "width": 316.109375,
+          "height": 76.390625
+        },
+        "gorunur": true
+      },
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai"
+    ]
+  },
+  {
+    "ad": "t390-dark",
+    "ana": {
+      "yeniCalismaGorunur": false,
+      "tasmaYok": true,
+      "tema": {
+        "dataTheme": "dark",
+        "bg": "rgb(15, 22, 38)"
+      }
+    },
+    "yeniCalisma": {
+      "HATA": "locator.click: Timeout 30000ms exceeded."
+    },
+    "editor": {
+      "tasmaYok": true,
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "width": 356,
+        "height": 506.390625
+      }
+    },
+    "pdf": {
+      "panel": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 780
+      },
+      "belge": {
+        "x": 17,
+        "y": 138,
+        "width": 356,
+        "height": 506.390625
+      },
+      "cekmece": false,
+      "guven": {
+        "metin": "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanm",
+        "alt": 642,
+        "gorunur": true
+      },
+      "belgeyleOrtusme": null,
+      "tasmaYok": true,
+      "escSonrasiPdfAcik": true,
+      "adres": "?sol=kaynaklar&sag=pdf"
+    },
+    "ai": {
+      "istem": {
+        "x": 15,
+        "y": 752.609375,
+        "width": 316.109375,
+        "height": 76.390625
+      },
+      "istemGorunur": true,
+      "kapatGorunur": true,
+      "tasmaYok": true,
+      "klavyede": {
+        "istem": {
+          "x": 15,
+          "y": 408.609375,
+          "width": 316.109375,
+          "height": 76.390625
+        },
+        "gorunur": true
+      },
+      "escSonrasiPanelAcik": true,
+      "adres": "?sag=ai"
+    },
+    "sayfaHatalari": [],
+    "sunucu5xx": [],
+    "sunucuEylemleri": [
+      "https://lab.arvo-os.com/dashboard",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sol=kaynaklar&sa",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai",
+      "https://lab.arvo-os.com/dashboard/editor/0c676cbf-1e84-495b-acd4-a94dcbad035f/write?sag=ai"
+    ]
+  }
+]

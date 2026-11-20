@@ -1,0 +1,152 @@
+[
+  {
+    "ad": "d1440-light",
+    "tetikGorunur": true,
+    "dom": [
+      "word",
+      "yaz"
+    ],
+    "gorsel": [
+      "word",
+      "yaz"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "word",
+      "yaz"
+    ],
+    "shiftTab": [
+      "word",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1440-dark",
+    "tetikGorunur": true,
+    "dom": [
+      "word",
+      "yaz"
+    ],
+    "gorsel": [
+      "word",
+      "yaz"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "word",
+      "yaz"
+    ],
+    "shiftTab": [
+      "word",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1280-light",
+    "tetikGorunur": true,
+    "dom": [
+      "word",
+      "yaz"
+    ],
+    "gorsel": [
+      "word",
+      "yaz"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "word",
+      "yaz"
+    ],
+    "shiftTab": [
+      "word",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "d1280-dark",
+    "tetikGorunur": true,
+    "dom": [
+      "word",
+      "yaz"
+    ],
+    "gorsel": [
+      "word",
+      "yaz"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "word",
+      "yaz"
+    ],
+    "shiftTab": [
+      "word",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "t390-light",
+    "tetikGorunur": true,
+    "dom": [
+      "yaz",
+      "word"
+    ],
+    "gorsel": [
+      "yaz",
+      "word"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "yaz",
+      "word"
+    ],
+    "shiftTab": [
+      "yaz",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  },
+  {
+    "ad": "t390-dark",
+    "tetikGorunur": true,
+    "dom": [
+      "yaz",
+      "word"
+    ],
+    "gorsel": [
+      "yaz",
+      "word"
+    ],
+    "oncekiAlan": "tr",
+    "tab": [
+      "yaz",
+      "word"
+    ],
+    "shiftTab": [
+      "yaz",
+      "tr"
+    ],
+    "pozitifTabindex": 0,
+    "escKapatti": true,
+    "formGonderilmedi": true,
+    "sayfaHatalari": []
+  }
+]
