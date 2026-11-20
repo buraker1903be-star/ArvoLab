@@ -402,7 +402,10 @@
 .kaynakca-skor[data-tone="warning"] .kaynakca-skor-puan b { color: var(--warning); }
 .kaynakca-skor[data-tone="danger"] .kaynakca-skor-puan b { color: var(--danger); }
 .kaynakca-skor-puan span { display: grid; gap: 1px; color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.3; }
-.kaynakca-skor-puan span small:last-child { color: var(--ink); font-weight: 650; }
+.kaynakca-skor-puan span small:first-child { color: var(--ink); font-weight: 650; }
+/* Açık sorunların dökümü ve kapsam notu (20.11.2026; "uyum /100" yerine). */
+.kaynakca-acik-sorunlar { flex: 1 1 100%; display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: var(--fs-sm); }
+.kaynakca-kapsam-notu { color: var(--ink-soft); }
 .kaynakca-skor-sayilar { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 8px; margin: 0; }
 .kaynakca-skor-sayilar > div { display: grid; flex: 1 1 96px; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface); }
 .kaynakca-skor-sayilar dt { color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
@@ -956,6 +959,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Eksik künye: sarı ve önünde uyarı işareti; gri metin arasında gözden kaçıyordu */
 .kaynak-eksik { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-weight: 550; }
 .kaynak-eksik::before { content: "⚠ "; }
+/* Eski kaynak düzeltme önerisi (20.11.2026): alan alan "şimdiki / dizindeki"; uygulama öğrencinin işaretiyle. */
+.kaynak-duzeltme { display: grid; gap: 6px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.kaynak-duzeltme-tablo { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.kaynak-duzeltme-tablo th, .kaynak-duzeltme-tablo td { padding: 4px 6px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.kaynak-duzeltme-tablo thead th { color: var(--muted); font-weight: 600; }
+.kaynak-duzeltme-eski { color: var(--muted); }
+.kaynak-duzeltme-yeni { color: var(--ink); font-weight: 550; }
 /* flex: none satırın eylem kümesini içerik genişliğine kilitliyordu; "PDF'i oku" eklenince dar ekranda satırdan taşıyordu (M5). */
 .kaynak-satiri-eylem { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; max-width: 100%; }
 .kaynak-satiri .gb-satir-govde b { overflow-wrap: anywhere; }
