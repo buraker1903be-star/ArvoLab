@@ -1,0 +1,203 @@
+[
+  {
+    "ad": "yalnızca seçim kalıcı işaret oluşturmaz",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "alıntı eklenince pasaj fosforlu sarı işaretli",
+    "gecti": true,
+    "ayrinti": [
+      {
+        "sayfa": "1",
+        "metin": "Seasonal variation explained most of the observed difference across the three regions."
+      }
+    ]
+  },
+  {
+    "ad": "işaret çalışma belgesinde: PDF kimliği, dosya özeti, PDF sayfası, pasaj, kaynak",
+    "gecti": true,
+    "ayrinti": [
+      {
+        "pdf": "941f2545-3969-473e-8492-03cba909b60c",
+        "surum": "sha256:4feee8ffe2896a8f80f296edd12a2e9a",
+        "sayfa": 1,
+        "pasaj": "Seasonal variation explained most of the observed difference across the three regions.",
+        "kaynak": "cdbdaedf-2fea-4ee9-b00c-689beaae5dec"
+      }
+    ]
+  },
+  {
+    "ad": "işaret rengi fosforlu sarı token'ı",
+    "gecti": true,
+    "ayrinti": {
+      "renk": "rgba(255, 242, 0, 0.54)"
+    }
+  },
+  {
+    "ad": "geri al: alıntı ve işaret birlikte gider",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "yinele: işaret geri gelir",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "aynı PDF'te ikinci pasaj (Yalnızca atıf): ikisi de belgede ayrı işaret",
+    "gecti": true,
+    "ayrinti": {
+      "sayfalar": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "ad": "yalnızca atıf: alıntı metni belgeye girmedi",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "işaret veritabanındaki belgeye kaydedildi (tarayıcı belleğine dayanmıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "db": 3
+    }
+  },
+  {
+    "ad": "çekmece kapatıp açınca işaret yerinde",
+    "gecti": true,
+    "ayrinti": [
+      {
+        "sayfa": "2",
+        "metin": "Rainfall alone did not account for the gap between the coastal stations."
+      }
+    ]
+  },
+  {
+    "ad": "yakınlaştırma: işaret aynı metinde, kutular ölçekle büyüdü",
+    "gecti": true,
+    "ayrinti": {
+      "o1": {
+        "metin": "Seasonal variation explained most of the observed difference across the three regions.",
+        "kutu": [
+          629
+        ]
+      },
+      "o2": {
+        "metin": "Seasonal variation explained most of the observed difference across the three regions.",
+        "kutu": [
+          840
+        ]
+      }
+    }
+  },
+  {
+    "ad": "yeniden boyutlandırma: işaret aynı metinde",
+    "gecti": true,
+    "ayrinti": {
+      "o3": {
+        "metin": "Seasonal variation explained most of the observed difference across the three regions.",
+        "kutu": [
+          557
+        ]
+      }
+    }
+  },
+  {
+    "ad": "ana akış: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "yeni oturum: belge işaretlerle açıldı",
+    "gecti": true,
+    "ayrinti": {
+      "n": 3
+    }
+  },
+  {
+    "ad": "yenileme sonrası atıf kartında Dayanağa git (iki pasaj)",
+    "gecti": true,
+    "ayrinti": {
+      "dugmeler": [
+        " Dayanağa git · s. 1",
+        " Dayanağa git · s. 2"
+      ]
+    }
+  },
+  {
+    "ad": "Dayanağa git: 2. sayfa açıldı, pasaj vurgulu ve kalıcı işaretli",
+    "gecti": true,
+    "ayrinti": {
+      "sayfa": "2",
+      "pasaj": "Rainfall alone did not account for the gap between the coastal stations.",
+      "kalici": "Rainfall alone did not account for the gap between the coastal stations."
+    }
+  },
+  {
+    "ad": "atfı silmek işaretini götürür; öteki pasaj kalır",
+    "gecti": true,
+    "ayrinti": {
+      "kalan": 2
+    }
+  },
+  {
+    "ad": "silme de kaydedildi",
+    "gecti": true,
+    "ayrinti": {
+      "db": 2
+    }
+  },
+  {
+    "ad": "yeni oturum: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "PDF değişince eski işaret yeni dosyada sessizce uygulanmaz",
+    "gecti": true,
+    "ayrinti": {
+      "isaret": []
+    }
+  },
+  {
+    "ad": "PDF değişince kullanıcıya söylenir",
+    "gecti": true,
+    "ayrinti": {
+      "uyari": [
+        "Bu PDF dosyası değişmiş: belgede kullanılan 1 pasajın işareti eski sürüme ait, bu dosyada gösterilmiyor."
+      ]
+    }
+  },
+  {
+    "ad": "PDF değişti: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "gerçek iki sütunlu PDF: işaret seçilen sütunda (sağ sütuna taşmıyor)",
+    "gecti": true,
+    "ayrinti": {
+      "n": 4,
+      "metin": "Dynamic languages such as JavaScript are more difficult to com- pile than statically typed ones. Since no concrete type information is available, traditional co",
+      "sagYari": 0
+    }
+  },
+  {
+    "ad": "gerçek iki sütunlu PDF: yakınlaştırmada aynı metin, aynı sütun",
+    "gecti": true,
+    "ayrinti": {
+      "n": 4,
+      "metin": "Dynamic languages such as JavaScript are more difficult to com- pile than statically typed ones. Since no concrete type information is available, traditional co",
+      "sagYari": 0
+    }
+  },
+  {
+    "ad": "gerçek PDF: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  }
+]

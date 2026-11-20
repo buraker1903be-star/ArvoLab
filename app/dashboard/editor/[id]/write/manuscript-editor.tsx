@@ -84,7 +84,8 @@ import { Minus as OlcekEksi, Plus as OlcekArti } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SolArama, SolBolumler, SolKaynaklar } from "./sol-araclar";
 import { adrestekiPdf, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
-import { AtifKarti, SecimIslemleri, type AtifKartiDurumu, type DogrulanmisPasaj } from "./atif-karti";
+import { AtifKarti, SecimIslemleri, type AtifKartiDurumu } from "./atif-karti";
+import { pdfDayanaklari, type PdfDayanagi } from "@/lib/tiptap-pdf-dayanak";
 import { atifAdaylari, kartKonumu, tiklananAtif, type AtifStilTuru } from "@/lib/atif-karti";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
 import { belgeBolumleri, kaynakcaGirdileri, type Dugum } from "@/lib/kaynakca-bolumu";
@@ -759,7 +760,15 @@ export default function ManuscriptEditor({
   const [atifKarti, setAtifKarti] = useState<AtifKartiDurumu | null>(null);
   const [kartVerisi, setKartVerisi] = useState<{ kaynaklar: LiteratureSource[]; pdfler: KaynakPdfi[]; kunye: Map<string, KunyeDurumOzeti> } | null>(null);
   const [kartYukleniyor, setKartYukleniyor] = useState(false);
-  const [dogrulanmisPasajlar, setDogrulanmisPasajlar] = useState<DogrulanmisPasaj[]>([]);
+  /*
+    BELGEDE KULLANILMIŞ PDF PASAJLARI (20.11.2026): kalıcı sarı vurgu ve atıf
+    kartının "Dayanağa git"i belgedeki pdfDayanak işaretlerinden okunur
+    (lib/tiptap-pdf-dayanak.ts). Eskiden "Dayanağa git" yalnızca bu oturumda
+    eklenen pasajları bellekte tutuyordu; sayfa yenilenince kayboluyordu.
+    Belge her değişişinde değil, yazma durunca (250 ms) yeniden taranır:
+    tuş başına bütün belgeyi gezmek yazmayı yavaşlatırdı.
+  */
+  const [pdfDayanaklariListesi, setPdfDayanaklariListesi] = useState<PdfDayanagi[]>([]);
   const [secimKonumu, setSecimKonumu] = useState<{ yan: "sag" | "alt"; x: number; y: number } | null>(null);
   const yerlesimRef = useRef<HTMLDivElement>(null);
   const yerlesimiAl = useCallback(() => yerlesimRef.current, []);
@@ -1381,6 +1390,25 @@ export default function ManuscriptEditor({
       },
     },
   });
+  useEffect(() => {
+    if (!editor) return;
+    let z: ReturnType<typeof setTimeout> | undefined;
+    const tara = () => {
+      const yeni = pdfDayanaklari(editor.state.doc);
+      setPdfDayanaklariListesi((o) => (JSON.stringify(o) === JSON.stringify(yeni) ? o : yeni));
+    };
+    tara();
+    const degisti = ({ transaction }: { transaction: { docChanged: boolean } }) => {
+      if (!transaction.docChanged) return;
+      clearTimeout(z);
+      z = setTimeout(tara, 250);
+    };
+    editor.on("transaction", degisti);
+    return () => {
+      clearTimeout(z);
+      editor.off("transaction", degisti);
+    };
+  }, [editor]);
 
   /*
     KAYITLI İMLEÇ (20.11.2026): öğrencinin editörde son bıraktığı yer. Odak
@@ -2806,7 +2834,7 @@ export default function ManuscriptEditor({
 
   const handleCite = async (
     source: LiteratureSource,
-    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean } = {},
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean; dayanak?: PdfDayanagi | null } = {},
   ): Promise<{ ok: true; atif?: string } | { ok: false; hata: string }> => {
     const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
@@ -2863,6 +2891,7 @@ export default function ManuscriptEditor({
       alinti: secenek.alinti,
       konum,
       odaklanma: !secenek.kayitliKonum,
+      dayanak: secenek.dayanak ?? null,
     });
     /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
        Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
@@ -4388,7 +4417,7 @@ export default function ManuscriptEditor({
         onCite={handleCite}
         genislik={kaynakAcik ? sagGenislik : undefined}
         onGenislik={sagGenislikDegisti}
-        onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
+        dayanaklar={pdfDayanaklariListesi}
         onBagDegisti={() => setKartVerisi(null)}
       />
       {atifKarti ? (
@@ -4398,7 +4427,7 @@ export default function ManuscriptEditor({
           kaynaklar={kartVerisi?.kaynaklar ?? []}
           pdfBul={(k) => (kartVerisi ? pdfEslesmesi(k, kartVerisi.pdfler) : { tur: "yok" })}
           kunye={kartVerisi?.kunye ?? new Map()}
-          pasajlar={dogrulanmisPasajlar}
+          pasajlar={pdfDayanaklariListesi.map((d) => ({ kaynakId: d.kaynak ?? "", pdfId: d.pdf, sayfa: d.sayfa, metin: d.pasaj }))}
           yukleniyor={kartYukleniyor}
           onSec={(id) => setAtifKarti((d) => (d ? { ...d, secilen: id } : d))}
           onKapat={() => {

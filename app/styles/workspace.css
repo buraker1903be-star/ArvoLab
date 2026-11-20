@@ -1598,6 +1598,9 @@
 .pdf-sayfa .textLayer span.pdf-esles { background: var(--warning-soft); border-radius: 2px; }
 /* Doğrulanmış pasaj (atıf kartı "Dayanağa git"): sarı vurgu, iki temada aynı — PDF sayfası her temada beyaz. */
 .pdf-sayfa .textLayer span.pdf-pasaj { background: var(--pasaj-vurgu); border-radius: 2px; }
+/* Kalıcı işaret belgedeki PDF dayanağından türer (lib/tiptap-pdf-dayanak.ts); metin katmanının
+   kendi span'ına konduğu için yakınlaştırma ve iki sütunlu düzende metinle birlikte yer değiştirir. */
+.pdf-sayfa .textLayer span.pdf-kalici { background: var(--pasaj-kalici); border-radius: 2px; }
 
 .kaynak-pdf-alt { display: grid; gap: 10px; max-height: 45%; overflow: auto; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
 .kaynak-ipucu, .kaynak-secim small { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }

@@ -13,6 +13,7 @@ import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 import { AsistanIzi } from "@/lib/tiptap-asistan-izi";
+import { PdfDayanak } from "@/lib/tiptap-pdf-dayanak";
 import { SatirIciOneri } from "@/lib/tiptap-satir-ici-oneri";
 import type { Dil, Metin } from "@/lib/dil";
 
@@ -69,6 +70,8 @@ export function editorExtensions(secenek: {
     FootnoteReference,
     // Yazım asistanından eklenen metin (yazarlık raporu); çıktılarda görünmez.
     AsistanIzi,
+    // PDF'te doğrulanmış pasajdan eklenen alıntı/atıf; PDF'teki kalıcı vurgu buradan türer, çıktılarda görünmez.
+    PdfDayanak,
     // Satır içi öneri: yalnızca süsleme, şemaya düğüm eklemiyor; Tab ile kabul.
     SatirIciOneri,
     Caption,

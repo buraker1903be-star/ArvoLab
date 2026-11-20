@@ -20,7 +20,7 @@ import type { AtifIsabeti } from "@/lib/atif-karti";
   GÜVEN DURUMLARI AYRI (madde 5; lib/kanit/durum.ts ile aynı ayrım):
     Künye — kanıt matrisindeki gerçek dizin denetimi (Crossref/OpenAlex),
     PDF — açılabilir bir dosya var mı (K2 bağı ya da tek DOI eşleşmesi),
-    Alıntı — bu oturumda PDF metnine karşı doğrulanıp eklenmiş pasaj.
+    Alıntı — PDF metnine karşı doğrulanıp belgeye eklenmiş pasaj (kalıcı işaret).
   Üçü ayrı kontroldür; hiçbiri iddianın desteklendiği anlamına gelmez.
 
   20.11.2026 (M9): durumların kuralı lib/kaynak-durumu.ts'e taşındı
@@ -32,9 +32,10 @@ import type { AtifIsabeti } from "@/lib/atif-karti";
   kaydı" artık o kaydın kendisine gidiyor (?kaynak=), listeye değil.
 
   "Dayanağa git" YALNIZCA ilgili PDF için doğrulanmış sayfa ve metin
-  bilgisi varsa çıkar. Bu bilgi bu sürümde KALICI DEĞİL (K3-ek onaylı
-  değil): PDF panelinden doğrulanmış alıntıyla atıf eklendiği oturumda
-  bellekte tutulur; sayfa yenilenince yalnızca "PDF'i aç" kalır.
+  bilgisi varsa çıkar. 20.11.2026'ya kadar bu bilgi yalnızca eklendiği
+  oturumda bellekte tutuluyordu; sayfa yenilenince yalnızca "PDF'i aç"
+  kalıyordu. Artık belgedeki görünmez PDF dayanağı işaretinden okunur
+  (lib/tiptap-pdf-dayanak.ts): yenilemede ve yeni oturumda da durur.
 */
 
 export type DogrulanmisPasaj = { kaynakId: string; pdfId: string; sayfa: number; metin: string };
