@@ -1,0 +1,283 @@
+[
+  {
+    "ad": "1440: editör yerinden oynamaz (konum, genişlik, ölçek, kaydırma)",
+    "gecti": true,
+    "ayrinti": {
+      "once": {
+        "x": 378,
+        "w": 924,
+        "olcek": "1",
+        "kaydirma": 0
+      },
+      "acik": {
+        "x": 378,
+        "w": 924,
+        "olcek": "1",
+        "kaydirma": 0
+      }
+    }
+  },
+  {
+    "ad": "1440: çekmece ≈ ekranın %65'i, arkası karartılmış",
+    "gecti": true,
+    "ayrinti": {
+      "cekmece": {
+        "x": 496,
+        "y": 60,
+        "w": 936,
+        "h": 832
+      },
+      "ortu": {
+        "x": 0,
+        "y": 52,
+        "w": 1440,
+        "h": 848
+      }
+    }
+  },
+  {
+    "ad": "1440: okuma alanı çekmecenin neredeyse bütün yüksekliği",
+    "gecti": true,
+    "ayrinti": {
+      "alan": {
+        "x": 497,
+        "y": 196,
+        "w": 934,
+        "h": 695
+      },
+      "cekmece": {
+        "x": 496,
+        "y": 60,
+        "w": 936,
+        "h": 832
+      }
+    }
+  },
+  {
+    "ad": "seçim: araç çubuğu seçimin yanında, okuma alanı küçülmez",
+    "gecti": true,
+    "ayrinti": {
+      "secilen": "Seasonal variation explained most of the observed difference across the three regions.",
+      "arac": {
+        "x": 592,
+        "y": 330,
+        "w": 424,
+        "h": 40
+      },
+      "alanSecim": {
+        "x": 497,
+        "y": 196,
+        "w": 934,
+        "h": 695
+      }
+    }
+  },
+  {
+    "ad": "Esc 1: seçim katmanı kapanır, çekmece açık",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "kısa onay: okuma alanı küçülmez",
+    "gecti": true,
+    "ayrinti": {
+      "onay": {
+        "x": 592,
+        "y": 330,
+        "w": 420,
+        "h": 210
+      },
+      "alanOnay": {
+        "x": 497,
+        "y": 196,
+        "w": 934,
+        "h": 695
+      }
+    }
+  },
+  {
+    "ad": "eklenen alıntı seçilenle aynı, önünde boşluk, atıf ardında, kayıtlı konumda",
+    "gecti": true,
+    "ayrinti": {
+      "eklenecek": "“Seasonal variation explained most of the observed difference across the three regions.”",
+      "bas": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır “Seasonal variation explained most of the observed difference across the three regions.” (Fisher ve Other, 2023)\n\nDolgu paragrafı 1: belge kaydırılabili"
+    }
+  },
+  {
+    "ad": "ekleme sonrası çekmece açık kalır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "tutamakla genişler; elle seçilen yakınlaştırma ezilmez",
+    "gecti": true,
+    "ayrinti": {
+      "once": 936,
+      "sonra": 1120,
+      "yuzde1": "199%",
+      "yuzde2": "199%"
+    }
+  },
+  {
+    "ad": "sığdır modunda çekmece daralınca sayfa yeniden sığar",
+    "gecti": true,
+    "ayrinti": {
+      "tuval1": {
+        "x": 325,
+        "y": 208,
+        "w": 1095,
+        "h": 1417
+      },
+      "tuval2": {
+        "x": 521,
+        "y": 208,
+        "w": 899,
+        "h": 1164
+      }
+    }
+  },
+  {
+    "ad": "Esc 2: çekmece kapanır, odak editöre döner",
+    "gecti": true,
+    "ayrinti": {
+      "kapandi": true,
+      "odak": true
+    }
+  },
+  {
+    "ad": "yeniden açılınca sayfa, yakınlaştırma ve sayfa içi konum aynı",
+    "gecti": true,
+    "ayrinti": {
+      "konum1": {
+        "sayfa": "2",
+        "kaydirma": 240,
+        "yuzde": "147%"
+      },
+      "konum2": {
+        "sayfa": "2",
+        "kaydirma": 240,
+        "yuzde": "147%"
+      }
+    }
+  },
+  {
+    "ad": "AI görünümünden PDF'e dönünce okuma konumu yerinde",
+    "gecti": true,
+    "ayrinti": {
+      "konum2": {
+        "sayfa": "2",
+        "kaydirma": 240,
+        "yuzde": "147%"
+      },
+      "konum3": {
+        "sayfa": "2",
+        "kaydirma": 240,
+        "yuzde": "147%"
+      }
+    }
+  },
+  {
+    "ad": "tam ekran: çekmece bütün genişlik",
+    "gecti": true,
+    "ayrinti": {
+      "tam": {
+        "x": 8,
+        "y": 60,
+        "w": 1424,
+        "h": 832
+      }
+    }
+  },
+  {
+    "ad": "tek Ctrl+Z alıntıyı, atfı ve kaynakça girdisini birlikte geri alır",
+    "gecti": true,
+    "ayrinti": {
+      "bas": "Giriş\n\nMevsimsel örüntüler önceki çalışmalarda şöyle tanımlanmıştır\n\nDolgu paragrafı 1: belge kaydırılabilir olsun diye sentetik metin, ölçüm için yeterince uzu"
+    }
+  },
+  {
+    "ad": "1440: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "1280: editör yerinden oynamaz (konum, genişlik, ölçek, kaydırma)",
+    "gecti": true,
+    "ayrinti": {
+      "once": {
+        "x": 298,
+        "w": 924,
+        "olcek": "1",
+        "kaydirma": 0
+      },
+      "acik": {
+        "x": 298,
+        "w": 924,
+        "olcek": "1",
+        "kaydirma": 0
+      }
+    }
+  },
+  {
+    "ad": "1280: çekmece ≈ ekranın %65'i, arkası karartılmış",
+    "gecti": true,
+    "ayrinti": {
+      "cekmece": {
+        "x": 440,
+        "y": 60,
+        "w": 832,
+        "h": 832
+      },
+      "ortu": {
+        "x": 0,
+        "y": 52,
+        "w": 1280,
+        "h": 848
+      }
+    }
+  },
+  {
+    "ad": "1280: okuma alanı çekmecenin neredeyse bütün yüksekliği",
+    "gecti": true,
+    "ayrinti": {
+      "alan": {
+        "x": 441,
+        "y": 196,
+        "w": 830,
+        "h": 695
+      },
+      "cekmece": {
+        "x": 440,
+        "y": 60,
+        "w": 832,
+        "h": 832
+      }
+    }
+  },
+  {
+    "ad": "1280: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  },
+  {
+    "ad": "telefon: çekmece tam ekran (genişlik)",
+    "gecti": true,
+    "ayrinti": {
+      "tel": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 600
+      },
+      "vp": {
+        "width": 390,
+        "height": 664
+      }
+    }
+  },
+  {
+    "ad": "telefon: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": []
+  }
+]
