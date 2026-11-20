@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
@@ -30,7 +31,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const yenile = () => {
   revalidatePath(PAGE_PATH);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 
 /*

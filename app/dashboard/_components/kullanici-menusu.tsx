@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { Building2, Check, ChevronsUpDown, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronsUpDown, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { OsSimge } from "./os-simge";
 import type { OsIkon } from "@/lib/os/uygulamalar";
-import ActionForm from "../action-form";
-import { kurumSec } from "@/app/actions/kurum-secimi";
 import { ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import DilSecici from "@/app/_components/dil-secici";
@@ -39,8 +37,6 @@ export default async function KullaniciMenusu({
   rol,
   basHarf,
   cikis,
-  kurumlar,
-  seciliKurumId = null,
   yerlesim = "ust",
   hesapBaglantilari = [],
   personelAraclari = [],
@@ -50,9 +46,6 @@ export default async function KullaniciMenusu({
   rol: string;
   basHarf: string;
   cikis: () => Promise<void>;
-  /* Yalnızca iç ekipte ve birden çok kurum varsa verilir (lib/kurum-secimi.ts). */
-  kurumlar?: { id: string; name: string }[];
-  seciliKurumId?: string | null;
   hesapBaglantilari?: MenuBaglantisi[];
   /*
     Rolüne açık personel araçları; öğrencide boş gelir ve bölüm hiç
@@ -89,26 +82,7 @@ export default async function KullaniciMenusu({
           20.11.2026'da kalktı: herkesin ana deneyimi aynı, yönetim işleri
           aşağıdaki Yönetim bölümünde (lib/yonetim.ts).
         */}
-        {kurumlar ? (
-          /*
-            KURUM SEÇİMİ: çalışmalar, ekip, destek kuyrukları ve ana sayfa
-            seçilen kuruma göre süzülür. Yalnızca görünüm; yetki aynı.
-          */
-          <div className="os-kullanici-gorunum">
-            <small>
-              <Building2 size={13} aria-hidden="true" /> {t({ tr: "Kurum", en: "Institution" })}
-            </small>
-            {[{ id: "", name: t({ tr: "Bütün kurumlar", en: "All institutions" }) }, ...kurumlar].map((k) => (
-              <ActionForm key={k.id || "tumu"} action={kurumSec}>
-                <input type="hidden" name="kurum" value={k.id} />
-                <button type="submit" aria-pressed={(seciliKurumId ?? "") === k.id}>
-                  {k.name}
-                  {(seciliKurumId ?? "") === k.id ? <Check size={15} aria-hidden="true" /> : null}
-                </button>
-              </ActionForm>
-            ))}
-          </div>
-        ) : null}
+        {/* Kurum seçimi 20.11.2026'dan beri yönetim ekranlarının şeridinde (kurum-seridi.tsx), hesap menüsünde değil. */}
         {/* Çeviri bitene kadar yalnızca iç ekipte (lib/dil.ts, INGILIZCE_YAYINDA). */}
         {INGILIZCE_YAYINDA ? <DilSecici /> : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>

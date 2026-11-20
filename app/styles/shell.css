@@ -245,6 +245,10 @@
 }
 .onizleme-serit b { color: var(--primary-ink); }
 @media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }
+/* Kurum seçimi şeridi (kurum-seridi.tsx): yalnızca yönetim ekranlarında. */
+.kurum-seridi-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kurum-seridi-form label { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+.kurum-seridi-form select { min-height: 32px; max-width: 260px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: var(--fs-sm); }
 
 /* ============================================================
    ÜST ÇUBUK DİL MENÜSÜ (premium çalışma alanı, 17.11.2026;

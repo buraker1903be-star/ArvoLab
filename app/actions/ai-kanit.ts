@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
@@ -249,6 +250,6 @@ async function hukmuIsle(
   }
   revalidatePath(`/dashboard/editor/${projectId}/kanit`);
   revalidatePath(`/dashboard/editor/${projectId}/makale`);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return null;
 }

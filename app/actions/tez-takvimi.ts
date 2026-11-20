@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { taslakTakvim, tasGirdisi, type TakvimTasi } from "@/lib/tez-takvimi";
@@ -23,8 +23,7 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const yenile = () => {
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
 };
 
 /** Çalışmanın takvimi; okunamazsa null (boş liste "plan yok" demek olurdu). */

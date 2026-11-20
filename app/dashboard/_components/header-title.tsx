@@ -8,6 +8,7 @@ import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { calismaBaglantilari, calismaIcindeMi, etkinBaglanti, etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 import { useCalismaBaglami } from "./calisma-baglami";
 import { listeyeDonusIsaretle, useListeAdresi } from "./liste-donusu";
+import { listeDonusEtiketi } from "@/lib/os/liste-donusu";
 
 /*
   ÜST ÇUBUĞUN SOLU: marka ve açık uygulama (ArvoOS'taki os-brand).
@@ -61,7 +62,7 @@ export default function HeaderTitle() {
         (gorsel-uyum.css); masaüstü ve tablette dönüş gezinmenin başında.
       */}
       {calismaIcinde ? (
-        <Link href={listeAdresi} className="os-marka-geri" onClick={listeyeDonusIsaretle} aria-label={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })} title={t({ tr: "Çalışmalarıma dön", en: "Back to my works" })}>
+        <Link href={listeAdresi} className="os-marka-geri" onClick={listeyeDonusIsaretle} aria-label={t(listeDonusEtiketi(listeAdresi))} title={t(listeDonusEtiketi(listeAdresi))}>
           <ArrowLeft size={20} aria-hidden="true" />
         </Link>
       ) : null}

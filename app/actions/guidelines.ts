@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { formdanSayiKurali } from "@/lib/sayi-bicimi";
 
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
@@ -678,7 +679,7 @@ export async function approveGuideline(guidelineId: string) {
   if (resyncError) console.error(resyncError);
 
   revalidatePath("/dashboard/guidelines");
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { success: true };
 }
 
@@ -729,7 +730,7 @@ export async function kilavuzOnayiniGeriAl(guidelineId: string): Promise<ActionR
   if (resyncError) console.error(resyncError);
 
   revalidatePath("/dashboard/guidelines");
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { success: true };
 }
 

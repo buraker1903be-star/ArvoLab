@@ -1,5 +1,7 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
+import { yonetimeGirebilir } from "@/lib/yonetim";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { secilenBelgeDili } from "@/lib/belge-dili";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
@@ -141,9 +143,18 @@ async function calismaKaydet(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id")
+    .select("organization_id, role")
     .eq("id", user.id)
     .single();
+  /*
+    Doçentlik dosyası yalnızca doçentlik modülünden ve yalnızca personelce
+    açılır (associate-professorship/docentlik-dosyasi-penceresi.tsx, PR #113).
+    Ortak pencere bu türü sunmuyor; işlem doğrudan çağrılabildiği için tür
+    burada da denetleniyor.
+  */
+  if (type === "associate-professorship" && !yonetimeGirebilir(profile?.role)) {
+    return { error: t({ tr: "Doçentlik dosyası yalnızca doçentlik modülünden açılır.", en: "Associate professorship files can only be created from the associate professorship module." }) };
+  }
 
   const citationStyle = String(formData.get("citationStyle") ?? "apa7");
   const method = String(formData.get("method") ?? "");
@@ -176,8 +187,7 @@ async function calismaKaydet(
     return { error: t(stilKisiti(error) ?? { tr: "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin.", en: "An error occurred while saving; please try again." }) };
   }
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   return { id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) };
 }
 
@@ -402,7 +412,7 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
     return { error: t({ tr: "Atıf stili güncellenemedi. Tekrar deneyin.", en: "The citation style could not be updated. Try again." }) };
   }
 
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { success: true };
 }
 
@@ -490,8 +500,7 @@ export async function updateProject(projectId: string, formData: FormData): Prom
   }
   if (!data?.length) return { error: t({ tr: "Bu çalışmayı düzenleme yetkiniz yok.", en: "You don't have permission to edit this work." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   // Düzenleme sayfası da yeni değerlerle çizilsin; form kayıttan sonra bu değerlerle yeniden kurulur (action-form.tsx).
   revalidatePath(`/dashboard/editor/${projectId}/edit`);
   return { success: true };
@@ -523,8 +532,7 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
   }
   if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   revalidatePath(`/dashboard/editor/${projectId}`);
 
   /*
@@ -569,8 +577,7 @@ export async function revokeApproval(projectId: string): Promise<ActionResult> {
   }
   if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   return { success: true };
 }
 
@@ -600,7 +607,6 @@ export async function deleteProject(projectId: string): Promise<ActionResult> {
   }
   if (!data?.length) return { error: t({ tr: "Bu çalışmayı silme yetkiniz yok.", en: "You don't have permission to delete this work." }) };
 
-  revalidatePath("/dashboard/editor");
-  revalidatePath("/dashboard");
+  calismaListeleriniYenile();
   return { success: true };
 }

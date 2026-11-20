@@ -81,3 +81,27 @@ test("filtre, sayaç, dikkat maddesi ve seçim bağlantıları bulundukları lis
   // Varsayılan taban eskisi gibi Çalışmalarım (geriye dönük uyum).
   assert.equal(filtreAdresi({ ...DEFAULT_PROJECT_FILTERS, status: "gecikmis" }), "/dashboard/editor?durum=gecikmis");
 });
+
+import { listeAdresiOku, listeDonusEtiketi, LISTE_VARSAYILAN } from "@/lib/os/liste-donusu";
+
+test("liste dönüşü Yönetim listesini kabul eder; çalışma alt yolu ve başka site kabul edilmez (kod incelemesi, PR #113)", () => {
+  assert.equal(listeAdresiOku("/dashboard/yonetim/calismalar?q=tez&sec=a"), "/dashboard/yonetim/calismalar?q=tez&sec=a");
+  assert.equal(listeAdresiOku("/dashboard/yonetim/calismalar"), "/dashboard/yonetim/calismalar");
+  assert.equal(listeAdresiOku("/dashboard/editor?durum=aktif"), "/dashboard/editor?durum=aktif");
+  for (const kotu of ["/dashboard/yonetim", "/dashboard/yonetim/calismalar/x", "/dashboard/editor/abc/write", "https://kotu.example/dashboard/editor", "//kotu.example", "/dashboard/yonetim/calismalar#x", null, ""]) {
+    assert.equal(listeAdresiOku(kotu), LISTE_VARSAYILAN, String(kotu));
+  }
+  assert.equal(listeDonusEtiketi("/dashboard/yonetim/calismalar?sec=a").tr, "Yönetim listesine dön");
+  assert.equal(listeDonusEtiketi("/dashboard/editor").tr, "Çalışmalarıma dön");
+});
+
+import { kurumSecimiGorunur, CALISMA_LISTESI_ADRESLERI } from "@/lib/yonetim";
+
+test("kurum seçimi yalnızca yönetim ekranlarında; kişisel Ana Sayfa ve Çalışmalarım'da yok (PR #113)", () => {
+  for (const yol of ["/dashboard/yonetim", "/dashboard/yonetim/calismalar", "/dashboard/team", "/dashboard/expert-requests", "/dashboard/support", "/dashboard/asistan", "/dashboard/abonelik"]) assert.equal(kurumSecimiGorunur(yol), true, yol);
+  for (const yol of ["/dashboard", "/dashboard/editor", "/dashboard/editor/abc/write", "/dashboard/literature", "/dashboard/yonetimx", "/dashboard/teamx", null, undefined]) assert.equal(kurumSecimiGorunur(yol), false, String(yol));
+});
+
+test("kayıt sonrası yenilenen listeler Yönetim'in iki sayfasını da kapsıyor (PR #113)", () => {
+  assert.deepEqual([...CALISMA_LISTESI_ADRESLERI].sort(), ["/dashboard", "/dashboard/editor", "/dashboard/yonetim", "/dashboard/yonetim/calismalar"].sort());
+});

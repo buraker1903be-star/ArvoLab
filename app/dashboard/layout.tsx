@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
-import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
@@ -26,7 +25,7 @@ import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
-import { kurumSec } from "@/app/actions/kurum-secimi";
+import KurumSeridi from "./_components/kurum-seridi";
 import { getOrganizations } from "@/app/actions/team";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 
@@ -87,8 +86,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     rol: roleLabel,
     basHarf: initials,
     cikis: logout,
-    kurumlar: icEkip && kurumlar.length > 1 ? kurumlar : undefined,
-    seciliKurumId: kurum?.id ?? null,
     /*
       Hesap menüsünün bağlantıları gezinmeyle AYNI süzülmüş listeden
       (uygulamalar): menü ile kenar çubuğu ayrı ayrı rol kararı verip
@@ -140,24 +137,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <OsBolumSeridi uygulamalar={uygulamalar} />
         </Suspense>
 
-        {/* Seçili kurum her sayfada görünür: unutulan bir süzgeç diğer kurumun işlerini "kaybolmuş" gösterirdi. */}
-        {kurum ? (
-          <div className="onizleme-serit" role="status">
-            <span>
-              {t({ tr: "Yalnızca", en: "Showing only" })} <b>{kurum.ad}</b>
-              {t({
-                tr: " gösteriliyor: çalışmalar, ekip, destek kuyrukları ve ana sayfa bu kuruma göre süzülü.",
-                en: ": works, team, support queues and the home page are filtered to this institution.",
-              })}
-            </span>
-            <ActionForm action={kurumSec}>
-              <input type="hidden" name="kurum" value="" />
-              <button type="submit" className="projects-filter-button button-compact">
-                {t({ tr: "Bütün kurumları göster", en: "Show all institutions" })}
-              </button>
-            </ActionForm>
-          </div>
-        ) : null}
+        {/*
+          Kurum seçimi yalnızca iç ekipte ve yalnızca yönetim ekranlarında
+          (kurum-seridi.tsx, lib/yonetim.ts). Eskiden şerit her sayfadaydı,
+          seçici hesap menüsündeydi: kişisel Ana Sayfa ve Çalışmalarım
+          seçimden bağımsız olduğu hâlde üstlerinde "yalnızca X" yazıyordu.
+        */}
+        {icEkip ? <KurumSeridi kurumlar={kurumlar} seciliKurum={kurum ? { id: kurum.id, ad: kurum.ad } : null} /> : null}
 
         <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>

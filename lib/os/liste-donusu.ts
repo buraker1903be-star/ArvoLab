@@ -17,12 +17,28 @@ export const LISTE_ADRESI_ANAHTARI = "arvolab.calismalar.adres";
 export const LISTE_KONUMU_ANAHTARI = "arvolab.calismalar.konum";
 export const LISTE_VARSAYILAN = "/dashboard/editor";
 
+/*
+  İki liste kabul edilir: kişisel Çalışmalarım ve Yönetim'deki kurum listesi
+  (lib/yonetim.ts). Eskiden yalnızca ilki kabul ediliyordu; personel Yönetim'den
+  bir öğrencinin çalışmasını açıp "dön"e basınca kişisel listesine düşüyor,
+  süzgeci ve seçimi kayboluyor, öğrencinin çalışması da orada görünmüyordu
+  (kod incelemesi, PR #113).
+*/
+const LISTE_YOLU = /^\/dashboard\/(?:editor|yonetim\/calismalar)(\?[^#\s]*)?$/;
+
 /** Saklanan adres listenin kendisi mi? Değilse varsayılan liste. */
 export function listeAdresiOku(deger: string | null | undefined): string {
   if (!deger) return LISTE_VARSAYILAN;
-  // Yalnızca "/dashboard/editor" ya da "/dashboard/editor?..." — alt yol (bir çalışma) ya da başka site değil.
-  if (!/^\/dashboard\/editor(\?[^#\s]*)?$/.test(deger)) return LISTE_VARSAYILAN;
+  // Yalnızca listenin kendi yolu ve sorgusu — alt yol (bir çalışma) ya da başka site değil.
+  if (!LISTE_YOLU.test(deger)) return LISTE_VARSAYILAN;
   return deger;
+}
+
+/** "Dön" bağlantısının adı: Yönetim listesine dönerken "Çalışmalarıma" demez. */
+export function listeDonusEtiketi(adres: string): { tr: string; en: string } {
+  return adres.startsWith("/dashboard/yonetim/")
+    ? { tr: "Yönetim listesine dön", en: "Back to the management list" }
+    : { tr: "Çalışmalarıma dön", en: "Back to my works" };
 }
 
 /** Kaydırma konumu: sonlu, negatif olmayan bir sayı; bozuksa 0. */

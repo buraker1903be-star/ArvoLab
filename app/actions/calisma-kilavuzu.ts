@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { createHmac } from "node:crypto";
 import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
@@ -416,7 +417,7 @@ export async function kilavuzuKaydet(
   }
 
   revalidatePath(`/dashboard/editor/${projectId}`);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
 }
@@ -473,7 +474,7 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
   }
   await eskiDosyayiSil(izin.ctx.supabase, silinen?.depo_yolu, null);
   revalidatePath(`/dashboard/editor/${projectId}`);
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
 }
@@ -507,7 +508,7 @@ export async function ornekAtifKaydet(projectId: string, ornek: string): Promise
   }
   // RLS yetkisiz güncellemeyi sessizce sıfır satıra çeviriyor; başarı sanılmasın.
   if (!data?.length) return { error: t({ tr: "Bu çalışmayı güncelleme yetkiniz yok.", en: "You don't have permission to update this work." }) };
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   revalidatePath(`/dashboard/editor/${projectId}`);
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return {};

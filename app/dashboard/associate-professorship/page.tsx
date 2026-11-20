@@ -38,6 +38,8 @@ import PanelDrawer from "../_components/panel-drawer";
 import BelgeSatiri from "./belge-satiri";
 import UakYukle from "./uak-yukle";
 import UakPdfAc from "./uak-pdf-ac";
+import DocentlikDosyasiPenceresi from "./docentlik-dosyasi-penceresi";
+import { yonetimeGirebilir } from "@/lib/yonetim";
 
 export const metadata = { title: "Doçentlik Puanı" };
 
@@ -309,6 +311,8 @@ export default async function ScoringPage({
           </p>
         </div>
         <span className="cluster">
+          {/* Doçentlik dosyası burada oluşturulur, ortak Yeni çalışma penceresinde değil (PR #113). */}
+          {yonetimeGirebilir(profile?.role) ? <DocentlikDosyasiPenceresi /> : null}
           <nav className="segment-secici" aria-label="Dönem">
             <Link href={`/dashboard/associate-professorship${typeof params.alan === "string" ? `?alan=${encodeURIComponent(params.alan)}` : ""}`} aria-current={!sonrasi ? "page" : undefined}>
               Tüm faaliyetler

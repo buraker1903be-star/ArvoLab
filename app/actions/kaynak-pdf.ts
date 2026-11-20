@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { varsayilanGetir } from "@/lib/kanit/dizin";
@@ -57,7 +57,7 @@ const KOVA = "project-files";
 
 const SECIM = "id, kunye_anahtari, kunye, doi, durum, depo_yolu, kaynak_adres, baslik_eslesti, bakildi, kaynak_id";
 
-const yenile = () => revalidatePath("/dashboard/editor");
+const yenile = () => calismaListeleriniYenile();
 
 /** Çalışmanın bütün PDF kayıtları (sınırsız: ZIP de buradan kuruluyor). */
 export async function kaynakPdfleri(projectId: string): Promise<KaynakPdfSatiri[]> {

@@ -1,5 +1,6 @@
 "use server";
 
+import { calismaListeleriniYenile } from "@/lib/liste-yenileme";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { abonelikKapaliMesaji, isSubscriptionBlocked } from "@/lib/access";
@@ -72,7 +73,7 @@ export async function etikBilgileriniKaydet(formData: FormData): Promise<ActionR
   }
   revalidatePath(`/dashboard/editor/${projectId}`, "layout");
   // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { success: true };
 }
 
@@ -89,7 +90,7 @@ export async function etikBelgeleriniKaydet(projectId: string, ham: unknown): Pr
   }
   revalidatePath(`/dashboard/editor/${projectId}`, "layout");
   // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
   return { ok: true, belgeler };
 }
 
@@ -159,7 +160,7 @@ export async function etikYonergesiniTara(
     }
     revalidatePath(`/dashboard/editor/${projectId}`, "layout");
   // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
-  revalidatePath("/dashboard/editor");
+  calismaListeleriniYenile();
     return { ok: true, belgeler, bulunan: bulunan.length };
   } finally {
     const { error } = await ctx.supabase.storage.from("project-files").remove([depoYolu]);

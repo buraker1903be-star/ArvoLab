@@ -72,3 +72,22 @@ export function calismaninListesi(girdi: {
   const taban = baskasinin && yonetimeGirebilir(girdi.rol) ? YONETIM_CALISMALAR : KISISEL_CALISMALAR;
   return `${taban}?sec=${encodeURIComponent(girdi.calismaId)}${girdi.kilavuz ? "&kilavuz=1" : ""}`;
 }
+
+/*
+  KURUM SEÇİMİNİN GÖRÜNDÜĞÜ YERLER (20.11.2026, PR #113). İç ekibin kurum
+  seçimi (lib/kurum-secimi.ts) yalnızca yönetim ekranlarını süzer: Yönetim,
+  ekip, destek kuyrukları, asistan kayıtları ve kurum faturası. Seçici ve
+  "Yalnızca X gösteriliyor" şeridi de yalnızca orada. Eskiden şerit HER
+  sayfada, seçici hesap menüsündeydi; kişisel Ana Sayfa ve Çalışmalarım
+  artık seçimden bağımsız olduğu hâlde kurucu kendi tezinin üstünde
+  "yalnızca B kurumu gösteriliyor" yazısını görüyordu.
+*/
+const KURUM_SECIMI_YOLLARI = [YONETIM_ANA, "/dashboard/team", "/dashboard/expert-requests", "/dashboard/support", "/dashboard/asistan", "/dashboard/abonelik"];
+
+export function kurumSecimiGorunur(yol: string | null | undefined): boolean {
+  if (!yol) return false;
+  return KURUM_SECIMI_YOLLARI.some((onek) => yol === onek || yol.startsWith(`${onek}/`));
+}
+
+/** Bir çalışma değişince yenilenen liste sayfaları (lib/liste-yenileme.ts; adres listesi saf modülde, test edilebilsin diye). */
+export const CALISMA_LISTESI_ADRESLERI = ["/dashboard", KISISEL_CALISMALAR, YONETIM_ANA, YONETIM_CALISMALAR] as const;

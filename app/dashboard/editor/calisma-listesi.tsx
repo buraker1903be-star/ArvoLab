@@ -318,8 +318,8 @@ export default async function CalismaListesi({
             {kapsam === "yonetim"
               ? canApprove
                 ? t({
-                    tr: "Yetkinizin kapsadığı tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta.",
-                    en: "Thesis, article and project works within your permissions. Select a work; approval and assignment are on the card on the right.",
+                    tr: "Yetkinizin kapsadığı tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve düzenleme sağdaki kartta.",
+                    en: "Thesis, article and project works within your permissions. Select a work; approval and editing are on the card on the right.",
                   })
                 : t({
                     tr: "Yetkinizin kapsadığı çalışmalar. Kendi çalışmalarınız Çalışmalarım'da.",
