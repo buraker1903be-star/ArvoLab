@@ -264,3 +264,89 @@ export async function aramaKaydiniEkle(kayit: {
   yenile();
   return { success: true };
 }
+
+/**
+ * "PDF'yi oku" (M7, 20.11.2026): arama sonucunu çalışmaya OKUNACAK olarak
+ * alır ve okumaya hazırlar. Kaynak çalışmada zaten varsa (DOI ya da başlık)
+ * yeniden eklenmez ve `yeni: false` döner: Geri al yalnızca bu çağrının
+ * eklediği kaydı silebilsin, öğrencinin önceden eklediği kayda asla
+ * dokunulmasın. Çalışma seçilmeden çağrılırsa çalışma OLUŞTURULMAZ.
+ * PDF bu çalışmada zaten hazırsa kimliği döner; çağıran ikinci kez indirmez.
+ */
+export async function okumayaAl(kayit: {
+  baslik: string;
+  yazarlar?: string[];
+  yil?: number | null;
+  tur?: string;
+  dergi?: string | null;
+  doi?: string | null;
+  url?: string;
+  projectId: string;
+}): Promise<{ kaynakId: string; yeni: boolean; hazirPdfId: string | null } | { error: string }> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: await abonelikKapaliMesaji() };
+  const t = await ceviri();
+  const projectId = String(kayit.projectId ?? "").trim();
+  if (!UUID.test(projectId)) return { error: t({ tr: "Önce bir çalışma seçin; PDF çalışmanın kaynaklarına eklenir.", en: "Pick a work first; the PDF is added to that work's sources." }) };
+  const baslik = String(kayit.baslik ?? "").trim().slice(0, 500);
+  if (!baslik) return { error: t({ tr: "Kaynak başlığı okunamadı.", en: "Couldn't read the source title." }) };
+  const doi = String(kayit.doi ?? "").trim().toLowerCase() || null;
+
+  /* Var mı: aynı çalışmada aynı DOI ya da aynı başlık. Okuma hatası "yok"
+     sayılmaz — sayılsaydı ikinci bir kopya eklenir, Geri al onu da silerdi. */
+  const { data: adaylar, error: okumaHatasi } = await ctx.supabase
+    .from("literature_sources")
+    .select("id, title, doi_or_url")
+    .eq("owner_id", ctx.user.id)
+    .eq("project_id", projectId)
+    .limit(500);
+  if (okumaHatasi) {
+    console.error("[okumaya-al] kaynaklar okunamadı:", okumaHatasi.message);
+    return { error: t({ tr: "Kaynaklarınız okunamadı; tekrar deneyin.", en: "Your sources couldn't be read; please try again." }) };
+  }
+  const baslikAnahtari = (s: string) => s.toLocaleLowerCase("tr-TR").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const mevcut = (adaylar ?? []).find(
+    (a) => (doi && String(a.doi_or_url ?? "").toLowerCase().includes(doi)) || baslikAnahtari(String(a.title ?? "")) === baslikAnahtari(baslik),
+  );
+
+  let kaynakId: string;
+  let yeni = false;
+  if (mevcut) {
+    kaynakId = String(mevcut.id);
+  } else {
+    const satir = {
+      owner_id: ctx.user.id,
+      project_id: projectId,
+      title: baslik,
+      authors: (kayit.yazarlar ?? []).join(", ").slice(0, 500) || null,
+      year: kayit.yil ? String(kayit.yil) : null,
+      source_type: TURLER.includes(String(kayit.tur)) ? String(kayit.tur) : "other",
+      doi_or_url: (doi ? `https://doi.org/${doi}` : String(kayit.url ?? "")).slice(0, 500) || null,
+      status: "to_review" as const,
+      notes: null,
+      container_title: (kayit.dergi ?? "").slice(0, 500) || null,
+    };
+    const { data: eklenen, error } = await ctx.supabase.from("literature_sources").insert(satir).select("id").single();
+    if (error || !eklenen) {
+      console.error("[okumaya-al] eklenemedi:", error?.message);
+      return { error: t({ tr: "Kaynak çalışmaya eklenemedi.", en: "Couldn't add the source to the work." }) };
+    }
+    kaynakId = String(eklenen.id);
+    yeni = true;
+  }
+
+  let hazirPdfId: string | null = null;
+  const { data: pdfler, error: pdfHatasi } = await ctx.supabase
+    .from("kaynak_pdfleri")
+    .select("id, durum, doi, kaynak_id")
+    .eq("project_id", projectId)
+    .in("durum", ["indirildi", "yuklendi"])
+    .limit(500);
+  if (pdfHatasi) console.error("[okumaya-al] PDF kayıtları okunamadı:", pdfHatasi.message);
+  // hata-tamam: okunamazsa hazır PDF yok sayılır; çağıran PDF'i arar, ikinci kopya yazılmaz (otomatikSonucuYaz koşulu).
+  else hazirPdfId = (pdfler ?? []).find((p) => p.kaynak_id === kaynakId || (doi && String(p.doi ?? "").toLowerCase() === doi))?.id ?? null;
+
+  yenile();
+  return { kaynakId, yeni, hazirPdfId };
+}

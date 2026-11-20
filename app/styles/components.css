@@ -1803,6 +1803,13 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .bulgu-govde p { margin: 0; }
 .bulgu-eylemler { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bulgu-eylemler .status-pill { white-space: nowrap; }
+/* Makale Bul (M7, 20.11.2026): tek alan + Ara + Filtreler; dar sol panelde de tek satır, sığmazsa düğmeler alta iner. */
+.makale-arama-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.makale-arama-alani { flex: 1 1 220px; min-width: 0; }
+.makale-arama-alani input { width: 100%; }
+.makale-cip { display: inline-flex; align-items: center; gap: 4px; }
+.makale-cip button { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; color: inherit; cursor: pointer; }
+.makale-cip button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 
 /* Onay kutusu ile etiketi aynı satırda; form ızgarasındaki diğer alanlar
    dikey (etiket üstte) olduğu için ayrı sınıf gerekiyor. */
