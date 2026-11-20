@@ -50,7 +50,8 @@
 .os-marka-logo { --logo-h: 26px; display: flex; align-items: center; min-height: 44px; border-radius: var(--r-xs); }
 .os-marka-logo:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .os-marka-sayfa { overflow: hidden; padding-left: 12px; border-left: 1px solid var(--line); color: var(--ink-soft); font-size: var(--fs-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.dashboard-header-actions { display: flex; align-items: center; gap: 8px; }
+/* Sağa yaslı: arama kutusu kaldırılınca (20.11.2026) eylem yuvası başlığın yanında kalsın, eylemler kenarda. */
+.dashboard-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
 .dashboard-icon-button {
   display: inline-grid;
@@ -177,6 +178,7 @@
 .os-kullanici-bas small { display: block; color: var(--muted); font-size: var(--fs-sm); }
 .os-kullanici-baglantilar { display: flex; flex-direction: column; padding: 4px 0; border-top: 1px solid var(--line-soft); }
 .os-kullanici-baglantilar a,
+.os-kullanici-baglantilar .os-kullanici-komut,
 .os-kullanici-cikis button {
   display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px;
   border: 0; border-radius: var(--r-sm); background: transparent;
@@ -184,12 +186,15 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .os-kullanici-baglantilar a:hover,
+  .os-kullanici-baglantilar .os-kullanici-komut:hover,
   .os-kullanici-cikis button:hover { background: var(--surface-2); }
 }
 .os-kullanici-cikis { padding-top: 4px; border-top: 1px solid var(--line-soft); }
 /* "Personel Araçları" başlığı (Phase 5.1d-3): hesap bağlantılarından ayrı bir bölüm olduğu görünsün. */
 .os-kullanici-bolum { display: block; padding: 6px 12px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .os-kullanici-cikis button { color: var(--danger); }
+/* Komut paleti girişi: kısayol rozeti satırın sağında (üst çubuktaki Ctrl+K kutusu kaldırıldı, 20.11.2026). */
+.os-kullanici-komut kbd { margin-left: auto; }
 .os-kullanici-alt { display: flex; align-items: center; gap: 6px; margin: 4px 12px 6px; color: var(--muted); font-size: var(--fs-micro); }
 
 

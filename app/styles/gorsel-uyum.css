@@ -17,9 +17,6 @@
 */
 .ust-cubuk-yuva { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 8px; }
 .ust-cubuk-yuva:empty { display: none; }
-/* Yuva doluyken arama kutusu kompakt: büyüteç + kısayol (prototipteki gibi). */
-.dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search { flex: none; width: auto; max-width: none; margin-inline: 0; }
-.dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search-text { display: none; }
 
 /* ---------- Yazım sayfası: dar dış pay (12 + 12) ---------- */
 @media (min-width: 1200px) {
@@ -38,7 +35,6 @@
 */
 @media (min-width: 901px) and (max-width: 1439px) {
   .ust-cubuk-yuva .arac-metin, .ust-cubuk-yuva .arac-menu-ok { display: none; }
-  .dashboard-header:has(.ust-cubuk-yuva:not(:empty)) .os-search kbd { display: none; }
 }
 
 /*
@@ -93,9 +89,8 @@
     border-radius: var(--r-sm); color: var(--ink);
   }
   .os-marka[data-calisma] .os-marka-geri:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
-  /* Çalışmanın içinde logo yerine dönüş; arama telefonda editör dışındaki ekranlarda (yer yok: 390 px'te sekiz düğme sığmıyordu). */
+  /* Çalışmanın içinde logo yerine dönüş. */
   .os-marka[data-calisma] .os-marka-logo { display: none; }
-  .dashboard-header:has(.os-marka[data-calisma]) .os-search { display: none; }
   .ust-cubuk-yuva { gap: 4px; }
   .dashboard-header:has(.os-marka[data-calisma]) .dashboard-header-actions { gap: 4px; }
 }

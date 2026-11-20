@@ -1,5 +1,6 @@
 "use client";
 
+import { KomutPaletiAcOgesi } from "./os-komut-paleti";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -514,7 +515,12 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
             </li>
           ))}
         </ul>
-        <p className="os-daha-ipucu">{t({ tr: "Her şeye Ctrl+K ile de ulaşabilirsiniz.", en: "You can also reach everything with Ctrl+K." })}</p>
+        <div className="os-daha-ipucu">
+          {/* Palet önce bu pencereyi kapatır: iki diyalog üst üste açılmasın. */}
+          <span onClickCapture={() => pencere.current?.close()}>
+            <KomutPaletiAcOgesi className="os-daha-komut" />
+          </span>
+        </div>
       </dialog>
     </>
   );

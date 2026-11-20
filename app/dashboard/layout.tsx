@@ -23,7 +23,7 @@ import NavProgress from "./_components/nav-progress";
 import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
-import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
+import { OsKomutPaleti } from "./_components/os-komut-paleti";
 
 /* Menüye uygulamanın yalnızca bağlantı için gereken alanları gider (roller, yollar gitmez). */
 const menuBaglantisi = ({ key, label, href, ikon }: OsUygulama) => ({ key, label, href, ikon });
@@ -98,8 +98,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
         {/*
-          ÜST ÇUBUK (Signature OS 5 / Phase 3, 12.11.2026): sayfa adı, arama
-          (Ctrl+K), bildirim ve tema. Logo ve hesap menüsü masaüstünde kenar
+          ÜST ÇUBUK (Signature OS 5 / Phase 3, 12.11.2026): sayfa adı, bildirim
+          ve tema. Arama kutusu (Ctrl+K) 20.11.2026'da kaldırıldı: makale,
+          belge ve PDF aramalarıyla karışıyordu; komut paleti kısayolla ve
+          hesap menüsü / "Daha fazla" penceresindeki girişle açılıyor. Logo ve hesap menüsü masaüstünde kenar
           çubuğuna taşındı; tarih-saat göstergesi kaldırıldı (kurum sahibinin
           "üst çubuk sadeleşsin" kararı; saat işletim sisteminde zaten var).
           Tablet ve telefonda logo ve hesap menüsü burada kalır.
@@ -113,7 +115,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             üst bant. Öteki sayfalarda boş kalır ve yer kaplamaz.
           */}
           <div id="ust-cubuk-yuva" className="cluster yazma-eylemleri ust-cubuk-yuva" />
-          <OsAramaDugmesi />
           <div className="dashboard-header-actions">
             <NotificationBell />
             <ThemeToggle />
