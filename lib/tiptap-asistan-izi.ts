@@ -40,3 +40,20 @@ export const AsistanIzi = Mark.create({
     return ["span", mergeAttributes(HTMLAttributes, { class: "asistan-izi" }), 0];
   },
 });
+
+/**
+ * Belgede hâlâ duran asistan metinlerinin kayıt kimlikleri (20.11.2026).
+ * Yazım panelindeki kart "Eklendi" diye kilitleniyordu; öğrenci Ctrl+Z ile
+ * metni geri alınca kart kilitli kalıyor, aynı öneriyi yeniden eklemenin
+ * yolu yoktu. Kart artık belgeye bakar: iz duruyorsa eklendi, durmuyorsa
+ * yeniden eklenebilir.
+ */
+export function asistanKayitlari(doc: { descendants: (f: (node: { marks: readonly { type: { name: string }; attrs: Record<string, unknown> }[] }) => boolean | void) => void }): Set<string> {
+  const kayitlar = new Set<string>();
+  doc.descendants((node) => {
+    for (const isaret of node.marks) {
+      if (isaret.type.name === ASISTAN_IZI && typeof isaret.attrs.kayit === "string" && isaret.attrs.kayit) kayitlar.add(isaret.attrs.kayit);
+    }
+  });
+  return kayitlar;
+}

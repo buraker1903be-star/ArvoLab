@@ -188,6 +188,8 @@ import {
   insertFrontMatter,
   insertCitation,
   atifSirasi,
+  kaynakcaGirdisiIslemi,
+  aiAtiflariniBagla,
   oncekiDipnottaVar,
   isDocumentEmpty,
   jumpToHeading,
@@ -237,6 +239,8 @@ const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
 const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
 const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr: false });
 const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
+import type { AiAtifHazirlik } from "./yazim-paneli";
+import { aiAtiflariniEsle } from "@/lib/ai-atif-esleme";
 /* Yazım Stüdyosu (16.11.2026): editörün yanında kaynak PDF'i, pasaj seçimi, Arvo AI analizi ve doğrulanmış atıf. */
 const KaynakPdfPaneli = dynamic(() => import("./kaynak-pdf-paneli"), { ssr: false });
 const SagPanelAyirici = dynamic(() => import("./sag-panel-ayirici"), { ssr: false });
@@ -1279,6 +1283,36 @@ export default function ManuscriptEditor({
       },
     },
   });
+
+  /*
+    KAYITLI İMLEÇ (20.11.2026): öğrencinin editörde son bıraktığı yer. Odak
+    PDF'e geçtiğinde editör seçimi hâlâ duruyor ama bir sonraki odak
+    olayında (focus()) neyin geri yükleneceği tarayıcıya bağlı; otomatik
+    sınamada alıntı bir karakter önceye girdi. Çekmeceden gelen alıntı bu
+    konuma yazılır. Belge bu arada değişirse (başka sekme değil, aynı
+    editördeki işlem) konum işlemin eşlemesiyle kaydırılır.
+  */
+  const kayitliImlec = useRef<{ from: number; to: number } | null>(null);
+  useEffect(() => {
+    if (!editor) return;
+    const kaydet = () => {
+      if (editor.isFocused) kayitliImlec.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    };
+    const esle = ({ transaction }: { transaction: import("@tiptap/pm/state").Transaction }) => {
+      const k = kayitliImlec.current;
+      if (!k || !transaction.docChanged) return;
+      kayitliImlec.current = { from: transaction.mapping.map(k.from, -1), to: transaction.mapping.map(k.to, 1) };
+    };
+    kaydet();
+    editor.on("selectionUpdate", kaydet);
+    editor.on("focus", kaydet);
+    editor.on("transaction", esle);
+    return () => {
+      editor.off("selectionUpdate", kaydet);
+      editor.off("focus", kaydet);
+      editor.off("transaction", esle);
+    };
+  }, [editor]);
 
   /*
     PDF paneli kapanınca odak BELGEYE, kullanıcının bıraktığı konuma döner
@@ -2583,7 +2617,79 @@ export default function ManuscriptEditor({
       .insertContent(satirlar.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })))
       .run();
   };
-  const handleCite = async (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
+  /*
+    Sonuç döner (20.11.2026): PDF çekmecesi atıf üretilemediğinde açık kalıp
+    hatayı göstersin. Eskiden dönüş yoktu; panel alıntıyı önceden yazıp
+    başarısız atıftan sonra "eklendi" gibi kapanıyordu.
+    alinti: atıftan önce tırnak içinde yazılır, atıfla AYNI işlemde
+    (editor-navigation.ts atifIslemi). kayitliKonum: çekmeceden gelen
+    ekleme, öğrencinin editörde bıraktığı yere yazılır.
+  */
+  /*
+    B-16 (20.11.2026): yazım asistanının metnindeki atıfları kaynakçaya
+    bağlamanın hazırlığı. Kütüphane okunur, atıflar eşleştirilir
+    (lib/ai-atif-esleme.ts; kural sunucudaki denetimle aynı), CSL stilinde
+    eksik künyeler citeproc'tan ÖNCEDEN alınır; panel metni ve künyeleri
+    tek işlemde yazar. Kütüphane okunamazsa "kaynak yok" sayılmaz: hata
+    döner ve metin girmez (okunamayan liste boş liste değildir).
+  */
+  const aiAtifHazirla = async (metin: string): Promise<AiAtifHazirlik> => {
+    const bos: AiAtifHazirlik = { uygula: () => ({ donusen: 0, kaynakcaya: 0 }), belirsiz: [] };
+    if (!/\d{4}/.test(metin)) return bos;
+    const liste = await kartKaynaklariniOku();
+    if (liste.okunamadi) return { ...bos, hata: t({ tr: "kütüphaneniz okunamadı; tekrar deneyin.", en: "your library couldn't be read; try again." }) };
+    const eslenebilir = liste.satirlar.map((k) => ({ id: k.id, authors: k.authors, year: k.year, title: k.title }));
+    const esleme = aiAtiflariniEsle(metin, eslenebilir, cikarmaStili);
+    const eslesenler = esleme.eslesen.map((id) => liste.satirlar.find((k) => k.id === id)).filter((k): k is LiteratureSource => Boolean(k));
+    const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
+    /* CSL: atıf ve künye citeproc'tan ÖNCEDEN alınır (işlem içinde ağ adımı olmaz). Numara, yeni kaynaklar Kaynakça'ya eklenme sırasıyla tahmin edilir. */
+    const hazirlar = new Map<string, { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean }>();
+    if (csl && eslesenler.length) {
+      let sonrakiNumara = atifSirasi(editor.state.doc, eslesenler[0]).number;
+      for (const kaynak of eslesenler) {
+        const { number, existingIndex } = atifSirasi(editor.state.doc, kaynak);
+        const numara = existingIndex >= 0 ? number : sonrakiNumara++;
+        const sonuc = await cslAtifUret({
+          stil: citationStyle,
+          kaynak,
+          numara,
+          sayfa: null,
+          kisa: false,
+          dil: belgeDili,
+          erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
+        }).catch(() => ({ hata: t({ tr: "atıf stili sunucusuna ulaşılamadı.", en: "couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
+        if (sonuc.hata || !sonuc.atif || !sonuc.kunye?.length) return { ...bos, hata: sonuc.hata ?? t({ tr: "atıf üretilemedi.", en: "the citation couldn't be produced." }) };
+        hazirlar.set(kaynak.id, { atif: sonuc.atif, kunye: sonuc.kunye, dipnot: csl.kod === "d" });
+      }
+    }
+    return {
+      belirsiz: esleme.belirsiz.map((x) => x.atif),
+      uygula: (tr, kayitId) => {
+        const kunyeYaz = () => ({
+          donusen: 0,
+          kaynakcaya: eslesenler.filter((k) => kaynakcaGirdisiIslemi(tr, k, style, { dil: belgeDili, erisimTarihi: bugun, kunye: hazirlar.get(k.id)?.kunye })).length,
+        });
+        // İz kimliği yoksa (kayıt yazılamadı) metin bulunamaz: yalnızca künyeler.
+        if (!kayitId) return kunyeYaz();
+        return aiAtiflariniBagla(tr, {
+          kayitId,
+          kaynakBul: (atif) => {
+            const tek = aiAtiflariniEsle(atif, eslenebilir, cikarmaStili);
+            return tek.eslesen.length === 1 && !tek.belirsiz.length ? (eslesenler.find((k) => k.id === tek.eslesen[0]) ?? null) : null;
+          },
+          digerEslesenler: eslesenler,
+          style,
+          secenek: { dil: belgeDili, erisimTarihi: bugun, kalip: ornekKalibi(ornekAtif), hazir: (k) => hazirlar.get((k as LiteratureSource).id) },
+        });
+      },
+    };
+  };
+
+  const handleCite = async (
+    source: LiteratureSource,
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean } = {},
+  ): Promise<{ ok: true } | { ok: false; hata: string }> => {
+    const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
     let hazir: { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean } | undefined;
@@ -2605,8 +2711,10 @@ export default function ManuscriptEditor({
         erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
       }).catch(() => ({ hata: t({ tr: "Atıf stili sunucusuna ulaşılamadı.", en: "Couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
       if (sonuc.hata || !sonuc.atif) {
-        showToast("error", sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." }));
-        return;
+        /* Belge DEĞİŞMEDİ: alıntı da atıf da yazılmadı (ikisi aynı işlemde). */
+        const hata = sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." });
+        showToast("error", hata);
+        return { ok: false, hata };
       }
       hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
     }
@@ -2616,12 +2724,16 @@ export default function ManuscriptEditor({
       kalip: ornekKalibi(ornekAtif),
       dil: belgeDili,
       hazir,
+      alinti: secenek.alinti,
+      konum,
     });
-    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
+    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
+       Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
+       ekleme kırmızı "İşlem tamamlanamadı" başlığıyla gösteriliyordu (20.11.2026). */
     const eksik = addedReference ? eksikAlanlar(source, dil) : [];
     const eksikMetni = eksik.join(", ");
     showToast(
-      eksik.length ? "error" : "success",
+      eksik.length ? "info" : "success",
       eksik.length
         ? t({
             tr: `${citation} eklendi; künyede eksik: ${eksikMetni}. Literatür'den kaynağı tamamlayın.`,
@@ -2632,6 +2744,7 @@ export default function ManuscriptEditor({
           : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
+    return { ok: true };
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
   const handlePrint = async () => {
@@ -4382,7 +4495,7 @@ export default function ManuscriptEditor({
         onCite={(source) => void handleCite(source)}
       />
       {/* Kapanınca adres de temizlenir (sagAc): "?asistan=1" ya da "?sag=ai" kalsaydı yenilemede panel yeniden açılırdı. */}
-      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => sagAc(null)} zorunluBolumler={guideline?.requiredSections ?? []} />
+      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => sagAc(null)} zorunluBolumler={guideline?.requiredSections ?? []} aiAtifHazirla={aiAtifHazirla} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}

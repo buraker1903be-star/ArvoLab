@@ -1389,6 +1389,9 @@
 .yazim-anahat li[data-duzey="3"] { padding-left: 28px; }
 .yazim-anahat small { color: var(--muted); font-size: var(--fs-sm); }
 .yazim-oneri-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 12px 12px; }
+/* Kısaltma uyarıları (20.11.2026): engellemez, okutur. Karar öğrencinin. */
+.yazim-oneri-uyari { margin: 0 12px 10px; padding: 8px 10px 8px 26px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--warning) 12%, var(--surface)); color: var(--ink); font-size: var(--fs-sm); }
+.yazim-oneri-uyari li + li { margin-top: 2px; }
 .yazim-hizli { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
 /* Sohbet doluyken çipler tek satır ve yatay kayar: iki satıra sarınca sohbetten yer çalıyordu. */
 .yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }

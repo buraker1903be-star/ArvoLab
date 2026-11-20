@@ -48,6 +48,18 @@ test("tamamlamada da uydurma atıf ve sayı düşer", () => {
   assert.equal(yazimDenetle("örneklem 412 kişidir.", [], ["öncesi metin"]).gecti, false);
 });
 
+test("kısaltma uyarıları: somut kayıplar, örtüşme oranı değil", async () => {
+  const { kisaltmaUyarilari } = await import("@/lib/ai/yazim-metni");
+  const secim = "Akran grupları yalnızlığı azaltmaktadır (Demir, 2019); ancak bu etki 3 ay sonra gözlenmemiştir ve kalıcı değildir.";
+  assert.deepEqual(kisaltmaUyarilari(secim, "Akran grupları yalnızlığı azaltır (Demir, 2019); etki 3 ayda kaybolur ve kalıcı değildir."), []);
+  // "değil" düştü: anlam tersine dönebilir — örtüşme yüksek olsa bile uyarılır.
+  assert.ok(kisaltmaUyarilari(secim, "Akran grupları yalnızlığı azaltır (Demir, 2019); etki 3 ay sonra da kalıcıdır.").includes("olumsuzluk"));
+  assert.ok(kisaltmaUyarilari(secim, "Akran grupları yalnızlığı azaltır; etki 3 ayda kaybolur, kalıcı değildir.").includes("atif"));
+  assert.ok(kisaltmaUyarilari(secim, "Akran grupları yalnızlığı azaltır (Demir, 2019); etki kısa sürer, kalıcı değildir.").includes("sayi"));
+  assert.ok(kisaltmaUyarilari("Kısa bir cümle.", "Kısa bir cümle, aslında.").includes("kisalmadi"));
+  assert.ok(kisaltmaUyarilari("The effect was not significant in 2020 (Lee, 2021).", "The effect was significant (Lee, 2021).").includes("olumsuzluk"));
+});
+
 /*
   20.11.2026: öneri en çok bir kısa cümle. Eskiden istem iki cümleye izin
   veriyor, istemci 400 karaktere kadar gösteriyordu; gri metin paragrafı

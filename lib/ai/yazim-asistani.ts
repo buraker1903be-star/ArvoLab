@@ -79,7 +79,14 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   devam: "Belgedeki metni kaldığı yerden, aynı üslupla BİR paragraf olarak sürdür.",
   paragraf: "İmlecin bulunduğu bölüm için kullanıcının isteği doğrultusunda BİR paragraf yaz.",
   akademik: "Seçili metni anlamını değiştirmeden akademik üsluba çevir.",
-  kisalt: "Seçili metni anlamını koruyarak kısalt.",
+  /*
+    20.11.2026: "anlamını koruyarak kısalt" tek başına yetmedi; model
+    olumsuzluğu ("değildir") ya da atıfı düşürüp kısaltabiliyordu. Neyin
+    korunacağı açıkça sayıldı. Örtüşme oranı anlamın kanıtı sayılmıyor;
+    panel somut kayıpları uyarı olarak gösteriyor (kisaltmaUyarilari).
+  */
+  kisalt:
+    "Seçili metni kısalt: yalnızca tekrarları, dolgu ifadelerini ve gereksiz ara sözleri çıkar. Anlamı, iddianın yönünü, olumsuzlukları ('değil', 'yok', 'not'), sınırlamaları, atıfları ve sayıları AYNEN koru; yeni bilgi, yorum ya da sonuç ekleme. Kısaltılmış metin aslından belirgin biçimde kısa olsun (yaklaşık üçte ikisi). Kısaltılamıyorsa 'metin' alanını boş bırak ve 'yanit' alanında nedenini söyle.",
   genislet: "Seçili metni anlamını değiştirmeden, mevcut bilgilerle derinleştirerek genişlet; yeni olgu ekleme.",
   /*
     Ana hat (03.11.2026): başlık iskeleti. Kılavuzun zorunlu bölümleri

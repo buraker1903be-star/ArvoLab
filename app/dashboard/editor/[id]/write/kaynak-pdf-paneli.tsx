@@ -48,7 +48,6 @@ type AtifDurumu =
 const ozet = (metin: string, uzunluk = 180) => (metin.length > uzunluk ? `${metin.slice(0, uzunluk).trimEnd()}…` : metin);
 
 export default function KaynakPdfPaneli({
-  editor,
   projectId,
   acik,
   acilacak = null,
@@ -67,7 +66,11 @@ export default function KaynakPdfPaneli({
   /** PDF'in kaynak bağı değişince (K2-A): editör atıf kartının verisini tazeler. */
   onBagDegisti?: () => void;
   onKapat: () => void;
-  onCite: (source: LiteratureSource, secenek: { sayfa?: string | null }) => Promise<void>;
+  /* Sonuç döner: atıf üretilemezse panel açık kalır ve belge değişmez (20.11.2026). */
+  onCite: (
+    source: LiteratureSource,
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean },
+  ) => Promise<{ ok: true } | { ok: false; hata: string }>;
 }) {
   const t = useCeviri();
   /* Telefonda ikincil PDF işlemlerinin ("⋯") açık olup olmadığı; masaüstünde etkisiz. */
@@ -219,8 +222,17 @@ export default function KaynakPdfPaneli({
     if (atif.eslesme.tur !== "kesin" && !onay) return;
     setEkleniyor(true);
     try {
-      if (alintiEkle) editor.chain().focus().insertContent(`“${atif.alinti}” `).run();
-      await onCite(kaynak, { sayfa: basiliSayfa.trim() || null });
+      /*
+        Alıntı ile atıf TEK işlemde ve öğrencinin editörde bıraktığı yere
+        (manuscript-editor.tsx handleCite). Eskiden alıntı burada önce, önüne
+        boşluk konmadan yazılıyor; atıf üretilemezse alıntı belgede atıfsız
+        kalıyor ve panel yine "eklendi" gibi kapanıyordu.
+      */
+      const sonuc = await onCite(kaynak, { sayfa: basiliSayfa.trim() || null, alinti: alintiEkle ? atif.alinti : null, kayitliKonum: true });
+      if (!sonuc.ok) {
+        setAtif({ adim: "hata", mesaj: sonuc.hata });
+        return;
+      }
       if (pdf) onDogrulanmisPasaj?.({ kaynakId: kaynak.id, pdfId: pdf.id, sayfa: atif.pdfSayfa, metin: atif.alinti });
       setAtif(null);
       setSecim(null);
