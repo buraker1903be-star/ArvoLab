@@ -4,7 +4,7 @@ import { ornekKalibi } from "@/lib/atif/tyk";
 import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
-import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
@@ -982,13 +982,37 @@ export default function ManuscriptEditor({
   const otomatikOlcek = karar?.sabitKagit && anaGenislik ? Math.min(1, Math.floor(((anaGenislik - 2) / KAGIT_GENISLIGI) * 100) / 100) : 1;
   const belgeOlcegi = karar?.sabitKagit ? gecerliOlcek(olcekTercihi, otomatikOlcek) : 1;
   const sagGenislik = karar && (karar.sag === "sutun" || sag === "pdf") ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
-  /* CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css). */
-  useEffect(() => {
+  /*
+    CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css).
+
+    Ölçek değişince ekranın üstündeki belge noktası yerinde tutulur
+    (21.11.2026). Araç menünün yanında açıldığından beri sol araç belge
+    sütununu daraltıyor ve kâğıt ölçeği değişiyor (1440 px'te 1 → 0,95);
+    eskiden scrollTop olduğu gibi kaldığı için okunan yer bir paragraf
+    aşağı kayıyordu (dört-giriş kabulü: ekranın üstündeki blok 17 → 18).
+    Ölçmek ve kaydırmayı düzeltmek boyamadan önce (useLayoutEffect):
+    sonra yapılsa bir kare kaymış hâl görünürdü.
+  */
+  const sonOlcek = useRef<number | null>(null);
+  useLayoutEffect(() => {
     const kap = yerlesimRef.current;
     if (!kap) return;
+    const onceki = sonOlcek.current;
+    sonOlcek.current = belgeOlcegi;
+    const icerik = kap.querySelector<HTMLElement>(".manuscript-editor-content");
+    const kaydirici = document.scrollingElement;
+    let capa: number | null = null;
+    if (onceki !== null && onceki !== belgeOlcegi && icerik && kaydirici) {
+      // Ekranın üstünün kâğıt içindeki yeri, ölçeksiz birimde.
+      const goreli = -icerik.getBoundingClientRect().top;
+      if (goreli > 0) capa = goreli / onceki;
+    }
     kap.style.setProperty("--belge-olcek", String(belgeOlcegi));
     if (sagGenislik) kap.style.setProperty("--sag-panel-genislik", `${sagGenislik}px`);
     else kap.style.removeProperty("--sag-panel-genislik");
+    if (capa !== null && icerik && kaydirici) {
+      kaydirici.scrollTop += icerik.getBoundingClientRect().top + capa * belgeOlcegi;
+    }
   });
 
   /*
