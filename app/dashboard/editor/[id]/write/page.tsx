@@ -12,6 +12,7 @@ import ManuscriptEditor from "./manuscript-editor";
 import { CalismaBaglamiYayinla } from "../../../_components/calisma-baglami";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
+import { denemeAsistanHakkim } from "@/lib/ai/erisim";
 
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
 export const maxDuration = 60;
@@ -44,7 +45,7 @@ export default async function WriteManuscriptPage({
     kendi kolunda bekliyor. Çalışma bulunamazsa sonuç yine 404: öbür
     okumalar RLS altında boş döner, kullanılmaz.
   */
-  const [{ data: project }, manuscript, { user, authorFullName }, kontrolYaniti, dokumanDili, etik] = await Promise.all([
+  const [{ data: project }, manuscript, { user, authorFullName, denemeKalan }, kontrolYaniti, dokumanDili, etik] = await Promise.all([
     supabase
       .from("academic_projects")
       .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id, due_date, status, ornek_atif")
@@ -52,9 +53,25 @@ export default async function WriteManuscriptPage({
       .maybeSingle(),
     getManuscript(id),
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return { user: null, authorFullName: "" };
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", data.user.id).single();
-      return { user: data.user, authorFullName: profile?.full_name ?? "" };
+      if (!data.user) return { user: null, authorFullName: "", denemeKalan: null };
+      /*
+        Deneme hesabı (21.11.2026): satır içi öneri denemenin 2 asistan
+        hakkından düşüyor; editör bunu açmadan önce söylemek için kalan
+        hakkı bilmeli. Abone ve kurum üyesi için null döner (sayım
+        yalnızca denemede yapılıyor). Okunamazsa uyarı gösterilmez ama hak
+        yine korunur: sınırı sunucu uygular (lib/ai/erisim.ts), bu değer
+        yalnızca ekrandaki açıklama için; editör bir okuma hatası yüzünden
+        açılmamazlık etmemeli.
+      */
+      const [{ data: profile }, deneme] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", data.user.id).single(),
+        denemeAsistanHakkim(data.user.id).catch((hata: unknown) => {
+          console.error("[deneme] hak okunamadı", hata);
+          return null;
+        }),
+      ]);
+      const denemeKalan = deneme?.denemede ? deneme.kalan : null;
+      return { user: data.user, authorFullName: profile?.full_name ?? "", denemeKalan };
     }),
     /* Kılavuz ve kaynakça kontrolü geçmişi: son 10 çalıştırma; en
        yenisinin tamamı açılışta gösteriliyor (migration 20261026202222).
@@ -135,6 +152,7 @@ export default async function WriteManuscriptPage({
         projectId={id}
         etik={etik}
         kullaniciId={user?.id ?? null}
+        denemeKalan={denemeKalan}
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         asistanAcikBasla={asistan === "1"}
