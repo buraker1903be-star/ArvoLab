@@ -79,7 +79,17 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   devam: "Belgedeki metni kaldığı yerden, aynı üslupla BİR paragraf olarak sürdür.",
   paragraf: "İmlecin bulunduğu bölüm için kullanıcının isteği doğrultusunda BİR paragraf yaz.",
   akademik: "Seçili metni anlamını değiştirmeden akademik üsluba çevir.",
-  kisalt: "Seçili metni anlamını koruyarak kısalt.",
+  /*
+    Kısaltma (21.11.2026, gerçek AI kabulü bulgusu): "anlamını koruyarak
+    kısalt" yetmiyordu. Kabulde model "istatistiksel olarak anlamlı
+    değildir"i "anlamlı değildir"e indirdi, "bu nedenle sonuçlar dikkatle
+    yorumlanmalıdır"ı attı ve açıklamasına "anlam korundu" yazdı. Sayı,
+    atıf ve olumsuzluk denetimleri bunu göremez: hiçbiri uydurulmamıştı,
+    niteleme DÜŞMÜŞTÜ. Korunacaklar tek tek sayılıyor; denetimi
+    lib/ai/anlam-koruma.ts ayrıca yapıyor.
+  */
+  kisalt:
+    "Seçili metni anlamını koruyarak kısalt. Şunlar KISALTMADA DÜŞMEZ, gerekirse metin daha az kısalır: istatistiksel niteleme ('istatistiksel olarak', p değeri, güven aralığı, etki büyüklüğü), olumsuzluk, belirsizlik/ihtiyat ifadeleri ('olabilir', 'henüz', 'dikkatle yorumlanmalıdır'), zaman bilgisi (yıl, dönem, 'birinci yılın sonunda'), örneklem bilgisi (kaç kişi, kaç grup) ve sınırlılık/karşıtlık ifadeleri ('ancak', 'genellenemez'). Bir iddianın gücünü değiştirme: 'istatistiksel olarak anlamlı değildir' ile 'anlamlı değildir' aynı şey değildir. Bunlardan birini korumadan kısaltamıyorsan metni daha az kısalt; yine de düşen olduysa 'yanit' alanında NEYİN düştüğünü söyle ve 'anlam korundu' deme.",
   genislet: "Seçili metni anlamını değiştirmeden, mevcut bilgilerle derinleştirerek genişlet; yeni olgu ekleme.",
   /*
     Ana hat (03.11.2026): başlık iskeleti. Kılavuzun zorunlu bölümleri
@@ -143,9 +153,10 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
   ]
     .filter(Boolean)
     .join("\n\n");
+  /* Geçmiş gerçek asistan turu olarak: gerekçe lib/ai/saglayici.ts'teki Rol tanımında. */
   const gecmis: Mesaj[] = g.gecmis.slice(-SINIR.gecmisMesaj).map((m) => ({
-    rol: m.rol === "kullanici" ? "kullanici" : "sistem",
-    metin: m.rol === "kullanici" ? bastanKirp(m.metin, SINIR.gecmisKarakter) : `ÖNCEKİ CEVABIN: ${bastanKirp(m.metin, SINIR.gecmisKarakter)}`,
+    rol: m.rol === "kullanici" ? "kullanici" : "asistan",
+    metin: bastanKirp(m.metin, SINIR.gecmisKarakter),
   }));
   const istek = bastanKirp(g.istek, SINIR.istek) || GOREV_ACIKLAMASI[g.gorev];
   const mesajlar: Mesaj[] = [

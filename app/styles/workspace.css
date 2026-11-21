@@ -1375,6 +1375,8 @@
 .yazim-anahat li[data-duzey="2"] { padding-left: 14px; }
 .yazim-anahat li[data-duzey="3"] { padding-left: 28px; }
 .yazim-anahat small { color: var(--muted); font-size: var(--fs-sm); }
+/* Kısaltmada düşen niteleme uyarısı: metinle eylem düğmeleri arasında, kaçırılmayacak yerde. */
+.yazim-oneri-uyari { display: grid; gap: 4px; margin: 0 12px 12px; padding: 8px 10px; border-left: 3px solid var(--warning); border-radius: var(--r-sm); background: var(--warning-soft); color: var(--ink); font-size: var(--fs-sm); line-height: 1.5; list-style: none; }
 .yazim-oneri-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 12px 12px; }
 .yazim-hizli { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
 /* Sohbet doluyken çipler tek satır ve yatay kayar: iki satıra sarınca sohbetten yer çalıyordu. */

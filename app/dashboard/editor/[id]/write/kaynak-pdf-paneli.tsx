@@ -177,6 +177,13 @@ export default function KaynakPdfPaneli({
     const metin = (hazirSoru ?? soru).trim();
     if (metin.length < 3) return;
     setSoruluyor(true);
+    /*
+      Geçmişe yalnızca soru ve cevap METNİ girer, alıntılar GİRMEZ
+      (21.11.2026, gerçek AI kabulü bulgusu): önceki turun kanıtı yeni
+      sorunun kanıtı değildir. Her cevabın alıntıları kendi `yanit`inde
+      durur ve yalnızca kendi kartının altında çizilir (aşağıdaki liste);
+      hiçbir yerde sonraki cevaba taşınmaz.
+    */
     const gecmis: KaynakMesaji[] = analizler.flatMap((a) => (a.yanit.cevap ? [{ rol: "kullanici" as const, metin: a.soru }, { rol: "asistan" as const, metin: a.yanit.cevap }] : [])).slice(-6);
     try {
       const yanit = await kaynaklaSohbet({ projectId, pdfId: pdf.id, soru: metin, gecmis, secim: secim && secim.metin.length >= SECIM_EN_KISA ? secim : null });

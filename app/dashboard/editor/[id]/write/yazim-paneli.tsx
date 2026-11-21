@@ -44,7 +44,7 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
   anahat: { tr: "Ana hat", en: "Outline" },
   tamamla: { tr: "Öneri", en: "Suggestion" },
 };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean };
+type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean; uyarilar?: string[] };
 
 export default function YazimPaneli({
   editor,
@@ -114,7 +114,7 @@ export default function YazimPaneli({
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev, uyarilar: cevap.uyarilar },
       ]);
     } catch (hata) {
       console.error(hata);
@@ -502,6 +502,19 @@ export default function YazimPaneli({
                         paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
                       )}
                     </div>
+                    {/*
+                      Kısaltmada düşen nitelemeler (21.11.2026): metin
+                      gösterilir ama hangi bilginin kaybolduğu kartın
+                      üstünde durur. Kaybı kullanıcı görmeden "İmlece ekle"
+                      düğmesine basmasın.
+                    */}
+                    {m.uyarilar?.length ? (
+                      <ul className="yazim-oneri-uyari" role="alert">
+                        {m.uyarilar.map((u, j) => (
+                          <li key={j}>{u}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                     <div className="yazim-oneri-eylem">
                       <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
                         {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}

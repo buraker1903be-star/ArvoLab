@@ -46,6 +46,7 @@ export default function KaynakSohbetPenceresi({
   const sor = async (metin: string) => {
     const temiz = metin.trim();
     if (!temiz || bekliyor) return;
+    /* Geçmişe yalnızca metin girer, alıntılar girmez; her alıntı kendi mesajında kalır (bkz. kaynak-pdf-paneli.tsx). */
     const gecmis = mesajlar.filter((m) => !(m.rol === "asistan" && m.hata)).map((m) => ({ rol: m.rol, metin: m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: temiz }]);
     setSoru("");
