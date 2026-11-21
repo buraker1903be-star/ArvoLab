@@ -456,6 +456,20 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
               <span>{t({ tr: "Geri: çalışma menüsü", en: "Back: work menu" })}</span>
             </Link>
             <h2 className="os-sol-alan-ad">{solAracAdi}</h2>
+            {/*
+              Masaüstünde menü yerinde durduğu için (21.11.2026) geri bağlantısı
+              yerine kapatma düğmesi; aynı adrese gider, araç kapanır, içerik
+              menünün yanına döner. Tablet ve telefonda gizli: orada "Geri" kalır.
+            */}
+            <Link
+              href={solGeriAdresi}
+              scroll={false}
+              className="os-sol-kapat"
+              aria-label={t({ tr: `${solAracAdi} alanını kapat`, en: `Close ${solAracAdi}` })}
+              title={t({ tr: "Kapat", en: "Close" })}
+            >
+              <X size={16} aria-hidden="true" />
+            </Link>
           </div>
           {/* Yazım ekranının sol araçları buraya yerleşir (manuscript-editor.tsx, createPortal). */}
           <div id="sol-alan-yuva" className="os-sol-alan-yuva" />

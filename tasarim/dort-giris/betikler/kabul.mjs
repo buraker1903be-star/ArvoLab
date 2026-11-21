@@ -86,6 +86,19 @@ for (const koyu of [false, true]) {
     const sekmeler = await s.evaluate(() => [...document.querySelectorAll('.sol-arac:not([hidden]) .sol-kaynak-sekme')].map((x) => [x.textContent.trim(), x.getAttribute("aria-selected")]));
     if (!koyu) kayit("Kaynaklar: Kütüphanem ve Kaynakça sekmeleri, Makale bul belirgin", JSON.stringify(sekmeler) === JSON.stringify([["Kütüphanem", "true"], ["Kaynakça", "false"]]) && (await s.locator(".sol-arac:not([hidden]) .sol-kaynak-gec").innerText()).includes("Makale bul"), { sekmeler });
     await s.screenshot({ path: `${OUT}masaustu-${tema}-kaynaklar.png` });
+    // Araç menünün YANINDA (21.11.2026): menü yerinde, dört giriş görünür ve tıklanabilir; içerik menü + araç kadar kayar.
+    const yan = await s.evaluate(() => {
+      const r = (q) => document.querySelector(q)?.getBoundingClientRect();
+      const n = r(".os-gezinme"), a = r(".os-sol-alan[data-acik]"), ic = r(".dashboard-content-shell");
+      const ust = [...document.querySelectorAll(".os-calisma-liste > li > .os-gezinme-oge:not(.os-calisma-alt)")].map((x) => {
+        const k = x.getBoundingClientRect(); const e = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+        return { ad: x.textContent.trim(), ustte: !!e && x.contains(e) };
+      });
+      return { menuSol: Math.round(n.left), menuEn: Math.round(n.width), aracSol: Math.round(a.left), aracEn: Math.round(a.width), icerikSol: Math.round(ic.left), ust, geri: !!document.querySelector(".os-sol-alan[data-acik] .os-sol-geri")?.getClientRects().length, kapat: !!document.querySelector(".os-sol-alan[data-acik] .os-sol-kapat")?.getClientRects().length };
+    });
+    kayit(`masaüstü ${tema}: araç açıkken menü yerinde ve tam genişlikte, araç onun sağında`, yan.menuSol === 0 && yan.menuEn === 240 && yan.aracSol === 240 && yan.aracEn === 300 && yan.icerikSol === 540, yan);
+    kayit(`masaüstü ${tema}: araç açıkken dört giriş görünür ve üstte (örtülmüyor)`, yan.ust.length === 4 && yan.ust.every((x) => x.ustte), { ust: yan.ust });
+    kayit(`masaüstü ${tema}: masaüstünde "Geri" yok, kapatma düğmesi var`, !yan.geri && yan.kapat, yan);
     if (!koyu) {
       await s.locator(".sol-arac:not([hidden])").getByRole("tab", { name: "Kaynakça" }).click(); await s.waitForTimeout(500);
       kayit("Kaynakça sekmesi aynı alanda açılır", /sol=kaynakca/.test(s.url()) && (await s.locator(".os-sol-alan-ad").innerText()) === "Kaynaklar");
@@ -98,12 +111,19 @@ for (const koyu of [false, true]) {
       const sonra = await durum(s);
       kayit("kaynak ararken editörün içeriği, imleci ve kaydırması korunur", JSON.stringify(once2) === JSON.stringify(sonra), { once2, sonra });
     }
-    // Kontrol ve teslim: kılavuz + biçim + teslim + sayfalar.
-    // Araç alanı açıkken menünün üstündedir (masaüstü): önce "Geri: çalışma menüsü".
-    if (await s.locator(".os-sol-alan[data-acik] .os-sol-geri").isVisible().catch(() => false)) { await s.locator(".os-sol-alan[data-acik] .os-sol-geri").click(); await s.waitForTimeout(500); }
+    // Kontrol ve teslim: kılavuz + biçim + teslim + sayfalar. Kaynaklar açıkken DOĞRUDAN menüden (eskiden önce "Geri" gerekiyordu).
     await s.locator(".os-calisma-liste").getByRole("link", { name: "Kontrol ve teslim" }).click();
     await s.waitForSelector('.os-sol-alan[data-acik="kontrol"]', { timeout: 15000 });
     await s.waitForTimeout(500);
+    if (!koyu) {
+      const once3 = await durum(s);
+      await s.locator('.os-sol-alan[data-acik="kontrol"] .os-sol-kapat').click(); await s.waitForTimeout(600);
+      const kapali = await s.evaluate(() => ({ acik: !!document.querySelector(".os-sol-alan[data-acik]"), icerikSol: Math.round(document.querySelector(".dashboard-content-shell").getBoundingClientRect().left) }));
+      kayit("kapatma düğmesi aracı kapatır; içerik menünün yanına döner, editör durumu korunur", !/sol=/.test(s.url()) && !kapali.acik && kapali.icerikSol === 240 && JSON.stringify(once3) === JSON.stringify(await durum(s)), kapali);
+      await s.locator(".os-calisma-liste").getByRole("link", { name: "Kontrol ve teslim" }).click();
+      await s.waitForSelector('.os-sol-alan[data-acik="kontrol"]', { timeout: 15000 });
+      await s.waitForTimeout(500);
+    }
     if (!koyu) {
       // Bölüm başlıkları CSS'le büyük harf (innerText onu yansıtır); Türkçe küçük harfe çevirip karşılaştır.
       const panel = (await s.locator(".sol-arac:not([hidden])").innerText()).toLocaleLowerCase("tr");
@@ -126,6 +146,15 @@ for (const koyu of [false, true]) {
       }
     }
     kayit(`masaüstü ${tema}: sayfa hatası yok`, hatalar.length === 0, { hatalar });
+    await c.close();
+  }
+  // ── Tablet: araç eskisi gibi içeriğin üstünde açılan yaprak, "Geri" bağlantısıyla (masaüstü değişikliği buraya taşmaz).
+  if (!koyu) {
+    const { c, s } = await baglam({ viewport: { width: 1024, height: 768 } }, koyu);
+    await s.goto(`/dashboard/editor/${PR}/write?sol=kaynaklar`); await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 }); await s.waitForTimeout(1000);
+    const tb = await s.evaluate(() => ({ aracSol: Math.round(document.querySelector(".os-sol-alan[data-acik]").getBoundingClientRect().left), geri: !!document.querySelector(".os-sol-alan[data-acik] .os-sol-geri")?.getClientRects().length, kapat: !!document.querySelector(".os-sol-alan[data-acik] .os-sol-kapat")?.getClientRects().length }));
+    kayit("tablet: araç yaprağı soldan, \"Geri\" görünür, masaüstü kapatma düğmesi yok", tb.aracSol === 0 && tb.geri && !tb.kapat, tb);
+    await s.screenshot({ path: `${OUT}tablet-acik-kaynaklar.png` });
     await c.close();
   }
   // ── Telefon

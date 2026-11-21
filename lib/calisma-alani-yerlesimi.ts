@@ -195,7 +195,13 @@ export function yerlesimKarari(girdi: {
   }
   const olcekFor = (sol: number, sag: number) => Math.min(1, (ekran - sol - (sag ? sag + AYIRICI_PAYI : 0) - SAYFA_PAYI) / KAGIT_GENISLIGI);
   const kenar: YerlesimKarari["kenar"] = solArac ? "arac" : girdi.kenarDar ? "ray" : "tam";
-  const solEn = solArac ? SOL_ARAC_GENISLIGI[solArac] : girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
+  /*
+    Araç menünün YANINDA açılır (21.11.2026): sol genişlik menü + araç.
+    Eskiden araç menünün yerini alıyordu ve sol genişlik yalnızca aracınkiydi
+    (os-shell.css, SOL ARAÇ ALANI).
+  */
+  const menuEn = girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
+  const solEn = solArac ? menuEn + SOL_ARAC_GENISLIGI[solArac] : menuEn;
 
   /* PDF: her zaman çekmece; editörün kenarı ve ölçeği PDF yokmuş gibi (yukarıda, PDF ÇEKMECESİ). */
   if (sagPanel === "pdf") {
