@@ -976,7 +976,7 @@ export default function ManuscriptEditor({
   /*
     CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css).
 
-    Ölçek değişince ekranın üstündeki belge noktası yerinde tutulur
+    Ölçek değişince okuma çizgisindeki belge noktası yerinde tutulur
     (21.11.2026). Araç menünün yanında açıldığından beri sol araç belge
     sütununu daraltıyor ve kâğıt ölçeği değişiyor (1440 px'te 1 → 0,95);
     eskiden scrollTop olduğu gibi kaldığı için okunan yer bir paragraf
@@ -992,17 +992,29 @@ export default function ManuscriptEditor({
     sonOlcek.current = belgeOlcegi;
     const icerik = kap.querySelector<HTMLElement>(".manuscript-editor-content");
     const kaydirici = document.scrollingElement;
+    /*
+      Çapa "okuma çizgisi": araç çubuğunun alt kenarı (çekmecenin başladığı
+      yer, --cekmece-ust ile aynı hesap). Ekranın en üstü yapışkan üst çubuğun
+      ve araç çubuğunun altında kaldığı için orayı sabitlemek, kullanıcının
+      gördüğü ilk satırı yine ~1 satır kaydırıyordu (ölçüldü: 0,94 ölçekte
+      çizgideki blok 17 → 18).
+    */
+    const okumaCizgisi = () => {
+      const baslik = document.querySelector(".manuscript-araclar") ?? document.querySelector(".dashboard-header");
+      const ustCubuk = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64;
+      return Math.max(ustCubuk, baslik ? baslik.getBoundingClientRect().bottom : 0);
+    };
     let capa: number | null = null;
     if (onceki !== null && onceki !== belgeOlcegi && icerik && kaydirici) {
-      // Ekranın üstünün kâğıt içindeki yeri, ölçeksiz birimde.
-      const goreli = -icerik.getBoundingClientRect().top;
+      // Okuma çizgisinin kâğıt içindeki yeri, ölçeksiz birimde.
+      const goreli = okumaCizgisi() - icerik.getBoundingClientRect().top;
       if (goreli > 0) capa = goreli / onceki;
     }
     kap.style.setProperty("--belge-olcek", String(belgeOlcegi));
     if (sagGenislik) kap.style.setProperty("--sag-panel-genislik", `${sagGenislik}px`);
     else kap.style.removeProperty("--sag-panel-genislik");
     if (capa !== null && icerik && kaydirici) {
-      kaydirici.scrollTop += icerik.getBoundingClientRect().top + capa * belgeOlcegi;
+      kaydirici.scrollTop += icerik.getBoundingClientRect().top + capa * belgeOlcegi - okumaCizgisi();
     }
   });
 

@@ -49,7 +49,10 @@ const durum = (s) => s.evaluate(() => {
   const e = document.querySelector(".ProseMirror").editor;
   // Çizgi bloklar arasındaki boşluğa düşebilir; posAtCoords en yakın konumu verir.
   const r = document.querySelector(".ProseMirror").getBoundingClientRect();
-  const konum = e.view.posAtCoords({ left: r.left + 60, top: 260 });
+  // Okuma çizgisi: araç çubuğunun hemen altı (manuscript-editor.tsx, ölçek çapası ile aynı yer).
+  const baslik = document.querySelector(".manuscript-araclar") ?? document.querySelector(".dashboard-header");
+  const cizgi = Math.max(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 64, baslik ? baslik.getBoundingClientRect().bottom : 0) + 6;
+  const konum = e.view.posAtCoords({ left: r.left + 60, top: cizgi });
   const ust = konum ? e.state.doc.resolve(konum.pos).index(0) : -1;
   return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, ustBlok: ust };
 });
