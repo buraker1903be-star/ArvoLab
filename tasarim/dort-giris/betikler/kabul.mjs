@@ -40,6 +40,27 @@ async function baglam(secenek, koyu = false) {
 }
 const ed = (s, fn, arg) => s.evaluate(([f, a]) => new Function("e", "a", `return (${f})(e, a)`)(document.querySelector(".ProseMirror").editor, a), [fn.toString(), arg]);
 const durum = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; const kap = document.scrollingElement; return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, kaydirma: Math.round(kap.scrollTop) }; });
+/*
+  Koyu temada kararlı (geçiş bitmiş) ekranda açık zeminli öğe kalmamalı.
+  21.11.2026: teslim görsellerinde açık düğmeler ve beyaz zemin görüldü;
+  ölçünce görüntünün tema DEĞİŞTİRİLDİKTEN hemen sonra (0 ms) alındığı
+  çıktı — 150 ms sonra her ekranda 0. Bu denetim koyu açılmış bağlamda
+  çalışır: belge kâğıdı, PDF sayfası ve ters renkli baş harf rozeti
+  (os-avatar, bilerek --ink zeminli) dışarıda.
+*/
+const acikYuzeyler = (s) => s.evaluate(() => {
+  const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
+  const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const l = [];
+  for (const el of document.querySelectorAll("body *")) {
+    if (el.closest(".kagit, .ProseMirror, .pdf-sayfa, canvas, svg, .os-avatar")) continue;
+    const r = el.getBoundingClientRect(); if (r.width < 8 || r.height < 8 || r.bottom < 0 || r.top > innerHeight) continue;
+    const st = getComputedStyle(el); if (st.visibility === "hidden" || Number(st.opacity) === 0) continue;
+    const bg = parse(st.backgroundColor); if (!bg || bg.a < 0.5 || lum(bg) < 0.4) continue;
+    l.push(`${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 2).join(".")} ${st.backgroundColor}`);
+  }
+  return l;
+});
 const girisler = (s, sel) => s.evaluate((sel) => [...document.querySelectorAll(sel)].filter((e) => e.getClientRects().length).map((e) => ({ ad: e.querySelector(".os-gezinme-ad")?.textContent.trim(), etkin: e.classList.contains("is-active") })), sel);
 
 for (const koyu of [false, true]) {
@@ -86,6 +107,7 @@ for (const koyu of [false, true]) {
     const sekmeler = await s.evaluate(() => [...document.querySelectorAll('.sol-arac:not([hidden]) .sol-kaynak-sekme')].map((x) => [x.textContent.trim(), x.getAttribute("aria-selected")]));
     if (!koyu) kayit("Kaynaklar: Kütüphanem ve Kaynakça sekmeleri, Makale bul belirgin", JSON.stringify(sekmeler) === JSON.stringify([["Kütüphanem", "true"], ["Kaynakça", "false"]]) && (await s.locator(".sol-arac:not([hidden]) .sol-kaynak-gec").innerText()).includes("Makale bul"), { sekmeler });
     await s.screenshot({ path: `${OUT}masaustu-${tema}-kaynaklar.png` });
+    if (koyu) { const a = await acikYuzeyler(s); kayit("masaüstü koyu: Kaynaklar'da açık zeminli öğe yok", a.length === 0, { a: a.slice(0, 6) }); }
     // Araç menünün YANINDA (21.11.2026): menü yerinde, dört giriş görünür ve tıklanabilir; içerik menü + araç kadar kayar.
     const yan = await s.evaluate(() => {
       const r = (q) => document.querySelector(q)?.getBoundingClientRect();
@@ -130,6 +152,13 @@ for (const koyu of [false, true]) {
       kayit("Kontrol ve teslim: kılavuz, biçim, teslim hazırlığı ve eski 'Diğer araçlar' sayfaları", ["kılavuz", "biçim", "teslim hazırlığı", "özet ve teslim", "kanıt matrisi", "etik kurul", "analiz", "belge kontrolü"].every((x) => panel.includes(x)), { ornek: panel.slice(0, 200) });
     }
     await s.screenshot({ path: `${OUT}masaustu-${tema}-kontrol.png` });
+    if (koyu) {
+      let a = await acikYuzeyler(s); kayit("masaüstü koyu: Kontrol ve teslim'de açık zeminli öğe yok", a.length === 0, { a: a.slice(0, 6) });
+      await s.goto(`/dashboard/editor/${PR}/write?sol=arama`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(1000);
+      const f = s.getByRole("button", { name: /Filtreler/ }).first(); if (await f.isVisible().catch(() => false)) { await f.click(); await s.waitForTimeout(400); }
+      a = await acikYuzeyler(s); kayit("masaüstü koyu: Makale bul (filtreler açık) açık zeminli öğe yok", a.length === 0, { a: a.slice(0, 6) });
+      await s.screenshot({ path: `${OUT}masaustu-${tema}-makale-bul.png` });
+    }
     if (!koyu) {
       // Eski bağlantılar.
       for (const [adres, beklenen, acik] of [["?sol=kilavuz", "Kontrol ve teslim", "kontrol"], ["?sol=arama", "Kaynaklar", "arama"], ["?sol=kaynakca", "Kaynaklar", "kaynakca"]]) {
@@ -174,8 +203,10 @@ for (const koyu of [false, true]) {
     }
     await s.goto(`/dashboard/editor/${PR}/write?sol=kaynaklar`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(1000);
     await s.screenshot({ path: `${OUT}telefon-${tema}-kaynaklar.png` });
+    if (koyu) { const a = await acikYuzeyler(s); kayit("telefon koyu: Kaynaklar'da açık zeminli öğe yok", a.length === 0, { a: a.slice(0, 6) }); }
     await s.goto(`/dashboard/editor/${PR}/write?sol=kontrol`); await s.locator(".ProseMirror").first().waitFor(); await s.waitForTimeout(1000);
     await s.screenshot({ path: `${OUT}telefon-${tema}-kontrol.png` });
+    if (koyu) { const a = await acikYuzeyler(s); kayit("telefon koyu: Kontrol ve teslim'de açık zeminli öğe yok", a.length === 0, { a: a.slice(0, 6) }); }
     const tasma = await s.evaluate(() => document.scrollingElement.scrollWidth - document.documentElement.clientWidth);
     kayit(`telefon ${tema}: yatay taşma yok`, tasma <= 0, { tasma });
     kayit(`telefon ${tema}: sayfa hatası yok`, hatalar.length === 0, { hatalar });
