@@ -19,11 +19,11 @@
     "gecti": true,
     "ayrinti": [
       {
-        "pdf": "941f2545-3969-473e-8492-03cba909b60c",
+        "pdf": "74e6c78c-278c-42a0-b4da-81c7e109836e",
         "surum": "sha256:4feee8ffe2896a8f80f296edd12a2e9a",
         "sayfa": 1,
         "pasaj": "Seasonal variation explained most of the observed difference across the three regions.",
-        "kaynak": "cdbdaedf-2fea-4ee9-b00c-689beaae5dec"
+        "kaynak": "01161eb7-6c29-4740-b756-1787a4488985"
       }
     ]
   },
@@ -135,6 +135,17 @@
       "sayfa": "2",
       "pasaj": "Rainfall alone did not account for the gap between the coastal stations.",
       "kalici": "Rainfall alone did not account for the gap between the coastal stations."
+    }
+  },
+  {
+    "ad": "yenileme sonrası çekmece başlığı kullanılan pasajları söyler ('henüz yok' demez)",
+    "gecti": true,
+    "ayrinti": {
+      "cip": [
+        "Kaynak kaydı: bağlı",
+        "PDF: açık",
+        "Belgede kullanılan pasaj: PDF s. 1, 2"
+      ]
     }
   },
   {

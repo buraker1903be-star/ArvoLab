@@ -575,7 +575,13 @@ export default function KaynakPdfPaneli({
     üstünde sürekli yer kaplıyordu.
   */
   const kayitBagli = Boolean(pdf?.kaynak_id);
-  const alintiVar = Boolean(pdf && sonAlinti?.pdfId === pdf.id);
+  /*
+    Alıntı durumu belgedeki kalıcı işaretlerden de okunur (20.11.2026). Eskiden
+    yalnızca bu oturumda eklenen alıntıya bakıyordu: sayfa yenilenince PDF'te
+    sarı işaret görünürken başlık "Alıntı: henüz yok" diyordu.
+  */
+  const kaliciSayfalar = [...new Set((isaretler?.gecerli ?? []).map((d) => d.sayfa))].sort((x, y) => x - y);
+  const alintiVar = Boolean(pdf && (sonAlinti?.pdfId === pdf.id || kaliciSayfalar.length));
   const durumOzeti = pdf ? (
     <div className="pdf-durum-ozeti" data-acik={ayrintiAcik ? "" : undefined}>
       {/* Telefonda tek satırlık kısa özet: üç durum ayrı işaretlerle, ayrıntılar dokununca açılır. */}
@@ -598,10 +604,12 @@ export default function KaynakPdfPaneli({
         {pdf.kaynak_id ? t({ tr: "Kaynak kaydı: bağlı", en: "Source record: linked" }) : t({ tr: "Kaynak kaydı: bağlı değil", en: "Source record: not linked" })}
       </span>
       <span className="guven-cip" data-tur="kunye">{t({ tr: "PDF: açık", en: "PDF: open" })}</span>
-      <span className="guven-cip" data-tur={sonAlinti?.pdfId === pdf.id ? "kunye" : "notr"}>
+      <span className="guven-cip" data-tur={alintiVar ? "kunye" : "notr"}>
         {sonAlinti?.pdfId === pdf.id
           ? t({ tr: `Alıntı: PDF s. ${sonAlinti.sayfa}'de birebir`, en: `Quote: exact on PDF p. ${sonAlinti.sayfa}` })
-          : t({ tr: "Alıntı: henüz yok", en: "Quote: none yet" })}
+          : kaliciSayfalar.length
+            ? t({ tr: `Belgede kullanılan pasaj: PDF s. ${kaliciSayfalar.join(", ")}`, en: `Passage used in the document: PDF p. ${kaliciSayfalar.join(", ")}` })
+            : t({ tr: "Alıntı: henüz yok", en: "Quote: none yet" })}
       </span>
       <button type="button" className="link-button" aria-expanded={ayrintiAcik} aria-controls="pdf-durum-ayrinti" onClick={() => setAyrintiAcik((a) => !a)}>
         {ayrintiAcik ? t({ tr: "Ayrıntıları gizle", en: "Hide details" }) : t({ tr: "Ayrıntılar", en: "Details" })}

@@ -195,6 +195,8 @@ const ekle = async (s, metin, dugme) => {
   await s.waitForSelector(".kaynak-pdf-paneli:not([hidden]) .textLayer[data-sayfa='2'] span.pdf-pasaj", { timeout: 60000 }).catch(() => {});
   const gidis = await s.evaluate(() => ({ sayfa: document.querySelector(".kaynak-pdf-paneli .pdf-sayfa-girdi input, .kaynak-pdf-paneli input[aria-label*='Sayfa']")?.value ?? null, pasaj: [...document.querySelectorAll(".kaynak-pdf-paneli span.pdf-pasaj")].map((x) => x.textContent).join(""), kalici: [...document.querySelectorAll(".kaynak-pdf-paneli .textLayer[data-sayfa='2'] span.pdf-kalici")].map((x) => x.textContent).join("") }));
   kayit("Dayanağa git: 2. sayfa açıldı, pasaj vurgulu ve kalıcı işaretli", gidis.pasaj.includes(CUMLE2.slice(0, 30)) && gidis.kalici.includes(CUMLE2.slice(0, 30)), gidis);
+  const cip = await s.locator(".kaynak-pdf-paneli .guven-cip").allTextContents();
+  kayit("yenileme sonrası çekmece başlığı kullanılan pasajları söyler ('henüz yok' demez)", cip.some((x) => /Belgede kullanılan pasaj: PDF s\. 1, 2/.test(x)), { cip });
   await s.screenshot({ path: `${OUT}4-dayanaga-git.png` });
 
   // Atfı (sayfa 2) sil → işareti gider, sayfa 1 işareti kalır.
