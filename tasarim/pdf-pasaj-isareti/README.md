@@ -55,4 +55,4 @@ satırın span'ı bütün olarak boyanır (pdf.js satırı tek span verir).
 GERCEK_PDF=<iki sütunlu gerçek PDF> node tasarim/pdf-pasaj-isareti/betikler/kabul.mjs
 ```
 
-25/25 (sentetik PDF + TraceMonkey, PLDI 2009). Görseller `gorseller/`.
+26/26 (sentetik PDF + TraceMonkey, PLDI 2009). Görseller `gorseller/`.
