@@ -43,7 +43,33 @@ export interface AramaKaydi {
   /** Açık erişimli tam metnin adresi (varsa) */
   acikErisimUrl: string | null;
   saglayici: AramaSaglayici;
+  /**
+   * Birleştirmeden ÖNCE her dizinin kendi verdiği künye (20.11.2026,
+   * lib/arama-kunye-kontrolu.ts). Birleştirme alanları karıştırıyor (yıl
+   * OpenAlex'ten, dergi Crossref'ten): birleşik kaydı bir dizinle
+   * "doğrulamak" o dizinin kendi verisini kendisiyle karşılaştırmak olurdu.
+   * Kayıt iki dizinde birden çıktıysa iki ham künye birbirine karşı sınanır.
+   */
+  ham?: Partial<Record<AramaSaglayici, HamKunye>>;
 }
+
+/** Bir dizinin tek başına verdiği künye alanları (birleştirmeden önce). */
+export interface HamKunye {
+  baslik: string;
+  /** Yapılandırılmış yazar dizesi varsa o, yoksa "Ad Soyad; Ad Soyad". */
+  yazarlar: string;
+  yil: number | null;
+  dergi: string | null;
+  doi: string | null;
+}
+
+const hamKunye = (k: AramaKaydi): HamKunye => ({
+  baslik: k.baslik,
+  yazarlar: k.kunyeYazarlari ?? k.yazarlar.join("; "),
+  yil: k.yil,
+  dergi: k.dergi,
+  doi: k.doi,
+});
 
 export interface AramaFiltresi {
   sorgu: string;
@@ -301,6 +327,7 @@ export function kayitlariBirlestir(listeler: AramaKaydi[][], sinir = EN_FAZLA_SO
       ?? (baslikAnahtari ? baslikIle.get(baslikAnahtari) : undefined);
 
     if (onceki) {
+      onceki.ham = { ...onceki.ham, [kayit.saglayici]: onceki.ham?.[kayit.saglayici] ?? hamKunye(kayit) };
       onceki.dergi = onceki.dergi ?? kayit.dergi;
       onceki.doi = onceki.doi ?? kayit.doi;
       onceki.atifSayisi = onceki.atifSayisi ?? kayit.atifSayisi;
@@ -330,7 +357,7 @@ export function kayitlariBirlestir(listeler: AramaKaydi[][], sinir = EN_FAZLA_SO
       continue;
     }
 
-    const kopya = { ...kayit, yazarlar: [...kayit.yazarlar] };
+    const kopya = { ...kayit, yazarlar: [...kayit.yazarlar], ham: { [kayit.saglayici]: hamKunye(kayit) } };
     if (kopya.doi) doiIle.set(kopya.doi, kopya);
     if (baslikAnahtari) baslikIle.set(baslikAnahtari, kopya);
     sonuc.push(kopya);
@@ -419,3 +446,25 @@ export async function literaturAra(filtre: AramaFiltresi, getir: Getirici = vars
 
   return { kayitlar, ulasilamayan };
 }
+
+/**
+ * Kaynağa yazılacak yazar dizesi (20.11.2026'dan beri iki ekleme yolu için
+ * TEK yer: "Listeme ekle" ve "PDF'yi oku"). Sıra: (1) DOI'nin Crossref
+ * künyesi, (2) sağlayıcının yapılandırılmış adı ("Soyad, A."), (3) ikisi de
+ * yoksa ekrandaki adlar "; " ile, TERS ÇEVRİLMEDEN (soyadı tahmini "van der
+ * Berg"i ve kurum adlarını bozar).
+ *
+ * Eskiden "PDF'yi oku" yolu (okumayaAl) adları ", " ile birleştiriyordu:
+ * "Markus Knauff, Jelica Nejasmic" atıfta TEK yazar sayılıyor ve Preview'da
+ * "(Markus Knauff, 2014)" çıkıyordu (21.11.2026). "Listeme ekle" bu hatayı
+ * M1'de almıştı; iki yol ayrı kod olduğu için öbürü geride kalmıştı.
+ */
+export function kaynakYazarDizesi(girdi: { doiYazarlari?: string | null; kunyeYazarlari?: string | null; yazarlar?: string[] | null }): string | null {
+  const temiz = (s: string | null | undefined) => htmlVarliklariniCoz(s ?? "").trim();
+  return (
+    temiz(girdi.doiYazarlari) ||
+    temiz(girdi.kunyeYazarlari) ||
+    (girdi.yazarlar ?? []).map((y) => temiz(y)).filter(Boolean).join("; ")
+  ).slice(0, 500) || null;
+}
+

@@ -284,3 +284,23 @@ describe("arama akışı", () => {
     assert.deepEqual(kayitlar[0].yazarlar, ["World Health Organization"]);
   });
 });
+
+describe("kaynakYazarDizesi: iki ekleme yolu aynı yazar dizesini yazar", () => {
+  test("Preview'daki hata: 'Ad Soyad' adları virgülle birleşip tek yazar sayılmaz", async () => {
+    const { kaynakYazarDizesi } = await import("@/lib/literatur-arama");
+    const { formatInTextCitation } = await import("@/lib/citation-format");
+    const kaynak = (authors: string | null) => ({ title: "An Efficiency Comparison of Document Preparation Systems", authors, year: "2014", source_type: "article", container_title: "PLoS ONE", doi_or_url: null });
+    // Eskiden okumayaAl: ", " ile → "(Markus Knauff, 2014)".
+    assert.equal(formatInTextCitation(kaynak("Markus Knauff, Jelica Nejasmic") as never, "apa7", 1), "(Markus Knauff, 2014)");
+    // Şimdi: DOI künyesi > yapılandırılmış ad > "; " ile adlar.
+    assert.equal(kaynakYazarDizesi({ doiYazarlari: "Knauff, M., & Nejasmic, J.", kunyeYazarlari: null, yazarlar: ["Markus Knauff", "Jelica Nejasmic"] }), "Knauff, M., & Nejasmic, J.");
+    assert.equal(kaynakYazarDizesi({ kunyeYazarlari: "Knauff, M., & Nejasmic, J.", yazarlar: ["Markus Knauff"] }), "Knauff, M., & Nejasmic, J.");
+    const yedek = kaynakYazarDizesi({ yazarlar: ["Markus Knauff", "Jelica Nejasmic"] });
+    assert.equal(yedek, "Markus Knauff; Jelica Nejasmic");
+    for (const [stil, beklenen] of [["apa7", "(Knauff ve Nejasmic, 2014)"], ["harvard", "(Knauff ve Nejasmic, 2014)"]] as const) {
+      assert.equal(formatInTextCitation(kaynak("Knauff, M., & Nejasmic, J.") as never, stil, 1), beklenen, stil);
+      assert.equal(formatInTextCitation(kaynak(yedek) as never, stil, 1), beklenen, `${stil} (yedek)`);
+    }
+    assert.equal(kaynakYazarDizesi({ yazarlar: [] }), null);
+  });
+});

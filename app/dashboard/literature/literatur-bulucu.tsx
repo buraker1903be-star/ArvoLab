@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { BookOpenCheck, Check, ExternalLink, FileText, Plus, Search, SlidersHorizontal, Undo2, Unlock, X } from "lucide-react";
 import { aramaKaydiniEkle, literaturAramasiYap, okumayaAl, type AramaYaniti } from "@/app/actions/literatur-arama";
+import { bagimsizDizin, KontrolKuyrugu, kontrolAnahtari, servisHatasi, type KontrolGirdisi, type KunyeKontrolSonucu } from "@/lib/arama-kunye-kontrolu";
 import { deleteLiteratureSource } from "@/app/actions/literature";
 import { kaynakPdfleriniBul, pdfKaynaginiBagla } from "@/app/actions/kaynak-pdf";
 import { aramaKunyesi, pdfAramaDurumu, type MakalePdfDurumu } from "@/lib/makale-pdf-durumu";
@@ -12,8 +13,47 @@ import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 
 type Proje = { id: string; title: string };
 type Kayit = NonNullable<AramaYaniti["kayitlar"]>[number];
+type AramaKaydi = Kayit;
 
 const DIZIN_ADI: Record<string, string> = { openalex: "OpenAlex", crossref: "Crossref" };
+
+/*
+  OTOMATİK KÜNYE KONTROLÜ (20.11.2026, lib/arama-kunye-kontrolu.ts).
+  Sonuçlar BEKLETİLMEDEN gösterilir; her sonucun künyesi arkada, en çok
+  üç eşzamanlı istekle, görünürlerden başlayarak öteki dizine sorulur ve
+  rozet geldikçe güncellenir. Öğrencinin ayrıca kaynakça denetimi
+  çalıştırması gerekmez.
+
+  Önbellek sayfa ömrü boyunca bu modülde (sunucuda da ayrıca var): aynı
+  yayın başka bir aramada çıkınca yeniden sorulmaz. Geçici sonuç (servis
+  arızası) önbelleğe girmez.
+
+  Eski aramanın yanıtı yeni listeyi DEĞİŞTİRMEZ: sonuç içerik anahtarına
+  (kontrolAnahtari) yazılır ve yalnızca o anahtar GÜNCEL listede varsa
+  ekrana uygulanır — yani yalnızca aynı içerikli kayda. Eski aramanın
+  bekleyen istekleri yeni aramada atılır.
+*/
+const KUNYE_ONBELLEGI = new Map<string, KunyeKontrolSonucu>();
+const ES_ZAMANLI_KONTROL = 3;
+/*
+  Uç nokta (app/api/kunye-kontrol), sunucu işlemi değil: Next sunucu
+  işlemlerini sırayla gönderiyor; kontroller hem gerçekte tek tek gidiyor
+  hem de "Listeme ekle"yi ve yeni aramayı arkalarında bekletiyordu.
+*/
+async function kunyeSor(girdi: KontrolGirdisi, sinyal: AbortSignal): Promise<KunyeKontrolSonucu> {
+  const yanit = await fetch("/api/kunye-kontrol", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(girdi), signal: sinyal });
+  return (await yanit.json()) as KunyeKontrolSonucu;
+}
+const kontrolGirdisi = (k: AramaKaydi): KontrolGirdisi => ({
+  baslik: k.baslik,
+  yazarlar: k.yazarlar,
+  kunyeYazarlari: k.kunyeYazarlari,
+  yil: k.yil,
+  dergi: k.dergi,
+  doi: k.doi,
+  saglayici: k.saglayici,
+  ham: k.ham,
+});
 
 /*
   Literatür bulucu: kaynakları GERÇEK dizinlerde arar (OpenAlex + Crossref).
@@ -81,6 +121,31 @@ export default function LiteraturBulucu({
   */
   const [pdfDurumu, setPdfDurumu] = useOturumDurumu<Record<string, { durum: MakalePdfDurumu; adres?: string | null; pdfId?: string | null }>>(anahtar("pdfDurumu"), {});
   const [okumaya, setOkumaya] = useOturumDurumu<Record<string, { kaynakId: string; yeni: boolean }>>(anahtar("okumaya"), {});
+  const [kunye, setKunye, kunyeYuklendi] = useOturumDurumu<Record<string, KunyeKontrolSonucu>>(anahtar("kunye"), {});
+  const girdiler = useRef(new Map<string, KontrolGirdisi>());
+  const guncelAnahtarlar = useRef(new Set<string>());
+  const kuyrukRef = useRef<KontrolKuyrugu<KunyeKontrolSonucu> | null>(null);
+  const iptaller = useRef(new Map<string, AbortController>());
+  const kuyruk = useCallback(() => {
+    if (!kuyrukRef.current) {
+      kuyrukRef.current = new KontrolKuyrugu<KunyeKontrolSonucu>(
+        ES_ZAMANLI_KONTROL,
+        (a) => {
+          const g = girdiler.current.get(a)!;
+          const iptal = new AbortController();
+          iptaller.current.set(a, iptal);
+          return kunyeSor(g, iptal.signal).finally(() => iptaller.current.delete(a));
+        },
+        (_nesil, a, sonuc) => {
+          // İstek hiç sunucuya ulaşmadıysa (ağ kopuk) bu da servis arızası: "yanlış kaynak" değil.
+          const s = sonuc ?? servisHatasi(bagimsizDizin(girdiler.current.get(a)?.saglayici ?? "openalex"));
+          if (!s.gecici) KUNYE_ONBELLEGI.set(a, s);
+          if (guncelAnahtarlar.current.has(a)) setKunye((o) => ({ ...o, [a]: s }));
+        },
+      );
+    }
+    return kuyrukRef.current;
+  }, [setKunye]);
 
   const ara = () => {
     aramayaBasla(async () => {
@@ -115,15 +180,16 @@ export default function LiteraturBulucu({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnızca süzgeçler tetikler; sorgu Ara ile
   }, [yilDan, yilaKadar, acikErisim]);
 
-  const pdfiOku = async (kayit: Kayit) => {
+  const pdfiOku = async (sonucKaydi: Kayit) => {
     if (!onPdfOku) return;
+    const kayit = kontrollu(sonucKaydi);
     if (!projeId) {
       showToast("error", t({ tr: "Önce bir çalışma seçin; PDF çalışmanın kaynaklarına eklenir.", en: "Pick a work first; the PDF is added to that work's sources." }));
       return;
     }
     setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "araniyor" } }));
     try {
-      const alim = await okumayaAl({ baslik: kayit.baslik, yazarlar: kayit.yazarlar, yil: kayit.yil, tur: kayit.tur, dergi: kayit.dergi, doi: kayit.doi, url: kayit.url, projectId: projeId });
+      const alim = await okumayaAl({ baslik: kayit.baslik, yazarlar: kayit.yazarlar, kunyeYazarlari: kayit.kunyeYazarlari, yil: kayit.yil, tur: kayit.tur, dergi: kayit.dergi, doi: kayit.doi, url: kayit.url, projectId: projeId });
       if ("error" in alim) {
         setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "servis_hatasi" } }));
         showToast("error", alim.error);
@@ -168,7 +234,8 @@ export default function LiteraturBulucu({
     showToast("success", t({ tr: "Kaynak çalışmadan kaldırıldı.", en: "Source removed from the work." }));
   };
 
-  const ekle = (kayit: Kayit) => {
+  const ekle = (sonucKaydi: Kayit) => {
+    const kayit = kontrollu(sonucKaydi);
     setEklenenKimlik(kayit.kimlik);
     aramayaBasla(async () => {
       const sonuc = await aramaKaydiniEkle({
@@ -193,6 +260,60 @@ export default function LiteraturBulucu({
   };
 
   const kayitlar = yanit?.kayitlar ?? [];
+  const kayitAnahtari = (k: Kayit) => kontrolAnahtari(kontrolGirdisi(k));
+  const listeImzasi = kayitlar.map((k) => k.kimlik).join("|");
+
+  /* Yeni sonuç listesi: önbellektekiler hemen, geri kalanlar sıraya (liste sırası = önce görünenler). */
+  useEffect(() => {
+    if (!kunyeYuklendi) return;
+    const anahtarlar = kayitlar.map(kayitAnahtari);
+    guncelAnahtarlar.current = new Set(anahtarlar);
+    // Eski aramanın uçuştaki istekleri iptal edilir: yeni listeye ait olmayan cevap beklenmez.
+    for (const [a, iptal] of iptaller.current) if (!guncelAnahtarlar.current.has(a)) iptal.abort();
+    kayitlar.forEach((k, i) => girdiler.current.set(anahtarlar[i], kontrolGirdisi(k)));
+    const hazir: Record<string, KunyeKontrolSonucu> = {};
+    const sor: string[] = [];
+    for (const a of anahtarlar) {
+      const onceki = kunye[a];
+      const onbellek = KUNYE_ONBELLEGI.get(a);
+      if (onceki && !onceki.gecici) continue;
+      if (onbellek) hazir[a] = onbellek;
+      else sor.push(a);
+    }
+    // Oturumdan dönen geçici (arıza) sonuçlar yeniden denenir; o sırada "Kontrol ediliyor" görünür.
+    setKunye((o) => {
+      const y = { ...o, ...hazir };
+      for (const a of sor) delete y[a];
+      return y;
+    });
+    kuyruk().yeniArama(sor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- liste değişince bir kez; kunye her sonuçta değişir
+  }, [listeImzasi, kunyeYuklendi]);
+
+  /* Görünür sonuçlar sıranın başına: uzun listede ekranın altındakiler bekler. */
+  const listeRef = useRef<HTMLUListElement | null>(null);
+  useEffect(() => {
+    const kok = listeRef.current;
+    if (!kok || typeof IntersectionObserver === "undefined") return;
+    const gozlem = new IntersectionObserver((girisler) => {
+      const gorunen = girisler.filter((g) => g.isIntersecting).map((g) => (g.target as HTMLElement).dataset.kunyeAnahtari).filter((a): a is string => Boolean(a));
+      if (gorunen.length) kuyruk().one(gorunen);
+    });
+    kok.querySelectorAll<HTMLElement>("[data-kunye-anahtari]").forEach((el) => gozlem.observe(el));
+    return () => gozlem.disconnect();
+  }, [listeImzasi, kuyruk]);
+
+  /*
+    Ekleme ve PDF araması KONTROL EDİLMİŞ bilgiyle: öteki dizinin teyit
+    ettiği eksikler (DOI, yıl, dergi) yalnızca başlık ve ilk yazar tutmuş,
+    hiçbir alan farklı değilken doldurulur (tamamlama). Kontrol sürüyorsa
+    ekleme beklemez, sonucun kendi bilgisiyle yapılır.
+  */
+  const kontrollu = (k: Kayit): Kayit => {
+    const tm = kunye[kayitAnahtari(k)]?.tamamlama;
+    if (!tm) return k;
+    return { ...k, doi: k.doi ?? tm.doi ?? null, yil: tm.yil ?? k.yil, dergi: k.dergi ?? tm.dergi ?? null };
+  };
 
   /* Şerit için sayımlar; listenin kendisi zaten hesaplanmış durumda. */
   const acikErisimSayisi = kayitlar.filter((kayit) => kayit.acikErisim).length;
@@ -330,11 +451,12 @@ export default function LiteraturBulucu({
       )}
 
       {kayitlar.length > 0 && (
-        <ul className="bulgu-listesi">
+        <ul className="bulgu-listesi" ref={listeRef}>
           {kayitlar.map((kayit) => {
             const listede = kayit.listede || eklenen.has(kayit.kimlik);
+            const kAnahtar = kayitAnahtari(kayit);
             return (
-              <li className="bulgu-satiri" key={kayit.kimlik}>
+              <li className="bulgu-satiri" key={kayit.kimlik} data-kunye-anahtari={kAnahtar}>
                 <div className="bulgu-govde">
                   <strong>{kayit.baslik}</strong>
                   <p className="muted text-sm">
@@ -344,10 +466,9 @@ export default function LiteraturBulucu({
                     {kayit.dergi ? ` · ${kayit.dergi}` : ""}
                     {` · ${DIZIN_ADI[kayit.saglayici] ?? kayit.saglayici}`}
                   </p>
-                  {/* Rozet satırı yalnızca gösterecek bir şey varken:
-                      boş bir satır da yer kaplıyor. */}
-                  {(kayit.acikErisim || typeof kayit.atifSayisi === "number") && (
+                  {/* Künye rozeti her sonuçta: kontrol otomatik başlıyor. */}
                   <div className="pill-row">
+                    <KunyeRozeti sonuc={kunye[kAnahtar] ?? KUNYE_ONBELLEGI.get(kAnahtar) ?? null} />
                     {kayit.acikErisim && (
                       <span className="status-pill" data-tone="success">
                         <Unlock size={12} aria-hidden="true" /> {t({ tr: "Açık erişim", en: "Open access" })}
@@ -357,7 +478,7 @@ export default function LiteraturBulucu({
                       <span className="status-pill" data-tone="neutral">{t({ tr: `${kayit.atifSayisi} atıf`, en: `${kayit.atifSayisi} ${kayit.atifSayisi === 1 ? "citation" : "citations"}` })}</span>
                     )}
                   </div>
-                  )}
+                  <KunyeNedeni sonuc={kunye[kAnahtar] ?? KUNYE_ONBELLEGI.get(kAnahtar) ?? null} />
                 </div>
                 <div className="bulgu-eylemler">
                   {onPdfOku ? <PdfOkuDugmesi durum={pdfDurumu[kayit.kimlik]} onOku={() => void pdfiOku(kayit)} onAc={(id) => onPdfOku(id)} /> : null}
@@ -475,3 +596,37 @@ function PdfOkuDugmesi({ durum, onOku, onAc }: { durum?: { durum: MakalePdfDurum
     </button>
   );
 }
+
+/*
+  Künye rozeti: beş durum ayrı (lib/arama-kunye-kontrolu.ts). "Kontrol
+  edilemedi" NÖTR tondadır, tehlike değil: servis arızası ya da dizinde
+  bulunmamak kaynağın yanlış olduğunu göstermez. Rozet yalnızca KÜNYEYİ
+  söyler; PDF ve pasaj ayrı kontroller. Eşleşmede karşılaştırılan dizin
+  yazılır: kullanıcı neyle karşılaştırıldığını görsün.
+*/
+const KUNYE_ETIKETI = {
+  kontrol_ediliyor: { tr: "Künye kontrol ediliyor", en: "Checking reference" },
+  eslesti: { tr: "Künye eşleşti", en: "Reference matched" },
+  eksik: { tr: "Eksik bilgi", en: "Missing information" },
+  belirsiz: { tr: "Belirsiz eşleşme", en: "Uncertain match" },
+  kontrol_edilemedi: { tr: "Kontrol edilemedi", en: "Couldn't check" },
+} as const;
+const KUNYE_TONU = { kontrol_ediliyor: "neutral", eslesti: "success", eksik: "warning", belirsiz: "warning", kontrol_edilemedi: "neutral" } as const;
+
+function KunyeRozeti({ sonuc }: { sonuc: KunyeKontrolSonucu | null }) {
+  const t = useCeviri();
+  const durum = sonuc?.durum ?? "kontrol_ediliyor";
+  return (
+    <span className="status-pill" data-tone={KUNYE_TONU[durum]} data-kunye-durumu={durum} title={sonuc ? t(sonuc.neden) : undefined}>
+      {t(KUNYE_ETIKETI[durum])}
+      {durum === "eslesti" && sonuc ? ` · ${DIZIN_ADI[sonuc.dizin]}` : ""}
+    </span>
+  );
+}
+
+function KunyeNedeni({ sonuc }: { sonuc: KunyeKontrolSonucu | null }) {
+  const t = useCeviri();
+  if (!sonuc || sonuc.durum === "eslesti") return null;
+  return <p className="muted text-sm" data-kunye-nedeni="">{t(sonuc.neden)}</p>;
+}
+
