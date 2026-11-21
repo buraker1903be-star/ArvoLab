@@ -206,6 +206,54 @@ const ekle = async (s, metin, dugme) => {
   kayit("atfı silmek işaretini götürür; öteki pasaj kalır", silindi && kalan.length > 0 && kalan.every((d) => d.sayfa === 1), { kalan: kalan.length });
   const db = await bekleDb((n) => n > 0 && n < 3);
   kayit("silme de kaydedildi", db > 0 && db < 3, { db });
+
+  /*
+    P4 (21.11.2026): işaret belgenin içinde (pdfDayanak işareti) — geri al,
+    yinele ve yeniden yükleme onunla tutarlı olmalı. Yeni oturumda silmenin
+    geri alınması, aynı oturumda sayfanın yeniden yüklenmesi ve yüklemeden
+    sonra sil / geri al / yinele ayrı ayrı sınanır; her adımda belge, ekran
+    ve veritabanı aynı şeyi söylemeli.
+  */
+  const sayfa2 = async () => (await belgedekiDayanak(s)).filter((d) => d.sayfa === 2).length;
+  await ed(s, (e) => e.commands.undo());
+  const geriGeldi = await bekleIsaret(s, CUMLE2);
+  const dbGeri = await bekleDb((n) => n >= 3);
+  kayit("yeni oturum: atıf silmeyi geri al → s. 2 işareti ekranda, belgede ve veritabanında geri", geriGeldi && (await sayfa2()) > 0 && dbGeri >= 3, { dbGeri });
+  await ed(s, (e) => e.commands.redo());
+  const yineGitti = await bekleIsaret(s, CUMLE2, false);
+  const dbYine = await bekleDb((n) => n > 0 && n < 3);
+  kayit("yeni oturum: yinele → s. 2 işareti yeniden gider (ekran, belge, veritabanı)", yineGitti && (await sayfa2()) === 0 && dbYine > 0 && dbYine < 3, { dbYine });
+  await ed(s, (e) => e.commands.undo());
+  await bekleIsaret(s, CUMLE2);
+  const dbOnce = await bekleDb((n) => n >= 3);
+
+  // Aynı oturumda sayfayı yeniden yükle.
+  await s.reload();
+  await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 });
+  await s.waitForTimeout(1200);
+  const yuklenen = await belgedekiDayanak(s);
+  kayit("aynı oturumda yeniden yükleme: belgedeki işaret sayısı veritabanıyla aynı (s. 1 ve s. 2)", yuklenen.length === dbOnce && new Set(yuklenen.map((d) => d.sayfa)).size === 2, { belge: yuklenen.length, dbOnce });
+  await pdfiAc(s);
+  kayit("yeniden yükleme sonrası çekmecede işaret yerinde", await bekleIsaret(s, CUMLE2), await isaretliler(s));
+  const gecmis = await ed(s, (e) => e.can().undo());
+  await ed(s, (e) => e.commands.undo());
+  kayit("yeniden yükleme sonrası geri al geçmişi boş: işaret kendiliğinden düşmez", !gecmis && (await belgedekiDayanak(s)).length === yuklenen.length, { gecmis });
+  await s.screenshot({ path: `${OUT}4b-yeniden-yuklendi.png` });
+
+  // Yüklemeden sonra: sil → geri al → yinele, sonra yeniden yükle.
+  await ed(s, (e) => { let bas = -1, son = -1; e.state.doc.descendants((n, p) => { if (n.isText && n.marks.some((m) => m.type.name === "pdfDayanak" && m.attrs.sayfa === 2)) { if (bas < 0) bas = p; son = p + n.nodeSize; } }); e.chain().focus().deleteRange({ from: bas, to: son }).run(); });
+  const y1 = await bekleIsaret(s, CUMLE2, false);
+  await ed(s, (e) => e.commands.undo());
+  const y2 = await bekleIsaret(s, CUMLE2);
+  await ed(s, (e) => e.commands.redo());
+  const y3 = await bekleIsaret(s, CUMLE2, false);
+  kayit("yeniden yükleme sonrası sil / geri al / yinele: işaret atıfla birlikte gider, gelir, gider", y1 && y2 && y3, { y1, y2, y3 });
+  const dbSon = await bekleDb((n) => n > 0 && n < 3);
+  await s.reload();
+  await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 });
+  await s.waitForTimeout(1200);
+  const son = await belgedekiDayanak(s);
+  kayit("ikinci yeniden yükleme: son durum (yalnızca s. 1) korunmuş, veritabanıyla aynı", son.length === dbSon && son.every((d) => d.sayfa === 1), { belge: son.length, dbSon });
   kayit("yeni oturum: sayfa hatası yok", hatalar.length === 0, hatalar);
   await c.close();
 }
