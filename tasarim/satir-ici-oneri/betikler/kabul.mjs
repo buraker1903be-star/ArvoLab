@@ -117,12 +117,47 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   // 4) Esc kapatır, belge değişmez.
   const escOnce = await metin(s); await s.keyboard.press("Escape"); await s.waitForTimeout(200);
   kayit("Esc öneriyi kapatır, belge değişmez", !(await oneri(s)) && (await metin(s)) === escOnce);
+
+  /*
+    4a) Sıklık kuralı ve önbellek (21.11.2026, lib/ai/oneri-zamanlama.ts).
+    İlk otomatik istekten sonra yeni otomatik istek için en az 40 yeni
+    karakter ve son istekten 8 sn gerekir; aynı bağlam önbellekten, istek
+    atılmadan ve belgeye girmeden gösterilir.
+  */
+  hakSifirla();
+  const nAz = calismaKayitlari(PR_TR).length;
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type(" ve", { delay: 40 }); await s.waitForTimeout(2600);
+  kayit("otomatik: 40 karakterden az yeni metinle ikinci istek gitmez", calismaKayitlari(PR_TR).length === nAz && !(await oneri(s)), { yeni: calismaKayitlari(PR_TR).length - nAz });
+  const UZUN = " öğrencilerin kampüs yaşamına katılımı da bu dönemde belirginleşir";
+  await altSlash(s); const tElle = Date.now(); await bekleOneri(s); await s.keyboard.press("Escape");
+  const nElle = calismaKayitlari(PR_TR).length;
+  await s.keyboard.type(UZUN, { delay: 15 });
+  const yazildi = Date.now() - tElle;
+  await s.waitForTimeout(Math.max(0, 5_000 - (Date.now() - tElle)));
+  const besSn = calismaKayitlari(PR_TR).length - nElle;
+  const o8 = await bekleOneri(s, 9_000);
+  const sekizSn = calismaKayitlari(PR_TR).length - nElle;
+  const gecen = Date.now() - tElle;
+  sonIstek = Date.now();
+  kayit("otomatik: 40+ karakterle bile son istekten 8 sn dolmadan istek gitmez, dolunca tek istek gider", besSn === 0 && sekizSn === 1 && !!o8 && gecen >= 8_000, { yazildi, besSn, sekizSn, gecen });
+  await s.keyboard.press("Escape");
+  const nOnb = calismaKayitlari(PR_TR).length; const mOnb = await metin(s);
+  await altSlash(s); const oOnb = await bekleOneri(s, 3_000);
+  kayit("önbellek: aynı bağlamda istek atılmadan aynı öneri gösterilir, belgeye girmez", oOnb === o8 && calismaKayitlari(PR_TR).length === nOnb && (await metin(s)) === mOnb, { oOnb, o8, yeni: calismaKayitlari(PR_TR).length - nOnb });
+  await s.keyboard.press("Escape");
+  await s.keyboard.type("x", { delay: 20 }); await altSlash(s); const oFark = await bekleOneri(s);
+  kayit("önbellek: bağlam bir harf değişince önbellekteki öneri gösterilmez, sunucuya gidilir", calismaKayitlari(PR_TR).length === nOnb + 1 && oFark !== null, { oFark });
+  await s.keyboard.press("Escape");
+  for (let i = 0; i < (" ve" + UZUN + "x").length; i++) await s.keyboard.press("Backspace");
+  hakSifirla();
   // 4b) SUNUCUDAKİ en az aralık: iki elle istek art arda → ikincisi frene takılır, hak tüketmez, söylenir.
   await s.waitForTimeout(3500);
   await sonaGit(s, "Üniversiteye");
   const hakOnce = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
   await s.keyboard.press("Alt+/"); await bekleOneri(s); await s.keyboard.press("Escape");
-  await s.keyboard.press("Alt+/"); await s.waitForTimeout(1500); sonIstek = Date.now();
+  // Bağlam bir harf değişir: aynı bağlam artık önbellekten gelir ve sunucuya hiç gitmez (4a).
+  await s.keyboard.type("q"); await s.keyboard.press("Alt+/"); await s.waitForTimeout(1500); sonIstek = Date.now();
+  await s.keyboard.press("Backspace");
   const hakSonra = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
   const aralikMetni = await s.evaluate(() => document.body.innerText);
   kayit("sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir", hakSonra - hakOnce === 1 && /çok sık istendi/.test(aralikMetni), { hakOnce, hakSonra });
@@ -196,7 +231,9 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   // 13b) Saatlik hak dolu: öneri DURAKLATILIR ve bu görünür (düğme yazısı + Alt+/ mesajı); otomatik istek gitmez.
   psql(`insert into public.auth_rate_limits (key, window_start, count) values ('ai-asistan:${KUL.id}', now(), 99) on conflict (key) do update set window_start = now(), count = 99`);
   await s.waitForTimeout(3500);
-  await sonaGit(s, "Üniversiteye"); await altSlash(s); await s.waitForTimeout(1500);
+  // Önceki adımlarda bu konum için öneri önbellekte: sunucunun "hak doldu" cevabını görmek için bağlam değişir.
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type("z"); await altSlash(s); await s.waitForTimeout(1500);
+  await s.keyboard.press("Backspace");
   const duraklatma = await dugme.textContent();
   kayit("hak dolunca düğme duraklatıldığını ve kalan süreyi söyler", /Öneri · \d+ dk/.test(duraklatma ?? ""), { duraklatma });
   await s.screenshot({ path: OUT + "masaustu-duraklatildi.png" });

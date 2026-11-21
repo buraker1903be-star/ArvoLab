@@ -6,6 +6,7 @@ import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { oneriTemizle } from "@/lib/ai/yazim-metni";
 import { etkinOneri, kabulEdilenOneri, oneriGoster } from "@/lib/tiptap-satir-ici-oneri";
+import { OneriOnbellegi, otomatikIstekKarari, type OneriBaglami } from "@/lib/ai/oneri-zamanlama";
 import { collectHeadings } from "./editor-navigation";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -17,8 +18,10 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 
   İki yol:
     - Kısayol (Alt+/): her zaman, imleç nerede olursa.
-    - Otomatik: yalnızca açıksa, yazma 1,8 sn durduğunda ve imleç bir
-      paragrafın SONUNDAYSA. Varsayılan KAPALI: her öneri bir asistan
+    - Otomatik: yalnızca açıksa, yazma 1,5 sn durduğunda ve imleç bir
+      paragrafın SONUNDAYSA; ilk istekten sonra en az 40 yeni karakter ve
+      8 sn (21.11.2026, lib/ai/oneri-zamanlama.ts). Aynı bağlam için
+      önbellekteki öneri istek atılmadan gösterilir. Varsayılan KAPALI: her öneri bir asistan
       hakkı (saatlik 20, lib/ai/sinirlar.ts) ve kurum kredisi harcıyor;
       kendiliğinden açık olsaydı öğrenci bir saat yazınca sohbet
       asistanını kullanamaz hâle gelirdi. Hak dolunca öneri "duraklatıldı"
@@ -59,13 +62,23 @@ export function useSatirIciOneri({
   editor,
   projectId,
   otomatik,
+  belgeDili,
+  atifStili,
 }: {
   editor: Editor | null;
   projectId: string;
   otomatik: boolean;
+  /** Önbellek anahtarına girer: başka dildeki ya da stildeki öneri gösterilmez. */
+  belgeDili: string;
+  atifStili: string;
 }) {
   const t = useCeviri();
   const istekte = useRef(false);
+  /* Sıklık kuralı ve önbellek: lib/ai/oneri-zamanlama.ts (gerekçe orada). */
+  const sonIstek = useRef<number | null>(null);
+  const yeniKarakter = useRef(0);
+  const bekleZamanlayici = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const onbellek = useRef<OneriOnbellegi | null>(null);
   const bekleyen = useRef(false);
   const sonKonum = useRef<string | null>(null);
   const [durum, setDurum] = useState<OneriDurumu>({ tur: "hazir" });
@@ -112,10 +125,35 @@ export function useSatirIciOneri({
       // Otomatik yol aynı yer için ikinci kez istemez (öğrenci öneriyi Esc ile reddetmiş olabilir).
       const anahtar = `${konum}:${oncesi.slice(-60)}`;
       if (!elle && sonKonum.current === anahtar) return;
+      const bolum = collectHeadings(doc).filter((h) => h.pos < konum).at(-1)?.text ?? null;
+      const baglam: OneriBaglami = { calisma: projectId, belgeDili, atifStili, bolum, konum, oncesi };
+      const ob = (onbellek.current ??= new OneriOnbellegi());
+      /*
+        Önbellek: bağlamın TAMAMI aynıysa (çalışma, dil, stil, bölüm, imleç,
+        imleçten önceki metin) istek atılmaz; öneri yine yalnızca süsleme
+        olarak gösterilir, belgeye girmesi kullanıcının kabulüdür.
+      */
+      const kayitli = ob.al(baglam);
+      if (kayitli) {
+        sonKonum.current = anahtar;
+        const tr = oneriGoster(editor.state, { konum, metin: kayitli.metin, kayit: kayitli.kayit });
+        if (tr) editor.view.dispatch(tr);
+        return;
+      }
+      if (!elle) {
+        const karar = otomatikIstekKarari({ simdi: Date.now(), sonIstek: sonIstek.current, yeniKarakter: yeniKarakter.current });
+        if (karar.tur === "yok") return;
+        if (karar.tur === "bekle") {
+          clearTimeout(bekleZamanlayici.current);
+          bekleZamanlayici.current = setTimeout(() => void isteRef.current(false), karar.ms);
+          return;
+        }
+      }
       sonKonum.current = anahtar;
+      sonIstek.current = Date.now();
+      yeniKarakter.current = 0;
       istekte.current = true;
       try {
-        const bolum = collectHeadings(doc).filter((h) => h.pos < konum).at(-1)?.text ?? null;
         const cevap = await yazimAsistani({ projectId, istek: "", gorev: "tamamla", bolum, oncesi });
         if (cevap.hata) {
           const sinir = cevap.sinir;
@@ -142,6 +180,7 @@ export function useSatirIciOneri({
           if (elle) showToast("error", t({ tr: "Burada önerecek bir devam bulunamadı.", en: "No continuation to suggest here." }));
           return;
         }
+        ob.koy(baglam, { metin, kayit: cevap.kayitId ?? null });
         const tr = oneriGoster(editor.state, { konum, metin, kayit: cevap.kayitId ?? null });
         if (tr) editor.view.dispatch(tr);
       } catch {
@@ -155,7 +194,7 @@ export function useSatirIciOneri({
         }
       }
     },
-    [editor, projectId, durumuKur, t],
+    [editor, projectId, belgeDili, atifStili, durumuKur, t],
   );
 
   useEffect(() => {
@@ -175,6 +214,10 @@ export function useSatirIciOneri({
     const islem = ({ transaction }: { transaction: Parameters<typeof kabulEdilenOneri>[0] }) => {
       const kabul = kabulEdilenOneri(transaction);
       if (kabul?.kayit) void asistanPuanla(kabul.kayit, "faydali", "satır içi öneri kabul edildi").catch(() => undefined);
+      // Sıklık kuralının "yeni karakter" sayacı: kullanıcının yazdığı metin (kabul edilen öneri sayılmaz).
+      if (transaction.docChanged && !kabul) {
+        for (const adim of transaction.steps) yeniKarakter.current += (adim as { slice?: { size: number } }).slice?.size ?? 0;
+      }
     };
     const kok = editor.view.dom;
     kok.addEventListener("keydown", tus);
@@ -191,6 +234,7 @@ export function useSatirIciOneri({
     let zamanlayici: ReturnType<typeof setTimeout> | undefined;
     const guncellendi = ({ transaction }: { transaction: Parameters<typeof kabulEdilenOneri>[0] }) => {
       clearTimeout(zamanlayici);
+      clearTimeout(bekleZamanlayici.current);
       // Kabulün kendisi yeni bir öneri tetiklemesin: öğrenci okumadan zincirleme kabul eder.
       if (!transaction.docChanged || kabulEdilenOneri(transaction)) return;
       zamanlayici = setTimeout(() => void iste(false), BEKLEME_MS);
@@ -198,6 +242,7 @@ export function useSatirIciOneri({
     editor.on("update", guncellendi);
     return () => {
       clearTimeout(zamanlayici);
+      clearTimeout(bekleZamanlayici.current);
       editor.off("update", guncellendi);
     };
   }, [editor, otomatik, iste]);
