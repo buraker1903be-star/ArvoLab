@@ -39,7 +39,19 @@ async function baglam(secenek, koyu = false) {
   return { c, s, hatalar };
 }
 const ed = (s, fn, arg) => s.evaluate(([f, a]) => new Function("e", "a", `return (${f})(e, a)`)(document.querySelector(".ProseMirror").editor, a), [fn.toString(), arg]);
-const durum = (s) => s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; const kap = document.scrollingElement; return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, kaydirma: Math.round(kap.scrollTop) }; });
+/*
+  Kaydırma "ekranın üstündeki blok" ile karşılaştırılır, piksel ile değil: araç
+  menünün yanında açılınca (21.11.2026) belge sütunu daralır ve kâğıt ölçeği
+  değişir (1440 px'te 1 → 0,95); aynı yer bu ölçekte birkaç piksel farklı
+  scrollTop'a düşer. Kullanıcı için korunan şey gördüğü yerdir.
+*/
+const durum = (s) => s.evaluate(() => {
+  const e = document.querySelector(".ProseMirror").editor;
+  const bloklar = [...document.querySelectorAll(".ProseMirror > *")];
+  const cizgi = 260;
+  const ust = bloklar.findIndex((b) => { const r = b.getBoundingClientRect(); return r.top <= cizgi && r.bottom > cizgi; });
+  return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, ustBlok: ust };
+});
 /*
   Koyu temada kararlı (geçiş bitmiş) ekranda açık zeminli öğe kalmamalı.
   21.11.2026: teslim görsellerinde açık düğmeler ve beyaz zemin görüldü;
