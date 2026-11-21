@@ -138,6 +138,17 @@ if (AŞAMA === "normal") {
   kayit("eklenen kaynak: yıl 2009 ve DOI (öteki dizinle teyitli bilgi)", /^2009\|https:\/\/doi\.org\/10\.1145\//.test(eklenen), { eklenen });
   await s.screenshot({ path: `${OUT}3-eklendi.png` });
 
+  // 5) PLOS makalesi YENİ kayıt olarak "PDF'yi oku" yoluyla: yazarlar iki ayrı yazar olarak yazılır.
+  //    Eskiden bu yol adları ", " ile birleştiriyordu ve atıf "(Markus Knauff, 2014)" çıkıyordu (Preview, 21.11.2026).
+  psql(`delete from public.literature_sources where owner_id='${KUL.id}' and title ilike 'An Efficiency Comparison of Document Preparation%'`);
+  await ara(s, "An Efficiency Comparison of Document Preparation Systems Used in Academic Research and Development");
+  await s.waitForSelector("li[data-kunye-anahtari]", { timeout: 60000 });
+  const plos = s.locator("li[data-kunye-anahtari]").filter({ hasText: /Efficiency Comparison of Document Preparation/i }).filter({ hasNotText: /Correction/i }).first();
+  await plos.getByRole("button", { name: /PDF'yi oku/ }).click();
+  let plosYazar = "";
+  for (let i = 0; i < 40 && !plosYazar; i++) { await s.waitForTimeout(500); plosYazar = psql(`select coalesce(authors,'') from public.literature_sources where owner_id='${KUL.id}' and project_id='${PR}' and title ilike 'An Efficiency Comparison of Document Preparation%' order by created_at desc limit 1`); }
+  kayit("PLOS yeni kayıt: iki yazar ayrı yazıldı (yapılandırılmış ya da '; ' ile), ', ' ile tek yazar değil", /^Knauff, M\.,? & Nejasmic, J\.$/.test(plosYazar) || /^Markus Knauff; Jelica Nejasmic$/.test(plosYazar), { plosYazar });
+
   // Koyu tema ve telefon görüntüleri.
   await s.emulateMedia({ colorScheme: "dark" });
   await s.screenshot({ path: `${OUT}4-koyu.png` });
