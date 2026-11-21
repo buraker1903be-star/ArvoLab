@@ -162,6 +162,26 @@ export function siniflandir(bizim: KaynakKunyesi & { yilSayi: number | null }, k
 
   const farkli = alanlar.filter((a) => a.sonuc === "farkli").map((a) => a.alan);
   const eksik = alanlar.filter((a) => (a.sonuc === "bizde_yok" || a.sonuc === "kayitta_yok") && a.alan !== "doi").map((a) => a.alan);
+  /*
+    Yalnızca DOI farklı (başlık, ilk yazar, yıl tutuyor): aynı çalışmanın
+    iki sürümü — bildiri ve dergi/SIGPLAN Notices baskısı, ön baskı ve
+    yayın. 21.11.2026'da TraceMonkey (PLDI 2009) aramasında gerçek dizinle
+    ölçüldü: arama birleştirmesi iki sürümü başlıktan tek kayda katmıştı.
+    "Uyuşmayan: DOI" doğru ama öğrenciye ne yapacağını söylemiyordu.
+  */
+  if (farkli.length === 1 && farkli[0] === "doi") {
+    return {
+      durum: "belirsiz",
+      dizin,
+      alanlar,
+      tamamlama: null,
+      gecici: false,
+      neden: {
+        tr: `Başlık, ilk yazar ve yıl ${ad} kaydıyla tutuyor ama DOI farklı: aynı çalışmanın başka bir sürümü (ör. bildiri ve dergi baskısı) olabilir. Eklemeden önce hangi sürüme atıf yapacağınızı DOI'den kontrol edin.`,
+        en: `Title, first author and year match the ${ad} record but the DOI differs: this may be another version of the same work (e.g., conference and journal versions). Check the DOI of the version you'll cite before adding.`,
+      },
+    };
+  }
   if (farkli.length) {
     return {
       durum: "belirsiz",

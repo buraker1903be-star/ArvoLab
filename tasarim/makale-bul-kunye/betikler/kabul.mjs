@@ -80,7 +80,14 @@ if (AŞAMA === "normal") {
   const bitisSure = Date.now() - t0;
   kayit("rozetler arkada güncellenir; hepsi beş durumdan biriyle sonuçlanır", bitti && son.every((r) => ["eslesti", "eksik", "belirsiz", "kontrol_edilemedi"].includes(r.durum)), { bitisSure, sayim: son.reduce((o, r) => ({ ...o, [r.durum]: (o[r.durum] ?? 0) + 1 }), {}) });
   const tm = son.find((r) => /trace-based just-in-time/i.test(r.baslik));
-  kayit("TraceMonkey sonucu öteki dizinle eşleşti (rozette karşılaştırılan dizin yazıyor)", Boolean(tm && tm.durum === "eslesti" && /Crossref|OpenAlex/.test(tm.metin)), tm);
+  /*
+    TraceMonkey'in iki sürümü var (PLDI bildirisi ve SIGPLAN Notices, iki DOI). Dizinlerin o
+    anki sıralamasına göre ya tek sürüm gelir ("eşleşti") ya da birleştirme iki sürümü tek kayda
+    katar ve kontrol bunu "belirsiz · başka bir sürümü" diye söyler. İkisi de doğru davranış;
+    yanlış olan "kontrol edilemedi" ya da sebepsiz "belirsiz" olurdu.
+  */
+  kayit("TraceMonkey: eşleşti (dizin adıyla) ya da iki sürüm için sürüm uyarısı", Boolean(tm && ((tm.durum === "eslesti" && /Crossref|OpenAlex/.test(tm.metin)) || (tm.durum === "belirsiz" && /başka bir sürümü/.test(tm.neden)))), tm);
+  kayit("sonuçların çoğu öteki dizinle eşleşti", son.filter((r) => r.durum === "eslesti").length >= son.length / 2, { eslesti: son.filter((r) => r.durum === "eslesti").length, n: son.length });
   kayit("'Kontrol edilemedi' ve 'Belirsiz' tehlike tonunda değil", son.every((r) => r.ton !== "danger"), {});
   kayit("kontroller paralel gider ama en çok 3 eşzamanlı", sayac.enCok >= 2 && sayac.enCok <= 3, { enCok: sayac.enCok, toplam: sayac.toplam });
   await s.screenshot({ path: `${OUT}2-tamamlandi.png` });

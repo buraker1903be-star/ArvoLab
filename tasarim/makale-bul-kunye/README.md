@@ -21,7 +21,7 @@ türer; rozet "dizinler arasında tutarlı" der, "kaynak doğru" demez.
 | Künye kontrol ediliyor | istek sürüyor | nötr |
 | Künye eşleşti · <dizin> | başlık, ilk yazar ve yıl öteki dizinle tutarlı; iki tarafta DOI varsa o da aynı | başarı |
 | Eksik bilgi | temel alanlardan biri bir tarafta yok, karşılaştırılamadı | uyarı |
-| Belirsiz eşleşme | bir temel alan farklı, DOI başka başlığa çıkıyor ya da aynı başlıkta birden çok yayın var | uyarı |
+| Belirsiz eşleşme | bir temel alan farklı, DOI başka başlığa çıkıyor, aynı başlıkta birden çok yayın var ya da yalnızca DOI farklı (aynı çalışmanın iki sürümü: "başka bir sürümü olabilir") | uyarı |
 | Kontrol edilemedi | öteki dizine ulaşılamadı **ya da** kayıt orada yok | nötr |
 
 "Kontrol edilemedi" hiçbir zaman "yanlış kaynak" demek değildir ve tehlike tonunda
@@ -57,11 +57,11 @@ Kontrol sürüyorsa ekleme beklemez, sonucun kendi bilgisiyle yapılır.
 ## Kabul
 
 ```
-ASAMA=normal node tasarim/makale-bul-kunye/betikler/kabul.mjs   # 13/13
+ASAMA=normal node tasarim/makale-bul-kunye/betikler/kabul.mjs   # 14/14
 # sunucuyu HTTPS_PROXY=http://127.0.0.1:9 ile (dizinlere ulaşamaz) yeniden başlat
 ASAMA=ariza  node tasarim/makale-bul-kunye/betikler/kabul.mjs   # 5/5
 ```
 
 Gerçek Crossref/OpenAlex'e karşı. Eski arama senaryosunda künye istekleri tarayıcıda
 1,2 sn bekletilir (sunucu önbelleği sıcakken de ilk arama yarıda kalsın).
-Birim testi: `tests/unit/arama-kunye-kontrolu.test.ts` (16).
+Birim testi: `tests/unit/arama-kunye-kontrolu.test.ts` (17).

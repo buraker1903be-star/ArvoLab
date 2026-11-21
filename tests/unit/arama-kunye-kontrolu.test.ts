@@ -101,6 +101,17 @@ describe("beş durum", () => {
     assert.match(s.neden.tr, /yıl/);
     assert.equal(s.tamamlama, null);
   });
+  test("yalnızca DOI farklı (aynı çalışmanın iki sürümü) → belirsiz, sürüm uyarısıyla", async () => {
+    // TraceMonkey: PLDI bildirisi 10.1145/1542476.1542528, SIGPLAN Notices 10.1145/1543135.1542528.
+    const birlesik = kayitlariBirlestir([
+      [{ ...temelKayit("openalex"), doi: "10.1145/1543135.1542528", kimlik: "10.1145/1543135.1542528" }],
+      [{ ...temelKayit("crossref"), kunyeYazarlari: "Gal, A., & Eich, B." }],
+    ])[0];
+    const s = await aramaKunyesiniKontrolEt(birlesik, sahteAg({}).getir);
+    assert.equal(s.durum, "belirsiz");
+    assert.match(s.neden.tr, /başka bir sürümü/);
+    assert.equal(s.tamamlama, null);
+  });
   test("ilk yazar tutmuyor → belirsiz", async () => {
     const a = sahteAg({ "api.crossref.org": { durum: 200, veri: crossrefIs({ family: ["Smith", "Jones"] }) } });
     assert.equal((await aramaKunyesiniKontrolEt(girdi(), a.getir)).durum, "belirsiz");
