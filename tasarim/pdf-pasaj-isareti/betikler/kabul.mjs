@@ -233,7 +233,9 @@ const ekle = async (s, metin, dugme) => {
   await s.waitForTimeout(1200);
   const yuklenen = await belgedekiDayanak(s);
   kayit("aynı oturumda yeniden yükleme: belgedeki işaret sayısı veritabanıyla aynı (s. 1 ve s. 2)", yuklenen.length === dbOnce && new Set(yuklenen.map((d) => d.sayfa)).size === 2, { belge: yuklenen.length, dbOnce });
-  await pdfiAc(s);
+  // Çekmece açık bırakıldıysa yeniden yüklemeden sonra da açık gelir (çekmece durumu korunur); değilse açılır.
+  const cekmeceAcik = await s.locator(".kaynak-pdf-paneli:not([hidden]) .pdf-sayfa .textLayer span").first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  if (!cekmeceAcik) await pdfiAc(s);
   kayit("yeniden yükleme sonrası çekmecede işaret yerinde", await bekleIsaret(s, CUMLE2), await isaretliler(s));
   const gecmis = await ed(s, (e) => e.can().undo());
   await ed(s, (e) => e.commands.undo());
