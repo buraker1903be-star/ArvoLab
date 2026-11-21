@@ -49,8 +49,19 @@ const panel = s.locator("aside.yazim-paneli");
 const sonKart = () => panel.locator(".yazim-oneri").last();
 async function iste(metinIstek) {
   const once = await panel.locator(".yazim-oneri").count();
-  await panel.locator("textarea").fill(metinIstek);
-  await panel.getByRole("button", { name: "Gönder" }).click();
+  /*
+    Sayfa yeni açılmışken fill() bileşen hidrasyonu bitmeden düşebiliyor:
+    React kutuyu kendi durumundaki boş değere geri çekiyor ve Gönder pasif
+    kalıyor (21.11.2026'daki ikinci birleşik koşuda dipnot adımı böyle 30 sn
+    bekleyip düştü). Düğme etkinleşene kadar doldurma yinelenir.
+  */
+  const gonder = panel.getByRole("button", { name: "Gönder" });
+  for (let i = 0; i < 5; i++) {
+    await panel.locator("textarea").fill(metinIstek);
+    if (await gonder.isEnabled()) break;
+    await s.waitForTimeout(400);
+  }
+  await gonder.click();
   await s.waitForFunction((n) => document.querySelectorAll("aside.yazim-paneli .yazim-oneri").length > n, once, { timeout: 15000 });
 }
 
