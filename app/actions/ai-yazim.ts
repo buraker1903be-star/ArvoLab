@@ -236,13 +236,28 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
         en: `Dropped from the shortened text: ${t(ANLAM_SINIFI_ADI[k.sinif])} (${k.dusenler.join(", ")}). Check before inserting.`,
       }),
     );
-    const gorunenYanit =
-      kayiplar.length && korunduIddiasi(sonuc.yanit)
+    /*
+      "ANLAM KORUNDU" İDDİASI HİÇBİR DURUMDA EKRANA ÇIKMAZ (22.11.2026).
+      Kayıp bulunduğunda iddia yanlıştır. Kayıp BULUNMADIĞINDA da iddia
+      DOĞRULANMAMIŞTIR: anlam-koruma kalıp arar, anlam karşılaştırmaz ve
+      sınıf düzeyindeki kör noktaları bilinir (modül belgesi ve
+      tests/unit/anlam-koruma.test.ts'teki karşı örnekler). Asistanın
+      ağzından çıkan "anlam korundu", öğrencinin kısaltmayı karşılaştırmadan
+      kabul etmesi için yeterli sebep olur; bu yüzden iki durumda da
+      sunucunun metniyle değiştirilir. Modelin ham açıklaması kayda
+      (ai_assistant_runs.output) olduğu gibi girer.
+    */
+    const gorunenYanit = !korunduIddiasi(sonuc.yanit)
+      ? sonuc.yanit
+      : kayiplar.length
         ? t({
             tr: "Kısaltma güvenli değil: aşağıdaki nitelemeler metinden düştü, bu yüzden anlamın korunduğunu söyleyemem.",
             en: "This shortening isn't safe: the qualifications below were dropped, so I can't say the meaning is preserved.",
           })
-        : sonuc.yanit;
+        : t({
+            tr: "Kısalttım. Yaptığım denetimler bir kayıp bulmadı, ama bu anlamın korunduğunun güvencesi değildir: iki metni karşılaştırın.",
+            en: "Shortened it. My checks found no loss, but that is not a guarantee the meaning is preserved: compare the two texts.",
+          });
 
     /*
       İstek de bulgulara yazılır (19.11.2026): Kayıtlı sekme cevabın neye

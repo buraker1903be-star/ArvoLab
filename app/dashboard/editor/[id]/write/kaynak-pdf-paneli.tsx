@@ -291,8 +291,8 @@ export default function KaynakPdfPaneli({
         soru: "",
         yanit: {
           hata: t({
-            tr: "Bekleme durduruldu. Asistan isteği tamamlasa bile cevap gösterilmeyecek; yeniden sorabilirsiniz.",
-            en: "Stopped waiting. Even if the assistant finishes, the answer won't be shown; you can ask again.",
+            tr: "Bekleme bırakıldı. İstek sağlayıcıda sürer ve ücreti doğar; iptal edilmedi. Gelen cevap gösterilmeyecek; yeniden sorabilirsiniz.",
+            en: "Stopped waiting. The request keeps running at the provider and is still billed; it was not cancelled. The answer won't be shown; you can ask again.",
           }),
         },
       },
@@ -922,11 +922,11 @@ export default function KaynakPdfPaneli({
                       className="projects-filter-button button-compact"
                       onClick={soruyuDurdur}
                       title={t({
-                        tr: "Bekleme durur. Asistanın isteği sunucuda tamamlanabilir ama cevap gösterilmez.",
-                        en: "Stops waiting. The request may still finish on the server, but the answer won't be shown.",
+                        tr: "Yalnızca bu ekrandaki bekleme biter. İstek sağlayıcıda sürer, ücreti doğar ve kaydı tutulur; iptal edilmez. Gelen cevap size gösterilmez.",
+                        en: "Only the wait on this screen ends. The request keeps running at the provider, is still billed and still recorded; it is not cancelled. The answer won't be shown to you.",
                       })}
                     >
-                      {t({ tr: "Durdur", en: "Stop" })}
+                      {t({ tr: "Beklemeyi bırak", en: "Stop waiting" })}
                     </button>
                   </p>
                 ) : null}
