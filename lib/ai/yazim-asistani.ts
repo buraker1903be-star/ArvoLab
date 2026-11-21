@@ -98,10 +98,14 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   /*
     Satır içi tamamlama (03.11.2026, Jenni'nin imza özelliği): editörde
     gri öneri, kabul Tab ile kullanıcının. Kısa tutulur: uzun öneri hem
-    pahalı hem okunmadan kabul edilir.
+    pahalı hem okunmadan kabul edilir. 20.11.2026: "en çok iki cümle"
+    idi; artık imleçteki cümlenin devamı, en çok BİR kısa cümle (istemci
+    de ilk cümle sonunda keser, lib/ai/yazim-metni.ts). Bulgu ve sonuç
+    ilanı yasağı açıkça yazıldı: sayı ve atıf yapısal olarak denetleniyor
+    ama "bulgular gösterdi" sayısız da kurulabiliyor.
   */
   tamamla:
-    "İmleçten önceki metni kaldığı yerden sürdür: cümle yarımsa önce onu tamamla, toplamda EN ÇOK iki cümle yaz. 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Bağlam yeterli değilse 'metin' alanını boş bırak.",
+    "İmleçten önceki metni kaldığı yerden sürdür: yalnızca imlecin bulunduğu cümleyi tamamla ya da, cümle bitmişse, onu izleyen EN ÇOK BİR kısa cümle yaz (yaklaşık 20 sözcük). 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Metinde geçmeyen sayı, bulgu, sonuç ya da istatistik iddiası ('bulgular gösterdi', 'anlamlı fark bulundu') ve atıf ekleme. Bağlam yeterli değilse 'metin' alanını boş bırak.",
 };
 
 export const YAZIM_ISTEMI = `Sen ArvoLab'ın akademik yazım asistanısın. Türkiye'deki üniversitelerde tez ve makale yazan öğrencilere yazarken yardım ediyorsun.
@@ -135,13 +139,29 @@ export function kutuphaneSatiri(k: KutuphaneKaydi, sira: number): string {
   return `${sira}. ${yazar} (${k.yil ?? "t.y."}) — ${bastanKirp(k.baslik, 160)}${k.yayin ? `, ${bastanKirp(k.yayin, 80)}` : ""}${k.not ? ` | Not: ${bastanKirp(k.not, 300)}` : ""}`;
 }
 
+/*
+  SATIR İÇİ TAMAMLAMADA KÜTÜPHANE GÖNDERİLMEZ (21.11.2026). Tamamlamanın
+  görevi atıf eklemeyi zaten yasaklıyor; eskiden yine de 60 kayıtlık liste
+  gidiyordu ve istemin %79'unu oluşturuyordu (ortalama 6.069 karakterin
+  4.811'i, yerel ölçüm). Görev metni de iki kez gidiyordu: bağlamdaki GÖREV
+  satırı ve boş istek yerine konan aynı metin. Kredi kayıttaki bağlam
+  uzunluğundan düştüğü için her öneri ~7 kredi tutuyordu.
+  Atıf ve sayı denetimi istemden değil sunucunun okuduğu kütüphaneden
+  yapılır (app/actions/ai-yazim.ts → yazimDenetle): listede olmayan bir
+  atıf yazan cevap yine düşer.
+*/
+const TAMAMLAMA_ISTEGI = "Kaldığı yerden sürdür.";
+
 export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: string } {
-  const kutuphane = g.kutuphane.slice(0, SINIR.kutuphane).map((k, i) => kutuphaneSatiri(k, i + 1));
+  const tamamla = g.gorev === "tamamla";
+  const kutuphane = tamamla ? [] : g.kutuphane.slice(0, SINIR.kutuphane).map((k, i) => kutuphaneSatiri(k, i + 1));
   const baglam = [
     g.calisma ? `ÇALIŞMA:\n${bastanKirp(g.calisma, 1_500)}` : "",
     `BELGENİN DİLİ: ${g.belgeDili === "en" ? "İngilizce (metni İngilizce yaz; atıfta 've' yerine 'and', 'vd.' yerine 'et al.')" : "Türkçe"}`,
     `ATIF STİLİ: ${g.atifStili}`,
-    `KÜTÜPHANE (atıf yapılabilecek TEK kaynaklar):\n${kutuphane.length ? kutuphane.join("\n") : "(boş — hiçbir atıf yapma)"}`,
+    tamamla
+      ? "KÜTÜPHANE: satır içi tamamlamada atıf yapılmaz."
+      : `KÜTÜPHANE (atıf yapılabilecek TEK kaynaklar):\n${kutuphane.length ? kutuphane.join("\n") : "(boş — hiçbir atıf yapma)"}`,
     g.bolum ? `İMLECİN BULUNDUĞU BÖLÜM: ${bastanKirp(g.bolum, 200)}` : "",
     g.oncesi ? `BELGEDE İMLEÇTEN ÖNCEKİ METİN:\n${kirp(g.oncesi, SINIR.oncesi)}` : "",
     g.secim ? `SEÇİLİ METİN:\n${bastanKirp(g.secim, SINIR.secim)}` : "",
@@ -154,7 +174,7 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
     rol: m.rol === "kullanici" ? "kullanici" : "sistem",
     metin: m.rol === "kullanici" ? bastanKirp(m.metin, SINIR.gecmisKarakter) : `ÖNCEKİ CEVABIN: ${bastanKirp(m.metin, SINIR.gecmisKarakter)}`,
   }));
-  const istek = bastanKirp(g.istek, SINIR.istek) || GOREV_ACIKLAMASI[g.gorev];
+  const istek = bastanKirp(g.istek, SINIR.istek) || (tamamla ? TAMAMLAMA_ISTEGI : GOREV_ACIKLAMASI[g.gorev]);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: YAZIM_ISTEMI },
     { rol: "sistem", metin: baglam },

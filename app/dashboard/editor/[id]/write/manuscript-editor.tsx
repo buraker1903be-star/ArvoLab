@@ -1417,8 +1417,8 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", tus);
     };
   }, [odak, pdfCekmecesiAcik, escDurumu]);
-  const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
-  useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
+  const { durum: oneriDurumu, kalanDk: oneriAcilisDk, durumuSifirla: oneriDurumunuSifirla } = useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, belgeDili, atifStili: citationStyle });
+  const oneriDuraklatildi = otomatikOneri && oneriDurumu.tur === "duraklatildi";
 
   const toolbarState = useEditorState({ editor, selector: selectToolbarState });
 
@@ -3456,17 +3456,39 @@ export default function ManuscriptEditor({
             <FileText size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label={t({
+            label={oneriDuraklatildi && oneriDurumu.tur === "duraklatildi" ? t({
+              tr: `Otomatik öneri duraklatıldı: ${oneriDurumu.mesaj}${oneriAcilisDk ? ` Yaklaşık ${oneriAcilisDk} dk sonra kendiliğinden sürer.` : ""} Kapatmak için tıklayın.`,
+              en: `Automatic suggestions paused: ${oneriDurumu.mesaj}${oneriAcilisDk ? ` Resumes in about ${oneriAcilisDk} min.` : ""} Click to turn off.`,
+            }) : t({
               tr: otomatikOneri
-                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri bir asistan hakkı kullanır; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
+                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri saatlik asistan hakkınızdan ve kurum kredisinden düşer; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
                 : "Otomatik öneri kapalı. Alt+/ ile imlece öneri isteyin; Tab kabul eder, Esc vazgeçer. Açmak için tıklayın.",
               en: otomatikOneri
                 ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses an assistant credit; press Alt+/ any time.)"
                 : "Automatic suggestions off. Press Alt+/ for a suggestion at the cursor; Tab accepts, Esc dismisses. Click to turn on.",
             })}
-            metin={t({ tr: "Öneri", en: "Suggest" })}
+            metin={oneriDuraklatildi ? t({ tr: oneriAcilisDk ? `Öneri · ${oneriAcilisDk} dk` : "Öneri · duraklatıldı", en: oneriAcilisDk ? `Suggest · ${oneriAcilisDk} min` : "Suggest · paused" }) : t({ tr: "Öneri", en: "Suggest" })}
             active={otomatikOneri}
-            onClick={() => otomatikOneriAyarla(!otomatikOneri)}
+            onClick={() => {
+              oneriDurumunuSifirla();
+              /*
+                Geri bildirim (20.11.2026): düğme eskiden yalnızca modu
+                sessizce değiştiriyordu; tıklayan öğrenci bir öneri
+                bekliyor, hiçbir şey görmüyor ve "çalışmıyor" diyordu.
+              */
+              const acik = !otomatikOneri;
+              otomatikOneriAyarla(acik);
+              showToast(
+                "info",
+                acik
+                  ? t({
+                      tr: "Otomatik öneri açık: paragrafın sonunda yazmayı bıraktığınızda gri bir devam görünür. Tab (telefonda “Ekle”) kabul eder, Esc kapatır.",
+                      en: "Automatic suggestions on: when you pause at the end of a paragraph a grey continuation appears. Tab (“Add” on phones) accepts, Esc dismisses.",
+                    })
+                  : t({ tr: "Otomatik öneri kapalı. Alt+/ ile istediğiniz an öneri isteyebilirsiniz.", en: "Automatic suggestions off. Press Alt+/ any time for a suggestion." }),
+              );
+              editor?.commands.focus();
+            }}
           >
             <WandSparkles size={16} />
           </ToolbarButton>

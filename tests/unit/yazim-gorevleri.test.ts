@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { anaHattiCozumle, oneriTemizle } from "@/lib/ai/yazim-metni";
+import { anaHattiCozumle, bulguIddiasi, ilkCumle, oneriTemizle } from "@/lib/ai/yazim-metni";
 import { yazimIstemi, yazimDenetle } from "@/lib/ai/yazim-asistani";
 
 /* Ana hat ve satır içi tamamlama görevleri (03.11.2026). */
@@ -58,4 +58,32 @@ test("kısaltma uyarıları: somut kayıplar, örtüşme oranı değil", async (
   assert.ok(kisaltmaUyarilari(secim, "Akran grupları yalnızlığı azaltır (Demir, 2019); etki kısa sürer, kalıcı değildir.").includes("sayi"));
   assert.ok(kisaltmaUyarilari("Kısa bir cümle.", "Kısa bir cümle, aslında.").includes("kisalmadi"));
   assert.ok(kisaltmaUyarilari("The effect was not significant in 2020 (Lee, 2021).", "The effect was significant (Lee, 2021).").includes("olumsuzluk"));
+});
+
+/*
+  20.11.2026: öneri en çok bir kısa cümle. Eskiden istem iki cümleye izin
+  veriyor, istemci 400 karaktere kadar gösteriyordu; gri metin paragrafı
+  kaplıyordu.
+*/
+test("tamamlama: ilk cümle sonunda kesilir; kısaltma ve ondalık cümle sonu değil", () => {
+  assert.equal(ilkCumle("zayıflamıştır. Bu durum ayrıca"), "zayıflamıştır.");
+  assert.equal(ilkCumle("eğitim, sağlık vb. alanlarda görülür. Ayrıca"), "eğitim, sağlık vb. alanlarda görülür.");
+  assert.equal(ilkCumle("as noted by Smith et al. in their review. Next"), "as noted by Smith et al. in their review.");
+  assert.equal(ilkCumle("oran 3.5 katına çıkmıştır! Sonra"), "oran 3.5 katına çıkmıştır!");
+  assert.equal(ilkCumle("E. Fisher bunu ilk tanımlayandır. Sonra"), "E. Fisher bunu ilk tanımlayandır.");
+  assert.equal(ilkCumle("yarım kalan bir devam"), "yarım kalan bir devam");
+  const oncesi = "Enflasyon ile işsizlik arasındaki ilişki";
+  assert.equal(oneriTemizle("zayıflamıştır. İkinci cümle burada gelir.", oncesi), " zayıflamıştır.");
+  assert.equal(oneriTemizle("which shapes study habits. A second sentence.", "This factor"), " which shapes study habits.");
+});
+
+test("tamamlama: dayanaksız bulgu iddiası yakalanır, öncesinde geçiyorsa geçer", () => {
+  assert.match(bulguIddiasi("ve bulgular bu ilişkiyi açıkça göstermiştir.", "Öğrencilerin uyumu") ?? "", /göstermiştir/);
+  assert.match(bulguIddiasi("gruplar arasında anlamlı bir fark vardır.", "İki grup karşılaştırıldığında") ?? "", /anlamlı bir fark/);
+  assert.match(bulguIddiasi("and the results clearly show a strong effect.", "Peer support") ?? "", /results clearly show/);
+  assert.match(bulguIddiasi("which was significantly higher.", "Loneliness") ?? "", /significantly/);
+  assert.equal(bulguIddiasi("bu da öğrencilerin çalışma planlarını etkiler.", "Uyum süreci"), null);
+  assert.equal(bulguIddiasi("which shapes how students plan their time.", "This factor"), null);
+  // Öğrencinin kendi bulgusunu yazdığı yerde (öncesinde geçiyor) düşmez.
+  assert.equal(bulguIddiasi("ve anlamlı bir fark bulundu.", "Analiz sonucunda gruplar arasında anlamlı"), null);
 });

@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
-import { etkinOneri, kabulEdilenOneri, oneriEklentisi, oneriGoster, oneriKabulEt, oneriTemizleIslem } from "@/lib/tiptap-satir-ici-oneri";
+import { history, undo } from "@tiptap/pm/history";
+import { etkinOneri, kabulEdilenOneri, oneriEklentisi, oneriGoster, oneriKabulEt, oneriKabulGonder, oneriTemizleIslem } from "@/lib/tiptap-satir-ici-oneri";
 import { belge, paragraf } from "./ortam";
+import JSZip from "jszip";
+import { Packer } from "docx";
+import { renderTiptapHtml } from "@/lib/tiptap-html";
+import { buildDocxFromTiptap } from "@/lib/tiptap-docx";
 
 /*
   Satır içi öneri (03.11.2026). Öneri SÜSLEMEDİR: gösterilmesi belgeyi
@@ -53,4 +58,73 @@ test("imleç istekten sonra yer değiştirdiyse öneri gösterilmez", () => {
   const s = durum();
   assert.equal(oneriGoster(s, { konum: 2, metin: " x", kayit: null }), null);
   assert.equal(oneriGoster(s, { konum: s.selection.head, metin: "", kayit: null }), null);
+});
+
+/*
+  Tek geri alma adımı (20.11.2026). Eskiden kabul, hemen önce yazılan
+  harflerle aynı geçmiş grubuna giriyordu (500 ms içinde): Ctrl+Z öneriyle
+  birlikte öğrencinin son yazdığı sözcüğü de siliyordu. Kabulden sonra
+  yazılan da aynı gruba girmemeli.
+*/
+test("kabul tek geri alma adımıdır: önce ve sonra yazılan korunur", () => {
+  const doc = belge(paragraf("Enflasyon ile"));
+  let s = EditorState.create({ doc, plugins: [history(), oneriEklentisi()], selection: TextSelection.create(doc, doc.content.size - 1) });
+  const gorunum = { get state() { return s; }, dispatch: (tr: Parameters<EditorState["apply"]>[0]) => { s = s.apply(tr); } };
+  // Aynı zaman damgasıyla: tarayıcıda 500 ms içinde yazılıp Tab'a basılmış gibi.
+  const an = Date.now();
+  gorunum.dispatch(s.tr.insertText(" işsizlik").setTime(an));
+  gorunum.dispatch(oneriGoster(s, { konum: s.selection.head, metin: " arasındaki ilişki", kayit: null })!);
+  assert.equal(oneriKabulGonder(gorunum), true);
+  gorunum.dispatch(s.tr.insertText(" zayıftır.").setTime(an));
+  assert.equal(s.doc.textContent, "Enflasyon ile işsizlik arasındaki ilişki zayıftır.");
+
+  undo(s, gorunum.dispatch);
+  assert.equal(s.doc.textContent, "Enflasyon ile işsizlik arasındaki ilişki", "kabulden sonra yazılan ayrı adım");
+  undo(s, gorunum.dispatch);
+  assert.equal(s.doc.textContent, "Enflasyon ile işsizlik", "tek Ctrl+Z yalnızca öneriyi geri alır");
+  assert.equal(oneriKabulGonder(gorunum), false, "öneri yokken kabul hiçbir şey yapmaz (Tab tabloya/listeye kalır)");
+});
+
+test("seçim varken öneri gösterilmez; tablo hücresinde gösterilir ve kabul edilir", () => {
+  const doc = belge(paragraf("Seçili bir metin"));
+  const secili = EditorState.create({ doc, plugins: [oneriEklentisi()], selection: TextSelection.create(doc, 1, 6) });
+  assert.equal(oneriGoster(secili, { konum: 6, metin: " x", kayit: null }), null);
+
+  const tablo = belge({
+    type: "table",
+    content: [{ type: "tableRow", content: [{ type: "tableCell", content: [paragraf("Hücre metni")] }, { type: "tableCell", content: [paragraf("İkinci")] }] }],
+  });
+  let hucre: number | null = null;
+  tablo.descendants((n, pos) => {
+    if (hucre === null && n.isTextblock && n.textContent === "Hücre metni") hucre = pos + 1 + n.content.size;
+  });
+  let s = EditorState.create({ doc: tablo, plugins: [oneriEklentisi()], selection: TextSelection.create(tablo, hucre!) });
+  s = s.apply(oneriGoster(s, { konum: hucre!, metin: " devam eder", kayit: null })!);
+  s = s.apply(oneriKabulEt(s)!);
+  assert.match(s.doc.textBetween(0, s.doc.content.size, "|"), /Hücre metni devam eder\|İkinci/);
+});
+
+test("öneri kaydedilen belgeye, kelime sayısına ve metne girmez", () => {
+  let s = durum();
+  const once = JSON.stringify(s.doc.toJSON());
+  s = s.apply(oneriGoster(s, { konum: s.selection.head, metin: " gizli öneri metni", kayit: null })!);
+  assert.equal(JSON.stringify(s.doc.toJSON()), once);
+  assert.equal(s.doc.textContent.includes("gizli"), false);
+});
+
+/*
+  20.11.2026: öneri gösterilirken alınan yazdırma/paylaşım HTML'i ve Word
+  çıktısı öneriyi TAŞIMAZ. Öneri süsleme olduğu için belgenin JSON'unda yok;
+  bu test, bir gün öneriyi düğüm olarak yazan bir yol eklenirse üç çıktıdan
+  ikisinde hemen kırmızı yanar.
+*/
+test("görünen öneri yazdırma HTML'ine ve Word'e girmez", async () => {
+  let s = durum();
+  s = s.apply(oneriGoster(s, { konum: s.selection.head, metin: " GIZLI_ONERI_METNI", kayit: null })!);
+  const json = s.doc.toJSON();
+  assert.equal(renderTiptapHtml(json as never, {}).html.includes("GIZLI_ONERI_METNI"), false);
+  const word = await buildDocxFromTiptap({ title: "T", doc: json as never, fetchImage: async () => null } as never);
+  const xml = await (await JSZip.loadAsync(await Packer.toBuffer(word))).file("word/document.xml")!.async("string");
+  assert.equal(xml.includes("GIZLI_ONERI_METNI"), false);
+  assert.equal(xml.includes("Enflasyon ile işsizlik"), true, "asıl metin Word'de");
 });

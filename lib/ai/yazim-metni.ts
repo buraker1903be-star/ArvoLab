@@ -48,7 +48,31 @@ export function anaHattiCozumle(metin: string): AnaHatSatiri[] {
   ardındadır. Satır sonu ve fazla boşluk tek boşluğa iner: öneri tek
   paragrafın devamıdır.
 */
-export const ONERI_EN_UZUN = 400;
+export const ONERI_EN_UZUN = 220;
+
+/*
+  TEK CÜMLE (20.11.2026). Satır içi öneri imleçteki cümlenin devamıdır,
+  en çok bir kısa cümle. Eskiden istem "en çok iki cümle" diyordu ve
+  istemci 400 karaktere kadar gösteriyordu: gri metin paragrafı kaplıyor,
+  öğrenci yazdığı cümleyi okuyamıyordu. Model iki cümle yazsa bile burada
+  ilk cümle sonunda kesilir. Kısaltma noktası ("vb.", "et al.", "Dr.")
+  ve ondalık ("3.5") cümle sonu sayılmaz.
+*/
+const KISALTMALAR = new Set(["vb", "vs", "vd", "örn", "bkz", "yy", "dr", "prof", "doç", "al", "e.g", "i.e", "etc", "cf", "vol", "no", "pp", "ss", "fig", "mr", "ms"]);
+
+export function ilkCumle(metin: string): string {
+  const desen = /[.!?…]+(?=\s|$)/g;
+  let eslesme: RegExpExecArray | null;
+  while ((eslesme = desen.exec(metin))) {
+    const once = metin.slice(0, eslesme.index);
+    const sozcuk = (/([\p{L}.]+)$/u.exec(once)?.[1] ?? "").toLowerCase().replace(/^\.+/, "");
+    if (eslesme[0] === "." && KISALTMALAR.has(sozcuk)) continue;
+    // Tek harf + nokta (adın baş harfi: "E. Fisher") cümle sonu değil.
+    if (eslesme[0] === "." && /^\p{L}$/u.test(sozcuk)) continue;
+    return metin.slice(0, eslesme.index + eslesme[0].length);
+  }
+  return metin;
+}
 
 export function oneriTemizle(oneri: string, oncesi: string): string {
   let o = oneri.replace(/\s+/g, " ").trim();
@@ -60,6 +84,8 @@ export function oneriTemizle(oneri: string, oncesi: string): string {
       break;
     }
   }
+  if (!o) return "";
+  o = ilkCumle(o).trim();
   if (!o) return "";
   const bosluk = oncesi === "" || /\s$/.test(oncesi) || /^[.,;:!?)\]]/.test(o) ? "" : " ";
   return (bosluk + o).slice(0, ONERI_EN_UZUN);
@@ -95,4 +121,33 @@ export function kisaltmaUyarilari(secim: string, kisaltma: string): KisaltmaUyar
   const kalanSayilar = new Set(b.match(SAYI) ?? []);
   if ((a.match(SAYI) ?? []).some((n) => !kalanSayilar.has(n))) u.push("sayi");
   return u;
+}
+
+/*
+  DAYANAKSIZ BULGU (20.11.2026). Satır içi öneri öğrencinin cümlesini
+  sürdürür; bir SONUÇ ilan etmesi öğrencinin elde etmediği bir bulguyu
+  onun ağzından yazmak olur ("bulgular X'i göstermiştir", "anlamlı bir
+  fark bulunmuştur"). Sayı ve atıf yapısal olarak denetleniyor
+  (yazimDenetle); bulgu iddiası sayısız da kurulabildiği için ayrı bir
+  kalıp listesi var. Yanlış alarmın bedeli burada küçük: düşen öneri
+  hiç gösterilmez, öğrenci yazmaya devam eder. Yine de kalıp öncesinde
+  geçiyorsa (öğrenci kendi bulgusunu yazıyor) düşürülmez.
+*/
+const BULGU_KALIPLARI: { anahtar: RegExp; kalip: RegExp }[] = [
+  { anahtar: /bulgu|sonuç/iu, kalip: /\b(bulgular|sonuçlar)\p{L}*\s+(?:[\p{L}'’]+\s+){0,4}(göster|ortaya koy|kanıtla|doğrula|işaret et)\p{L}*/iu },
+  { anahtar: /anlamlı/iu, kalip: /\banlamlı\s+(?:bir\s+)?(fark|ilişki|etki|farklılık|düzeyde)\p{L}*/iu },
+  { anahtar: /istatistiksel/iu, kalip: /\bistatistiksel\s+olarak\b/iu },
+  { anahtar: /saptan|tespit edil/iu, kalip: /\b(saptanmıştır|tespit edilmiştir|saptandı|tespit edildi)\b/iu },
+  { anahtar: /result|finding|data/i, kalip: /\b(results?|findings?|data)\s+(?:\w+\s+){0,3}(show|showed|shown|indicate[sd]?|reveal(?:ed|s)?|demonstrate[sd]?|confirm(?:ed|s)?)\b/i },
+  { anahtar: /significan/i, kalip: /\bsignificant(ly)?\b/i },
+  { anahtar: /found/i, kalip: /\b(we|was|were|it was)\s+found\b/i },
+];
+
+/** Öneride öncesinde dayanağı olmayan bir bulgu iddiası varsa onu döndürür. */
+export function bulguIddiasi(oneri: string, oncesi: string): string | null {
+  for (const { anahtar, kalip } of BULGU_KALIPLARI) {
+    const bulunan = kalip.exec(oneri);
+    if (bulunan && !anahtar.test(oncesi)) return bulunan[0];
+  }
+  return null;
 }

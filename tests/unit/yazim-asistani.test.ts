@@ -79,3 +79,34 @@ test("istem: kütüphane, belge ve görev bağlama girer; geçmiş kırpılır",
   assert.equal(mesajlar.length, 11);
   assert.equal(mesajlar.at(-1)?.metin, "Giriş için bir paragraf yaz");
 });
+
+/*
+  Satır içi tamamlama (21.11.2026): kütüphane listesi gönderilmez, görev
+  metni bir kez gider. Eskiden istemin %79'u atıf yapması yasak olan bir
+  görev için gönderilen kütüphane listesiydi. Atıf denetimi istemden değil
+  sunucunun okuduğu kütüphaneden yapılır: listede olmayan atıf yine düşer.
+*/
+test("istem (tamamla): kütüphane listesi yok, görev metni bir kez; atıf denetimi korunur", () => {
+  const girdi = {
+    calisma: "Tez: Enflasyon ve işsizlik",
+    belgeDili: "tr" as const,
+    atifStili: "APA 7",
+    bolum: "Giriş",
+    oncesi: "Fiyat istikrarı makroekonominin temel hedefidir ve",
+    secim: null,
+    kutuphane: KUTUPHANE,
+    gecmis: [],
+    istek: "",
+  };
+  const tamamla = yazimIstemi({ ...girdi, gorev: "tamamla" });
+  assert.doesNotMatch(tamamla.kaynak, /Phillips|Engle|Staiger/);
+  assert.match(tamamla.kaynak, /KÜTÜPHANE: satır içi tamamlamada atıf yapılmaz\./);
+  const gorevMetni = "İmleçten önceki metni kaldığı yerden sürdür";
+  assert.equal(tamamla.kaynak.split(gorevMetni).length - 1, 1, "görev metni bir kez geçmeli");
+  assert.equal(tamamla.mesajlar.at(-1)?.metin, "Kaldığı yerden sürdür.");
+  // Öteki görevler değişmedi: kütüphane yine gider.
+  assert.match(yazimIstemi({ ...girdi, gorev: "devam" }).kaynak, /Phillips \(1958\)/);
+  // Sunucu denetimi kütüphaneyi ayrıca alır: listede olmayan atıf düşer, olan geçer.
+  assert.equal(yazimDenetle("bu ilişki tartışmalıdır (Friedman, 1968).", KUTUPHANE, [tamamla.kaynak]).gecti, false);
+  assert.equal(yazimDenetle("bu ilişki tartışmalıdır (Phillips, 1958).", KUTUPHANE, [tamamla.kaynak, ...BAGLAM]).gecti, true);
+});

@@ -1,0 +1,214 @@
+[
+  {
+    "ad": "kapalıyken duraksama istek göndermez",
+    "gecti": true,
+    "ayrinti": {
+      "kayit": 0
+    }
+  },
+  {
+    "ad": "Öneri düğmesi açınca ne olacağını söyler",
+    "gecti": true,
+    "ayrinti": {
+      "bildirim": "Bu belgenin bazı biçim bilgileri eski bir kayıt hatası nedeniyle kaybolmuş.Başlık düzeylerini (H1–H3), hizalamayı ve şek",
+      "basili": "true"
+    }
+  },
+  {
+    "ad": "otomatik: yazarken istek yok, duraksamada tek istek",
+    "gecti": true,
+    "ayrinti": {
+      "yazarken": 0,
+      "sonraKayit": 1
+    }
+  },
+  {
+    "ad": "otomatik: gri devam görünür, tek cümle, belgeye girmez",
+    "gecti": true,
+    "ayrinti": {
+      "o1": " bu da öğrencilerin çalışma planlarını doğrudan etkiler."
+    }
+  },
+  {
+    "ad": "görünen öneri kelime sayısına girmez",
+    "gecti": true,
+    "ayrinti": {
+      "kelimeOnce": 32,
+      "k1": 35,
+      "oneriSozcuk": 7
+    }
+  },
+  {
+    "ad": "görünen öneri kaydedilen belgeye girmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "Esc öneriyi kapatır, belge değişmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir",
+    "gecti": true,
+    "ayrinti": {
+      "hakOnce": 1,
+      "hakSonra": 2
+    }
+  },
+  {
+    "ad": "Alt+/ hemen ardından da öneri gösterir (konum yarışı)",
+    "gecti": true,
+    "ayrinti": {
+      "o2": " bu da öğrencilerin çalışma planlarını doğrudan etkiler."
+    }
+  },
+  {
+    "ad": "yazmak öneriyi siler",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "imleç hareketi öneriyi siler",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "Tab öneriyi asistan iziyle ekler",
+    "gecti": true,
+    "ayrinti": {
+      "o3": " bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
+      "pOnce": "osyal ilişkilerini birlikte belirler ve ve bu süreçte ayrıca",
+      "pSonra": "e belirler ve ve bu süreçte ayrıca bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
+      "izler": [
+        " bu da öğrencilerin çalışma planlarını doğrudan etkiler."
+      ]
+    }
+  },
+  {
+    "ad": "tek Ctrl+Z yalnızca öneriyi geri alır",
+    "gecti": true,
+    "ayrinti": {
+      "sonra": "lan açıklama metni öğrencininKomşu hücre"
+    }
+  },
+  {
+    "ad": "geç cevap: yazmaya devam edilince gösterilmez",
+    "gecti": true,
+    "ayrinti": {
+      "o": null
+    }
+  },
+  {
+    "ad": "bağlamda olmayan sayı: öneri düşer",
+    "gecti": true,
+    "ayrinti": {
+      "sayiKaydi": [
+        "rejected:uydurma_sayi"
+      ]
+    }
+  },
+  {
+    "ad": "seçim varken öneri istenmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "tabloda öneri yokken Tab sonraki hücreye geçer",
+    "gecti": true,
+    "ayrinti": {
+      "hucreSonra": "Komşu hücre"
+    }
+  },
+  {
+    "ad": "tabloda öneri varken Tab kabul eder (hücrede kalır)",
+    "gecti": true,
+    "ayrinti": {
+      "hucreKabul": " öğrencilerin çalışma planlarını doğrudan etkiler."
+    }
+  },
+  {
+    "ad": "hak dolunca düğme duraklatıldığını ve kalan süreyi söyler",
+    "gecti": true,
+    "ayrinti": {
+      "duraklatma": "Öneri · 60 dk"
+    }
+  },
+  {
+    "ad": "duraklatılmışken otomatik istek gitmez ve öneri görünmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "duraklatılmışken Alt+/ nedeni söyler (sessiz değil)",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "kapatınca otomatik istek gitmez",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "masaüstü TR: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  },
+  {
+    "ad": "EN: İngilizce belgede İngilizce devam",
+    "gecti": true,
+    "ayrinti": {
+      "o": " which shapes how students plan their study time."
+    }
+  },
+  {
+    "ad": "EN: düğme İngilizce",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "EN: Tab kabul eder",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "EN: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  },
+  {
+    "ad": "telefon: Öneri düğmesi araç çubuğunda görünür",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "telefon: otomatik öneri + görünür “Ekle” düğmesi",
+    "gecti": true,
+    "ayrinti": {
+      "o": " bu da öğrencilerin çalışma planlarını doğrudan etkiler.",
+      "dugmeKutusu": {
+        "y": 330,
+        "alt": 362,
+        "w": 46,
+        "h": 32,
+        "ekran": 460
+      }
+    }
+  },
+  {
+    "ad": "telefon: “Ekle”ye dokunmak kabul eder, odak editörde kalır",
+    "gecti": true,
+    "ayrinti": {}
+  },
+  {
+    "ad": "telefon: sayfa hatası yok",
+    "gecti": true,
+    "ayrinti": {
+      "hatalar": []
+    }
+  }
+]
