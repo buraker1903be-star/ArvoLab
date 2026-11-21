@@ -47,9 +47,10 @@ const ed = (s, fn, arg) => s.evaluate(([f, a]) => new Function("e", "a", `return
 */
 const durum = (s) => s.evaluate(() => {
   const e = document.querySelector(".ProseMirror").editor;
-  const bloklar = [...document.querySelectorAll(".ProseMirror > *")];
-  const cizgi = 260;
-  const ust = bloklar.findIndex((b) => { const r = b.getBoundingClientRect(); return r.top <= cizgi && r.bottom > cizgi; });
+  // Çizgi bloklar arasındaki boşluğa düşebilir; posAtCoords en yakın konumu verir.
+  const r = document.querySelector(".ProseMirror").getBoundingClientRect();
+  const konum = e.view.posAtCoords({ left: r.left + 60, top: 260 });
+  const ust = konum ? e.state.doc.resolve(konum.pos).index(0) : -1;
   return { metin: e.state.doc.textContent.length, imlec: e.state.selection.from, ustBlok: ust };
 });
 /*
