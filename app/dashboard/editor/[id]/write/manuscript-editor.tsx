@@ -1475,7 +1475,7 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", tus);
     };
   }, [odak, pdfCekmecesiAcik, escDurumu]);
-  const { durum: oneriDurumu, kalanDk: oneriAcilisDk, durumuSifirla: oneriDurumunuSifirla } = useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri });
+  const { durum: oneriDurumu, kalanDk: oneriAcilisDk, durumuSifirla: oneriDurumunuSifirla } = useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, belgeDili, atifStili: citationStyle });
   const oneriDuraklatildi = otomatikOneri && oneriDurumu.tur === "duraklatildi";
 
   const toolbarState = useEditorState({ editor, selector: selectToolbarState });
