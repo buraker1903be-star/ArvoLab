@@ -154,10 +154,10 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   await s.waitForTimeout(3500);
   await sonaGit(s, "Üniversiteye");
   const hakOnce = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
-  await s.keyboard.press("Alt+/"); await bekleOneri(s); await s.keyboard.press("Escape");
-  // Bağlam bir harf değişir: aynı bağlam artık önbellekten gelir ve sunucuya hiç gitmez (4a).
+  // İki istek de YENİ bağlamda: aynı bağlam önbellekten gelir ve sunucuya hiç gitmez (4a). Bu konum 3. adımda istendi.
+  await s.keyboard.type("w"); await s.keyboard.press("Alt+/"); await bekleOneri(s); await s.keyboard.press("Escape");
   await s.keyboard.type("q"); await s.keyboard.press("Alt+/"); await s.waitForTimeout(1500); sonIstek = Date.now();
-  await s.keyboard.press("Backspace");
+  await s.keyboard.press("Backspace"); await s.keyboard.press("Backspace");
   const hakSonra = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
   const aralikMetni = await s.evaluate(() => document.body.innerText);
   kayit("sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir", hakSonra - hakOnce === 1 && /çok sık istendi/.test(aralikMetni), { hakOnce, hakSonra });
