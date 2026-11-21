@@ -115,6 +115,12 @@ dilinden ayrıdır: şekil/tablo etiketleri, kapak, atıf biçimi ona göre.
 - **Yeni yetenek `lib/ai/erisim.ts` kapısından geçer.** Oturum, abonelik,
   kurulum ve KULLANICI başına saatlik hak orada; yetenek başına ayrı sayaç
   tutulmaz, yoksa aynı kullanıcı her yetenekten ayrı hak kazanır.
+  **Tek istisna satır içi tamamlama** (`tamamla` görevi, otomatik ya da
+  Alt+/; 21.11.2026 kararı): saatlik haktan düşmez, çünkü sohbetle ortak
+  hak yazarken 4 dakikada doluyordu. Abonelik, deneme, aylık kredi ve
+  sunucudaki en az aralık tamamlamada da geçerli; liste
+  `lib/ai/sinirlar.ts` → `SAATLIK_HAKTAN_MUAF_GOREVLER`. Başka bir görevi
+  muaf tutmak bir karar ister.
 - **Kanıt durumları birbirinin yerine geçmez** (`lib/kanit/durum.ts`,
   `kanit_kayitlari`). Künye doğrulandı ≠ iddia destekleniyor ≠ bulgu
   doğru; her biri ayrı sütun, tek bir "doğrulandı" ya da yüzde yok.

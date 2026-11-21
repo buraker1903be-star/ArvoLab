@@ -160,7 +160,8 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   await s.keyboard.press("Backspace"); await s.keyboard.press("Backspace");
   const hakSonra = Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
   const aralikMetni = await s.evaluate(() => document.body.innerText);
-  kayit("sunucu en az aralığı: art arda ikinci istek frene takılır, saatlik hak tüketmez ve söylenir", hakSonra - hakOnce === 1 && /çok sık istendi/.test(aralikMetni), { hakOnce, hakSonra });
+  // 21.11.2026'dan beri tamamlama saatlik haktan hiç düşmez (lib/ai/sinirlar.ts): sayaç iki istekte de değişmemeli.
+  kayit("sunucu en az aralığı: art arda ikinci istek frene takılır ve söylenir; tamamlama saatlik hakkı değiştirmez", hakSonra === hakOnce && /çok sık istendi/.test(aralikMetni), { hakOnce, hakSonra });
 
 
   hakSifirla();
@@ -228,21 +229,73 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
   kayit("tabloda öneri varken Tab kabul eder (hücrede kalır)", !!o4 && hucreKabul.endsWith(o4.trim()), { hucreKabul: hucreKabul.slice(-50) });
   await s.screenshot({ path: OUT + "masaustu-tablo.png" });
 
-  // 13b) Saatlik hak dolu: öneri DURAKLATILIR ve bu görünür (düğme yazısı + Alt+/ mesajı); otomatik istek gitmez.
+  /*
+    13b) Saatlik hak istisnası ve kredi (21.11.2026, "D seçeneği"):
+    tamamlama krediden düşer ama sohbetin saatlik sayacını değiştirmez;
+    sohbet kullanılmaya devam eder. Önbellekten gösterim ve kabul kredi
+    tüketmez. Kredi ya da abonelik engeli atlanamaz: öneri duraklar ve
+    nedeni görünür.
+  */
+  const sohbetSayaci = () => Number(psql(`select coalesce((select count from public.auth_rate_limits where key='ai-asistan:${KUL.id}'),0)`));
+  const krediHareketi = () => psql(`select count(*) || '|' || coalesce(sum(kredi),0) from public.ai_bireysel_kredi_hareketleri where user_id='${KUL.id}' and tur='tuketim'`).split("|").map(Number);
+  const tamamlananlar = () => calismaKayitlari(PR_TR).filter((k) => k.startsWith("completed")).length;
+  hakSifirla();
+  const [kh0, kk0] = krediHareketi(); const t0 = tamamlananlar();
+  for (const [i, harf] of ["k", "l", "m"].entries()) {
+    await sonaGit(s, "Üniversiteye"); await s.keyboard.type(harf); await altSlash(s); await bekleOneri(s);
+    if (i < 2) { await s.keyboard.press("Escape"); await s.keyboard.press("Backspace"); }
+  }
+  const [kh1, kk1] = krediHareketi(); const t1 = tamamlananlar();
+  kayit("tamamlama krediden düşer, sohbetin saatlik sayacı değişmez", t1 - t0 === 3 && kh1 - kh0 === 3 && kk1 > kk0 && sohbetSayaci() === 0, { tamamlanan: t1 - t0, krediHareketi: kh1 - kh0, kredi: kk1 - kk0, sohbetSayaci: sohbetSayaci() });
+  // Aynı bağlamda önbellekten gösterim ve Tab ile kabul: yeni kredi hareketi yok.
+  await s.keyboard.press("Escape"); await altSlash(s); const oOnbK = await bekleOneri(s, 3_000);
+  await s.keyboard.press("Tab"); await s.waitForTimeout(800);
+  const [kh2] = krediHareketi();
+  kayit("önbellekten gösterim ve kabul kredi tüketmez", !!oOnbK && kh2 === kh1 && tamamlananlar() === t1, { oOnbK, yeniHareket: kh2 - kh1 });
+  await s.keyboard.press("Control+z"); await s.waitForTimeout(200); await s.keyboard.press("Backspace");
+  // Sohbet: tamamlamalardan sonra da kullanılabilir; sayacı yalnızca sohbet artırır.
+  await s.getByRole("button", { name: /^Yazım asistanı/ }).first().click();
+  const panel = s.locator("aside.yazim-paneli"); await panel.waitFor();
+  const kartOnce = await panel.locator(".yazim-oneri").count();
+  const gonder = panel.getByRole("button", { name: "Gönder" });
+  for (let i = 0; i < 5; i++) { await panel.locator("textarea").fill("Bu paragrafı daha akademik yaz."); if (await gonder.isEnabled()) break; await s.waitForTimeout(400); }
+  await gonder.click();
+  const sohbetCevabi = await s.waitForFunction((n) => document.querySelectorAll("aside.yazim-paneli .yazim-oneri").length > n, kartOnce, { timeout: 15000 }).then(() => true).catch(() => false);
+  kayit("sohbet tamamlamalardan sonra çalışır; saatlik sayacı yalnızca sohbet artırır (0 → 1)", sohbetCevabi && sohbetSayaci() === 1, { sohbetCevabi, sohbetSayaci: sohbetSayaci() });
+  await s.getByRole("button", { name: /^Yazım asistanı/ }).first().click().catch(() => {}); await s.waitForTimeout(300);
+  // Sohbetin hakkı dolu (99) iken tamamlama yine çalışır; sayaç dokunulmadan kalır.
   psql(`insert into public.auth_rate_limits (key, window_start, count) values ('ai-asistan:${KUL.id}', now(), 99) on conflict (key) do update set window_start = now(), count = 99`);
-  await s.waitForTimeout(3500);
-  // Önceki adımlarda bu konum için öneri önbellekte: sunucunun "hak doldu" cevabını görmek için bağlam değişir.
-  await sonaGit(s, "Üniversiteye"); await s.keyboard.type("z"); await altSlash(s); await s.waitForTimeout(1500);
-  await s.keyboard.press("Backspace");
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type("n"); await altSlash(s); const oDolu = await bekleOneri(s);
+  kayit("sohbetin saatlik hakkı doluyken tamamlama çalışır, sayaç değişmez", !!oDolu && sohbetSayaci() === 99, { oDolu, sohbetSayaci: sohbetSayaci() });
+  await s.keyboard.press("Escape"); await s.keyboard.press("Backspace");
+  hakSifirla();
+
+  // Kredi bitti: öneri duraklar, nedeni düğmede ve Alt+/ mesajında; otomatik istek gitmez.
+  const krediYedek = psql(`select aylik_kalan || '|' || ek_bakiye from public.ai_bireysel_kredi_hesabi where user_id='${KUL.id}'`);
+  psql(`update public.ai_bireysel_kredi_hesabi set aylik_kalan = 0, ek_bakiye = 0 where user_id='${KUL.id}'`);
+  const nKr = calismaKayitlari(PR_TR).length;
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type("p"); await altSlash(s); await s.waitForTimeout(1500);
   const duraklatma = await dugme.textContent();
-  kayit("hak dolunca düğme duraklatıldığını ve kalan süreyi söyler", /Öneri · \d+ dk/.test(duraklatma ?? ""), { duraklatma });
+  const dugmeEtiketi = await dugme.getAttribute("aria-label");
+  kayit("kredi bitince öneri duraklar ve düğme nedenini söyler", /Öneri · duraklatıldı/.test(duraklatma ?? "") && /kredi/i.test(dugmeEtiketi ?? ""), { duraklatma, dugmeEtiketi: (dugmeEtiketi ?? "").slice(0, 120) });
   await s.screenshot({ path: OUT + "masaustu-duraklatildi.png" });
-  const nD = calismaKayitlari(PR_TR).length;
-  await sonaGit(s, "Üniversiteye"); await s.keyboard.type(" dur", { delay: 40 }); await s.waitForTimeout(2600);
-  kayit("duraklatılmışken otomatik istek gitmez ve öneri görünmez", calismaKayitlari(PR_TR).length === nD && !(await oneri(s)));
+  await s.keyboard.type(" dur", { delay: 40 }); await s.waitForTimeout(2600);
+  kayit("kredi yokken otomatik istek gitmez, kayıt ve öneri yok", calismaKayitlari(PR_TR).length === nKr && !(await oneri(s)));
   await altSlash(s); await s.waitForTimeout(600);
-  kayit("duraklatılmışken Alt+/ nedeni söyler (sessiz değil)", /Saatlik asistan hakkınız doldu/.test(await s.evaluate(() => document.body.innerText)));
-  psql(`delete from public.auth_rate_limits where key='ai-asistan:${KUL.id}'`);
+  kayit("kredi yokken Alt+/ nedeni söyler (sessiz değil)", /AI krediniz bitti/.test(await s.evaluate(() => document.body.innerText)));
+  for (let i = 0; i < "p dur".length; i++) await s.keyboard.press("Backspace");
+  const [ay, ekb] = krediYedek.split("|");
+  psql(`update public.ai_bireysel_kredi_hesabi set aylik_kalan = ${Number(ay)}, ek_bakiye = ${Number(ekb)} where user_id='${KUL.id}'`);
+  // Abonelik kapısı da atlanamaz: hesap kapalıyken (silme talebi aynı kapıdan geçer) Alt+/ kayıt üretmez.
+  await dugme.click(); await s.waitForTimeout(400); await dugme.click(); await s.waitForTimeout(400); // duraklatmayı sıfırla
+  psql(`update public.profiles set silme_talebi_at = now() where id='${KUL.id}'`);
+  const nAb = calismaKayitlari(PR_TR).length;
+  await sonaGit(s, "Üniversiteye"); await s.keyboard.type("r"); await altSlash(s); await s.waitForTimeout(1500);
+  const abonelikMetni = await s.evaluate(() => document.body.innerText);
+  psql(`update public.profiles set silme_talebi_at = null where id='${KUL.id}'`);
+  kayit("abonelik kapalıyken tamamlama gitmez, öneri ve kayıt yok", calismaKayitlari(PR_TR).length === nAb && !(await oneri(s)) && /duraklatıldı/i.test(abonelikMetni), { yeni: calismaKayitlari(PR_TR).length - nAb });
+  await s.keyboard.press("Backspace");
+  await dugme.click(); await s.waitForTimeout(400); await dugme.click(); await s.waitForTimeout(400);
 
   // 14) Kapatınca otomatik istek durur.
   await dugme.click(); await s.waitForTimeout(1500);

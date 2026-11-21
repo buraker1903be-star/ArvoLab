@@ -5,7 +5,7 @@ import { aiHataMesaji, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiAcilisiSn, asistanHakkiVar, asistanKapisi, tamamlamaAraligiUygun } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
-import { TAMAMLAMA_EN_AZ_ARALIK_SN } from "@/lib/ai/sinirlar";
+import { TAMAMLAMA_EN_AZ_ARALIK_SN, saatlikHakaSayilir } from "@/lib/ai/sinirlar";
 import { bulguIddiasi, ilkCumle } from "@/lib/ai/yazim-metni";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 import { belgeDili } from "@/lib/belge-dili";
@@ -145,8 +145,15 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
       .map((b) => b.slice(0, 120)),
   });
 
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
-  if (hakHatasi) return { hata: hakHatasi, sinir: { tur: "saatlik", tekrarSaniye: await asistanHakkiAcilisiSn(kapi.kullaniciId) } };
+  /*
+    Tamamlama saatlik haktan düşmez (lib/ai/sinirlar.ts →
+    saatlikHakaSayilir, gerekçe orada). Kapı (abonelik, deneme, kredi)
+    ve en az aralık yukarıda her görev için çalıştı; kredi kayıttan düşer.
+  */
+  if (saatlikHakaSayilir(gorev)) {
+    const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
+    if (hakHatasi) return { hata: hakHatasi, sinir: { tur: "saatlik", tekrarSaniye: await asistanHakkiAcilisiSn(kapi.kullaniciId) } };
+  }
 
   const basladi = Date.now();
   const ortak = { kullaniciId: kapi.kullaniciId, calismaId: calisma.id, yetenek: "yazim" as const, baglam: kaynak, basladi };
