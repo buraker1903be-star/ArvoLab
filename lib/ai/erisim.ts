@@ -90,6 +90,11 @@ export async function denemeAsistanHakkim(kullaniciId: string, dil: Dil = "tr"):
  * Saatlik hak ayrı tutuluyor: kayıtlı bir cevap gösterilirken model
  * çağrılmıyor, dolayısıyla hak da yanmamalı. Aksi halde kullanıcı kendi
  * geçmişine bakarken hakkını tüketirdi.
+ *
+ * İSTİSNA (21.11.2026): satır içi tamamlama bu haktan düşmez; çağıran
+ * saatlikHakaSayilir(gorev) ile sorar (lib/ai/sinirlar.ts). Tamamlama
+ * asistanKapisi'nden (abonelik, deneme, kredi) ve tamamlamaAraligiUygun
+ * freninden geçmeye devam eder. Başka hiçbir yetenek muaf değil.
  */
 export async function asistanHakkiVar(kullaniciId: string, dil: Dil = "tr"): Promise<string | null> {
   // Sayaç kurulamıyorsa kullanıcı engellenmiyor (bkz. adminIstemcisiVarsa).

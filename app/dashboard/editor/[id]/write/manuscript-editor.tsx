@@ -3709,10 +3709,10 @@ export default function ManuscriptEditor({
               en: `Automatic suggestions paused: ${oneriDurumu.mesaj}${oneriAcilisDk ? ` Resumes in about ${oneriAcilisDk} min.` : ""} Click to turn off.`,
             }) : t({
               tr: otomatikOneri
-                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri saatlik asistan hakkınızdan ve kurum kredisinden düşer; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
+                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri AI kredinizden düşer; sohbetin saatlik hakkını kullanmaz. Alt+/ ile istediğiniz an isteyebilirsiniz.)"
                 : "Otomatik öneri kapalı. Alt+/ ile imlece öneri isteyin; Tab kabul eder, Esc vazgeçer. Açmak için tıklayın.",
               en: otomatikOneri
-                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses an assistant credit; press Alt+/ any time.)"
+                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses AI credits but not the chat's hourly limit; press Alt+/ any time.)"
                 : "Automatic suggestions off. Press Alt+/ for a suggestion at the cursor; Tab accepts, Esc dismisses. Click to turn on.",
             })}
             metin={oneriDuraklatildi ? t({ tr: oneriAcilisDk ? `Öneri · ${oneriAcilisDk} dk` : "Öneri · duraklatıldı", en: oneriAcilisDk ? `Suggest · ${oneriAcilisDk} min` : "Suggest · paused" }) : t({ tr: "Öneri", en: "Suggest" })}
