@@ -12,7 +12,15 @@
 */
 import { kanitMetniNormallestir } from "@/lib/kanit/alinti";
 
-const sikistir = (metin: string) => kanitMetniNormallestir(metin).toLocaleLowerCase("tr").replace(/\s+/g, "");
+/*
+  Tireler de atılır (20.11.2026). Eskiden yalnızca boşluk atılıyordu: gerçek
+  makalelerde satır sonu tirelemesi metin katmanında "com-" + "pile" diye
+  iki parça kalıyor, sunucunun doğruladığı pasaj ise "compile" taşıyor;
+  pasaj bulunamıyor ve ne "Dayanağa git" vurgusu ne kalıcı işaret
+  çiziliyordu (iki sütunlu PLDI 2009 makalesinde ölçüldü). İki taraftan da
+  atıldığı için "state-of-the-art" gibi gerçek tireli sözcükler de eşleşir.
+*/
+const sikistir = (metin: string) => kanitMetniNormallestir(metin).toLocaleLowerCase("tr").replace(/[\s\-\u00ad\u2010\u2011]+/g, "");
 
 /** Pasajın kapsadığı parça sıraları (yoksa null). En az 12 anlamlı karakter ister. */
 export function pasajParcalari(parcalar: string[], pasaj: string): number[] | null {

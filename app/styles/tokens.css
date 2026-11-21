@@ -467,6 +467,8 @@
 :root {
   /* PDF'te doğrulanmış pasajın vurgusu (pdf-goruntuleyici.tsx). PDF sayfası her temada beyaz: tek değer. */
   --pasaj-vurgu: #f6d24a8c;
+  /* Belgeye eklenmiş (kalıcı) pasaj: fosforlu sarı. Anlık seçim vurgusundan daha doygun, metni örtmeyecek kadar saydam. */
+  --pasaj-kalici: #fff2008a;
   --print-paper: #ffffff;
   --print-ink: #111111;
   --print-desk: #e6e9ee;
