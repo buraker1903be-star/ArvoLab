@@ -33,7 +33,16 @@ async function baglam(secenek, koyu = false) {
   await c.addCookies([{ name: "arvolab_dil", value: "tr", url: U }]);
   const s = await c.newPage();
   const hatalar = [];
-  s.on("pageerror", (e) => hatalar.push(String(e).slice(0, 200)));
+  /*
+    Hata, OLDUĞU SAYFANIN adresiyle kaydedilir (21.11.2026). Gerçek ağla
+    koşulan bir turda masaüstü/açık oturumunda bir kez React #418
+    (hidrasyon uyuşmazlığı) görüldü; betik yalnızca mesajı tuttuğu için
+    oturumun gezdiği yedi adresten hangisinde çıktığı bilinmiyordu ve
+    üç tekrar koşuda yeniden üretilemedi. Konsol hataları da yazılır:
+    React üretimde hidrasyon ayrıntısını yalnızca orada verir.
+  */
+  s.on("pageerror", (e) => hatalar.push(`${s.url()} :: ${String(e).slice(0, 200)}`));
+  s.on("console", (m) => { if (m.type() === "error") console.log("KONSOL", s.url(), m.text().slice(0, 300)); });
   await s.goto("/"); await s.fill('input[name="email"]', KUL.adres); await s.fill('input[name="password"]', T.parola);
   await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
   return { c, s, hatalar };
