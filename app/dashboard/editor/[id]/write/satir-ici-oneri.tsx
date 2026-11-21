@@ -21,11 +21,12 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
     - Otomatik: yalnızca açıksa, yazma 1,5 sn durduğunda ve imleç bir
       paragrafın SONUNDAYSA; ilk istekten sonra en az 40 yeni karakter ve
       8 sn (21.11.2026, lib/ai/oneri-zamanlama.ts). Aynı bağlam için
-      önbellekteki öneri istek atılmadan gösterilir. Varsayılan KAPALI: her öneri bir asistan
-      hakkı (saatlik 20, lib/ai/sinirlar.ts) ve kurum kredisi harcıyor;
-      kendiliğinden açık olsaydı öğrenci bir saat yazınca sohbet
-      asistanını kullanamaz hâle gelirdi. Hak dolunca öneri "duraklatıldı"
-      durumuna geçer ve bunu düğmede söyler (aşağıda ÖNERİNİN DURUMU).
+      önbellekteki öneri istek atılmadan gösterilir. Varsayılan KAPALI: her
+      öneri AI kredisi harcıyor. 21.11.2026'dan beri sohbetle ortak saatlik
+      haktan DÜŞMEZ (lib/ai/sinirlar.ts → SAATLIK_HAKTAN_MUAF_GOREVLER);
+      eskiden yazarken 4 dakikada hakkı bitirip sohbeti kilitliyordu.
+      Kredi, abonelik ya da deneme engeli gelince öneri "duraklatıldı"
+      durumuna geçer ve nedenini düğmede söyler (aşağıda ÖNERİNİN DURUMU).
 
   Cevap geldiğinde belge değişmişse (öğrenci yazmaya devam etti) öneri
   gösterilmez: eski konuma ait öneri yanlış yere düşerdi.
@@ -41,7 +42,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
       yazan öğrenci hiçbir şey görmüyordu. Eşik 40.
     - Otomatik istek uçuştayken gelen yeni duraksama yutuluyordu; artık
       cevap dönünce bir kez yeniden kurulur. Sıklık sınırı sunucuda
-      (app/actions/ai-yazim.ts): saatlik hak sohbetle ortak.
+      (app/actions/ai-yazim.ts, en az aralık).
     - Editör odakta değilse (öğrenci araç çubuğuna, panele geçti)
       otomatik istek gitmez, gelen cevap da gösterilmez.
 */
@@ -49,8 +50,9 @@ const BEKLEME_MS = 1_500;
 const EN_AZ_OTOMATIK = 40;
 /*
   ÖNERİNİN DURUMU (20.11.2026). Sınır artık SUNUCUDA (app/actions/ai-yazim.ts):
-  abonelik, deneme, kredi, kullanıcı başına saatlik asistan hakkı ve
-  tamamlamaya özgü en az aralık. Eskiden istemcide sabit bir "saatte 12"
+  abonelik, deneme, kredi ve tamamlamaya özgü en az aralık (saatlik
+  asistan hakkı tamamlamaya uygulanmaz; "saatlik" dalı yalnızca eski bir
+  sunucudan gelen cevaba karşı duruyor). Eskiden istemcide sabit bir "saatte 12"
   vardı (localStorage) ve hak dolunca otomatik mod sessizce kapanıyordu;
   öğrenci düğmeyi açık sanıp öneri bekliyordu. Şimdi sunucunun nedeni
   görünür bir duruma çevrilir: düğme "duraklatıldı" der, nedenini ve

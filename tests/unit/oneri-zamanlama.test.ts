@@ -8,6 +8,7 @@ import {
   otomatikIstekKarari,
   type OneriBaglami,
 } from "@/lib/ai/oneri-zamanlama";
+import { SAATLIK_HAKTAN_MUAF_GOREVLER, saatlikHakaSayilir } from "@/lib/ai/sinirlar";
 
 /*
   Satır içi önerinin sıklığı ve önbelleği (21.11.2026). Eskiden otomatik
@@ -66,4 +67,14 @@ test("önbellek: ömrü dolan kayıt düşer; sınır aşılınca en eski gider"
   assert.equal(o.boyut, 2);
   assert.equal(o.al({ ...B, konum: 1 }, 10), null);
   assert.deepEqual(o.al({ ...B, konum: 3 }, 10), { metin: "3", kayit: null });
+});
+
+/*
+  Saatlik hakkın tek istisnası (21.11.2026): satır içi tamamlama. Öteki
+  bütün görevler (sohbet dahil) ortak saatlik hakka sayılmaya devam eder.
+*/
+test("saatlik hak: yalnızca tamamlama muaf, öteki görevler sayılır", () => {
+  assert.deepEqual([...SAATLIK_HAKTAN_MUAF_GOREVLER], ["tamamla"]);
+  assert.equal(saatlikHakaSayilir("tamamla"), false);
+  for (const g of ["serbest", "devam", "paragraf", "akademik", "kisalt", "genislet", "anahat", ""]) assert.equal(saatlikHakaSayilir(g), true, g);
 });

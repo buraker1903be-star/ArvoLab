@@ -497,8 +497,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Every number the assistant gives must appear in your input; if one doesn't, the whole answer is withheld.",
       },
       {
-        tr: `Kullanım hakkı: saatte en fazla ${SAATLIK_HAK} istek; aylık kredi ve satın alınan ek kredi Abonelik ve Kredi sayfasında görünür.`,
-        en: `Usage: at most ${SAATLIK_HAK} requests an hour; your monthly credits and any extra credits you buy are shown on the Subscription and Credits page.`,
+        tr: `Kullanım hakkı: saatte en fazla ${SAATLIK_HAK} istek (satır içi öneri bu sayıya girmez, yalnızca krediden düşer); aylık kredi ve satın alınan ek kredi Abonelik ve Kredi sayfasında görünür.`,
+        en: `Usage: at most ${SAATLIK_HAK} requests an hour (inline suggestions don't count towards this; they only use credits); your monthly credits and any extra credits you buy are shown on the Subscription and Credits page.`,
       },
       {
         tr: `Ücretsiz deneme süresinde asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; sonra asistan, aboneliğinizi başlatana kadar kapanır. Editör, kaynaklar ve analiz deneme boyunca açık kalır.`,
