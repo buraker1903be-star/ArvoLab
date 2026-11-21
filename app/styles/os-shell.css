@@ -552,7 +552,8 @@
   /* Menü yerinde durduğu için "Geri" bağlantısı gereksiz; aracı başlıktaki kapatma düğmesi kapatır. */
   .os-sol-geri { display: none; }
   .os-sol-alan-bas { flex-direction: row; align-items: center; justify-content: space-between; min-height: var(--topbar-height); padding-block: 0; }
-  .os-sol-kapat { display: inline-flex; }
+  /* Özgüllük bilerek yüksek: aşağıdaki temel kural (display:none) medya sorgusundan SONRA geliyor. */
+  .os-sol-alan .os-sol-kapat { display: inline-flex; }
 }
 .os-sol-kapat {
   display: none; align-items: center; justify-content: center; flex: none;
