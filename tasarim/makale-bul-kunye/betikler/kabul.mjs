@@ -158,8 +158,11 @@ if (AŞAMA === "normal") {
   const plosKart = s.locator(".sol-kaynak").filter({ hasText: /Efficiency Comparison of Document Preparation/i }).first();
   await plosKart.getByRole("button", { name: /Atıf ekle/ }).click();
   await s.waitForTimeout(1500);
-  const atifMetni = await s.evaluate(() => [...document.querySelectorAll(".ProseMirror [data-citation], .ProseMirror .citation, .ProseMirror [data-type='citation']")].map((x) => x.textContent.trim()).join(" | ") || document.querySelector(".ProseMirror").innerText.slice(-200));
-  kayit(`PLOS atfı seçili stilde iki yazarla (${stil || "varsayılan"}): (Knauff ve Nejasmic, 2014)`, /\(Knauff (ve|&) Nejasmic, 2014\)/.test(atifMetni) && !/Markus Knauff/.test(atifMetni), { atifMetni, stil });
+  // Metin içi atıf belgeye metin olarak girer; Kaynakça satırı ("Knauff, M., & Nejasmic, J. (2014)…") ayrı tutulur.
+  const belgeMetni = await s.evaluate(() => document.querySelector(".ProseMirror").editor.state.doc.textContent);
+  const atifMetni = belgeMetni.match(/\([^()]*Nejasmic[^()]*\)|\([^()]*Knauff[^()]*\)/)?.[0] ?? null;
+  const kaynakca = belgeMetni.match(/Knauff, M\.[^.]*Nejasmic, J\. \(2014\)/)?.[0] ?? null;
+  kayit(`PLOS atfı seçili stilde iki yazarla (${stil || "varsayılan"}): (Knauff ve Nejasmic, 2014)`, atifMetni === "(Knauff ve Nejasmic, 2014)" && !/Markus Knauff/.test(belgeMetni), { atifMetni, kaynakca, stil });
   await s.screenshot({ path: `${OUT}3b-plos-atif.png` });
 
   // Koyu tema ve telefon görüntüleri. Tema sayfa açıkken değiştirilince renk geçişi sürüyor:
