@@ -189,7 +189,7 @@ export default function LiteraturBulucu({
     }
     setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "araniyor" } }));
     try {
-      const alim = await okumayaAl({ baslik: kayit.baslik, yazarlar: kayit.yazarlar, yil: kayit.yil, tur: kayit.tur, dergi: kayit.dergi, doi: kayit.doi, url: kayit.url, projectId: projeId });
+      const alim = await okumayaAl({ baslik: kayit.baslik, yazarlar: kayit.yazarlar, kunyeYazarlari: kayit.kunyeYazarlari, yil: kayit.yil, tur: kayit.tur, dergi: kayit.dergi, doi: kayit.doi, url: kayit.url, projectId: projeId });
       if ("error" in alim) {
         setPdfDurumu((o) => ({ ...o, [kayit.kimlik]: { durum: "servis_hatasi" } }));
         showToast("error", alim.error);
