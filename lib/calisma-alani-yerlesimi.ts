@@ -67,7 +67,7 @@ export const BELGE_OKUNUR_EN_AZ = 0.85;
 export const KENAR_GENIS = 240;
 export const KENAR_RAY = 64;
 /** Sol araçların genişliği (talimattaki aralıkların içinde: liste 280–320, arama 340–400). */
-export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372, kaynakca: 300, kilavuz: 300 };
+export const SOL_ARAC_GENISLIGI: Record<SolArac, number> = { bolumler: 300, kaynaklar: 300, arama: 372, kaynakca: 300, kontrol: 300, kilavuz: 300 };
 
 /** Sağ panelin sınırları (AI 360–420, PDF 360–600; ilk talimatta PDF 440–600 idi). */
 /*
@@ -195,7 +195,13 @@ export function yerlesimKarari(girdi: {
   }
   const olcekFor = (sol: number, sag: number) => Math.min(1, (ekran - sol - (sag ? sag + AYIRICI_PAYI : 0) - SAYFA_PAYI) / KAGIT_GENISLIGI);
   const kenar: YerlesimKarari["kenar"] = solArac ? "arac" : girdi.kenarDar ? "ray" : "tam";
-  const solEn = solArac ? SOL_ARAC_GENISLIGI[solArac] : girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
+  /*
+    Araç menünün YANINDA açılır (21.11.2026): sol genişlik menü + araç.
+    Eskiden araç menünün yerini alıyordu ve sol genişlik yalnızca aracınkiydi
+    (os-shell.css, SOL ARAÇ ALANI).
+  */
+  const menuEn = girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
+  const solEn = solArac ? menuEn + SOL_ARAC_GENISLIGI[solArac] : menuEn;
 
   /* PDF: her zaman çekmece; editörün kenarı ve ölçeği PDF yokmuş gibi (yukarıda, PDF ÇEKMECESİ). */
   if (sagPanel === "pdf") {
