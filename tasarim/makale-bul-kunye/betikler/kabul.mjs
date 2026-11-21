@@ -149,8 +149,25 @@ if (AŞAMA === "normal") {
   for (let i = 0; i < 40 && !plosYazar; i++) { await s.waitForTimeout(500); plosYazar = psql(`select coalesce(authors,'') from public.literature_sources where owner_id='${KUL.id}' and project_id='${PR}' and title ilike 'An Efficiency Comparison of Document Preparation%' order by created_at desc limit 1`); }
   kayit("PLOS yeni kayıt: iki yazar ayrı yazıldı (yapılandırılmış ya da '; ' ile), ', ' ile tek yazar değil", /^Knauff, M\.,? & Nejasmic, J\.$/.test(plosYazar) || /^Markus Knauff; Jelica Nejasmic$/.test(plosYazar), { plosYazar });
 
-  // Koyu tema ve telefon görüntüleri.
+  // 5b) Atıf: yeni PLOS kaydı kütüphaneden "Atıf ekle" ile belgeye konur; seçili stilde (çalışmanın APA 7,
+  //     Türkçe belge) iki yazar "Knauff ve Nejasmic" olarak yazılmalı, "Markus Knauff" tek yazar olarak değil.
+  const stil = psql(`select coalesce(citation_style,'') from public.academic_projects where id='${PR}'`);
+  await s.goto(`/dashboard/editor/${PR}/write?sol=kaynaklar`); await s.locator(".ProseMirror").first().waitFor({ timeout: 60000 }); await s.waitForTimeout(1200);
+  await s.evaluate(() => { const e = document.querySelector(".ProseMirror").editor; e.commands.focus("end"); });
+  await s.waitForFunction(() => document.querySelector(".ProseMirror")?.editor?.isFocused === true, null, { timeout: 5000 }).catch(() => undefined);
+  const plosKart = s.locator(".sol-kaynak").filter({ hasText: /Efficiency Comparison of Document Preparation/i }).first();
+  await plosKart.getByRole("button", { name: /Atıf ekle/ }).click();
+  await s.waitForTimeout(1500);
+  const atifMetni = await s.evaluate(() => [...document.querySelectorAll(".ProseMirror [data-citation], .ProseMirror .citation, .ProseMirror [data-type='citation']")].map((x) => x.textContent.trim()).join(" | ") || document.querySelector(".ProseMirror").innerText.slice(-200));
+  kayit(`PLOS atfı seçili stilde iki yazarla (${stil || "varsayılan"}): (Knauff ve Nejasmic, 2014)`, /\(Knauff (ve|&) Nejasmic, 2014\)/.test(atifMetni) && !/Markus Knauff/.test(atifMetni), { atifMetni, stil });
+  await s.screenshot({ path: `${OUT}3b-plos-atif.png` });
+
+  // Koyu tema ve telefon görüntüleri. Tema sayfa açıkken değiştirilince renk geçişi sürüyor:
+  // eskiden görüntü hemen alındığı için düğmeler ve zemin açık renk görünüyordu (21.11.2026, ölçüldü:
+  // 0 ms'de 2–38 açık öğe, 150 ms'de 0). Uygulanan tema koyu olana ve geçiş bitene kadar beklenir.
   await s.emulateMedia({ colorScheme: "dark" });
+  await s.waitForFunction(() => document.documentElement.getAttribute("data-theme") === "dark");
+  await s.waitForTimeout(600);
   await s.screenshot({ path: `${OUT}4-koyu.png` });
   kayit("normal aşama: sayfa hatası yok", hatalar.length === 0, hatalar);
   const yanitHam = await s.evaluate((pr) => sessionStorage.getItem(`arvolab.sol.${pr}.arama.yanit`), PR);
@@ -169,6 +186,8 @@ if (AŞAMA === "normal") {
   kayit("telefon: aynı rozetler (sunucu önbelleğinden)", telBitti && telRozet.length > 0 && telRozet.every((r) => r.durum && r.durum !== "kontrol_ediliyor"), { n: telRozet.length });
   await tel.s.screenshot({ path: `${OUT}5-telefon.png` });
   await tel.s.emulateMedia({ colorScheme: "dark" });
+  await tel.s.waitForFunction(() => document.documentElement.getAttribute("data-theme") === "dark");
+  await tel.s.waitForTimeout(600);
   await tel.s.screenshot({ path: `${OUT}5-telefon-koyu.png` });
   await tel.c.close();
 } else {
