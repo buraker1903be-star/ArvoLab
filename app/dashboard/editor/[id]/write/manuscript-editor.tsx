@@ -3,7 +3,6 @@
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
-import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
@@ -149,6 +148,7 @@ import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules"
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { calismaAdresi } from "@/lib/calisma-karti";
+import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
