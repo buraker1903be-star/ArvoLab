@@ -119,3 +119,19 @@ kabul betiğine aynı verilmeli (varsayılan 60).
 `STUDYO_DERLEME=uretim`: 67 PASS · 0 FAIL · 1 UNVERIFIED (U5-dokunma: dokunmatik kaydırma başsız
 tarayıcıda üretilemiyor). Sınanan derleme `sonuclar/studyo-kabul-derleme.json`'da. Birleşik aday
 kabulünde bu dosya, adayın commit SHA'sı ve şema özetiyle birlikte rapora geçer.
+
+## Dizin yanıtları: kayıtlı davranış kabulü ve gerçek erişim denetimi (21.11.2026)
+
+Makale Bul ve künye kabulleri iki ayrı soruyu ayrı ayrı yanıtlar:
+
+1. **Gerçek erişim:** `node scripts/yerel-yigin/dizin-erisim.mjs` her dizine
+   TEK istek atar; `ENGEL` (ör. OpenAlex 429) görülürse çıkış kodu 2'dir.
+   Engel hiçbir zaman "geçti" sayılmaz ve yeniden denenmez.
+2. **Davranış (kayıtlı yanıtlarla):** sunucu `dizin-kaydi.mjs` önceden
+   yüklenerek başlatılır. `DIZIN_KAYIT=kaydet` ile bir kez gerçek yanıtlar
+   (yalnızca HTTP 200) `kayitli-gercek-yanitlar/` altına adres adres yazılır;
+   sonra `DIZIN_KAYIT=oynat` ile kabuller ağa çıkmadan aynı yanıtlarla koşar.
+   Kaydı olmayan istek ağa ÇIKMAZ, ağ hatası gibi düşer ve log'a yazılır.
+
+`kayitli-dizin-yanitlari.mjs` (18.11.2026) ayrı bir şeydir: her aramaya aynı
+sentetik yanıtı döner, yalnızca liste yerleşimini sınar.
