@@ -3,7 +3,7 @@
 set -euo pipefail
 set +x
 O="${CIKTI:?CIKTI (depo dışı çıktı dizini) gerekli}"; mkdir -p "$O"; SP=${SP:-/tmp}
-cd /home/user/arvolab-tek
+cd "$(git rev-parse --show-toplevel)"
 [ "$(git rev-parse --short HEAD)" = "9e705ef" ] || { echo "HEAD aday değil"; exit 2; }
 [ -n "${ARVOLAB_KABUL_AI_ANAHTAR:-}" ] || { echo "anahtar yok"; exit 2; }
 pkill -f "next-server" || true; pkill -f sayac-vekili || true
