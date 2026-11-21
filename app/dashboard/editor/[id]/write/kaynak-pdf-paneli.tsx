@@ -129,6 +129,8 @@ export default function KaynakPdfPaneli({
   const [soru, setSoru] = useState("");
   const [analizler, setAnalizler] = useState<Analiz[]>([]);
   const [soruluyor, setSoruluyor] = useState(false);
+  /* Bekleyişi durdurma; gerekçe yazim-paneli.tsx'teki istekSira yorumunda. Sunucu çağrısı iptal edilmez, geç gelen cevap sohbete girmez. */
+  const istekSira = useRef(0);
   const [atif, setAtif] = useState<AtifDurumu | null>(null);
   const [secilenKaynak, setSecilenKaynak] = useState<string>("");
   const [onay, setOnay] = useState(false);
@@ -256,16 +258,45 @@ export default function KaynakPdfPaneli({
     const metin = (hazirSoru ?? soru).trim();
     if (metin.length < 3) return;
     setSoruluyor(true);
+    /*
+      Geçmişe yalnızca soru ve cevap METNİ girer, alıntılar GİRMEZ
+      (21.11.2026, gerçek AI kabulü bulgusu): önceki turun kanıtı yeni
+      sorunun kanıtı değildir. Her cevabın alıntıları kendi `yanit`inde
+      durur ve yalnızca kendi kartının altında çizilir (aşağıdaki liste);
+      hiçbir yerde sonraki cevaba taşınmaz.
+    */
     const gecmis: KaynakMesaji[] = analizler.flatMap((a) => (a.yanit.cevap ? [{ rol: "kullanici" as const, metin: a.soru }, { rol: "asistan" as const, metin: a.yanit.cevap }] : [])).slice(-6);
+    const sira = ++istekSira.current;
+    const guncel = () => sira === istekSira.current;
     try {
       const yanit = await kaynaklaSohbet({ projectId, pdfId: pdf.id, soru: metin, gecmis, secim: secim && secim.metin.length >= SECIM_EN_KISA ? secim : null });
+      if (!guncel()) return;
       setAnalizler((onceki) => [...onceki, { soru: metin, yanit }]);
       if (!yanit.hata) setSoru("");
     } catch {
+      if (!guncel()) return;
       setAnalizler((onceki) => [...onceki, { soru: metin, yanit: { hata: t({ tr: "Asistana ulaşılamadı; tekrar deneyin.", en: "Couldn't reach the assistant; try again." }) } }]);
     } finally {
-      setSoruluyor(false);
+      if (guncel()) setSoruluyor(false);
     }
+  };
+
+  /* Bekleyişi durdurur; geç gelen cevap listeye girmez. */
+  const soruyuDurdur = () => {
+    istekSira.current += 1;
+    setSoruluyor(false);
+    setAnalizler((onceki) => [
+      ...onceki,
+      {
+        soru: "",
+        yanit: {
+          hata: t({
+            tr: "Bekleme durduruldu. Asistan isteği tamamlasa bile cevap gösterilmeyecek; yeniden sorabilirsiniz.",
+            en: "Stopped waiting. Even if the assistant finishes, the answer won't be shown; you can ask again.",
+          }),
+        },
+      },
+    ]);
   };
 
   const onizlemeKaynagi = atif?.adim === "hazir" ? atif.kaynaklar.find((k) => k.id === secilenKaynak) ?? null : null;
@@ -851,7 +882,8 @@ export default function KaynakPdfPaneli({
               <div className="kaynak-analiz-liste" aria-live="polite">
                 {analizler.map((a, i) => (
                   <article key={i} className="kaynak-analiz-oge">
-                    <p className="kaynak-soru">{a.soru}</p>
+                    {/* Durdurma kaydının sorusu yok: boş bir soru balonu çizilmez. */}
+                    {a.soru ? <p className="kaynak-soru">{a.soru}</p> : null}
                     {a.yanit.hata ? (
                       <p role="alert" className="kaynak-hata">{a.yanit.hata}</p>
                     ) : (
@@ -884,7 +916,18 @@ export default function KaynakPdfPaneli({
                 ))}
                 {soruluyor ? (
                   <p className="pdf-durum" role="status">
-                    <Loader2 size={14} className="spin" aria-hidden="true" /> {t({ tr: "PDF'e soruluyor…", en: "Asking the PDF…" })}
+                    <Loader2 size={14} className="spin" aria-hidden="true" /> {t({ tr: "PDF'e soruluyor…", en: "Asking the PDF…" })}{" "}
+                    <button
+                      type="button"
+                      className="projects-filter-button button-compact"
+                      onClick={soruyuDurdur}
+                      title={t({
+                        tr: "Bekleme durur. Asistanın isteği sunucuda tamamlanabilir ama cevap gösterilmez.",
+                        en: "Stops waiting. The request may still finish on the server, but the answer won't be shown.",
+                      })}
+                    >
+                      {t({ tr: "Durdur", en: "Stop" })}
+                    </button>
                   </p>
                 ) : null}
               </div>

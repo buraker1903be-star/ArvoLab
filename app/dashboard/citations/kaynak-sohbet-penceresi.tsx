@@ -37,21 +37,44 @@ export default function KaynakSohbetPenceresi({
   const [mesajlar, setMesajlar] = useState<Kayit[]>([]);
   const [soru, setSoru] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
+  /* Bekleyişi durdurma; gerekçe yazim-paneli.tsx'teki istekSira yorumunda. */
+  const istekSira = useRef(0);
   const listeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     listeRef.current?.scrollTo({ top: listeRef.current.scrollHeight, behavior: "smooth" });
   }, [mesajlar, bekliyor]);
 
+  /* Bekleyişi durdurur; geç gelen cevap sohbete girmez. */
+  const durdur = () => {
+    istekSira.current += 1;
+    setBekliyor(false);
+    setMesajlar((onceki) => [
+      ...onceki,
+      {
+        rol: "asistan",
+        metin: t({
+          tr: "Bekleme durduruldu. Asistan isteği tamamlasa bile cevap gösterilmeyecek; yeniden sorabilirsiniz.",
+          en: "Stopped waiting. Even if the assistant finishes, the answer won't be shown; you can ask again.",
+        }),
+        hata: true,
+      },
+    ]);
+  };
+
   const sor = async (metin: string) => {
     const temiz = metin.trim();
     if (!temiz || bekliyor) return;
+    /* Geçmişe yalnızca metin girer, alıntılar girmez; her alıntı kendi mesajında kalır (bkz. kaynak-pdf-paneli.tsx). */
     const gecmis = mesajlar.filter((m) => !(m.rol === "asistan" && m.hata)).map((m) => ({ rol: m.rol, metin: m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: temiz }]);
     setSoru("");
     setBekliyor(true);
+    const sira = ++istekSira.current;
+    const guncel = () => sira === istekSira.current;
     try {
       const cevap = await kaynaklaSohbet({ projectId, pdfId, soru: temiz, gecmis });
+      if (!guncel()) return;
       if (cevap.hata) {
         setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: cevap.hata!, hata: true }]);
         return;
@@ -62,10 +85,11 @@ export default function KaynakSohbetPenceresi({
         { rol: "asistan", metin: cevap.cevap ?? "", bulundu: cevap.bulundu, alintilar: cevap.alintilar, okunmayanSayfa: cevap.okunmayanSayfa },
       ]);
     } catch (hata) {
+      if (!guncel()) return;
       console.error(hata);
       setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: t({ tr: "Asistana ulaşılamadı; bağlantınızı kontrol edin.", en: "Couldn't reach the assistant; check your connection." }), hata: true }]);
     } finally {
-      setBekliyor(false);
+      if (guncel()) setBekliyor(false);
     }
   };
 
@@ -190,6 +214,17 @@ export default function KaynakSohbetPenceresi({
                   <i />
                   <i />
                 </span>
+                <button
+                  type="button"
+                  className="projects-filter-button button-compact"
+                  onClick={durdur}
+                  title={t({
+                    tr: "Bekleme durur. Asistanın isteği sunucuda tamamlanabilir ama cevap gösterilmez.",
+                    en: "Stops waiting. The request may still finish on the server, but the answer won't be shown.",
+                  })}
+                >
+                  {t({ tr: "Durdur", en: "Stop" })}
+                </button>
               </div>
             </div>
           ) : null}

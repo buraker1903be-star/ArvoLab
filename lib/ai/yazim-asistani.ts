@@ -84,9 +84,16 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
     olumsuzluğu ("değildir") ya da atıfı düşürüp kısaltabiliyordu. Neyin
     korunacağı açıkça sayıldı. Örtüşme oranı anlamın kanıtı sayılmıyor;
     panel somut kayıpları uyarı olarak gösteriyor (kisaltmaUyarilari).
+    21.11.2026 (gerçek AI kabulü): liste yetmedi. Model "istatistiksel
+    olarak anlamlı değildir"i "anlamlı değildir"e indirdi, "bu nedenle
+    sonuçlar dikkatle yorumlanmalıdır"ı attı ve açıklamasına "anlam
+    korundu" yazdı. Düşen şeylerin hiçbiri sayı, atıf ya da olumsuzluk
+    DEĞİLDİ: kisaltmaUyarilari da, sunucu denetimleri de göremedi.
+    Korunacaklar niteleme SINIFLARIYLA sayıldı; denetimi
+    lib/ai/anlam-koruma.ts ayrıca yapıyor.
   */
   kisalt:
-    "Seçili metni kısalt: yalnızca tekrarları, dolgu ifadelerini ve gereksiz ara sözleri çıkar. Anlamı, iddianın yönünü, olumsuzlukları ('değil', 'yok', 'not'), sınırlamaları, atıfları ve sayıları AYNEN koru; yeni bilgi, yorum ya da sonuç ekleme. Kısaltılmış metin aslından belirgin biçimde kısa olsun (yaklaşık üçte ikisi). Kısaltılamıyorsa 'metin' alanını boş bırak ve 'yanit' alanında nedenini söyle.",
+    "Seçili metni kısalt: yalnızca tekrarları, dolgu ifadelerini ve gereksiz ara sözleri çıkar. Anlamı, iddianın yönünü, olumsuzlukları ('değil', 'yok', 'not'), sınırlamaları, atıfları ve sayıları AYNEN koru; yeni bilgi, yorum ya da sonuç ekleme. Şunlar da DÜŞMEZ, gerekirse metin daha az kısalır: istatistiksel niteleme ('istatistiksel olarak', p değeri, güven aralığı, etki büyüklüğü), belirsizlik/ihtiyat ifadeleri ('olabilir', 'henüz', 'dikkatle yorumlanmalıdır'), zaman bilgisi (yıl, dönem, 'birinci yılın sonunda'), örneklem bilgisi (kaç kişi, kaç grup) ve sınırlılık/karşıtlık ifadeleri ('ancak', 'genellenemez'). Bir iddianın gücünü değiştirme: 'istatistiksel olarak anlamlı değildir' ile 'anlamlı değildir' aynı şey değildir. Kısaltılmış metin aslından belirgin biçimde kısa olsun (yaklaşık üçte ikisi); bunu ancak yukarıdakilerden birini düşürerek yapabiliyorsan metni daha az kısalt. Hiç kısaltamıyorsan 'metin' alanını boş bırak ve 'yanit' alanında nedenini söyle; bir şey düştüyse 'yanit' alanında NEYİN düştüğünü söyle ve 'anlam korundu' deme.",
   genislet: "Seçili metni anlamını değiştirmeden, mevcut bilgilerle derinleştirerek genişlet; yeni olgu ekleme.",
   /*
     Ana hat (03.11.2026): başlık iskeleti. Kılavuzun zorunlu bölümleri
@@ -170,9 +177,10 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
   ]
     .filter(Boolean)
     .join("\n\n");
+  /* Geçmiş gerçek asistan turu olarak: gerekçe lib/ai/saglayici.ts'teki Rol tanımında. */
   const gecmis: Mesaj[] = g.gecmis.slice(-SINIR.gecmisMesaj).map((m) => ({
-    rol: m.rol === "kullanici" ? "kullanici" : "sistem",
-    metin: m.rol === "kullanici" ? bastanKirp(m.metin, SINIR.gecmisKarakter) : `ÖNCEKİ CEVABIN: ${bastanKirp(m.metin, SINIR.gecmisKarakter)}`,
+    rol: m.rol === "kullanici" ? "kullanici" : "asistan",
+    metin: bastanKirp(m.metin, SINIR.gecmisKarakter),
   }));
   const istek = bastanKirp(g.istek, SINIR.istek) || (tamamla ? TAMAMLAMA_ISTEGI : GOREV_ACIKLAMASI[g.gorev]);
   const mesajlar: Mesaj[] = [
