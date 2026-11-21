@@ -159,3 +159,18 @@ test("inceleme paneli: tablet ve telefonda akış (belgenin üstünde/altında),
 test("AI panelinde sol araç daraltılmaz", () => {
   assert.equal(karar(1472, "kaynaklar", "ai", 396).kenar, "arac");
 });
+
+/*
+  Araç menünün YANINDA (21.11.2026): ölçek menü + araç toplamıyla hesaplanır.
+  Eskiden araç menünün yerini aldığı için yalnızca aracın genişliği düşülüyordu;
+  bu hesap, menü yerinde kaldığı hâlde belgeyi olduğundan geniş sanardı.
+*/
+test("sol araç menünün yanında: ölçekten menü + araç düşülür", () => {
+  const sayfa = 24;
+  const kagit = 924;
+  const acik = karar(1366, "kaynaklar", null);
+  assert.equal(acik.kenar, "arac");
+  assert.equal(acik.olcek, Math.round(((1366 - 240 - 300 - sayfa) / kagit) * 100) / 100);
+  const dar = karar(1366, "arama", null, 520, true);
+  assert.equal(dar.olcek, Math.round(((1366 - 64 - 372 - sayfa) / kagit) * 100) / 100);
+});
