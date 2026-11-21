@@ -59,8 +59,21 @@ const paragrafMetni = (s) => ed(s, (e) => e.state.selection.$head.parent.textCon
 const sonaGit = async (s, icerik) => {
   const hedef = await ed(s, (e, a) => { let h = null; e.state.doc.descendants((n, p) => { if (h === null && n.isTextblock && n.textContent.startsWith(a)) h = p + 1 + n.content.size; }); if (h !== null) { e.commands.focus(); e.commands.setTextSelection(h); } return h; }, icerik);
   if (hedef === null) throw new Error(`"${icerik}" ile başlayan paragraf yok: ${JSON.stringify(await ed(s, (e) => { const l = []; e.state.doc.descendants((n) => { if (n.isTextblock) l.push(n.textContent.slice(0, 50)); }); return l; }))}`);
+  await odakBekle(s);
   return hedef;
 };
+/*
+  Tiptap'in focus() komutu odağı BİR SONRAKİ animasyon karesine erteliyor
+  (requestAnimationFrame). Sayfa yeni açılmışken ana iş parçacığı meşgulse o
+  kare gecikiyor ve hemen ardından basılan Alt+/ editöre değil BODY'ye
+  gidiyor: istek hiç gönderilmiyor, sunucuda kayıt yok, bildirim yok. "EN:
+  İngilizce belgede İngilizce devam" ve "EN: Tab kabul eder" 20.11.2026'daki
+  birleşik koşuda bu yüzden düştü (29/31). Yalnızca EN adımı 30 kez
+  koşturulunca editör açıldıktan 300 ms sonra odaklanan denemelerin 4/18'inde
+  odak BODY'de kaldı; odağın gelmesi beklenince 8/8 geçti. Kullanıcı editöre
+  tıklayarak odaklandığı için (eşzamanlı) ürün tarafında karşılığı yok.
+*/
+const odakBekle = (s) => s.waitForFunction(() => document.querySelector(".ProseMirror")?.editor?.isFocused === true, null, { timeout: 5000 });
 // Sunucunun en az aralığı (3 sn, lib/ai/sinirlar.ts): senaryolar arası istekler bu aralığı gözetir.
 let sonIstek = 0;
 const altSlash = async (s) => { const bekle = sonIstek + 3300 - Date.now(); if (bekle > 0) await s.waitForTimeout(bekle); sonIstek = Date.now(); await s.keyboard.press("Alt+/"); };
@@ -164,7 +177,7 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
 
   // 11) Seçim varken istek yok.
   const nSec = calismaKayitlari(PR_TR).length;
-  await ed(s, (e) => { let a = null; e.state.doc.descendants((n, p) => { if (a === null && n.isTextblock && n.textContent.startsWith("İkinci")) a = p + 1; }); e.commands.focus(); e.commands.setTextSelection({ from: a, to: a + 6 }); });
+  await ed(s, (e) => { let a = null; e.state.doc.descendants((n, p) => { if (a === null && n.isTextblock && n.textContent.startsWith("İkinci")) a = p + 1; }); e.commands.focus(); e.commands.setTextSelection({ from: a, to: a + 6 }); }); await odakBekle(s);
   await altSlash(s); await s.waitForTimeout(1500);
   kayit("seçim varken öneri istenmez", calismaKayitlari(PR_TR).length === nSec && !(await oneri(s)));
 
@@ -206,10 +219,21 @@ const kelime = (s) => ed(s, (e) => e.storage.characterCount.words());
 hakSifirla();
 {
   const { c, s, hatalar } = await baglam({ viewport: { width: 1440, height: 900 } }, "en");
+  /*
+    TANI (21.11.2026): 20.11'deki bir koşuda bu adım öneri almadı ve sunucuda
+    o çalışmaya ait HİÇ kayıt yoktu (istem modele de ulaşmamıştı). Düşerse
+    nedenini ayırt edebilmek için: istemcinin gönderdiği sunucu işlemleri,
+    cevap durumları ve ekrandaki bildirimler kaydedilir.
+  */
+  const ag = [];
+  s.on("request", (r) => { if (r.method() === "POST" && r.headers()["next-action"]) ag.push({ t: Date.now(), yon: "istek" }); });
+  s.on("response", (r) => { if (r.request().method() === "POST" && r.request().headers()["next-action"]) ag.push({ t: Date.now(), yon: "cevap", durum: r.status() }); });
   await ac(s, PR_EN);
+  const kayitOnce = calismaKayitlari(PR_EN).length;
   await sonaGit(s, "First-year"); await altSlash(s);
   const o = await bekleOneri(s);
-  kayit("EN: İngilizce belgede İngilizce devam", !!o && /which shapes/.test(o), { o });
+  const tani = { ag, bildirim: await s.locator(".toast-yigini").innerText().catch(() => ""), kayit: calismaKayitlari(PR_EN).slice(kayitOnce), odak: await s.evaluate(() => document.activeElement?.className ?? null) };
+  kayit("EN: İngilizce belgede İngilizce devam", !!o && /which shapes/.test(o), { o, ...(o ? {} : { tani }) });
   const dugme = s.getByRole("button", { name: /Automatic suggestions/ }).first();
   kayit("EN: düğme İngilizce", await dugme.isVisible());
   await s.screenshot({ path: OUT + "masaustu-en.png" });
