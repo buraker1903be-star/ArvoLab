@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Editor } from "@tiptap/react";
-import { BookOpenCheck, Ellipsis, FileText, Link2, Loader2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
+import { BookOpenCheck, Copy, FileText, Link2, Loader2, Maximize2, Minimize2, Quote, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useOturumDurumu } from "@/app/_components/oturum-durumu";
 import { goruntuleyiciKaynaklari, kaynakSecimiDogrula, pdfKaynaginiBagla } from "@/app/actions/kaynak-pdf";
@@ -55,6 +55,8 @@ export default function KaynakPdfPaneli({
   onBagDegisti,
   onKapat,
   onCite,
+  genislik,
+  onGenislik,
 }: {
   editor: Editor;
   projectId: string;
@@ -69,12 +71,42 @@ export default function KaynakPdfPaneli({
   /* Sonuç döner: atıf üretilemezse panel açık kalır ve belge değişmez (20.11.2026). */
   onCite: (
     source: LiteratureSource,
-    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean },
-  ) => Promise<{ ok: true } | { ok: false; hata: string }>;
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean },
+  ) => Promise<{ ok: true; atif?: string } | { ok: false; hata: string }>;
+  /** Çekmecenin şu anki genişliği (px) ve kenardan çekilince yeni değer; kaydet: bırakınca kalıcı. */
+  genislik?: number;
+  onGenislik?: (px: number, kaydet: boolean) => void;
 }) {
   const t = useCeviri();
-  /* Telefonda ikincil PDF işlemlerinin ("⋯") açık olup olmadığı; masaüstünde etkisiz. */
-  const [ikincilAcik, setIkincilAcik] = useState(false);
+  const kokRef = useRef<HTMLElement>(null);
+  /* Tam ekran (masaüstü): çekmece bütün genişliği alır; kapanınca bir sonraki açılışta yine normal. */
+  const [tamEkran, setTamEkran] = useState(false);
+  /* Çekmecenin içindeki görünüm: PDF ya da bu PDF'e sorular (Arvo AI). PDF görünümü gizlenir, sökülmez. */
+  const [gorunum, setGorunum] = useState<"pdf" | "ai">("pdf");
+  /* Kısa durum özetinin ayrıntıları (kaynak bağı); varsayılan kapalı. */
+  const [ayrintiAcik, setAyrintiAcik] = useState(false);
+  /* Bu oturumda eklenen son doğrulanmış alıntı: durum özetinin "Alıntı" satırı. */
+  const [sonAlinti, setSonAlinti] = useState<{ pdfId: string; sayfa: number } | null>(null);
+
+  /*
+    Çekmece açılınca odak çekmeceye geçer (ekran okuyucu adını okur, Tab
+    içindeki denetimlere gider); kapanınca editör odağı geri alır
+    (manuscript-editor.tsx pdfKapat). Çekmece kapalıyken SÖKÜLMEZ: PDF'in
+    sayfası, yakınlaştırması, kaydırması ve sorular yerinde kalır.
+  */
+  const [oncekiAcik, setOncekiAcik] = useState(acik);
+  if (acik !== oncekiAcik) {
+    setOncekiAcik(acik);
+    if (!acik) setTamEkran(false);
+  }
+  useEffect(() => {
+    if (!acik) return;
+    const kare = window.requestAnimationFrame(() => {
+      if (kokRef.current && !kokRef.current.contains(document.activeElement)) kokRef.current.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(kare);
+  }, [acik]);
+
   const [liste, setListe] = useState<KaynakPdfSatiri[] | null>(null);
   const [listeHatasi, setListeHatasi] = useState<string | null>(null);
   /*
@@ -98,6 +130,38 @@ export default function KaynakPdfPaneli({
   const [basiliSayfa, setBasiliSayfa] = useState("");
   const [alintiEkle, setAlintiEkle] = useState(true);
   const [ekleniyor, setEkleniyor] = useState(false);
+
+  /*
+    ATIF ÖNİZLEMESİ (20.11.2026): onay katmanında belgeye eklenecek TAM atıf
+    ("(Fisher ve Other, 2023, s. 214)"). Ekle ile aynı yoldan, belgeye
+    yazmadan kurulur (manuscript-editor.tsx handleCite, onizle). Kaynak ya da
+    basılı sayfa değişince yenilenir; basılı sayfa yazılırken bekler.
+  */
+  const [onizleme, setOnizleme] = useState<{ anahtar: string; atif: string | null; hata?: string } | null>(null);
+  /*
+    TELEFONDA ÇEKMECE BÜTÜN EKRANI ÖRTER (20.11.2026, kurum sahibinin
+    isteği). 19.11.2026'dan beri alt gezinmenin ÜSTÜNDE bitiyordu; arkadaki
+    sayfa da kaydırılabiliyordu (parmak PDF'in kenarından kaçınca belge
+    kayıyordu). Açıkken kök öğe işaretlenir: CSS gövdenin kaydırmasını keser,
+    çekmece alt gezinme dahil her şeyin üstüne çıkar.
+  */
+  useEffect(() => {
+    if (!acik) return;
+    const dar = window.matchMedia("(max-width: 760px)");
+    const kok = document.documentElement;
+    const uygula = () => (dar.matches ? kok.setAttribute("data-pdf-tam-ekran", "") : kok.removeAttribute("data-pdf-tam-ekran"));
+    uygula();
+    dar.addEventListener("change", uygula);
+    return () => {
+      dar.removeEventListener("change", uygula);
+      kok.removeAttribute("data-pdf-tam-ekran");
+    };
+  }, [acik]);
+  const secimiBirak = useCallback(() => {
+    setSecim(null);
+    setAtif(null);
+    window.getSelection()?.removeAllRanges();
+  }, []);
 
   useEffect(() => {
     if (!acik || liste) return;
@@ -192,8 +256,33 @@ export default function KaynakPdfPaneli({
     }
   };
 
-  const atifBaslat = async () => {
+  const onizlemeKaynagi = atif?.adim === "hazir" ? atif.kaynaklar.find((k) => k.id === secilenKaynak) ?? null : null;
+  const onizlemeAnahtari = onizlemeKaynagi ? `${onizlemeKaynagi.id}|${basiliSayfa.trim()}` : "";
+  useEffect(() => {
+    if (!onizlemeKaynagi) return;
+    let iptal = false;
+    const zaman = window.setTimeout(() => {
+      void onCite(onizlemeKaynagi, { sayfa: basiliSayfa.trim() || null, kayitliKonum: true, onizle: true })
+        .then((r) => {
+          if (!iptal) setOnizleme({ anahtar: onizlemeAnahtari, atif: r.ok ? r.atif ?? null : null, hata: r.ok ? undefined : r.hata });
+        })
+        .catch(() => {
+          if (!iptal) setOnizleme({ anahtar: onizlemeAnahtari, atif: null, hata: t({ tr: "Atıf önizlemesi kurulamadı.", en: "The citation preview couldn't be built." }) });
+        });
+    }, 250);
+    return () => {
+      iptal = true;
+      window.clearTimeout(zaman);
+    };
+    // Önizleme yalnızca kaynak ya da basılı sayfa değişince yenilenir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onizlemeAnahtari]);
+  const guncelOnizleme = onizleme && onizleme.anahtar === onizlemeAnahtari ? onizleme : null;
+
+  /* alintiMi: "Alıntı ekle" (alıntı + atıf) ya da "Yalnızca atıf". */
+  const atifBaslat = async (alintiMi: boolean) => {
     if (!pdf || !secim) return;
+    setAlintiEkle(alintiMi);
     setAtif({ adim: "dogrulaniyor" });
     setSecilenKaynak("");
     setOnay(false);
@@ -233,18 +322,22 @@ export default function KaynakPdfPaneli({
         setAtif({ adim: "hata", mesaj: sonuc.hata });
         return;
       }
-      if (pdf) onDogrulanmisPasaj?.({ kaynakId: kaynak.id, pdfId: pdf.id, sayfa: atif.pdfSayfa, metin: atif.alinti });
-      setAtif(null);
-      setSecim(null);
-      window.getSelection()?.removeAllRanges();
-      // Panel belgenin üstündeyse (çekmece ya da telefonda tam ekran): ekleme bitince öğrenci yazdığı yere döner.
-      if (document.querySelector(".manuscript-layout[data-sag-cekmece]") || window.matchMedia("(max-width: 760px)").matches) onKapat();
+      if (pdf) {
+        onDogrulanmisPasaj?.({ kaynakId: kaynak.id, pdfId: pdf.id, sayfa: atif.pdfSayfa, metin: atif.alinti });
+        if (alintiEkle) setSonAlinti({ pdfId: pdf.id, sayfa: atif.pdfSayfa });
+      }
+      secimiBirak();
+      /*
+        Çekmece AÇIK KALIR (20.11.2026): öğrenci aynı PDF'ten okumaya ve
+        alıntılamaya devam edebilir; eklenen metin arkadaki belgede, kayıtlı
+        konumda. Eskiden çekmece eklemeden sonra kapanıyordu. Telefonda tam
+        ekran olduğu için belgeyi görmek üzere kapanır.
+      */
+      if (window.matchMedia("(max-width: 760px)").matches) onKapat();
     } finally {
       setEkleniyor(false);
     }
   };
-
-  if (!acik) return null;
 
   const eslesmeMetni = (e: KaynakEslesmesi): string => {
     if (e.tur === "kesin" && e.neden === "bag") return t({ tr: "Bu PDF'i bu kaynak kaydına siz bağladınız.", en: "You linked this PDF to this source record." });
@@ -261,16 +354,367 @@ export default function KaynakPdfPaneli({
     });
   };
 
+  /* Kaynak kaydının kısa adı (çekmece başlığı ve onay katmanı): "Fisher, E. W. (2023)" ya da künyenin başı. */
+  const kisaAd = (r: KaynakPdfSatiri) => {
+    // "Fisher, E. W., & Other, J. (2023). Başlık. Dergi." → "Fisher, E. W., & Other, J. (2023) · Başlık"
+    const yazarYil = /^(.*?\(\s*\d{4}[a-z]?\s*\))/.exec(r.kunye)?.[1];
+    const baslik = kunyeBasligi(r.kunye);
+    return yazarYil && baslik ? `${ozet(yazarYil, 60)} · ${baslik}` : ozet(r.kunye, 110);
+  };
+
+  /*
+    KATMANIN YERİ (20.11.2026): seçimin altında; görünür alanın kenarlarına
+    göre sıkıştırılır. Sağ kenara yakın seçimde sola kayar; seçim görünür
+    alanın altına yakınsa (ya da uzun seçimin sonu ekran dışındaysa) seçimin
+    üstüne, o da sığmazsa görünür alanın altına sabitlenir. Boyutu çizildikten
+    sonra ölçülür (onay katmanı araç çubuğundan uzun).
+  */
+  const katmanRef = (el: HTMLDivElement | null) => {
+    const k = secim?.kutu;
+    if (!el || !k) return;
+    const W = el.offsetWidth;
+    const H = el.offsetHeight;
+    const pay = 8;
+    const solEnAz = k.alan.sol + pay;
+    const solEnCok = Math.max(solEnAz, k.alan.sol + k.alan.genislik - W - pay);
+    const sol = Math.min(Math.max(k.sol, solEnAz), solEnCok);
+    const gorunurAlt = k.alan.ust + k.alan.yukseklik - pay;
+    let ust = k.alt + pay;
+    if (ust + H > gorunurAlt) ust = k.ust - H - pay >= k.alan.ust + pay ? k.ust - H - pay : Math.max(k.alan.ust + pay, gorunurAlt - H);
+    // Konum DOM API'siyle (TSX'te satır içi stil yok, check:css).
+    el.style.setProperty("--katman-ust", `${Math.round(ust)}px`);
+    el.style.setProperty("--katman-sol", `${Math.round(sol)}px`);
+  };
+  const kisaSecim = Boolean(secim && secim.metin.length < SECIM_EN_KISA);
+
+  const secimKatmani = secim && pdf ? (
+    <div
+      ref={katmanRef}
+      className="pdf-secim-katmani"
+      data-pdf-katman=""
+      data-konumlu={secim?.kutu ? "" : undefined}
+      role="group"
+      aria-label={t({ tr: "Seçili pasaj", en: "Selected passage" })}
+    >
+      {!atif ? (
+        <div className="pdf-secim-arac" role="toolbar" aria-label={t({ tr: "Seçimle yapılacaklar", en: "Actions for the selection" })}>
+          {kisaSecim ? (
+            <span className="pdf-secim-not">{t({ tr: "Alıntı için biraz daha uzun bir pasaj seçin.", en: "Select a slightly longer passage to quote it." })}</span>
+          ) : (
+            <>
+              <button type="button" onClick={() => void atifBaslat(true)}>
+                <Quote size={14} aria-hidden="true" /> {t({ tr: "Alıntı ekle", en: "Insert quote" })}
+              </button>
+              <button type="button" onClick={() => void atifBaslat(false)}>
+                <BookOpenCheck size={14} aria-hidden="true" /> {t({ tr: "Yalnızca atıf", en: "Citation only" })}
+              </button>
+              <button
+                type="button"
+                disabled={soruluyor}
+                onClick={() => {
+                  setGorunum("ai");
+                  void sor(undefined, t(SECIM_ANALIZ_SORUSU));
+                }}
+              >
+                <Sparkles size={14} aria-hidden="true" /> {t({ tr: "AI'a sor", en: "Ask AI" })}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard?.writeText(secim.metin).catch(() => {});
+            }}
+          >
+            <Copy size={14} aria-hidden="true" /> {t({ tr: "Kopyala", en: "Copy" })}
+          </button>
+          <button type="button" className="pdf-secim-kapat" onClick={secimiBirak} aria-label={t({ tr: "Seçimi bırak", en: "Clear selection" })}>
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <section className="pdf-onay" data-pdf-ic-katman="" aria-live="polite" aria-label={t({ tr: "Alıntıyı onaylayın", en: "Confirm the quote" })}>
+          {atif.adim === "dogrulaniyor" ? (
+            <p role="status">
+              <Loader2 size={14} className="spin" aria-hidden="true" /> {t({ tr: "Seçim PDF metninde doğrulanıyor…", en: "Verifying the selection against the PDF text…" })}
+            </p>
+          ) : atif.adim === "hata" ? (
+            <>
+              <p role="alert" className="kaynak-hata">{atif.mesaj}</p>
+              <div className="pdf-onay-eylem">
+                <button type="button" className="projects-filter-button button-compact" onClick={() => setAtif(null)}>
+                  {t({ tr: "Geri", en: "Back" })}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="pdf-onay-bas">
+                <b>{alintiEkle ? t({ tr: "İmlece eklenecek", en: "Will be inserted at your cursor" }) : t({ tr: "Yalnızca atıf eklenecek", en: "Only the citation will be inserted" })}</b>
+                <span className="guven-cip" data-tur="kunye">
+                  <ShieldCheck size={12} aria-hidden="true" /> {t({ tr: `PDF s. ${atif.pdfSayfa}'de birebir`, en: `Exact match on PDF p. ${atif.pdfSayfa}` })}
+                </span>
+              </p>
+              {atif.eslesme.tur === "kesin" ? (
+                <p className="pdf-onay-kaynak">
+                  {t({ tr: "Kaynak kaydı:", en: "Source record:" })} <b>{atif.kaynaklar.find((k) => k.id === secilenKaynak)?.title}</b>
+                </p>
+              ) : null}
+              {/* Belgeye eklenecek metnin TAMAMI: alıntı (sunucunun PDF'ten kestiği hâliyle) ve atıf. */}
+              <div className="pdf-onay-onizleme" aria-live="polite">
+                <span className="pdf-onay-etiket">{t({ tr: "Belgeye eklenecek", en: "Will be inserted" })}</span>
+                <p>
+                  {alintiEkle ? <span className="pdf-onay-alinti">“{atif.alinti}” </span> : null}
+                  {!secilenKaynak ? (
+                    <i>{t({ tr: "(atıf, kaynak seçilince görünür)", en: "(the citation appears once a source is chosen)" })}</i>
+                  ) : guncelOnizleme?.atif ? (
+                    <b className="pdf-onay-atif">{guncelOnizleme.atif}</b>
+                  ) : guncelOnizleme?.hata ? (
+                    <span className="kaynak-hata">{guncelOnizleme.hata}</span>
+                  ) : (
+                    <Loader2 size={12} className="spin" aria-label={t({ tr: "Atıf hazırlanıyor", en: "Preparing the citation" })} />
+                  )}
+                </p>
+              </div>
+              {atif.eslesme.tur === "belirsiz" ? (
+                <fieldset className="kaynak-adaylar">
+                  <legend>{eslesmeMetni(atif.eslesme)}</legend>
+                  {atif.eslesme.adaylar.map((id) => {
+                    const k = atif.kaynaklar.find((x) => x.id === id);
+                    return k ? (
+                      <label key={id} className="kaynak-aday">
+                        <input type="radio" name="kaynak-aday" value={id} checked={secilenKaynak === id} onChange={() => setSecilenKaynak(id)} />
+                        <span>
+                          {k.title}
+                          {k.year ? ` (${k.year})` : ""}
+                        </span>
+                      </label>
+                    ) : null;
+                  })}
+                  <label className="kaynak-onay">
+                    <input type="checkbox" checked={onay} onChange={(e) => setOnay(e.target.checked)} />
+                    <span>{t({ tr: "Bu PDF'in seçtiğim kaynak olduğunu kontrol ettim.", en: "I've checked that this PDF is the source I selected." })}</span>
+                  </label>
+                </fieldset>
+              ) : atif.eslesme.tur === "yok" ? (
+                <p className="kaynak-eslesme" data-tur="yok">{eslesmeMetni(atif.eslesme)}</p>
+              ) : null}
+              {atif.eslesme.tur !== "yok" ? (
+                /*
+                  İKİ AYRI SAYFA (20.11.2026): PDF sayfası dosyadaki sıradır ve
+                  yalnızca alıntının doğrulandığı yeri söyler; atfa GİRMEZ. Atıftaki
+                  sayfa makalenin basılı numarasıdır ve yalnızca kullanıcının yazdığıdır.
+                */
+                <div className="pdf-onay-sayfalar">
+                  <p>
+                    <span className="pdf-onay-etiket">{t({ tr: "PDF sayfası", en: "PDF page" })}</span> {atif.pdfSayfa}
+                    <small>{t({ tr: " · dosyadaki sıra; atfa girmez", en: " · position in the file; not used in the citation" })}</small>
+                  </p>
+                  <label className="pdf-onay-sayfa">
+                    <span className="pdf-onay-etiket">{t({ tr: "Basılı sayfa (atıfta)", en: "Printed page (in the citation)" })}</span>
+                    <input
+                      className="field-control"
+                      value={basiliSayfa}
+                      onChange={(e) => setBasiliSayfa(e.target.value.slice(0, 20))}
+                      onFocus={(e) => {
+                        // Telefonda klavye açılınca kutu görünür kalsın: yalnızca sayfa alanı kayar.
+                        const kutu = e.currentTarget;
+                        window.setTimeout(() => kutu.scrollIntoView({ block: "center", inline: "nearest" }), 250);
+                      }}
+                      inputMode="text"
+                      placeholder={t({ tr: "ör. 214 (isteğe bağlı)", en: "e.g. 214 (optional)" })}
+                      title={t({ tr: "Makalenin kendi basılı sayfa numarası", en: "The article's own printed page number" })}
+                    />
+                  </label>
+                </div>
+              ) : null}
+              <div className="pdf-onay-eylem">
+                <button type="button" className="projects-filter-button button-compact" onClick={() => setAtif(null)}>
+                  {t({ tr: "Vazgeç", en: "Cancel" })}
+                </button>
+                {atif.eslesme.tur !== "yok" ? (
+                  <button
+                    type="button"
+                    className="projects-primary-button button-compact"
+                    autoFocus
+                    disabled={ekleniyor || !secilenKaynak || (atif.eslesme.tur !== "kesin" && !onay)}
+                    onClick={() => void atifEkle()}
+                  >
+                    {ekleniyor ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <BookOpenCheck size={14} aria-hidden="true" />} {t({ tr: "Ekle", en: "Insert" })}
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+    </div>
+  ) : null;
+
+  /*
+    KISA DURUM ÖZETİ (20.11.2026): kaynak kaydı eşleşmesi, PDF ve alıntı
+    AYRI üç durum, tek satırda; ayrıntılar (kaynak bağı, bağla/kaldır)
+    istenince açılır. Eskiden bağ satırı ve uzun açıklamalar okuma alanının
+    üstünde sürekli yer kaplıyordu.
+  */
+  const kayitBagli = Boolean(pdf?.kaynak_id);
+  const alintiVar = Boolean(pdf && sonAlinti?.pdfId === pdf.id);
+  const durumOzeti = pdf ? (
+    <div className="pdf-durum-ozeti" data-acik={ayrintiAcik ? "" : undefined}>
+      {/* Telefonda tek satırlık kısa özet: üç durum ayrı işaretlerle, ayrıntılar dokununca açılır. */}
+      <button
+        type="button"
+        className="pdf-durum-kisa"
+        aria-expanded={ayrintiAcik}
+        aria-controls="pdf-durum-ayrinti"
+        onClick={() => setAyrintiAcik((a) => !a)}
+        aria-label={t({
+          tr: `Durum: kaynak kaydı ${kayitBagli ? "bağlı" : "bağlı değil"}, PDF açık, alıntı ${alintiVar ? "PDF'te birebir" : "henüz yok"}. Ayrıntılar`,
+          en: `Status: source record ${kayitBagli ? "linked" : "not linked"}, PDF open, quote ${alintiVar ? "exact in PDF" : "none yet"}. Details`,
+        })}
+      >
+        <span data-tur={kayitBagli ? "tamam" : "uyari"}>{t({ tr: "Kayıt", en: "Record" })}</span>
+        <span data-tur="tamam">PDF</span>
+        <span data-tur={alintiVar ? "tamam" : "bos"}>{t({ tr: "Alıntı", en: "Quote" })}</span>
+      </button>
+      <span className="guven-cip" data-tur={pdf.kaynak_id ? "kunye" : "uyari"}>
+        {pdf.kaynak_id ? t({ tr: "Kaynak kaydı: bağlı", en: "Source record: linked" }) : t({ tr: "Kaynak kaydı: bağlı değil", en: "Source record: not linked" })}
+      </span>
+      <span className="guven-cip" data-tur="kunye">{t({ tr: "PDF: açık", en: "PDF: open" })}</span>
+      <span className="guven-cip" data-tur={sonAlinti?.pdfId === pdf.id ? "kunye" : "notr"}>
+        {sonAlinti?.pdfId === pdf.id
+          ? t({ tr: `Alıntı: PDF s. ${sonAlinti.sayfa}'de birebir`, en: `Quote: exact on PDF p. ${sonAlinti.sayfa}` })
+          : t({ tr: "Alıntı: henüz yok", en: "Quote: none yet" })}
+      </span>
+      <button type="button" className="link-button" aria-expanded={ayrintiAcik} aria-controls="pdf-durum-ayrinti" onClick={() => setAyrintiAcik((a) => !a)}>
+        {ayrintiAcik ? t({ tr: "Ayrıntıları gizle", en: "Hide details" }) : t({ tr: "Ayrıntılar", en: "Details" })}
+      </button>
+    </div>
+  ) : null;
+
+  const odaklanabilir = (kok: HTMLElement) =>
+    Array.from(kok.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(
+      (el) => !el.closest("[hidden]") && el.getClientRects().length > 0,
+    );
+
   return (
-    <aside className="kaynak-pdf-paneli" aria-label={t({ tr: "Kaynak PDF", en: "Source PDF" })}>
-      <header className="yazim-paneli-bas">
-        <span>
-          <FileText size={16} aria-hidden="true" />
-          <b>{t({ tr: "Kaynak PDF", en: "Source PDF" })}</b>
-        </span>
-        {/* Yalnızca çekmecede görünür (workspace.css): PDF belgenin üstünde, geçici bir inceleme görünümü. */}
-        <small className="kaynak-pdf-cekmece-ipucu">{t({ tr: "Geçici görünüm · Esc ile kapatın", en: "Temporary view · Esc to close" })}</small>
-        <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "Kaynak panelini kapat", en: "Close source panel" })}>
+    <aside
+      ref={kokRef}
+      className="kaynak-pdf-paneli"
+      hidden={!acik}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t({ tr: "Kaynak PDF", en: "Source PDF" })}
+      data-tam-ekran={tamEkran ? "" : undefined}
+      onKeyDown={(e) => {
+        /*
+          İÇ KATMANLARIN KAPANMA SIRASI: kısa onay → seçim → AI görünümü →
+          çekmece. Esc önce en içtekini kapatır ve olayı işlenmiş sayar
+          (preventDefault): editörün çekmece dinleyicisi (manuscript-editor
+          escIsle) işlenmiş Esc'e dokunmaz. En dışta çekmece kapanır.
+        */
+        if (e.key === "Escape") {
+          if (atif) setAtif(null);
+          else if (secim) secimiBirak();
+          else if (gorunum === "ai") setGorunum("pdf");
+          else return;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        /* Odak çekmecenin içinde döner (arkadaki editör karartılmış, etkileşim dışı). */
+        if (e.key === "Tab" && kokRef.current) {
+          const liste = odaklanabilir(kokRef.current);
+          if (!liste.length) return;
+          const ilk = liste[0];
+          const son = liste[liste.length - 1];
+          if (e.shiftKey && (document.activeElement === ilk || document.activeElement === kokRef.current)) {
+            e.preventDefault();
+            son.focus();
+          } else if (!e.shiftKey && document.activeElement === son) {
+            e.preventDefault();
+            ilk.focus();
+          }
+        }
+      }}
+    >
+      {onGenislik ? (
+        <div
+          className="pdf-cekmece-tutamak"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t({ tr: "Çekmece genişliği: sürükleyin ya da ok tuşlarını kullanın", en: "Drawer width: drag or use the arrow keys" })}
+          aria-valuenow={genislik}
+          tabIndex={0}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            const tutamak = e.currentTarget;
+            tutamak.setPointerCapture(e.pointerId);
+            const hesapla = (x: number) => window.innerWidth - 8 - x;
+            const tasi = (olay: PointerEvent) => onGenislik(hesapla(olay.clientX), false);
+            const birak = (olay: PointerEvent) => {
+              onGenislik(hesapla(olay.clientX), true);
+              tutamak.removeEventListener("pointermove", tasi);
+              tutamak.removeEventListener("pointerup", birak);
+            };
+            tutamak.addEventListener("pointermove", tasi);
+            tutamak.addEventListener("pointerup", birak);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            onGenislik((genislik ?? 0) + (e.key === "ArrowLeft" ? 40 : -40), true);
+          }}
+        />
+      ) : null}
+      <header className="pdf-cekmece-bas">
+        <FileText size={16} aria-hidden="true" />
+        <b className="pdf-cekmece-ad" title={pdf?.kunye}>{pdf ? kisaAd(pdf) : t({ tr: "Kaynak PDF", en: "Source PDF" })}</b>
+        {liste && liste.length > 1 ? (
+          <label className="pdf-cekmece-secici">
+            <span className="sr-only">{t({ tr: "Kaynak", en: "Source" })}</span>
+            <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
+              {liste.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {ozet(r.kunye, 110)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {pdf ? (
+          <button
+            type="button"
+            className="yazim-hizli-dugme"
+            aria-pressed={gorunum === "ai"}
+            aria-label={gorunum === "ai" ? t({ tr: "PDF'e dön", en: "Back to PDF" }) : t({ tr: "PDF'e sor", en: "Ask the PDF" })}
+            onClick={() => setGorunum((g) => (g === "ai" ? "pdf" : "ai"))}
+            title={t({ tr: "Bu PDF'e soru sorun; yanıtlar yalnızca bu PDF'e dayanır", en: "Ask this PDF; answers rely only on this PDF" })}
+          >
+            {gorunum === "ai" ? (
+              <>
+                <FileText size={14} aria-hidden="true" /> <span className="pdf-dugme-metin">{t({ tr: "PDF'e dön", en: "Back to PDF" })}</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} aria-hidden="true" /> <span className="pdf-dugme-metin">{t({ tr: "PDF'e sor", en: "Ask the PDF" })}</span>
+                {analizler.length ? <span className="pdf-sayac">{analizler.length}</span> : null}
+              </>
+            )}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="yazim-ikon pdf-tam-ekran"
+          aria-pressed={tamEkran}
+          onClick={() => setTamEkran((v) => !v)}
+          aria-label={tamEkran ? t({ tr: "Tam ekrandan çık", en: "Exit full screen" }) : t({ tr: "Tam ekran", en: "Full screen" })}
+          title={tamEkran ? t({ tr: "Tam ekrandan çık", en: "Exit full screen" }) : t({ tr: "Tam ekran", en: "Full screen" })}
+        >
+          {tamEkran ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+        </button>
+        <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "Kaynak panelini kapat (Esc)", en: "Close source panel (Esc)" })}>
           <X size={16} aria-hidden="true" />
         </button>
       </header>
@@ -284,58 +728,43 @@ export default function KaynakPdfPaneli({
       ) : liste.length === 0 ? (
         <p className="pdf-durum">
           {t({
-            tr: "Bu çalışmada PDF'i olan kaynak yok. Kaynakça kontrolünde \"PDF'leri bul\" ile açık erişimli PDF'leri getirin ya da kendi PDF'inizi yükleyin.",
-            en: "No source in this work has a PDF yet. Use \"Find PDFs\" in the reference check to fetch open-access PDFs, or upload your own.",
+            tr: "Bu çalışmada PDF'i olan kaynak yok. Kaynaklar'da bir kaynağın PDF'ini arayın ya da kendi PDF'inizi yükleyin.",
+            en: "No source in this work has a PDF yet. Look for a source's PDF in Sources, or upload your own.",
           })}
         </p>
       ) : (
         <>
-          {/*
-            TELEFONDA İKİ KOMPAKT SATIR (görsel uyum, 19.11.2026). Birinci
-            satır: kaynak seçici, bağ durumu çipi, "⋯". İkinci satır: PDF
-            görüntüleyicinin sayfa ve ölçek denetimleri. İkincil işlemler
-            (bağı kaldır/kaynağa bağla, PDF içinde ara) "⋯" altında. Eskiden
-            PDF'in üstünde beş satır denetim vardı ve sayfa ekranın üçte
-            birinden aşağıda başlıyordu. Masaüstünde bu kap yok sayılır
-            (display: contents, gorsel-uyum.css); düzen eskisi gibi.
-          */}
-          <div className="pdf-ust-satir">
-            <label className="kaynak-pdf-secici">
-              <span>{t({ tr: "Kaynak", en: "Source" })}</span>
-              <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
-                {liste.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {ozet(r.kunye, 110)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {pdf ? (
-              <div id="pdf-ikincil-islemler" className="pdf-ikincil" data-acik={ikincilAcik ? "" : undefined}>
-                <PdfBagSatiri
-                  projectId={projectId}
-                  pdf={pdf}
-                  onDegisti={(kaynakId) => {
-                    setListe((onceki) => onceki?.map((r) => (r.id === pdf.id ? { ...r, kaynak_id: kaynakId } : r)) ?? onceki);
-                    onBagDegisti?.();
-                  }}
-                />
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="yazim-ikon pdf-ikincil-dugme"
-              aria-expanded={ikincilAcik}
-              /* Ekran okuyucu açılan bölgeyi bulsun (kod incelemesi, PR #112). */
-              aria-controls="pdf-ikincil-islemler"
-              aria-label={t({ tr: "Diğer PDF işlemleri: kaynak bağı ve PDF içinde arama", en: "More PDF actions: source link and search in PDF" })}
-              title={t({ tr: "Diğer PDF işlemleri", en: "More PDF actions" })}
-              onClick={() => setIkincilAcik((a) => !a)}
-            >
-              <Ellipsis size={16} aria-hidden="true" />
-            </button>
-          </div>
+          {durumOzeti}
+          {ayrintiAcik && pdf ? (
+            <div id="pdf-durum-ayrinti" className="pdf-durum-ayrinti">
+              {liste && liste.length > 1 ? (
+                <label className="pdf-ayrinti-secici">
+                  <span>{t({ tr: "Kaynak", en: "Source" })}</span>
+                  <select className="field-control" value={pdfId} onChange={(e) => pdfDegisti(e.target.value)}>
+                    {liste.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {ozet(r.kunye, 110)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <PdfBagSatiri
+                projectId={projectId}
+                pdf={pdf}
+                onDegisti={(kaynakId) => {
+                  setListe((onceki) => onceki?.map((r) => (r.id === pdf.id ? { ...r, kaynak_id: kaynakId } : r)) ?? onceki);
+                  onBagDegisti?.();
+                }}
+              />
+              <p className="pdf-durum-not">
+                {t({
+                  tr: "Kaynak kaydı eşleşmesi, PDF'in bulunması ve alıntının PDF'te birebir geçmesi ayrı denetimlerdir; biri ötekinin yerine geçmez.",
+                  en: "Matching the source record, finding the PDF and the quote appearing verbatim in the PDF are separate checks; none stands in for another.",
+                })}
+              </p>
+            </div>
+          ) : null}
           {pasajSonucu === false ? (
             <p className="pdf-pasaj-durum" role="status">
               {t({
@@ -349,105 +778,36 @@ export default function KaynakPdfPaneli({
             </p>
           ) : null}
 
-          {pdf ? <PdfGoruntuleyici
-              pdfId={pdf.id}
-              gidilecekSayfa={gidilecek}
-              onPasaj={setPasajSonucu}
-              onGidisUygulandi={gidisUygulandi}
-              onSecim={secimGeldi}
-              konumAl={konumAl}
-              onKonum={konumDegisti}
-            /> : null}
-
-          <div className="kaynak-pdf-alt">
-            {secim ? (
-              <section className="kaynak-secim" aria-label={t({ tr: "Seçili pasaj", en: "Selected passage" })}>
-                <p className="kaynak-secim-metin">
-                  <span className="kaynak-etiket">{t({ tr: `PDF s. ${secim.sayfa}`, en: `PDF p. ${secim.sayfa}` })}</span> “{ozet(secim.metin)}”
-                </p>
-                {secim.metin.length < SECIM_EN_KISA ? (
-                  <small>{t({ tr: "Analiz ve alıntı için biraz daha uzun bir pasaj seçin.", en: "Select a slightly longer passage to analyse or quote it." })}</small>
-                ) : (
-                  <div className="kaynak-secim-eylem">
-                    <button type="button" className="yazim-hizli-dugme" disabled={soruluyor} onClick={() => void sor(undefined, t(SECIM_ANALIZ_SORUSU))}>
-                      <Sparkles size={14} aria-hidden="true" /> {t({ tr: "Arvo AI ile analiz et", en: "Analyse with Arvo AI" })}
-                    </button>
-                    <button type="button" className="yazim-hizli-dugme" disabled={atif?.adim === "dogrulaniyor"} onClick={() => void atifBaslat()}>
-                      <Quote size={14} aria-hidden="true" /> {t({ tr: "Alıntı ve atıf ekle", en: "Insert quote and citation" })}
-                    </button>
-                  </div>
-                )}
-              </section>
-            ) : (
-              <p className="kaynak-ipucu">{t({ tr: "PDF'ten bir pasaj seçin: Arvo AI'a sorabilir ya da doğrulanmış alıntı ve atıf olarak ekleyebilirsiniz.", en: "Select a passage in the PDF: ask Arvo AI about it or insert it as a verified quote and citation." })}</p>
-            )}
-
-            {atif ? (
-              <section className="kaynak-atif" aria-live="polite" aria-label={t({ tr: "Atıf ekle", en: "Insert citation" })}>
-                {atif.adim === "dogrulaniyor" ? (
-                  <p role="status">
-                    <Loader2 size={14} className="spin" aria-hidden="true" /> {t({ tr: "Seçim PDF metninde doğrulanıyor…", en: "Verifying the selection against the PDF text…" })}
-                  </p>
-                ) : atif.adim === "hata" ? (
-                  <p role="alert" className="kaynak-hata">{atif.mesaj}</p>
-                ) : (
-                  <>
-                    <p className="kaynak-dogrulandi">
-                      <ShieldCheck size={14} aria-hidden="true" /> {t({ tr: `Alıntı PDF'in ${atif.pdfSayfa}. sayfasında doğrulandı.`, en: `Quote verified on PDF page ${atif.pdfSayfa}.` })}
-                    </p>
-                    {/* Eklenecek metin, kaynaktan kesilen hâliyle: öğrenci onaylamadan önce görmeli. */}
-                    <blockquote className="kaynak-alinti-onizleme">“{atif.alinti}”</blockquote>
-                    <p className="kaynak-eslesme" data-tur={atif.eslesme.tur}>{eslesmeMetni(atif.eslesme)}</p>
-                    {atif.eslesme.tur === "kesin" ? (
-                      <p className="kaynak-secilen">{atif.kaynaklar.find((k) => k.id === secilenKaynak)?.title}</p>
-                    ) : atif.eslesme.tur === "belirsiz" ? (
-                      <fieldset className="kaynak-adaylar">
-                        <legend className="sr-only">{t({ tr: "Aday kaynaklar", en: "Candidate sources" })}</legend>
-                        {atif.eslesme.adaylar.map((id) => {
-                          const k = atif.kaynaklar.find((x) => x.id === id);
-                          return k ? (
-                            <label key={id} className="kaynak-aday">
-                              <input type="radio" name="kaynak-aday" value={id} checked={secilenKaynak === id} onChange={() => setSecilenKaynak(id)} />
-                              <span>
-                                {k.title}
-                                {k.year ? ` (${k.year})` : ""}
-                              </span>
-                            </label>
-                          ) : null;
-                        })}
-                        <label className="kaynak-onay">
-                          <input type="checkbox" checked={onay} onChange={(e) => setOnay(e.target.checked)} />
-                          <span>{t({ tr: "Bu PDF'in seçtiğim kaynak olduğunu kontrol ettim.", en: "I've checked that this PDF is the source I selected." })}</span>
-                        </label>
-                      </fieldset>
-                    ) : null}
-                    {atif.eslesme.tur !== "yok" ? (
-                      <>
-                        <label className="kaynak-sayfa">
-                          <span>{t({ tr: "Basılı sayfa (isteğe bağlı)", en: "Printed page (optional)" })}</span>
-                          <input className="field-control" value={basiliSayfa} onChange={(e) => setBasiliSayfa(e.target.value.slice(0, 20))} inputMode="text" placeholder={t({ tr: "ör. 214", en: "e.g. 214" })} />
-                          <small>
-                            {t({
-                              tr: `PDF'in ${atif.pdfSayfa}. sayfası. Makalenin basılı sayfa numarası farklı olabilir; numarayı makalenin kendi sayfasından yazın.`,
-                              en: `PDF page ${atif.pdfSayfa}. The article's printed page number may differ; type the number shown on the article's page.`,
-                            })}
-                          </small>
-                        </label>
-                        <label className="kaynak-onay">
-                          <input type="checkbox" checked={alintiEkle} onChange={(e) => setAlintiEkle(e.target.checked)} />
-                          <span>{t({ tr: "Doğrulanmış alıntıyı da ekle", en: "Also insert the verified quote" })}</span>
-                        </label>
-                        <button type="button" className="projects-primary-button" disabled={ekleniyor || !secilenKaynak || (atif.eslesme.tur !== "kesin" && !onay)} onClick={() => void atifEkle()}>
-                          <BookOpenCheck size={16} aria-hidden="true" /> {t({ tr: "İmlece ekle", en: "Insert at cursor" })}
-                        </button>
-                      </>
-                    ) : null}
-                  </>
-                )}
-              </section>
+          {/*
+            PDF görünümü AI görünümüne geçince SÖKÜLMEZ, yalnızca gizlenir:
+            sayfa, yakınlaştırma ve sayfa içi konum PDF'e dönünce yerinde.
+          */}
+          <div className="pdf-gorunum" hidden={gorunum !== "pdf"}>
+            {pdf ? (
+              <PdfGoruntuleyici
+                pdfId={pdf.id}
+                gidilecekSayfa={gidilecek}
+                onPasaj={setPasajSonucu}
+                onGidisUygulandi={gidisUygulandi}
+                onSecim={secimGeldi}
+                konumAl={konumAl}
+                onKonum={konumDegisti}
+                katman={secimKatmani}
+              />
             ) : null}
+          </div>
 
-            <section className="kaynak-analiz" aria-label={t({ tr: "Arvo AI kaynak analizi", en: "Arvo AI source analysis" })}>
+          {gorunum === "ai" && pdf ? (
+            <section className="kaynak-analiz pdf-ai-gorunum" aria-label={t({ tr: "Bu PDF'e sorular", en: "Questions to this PDF" })}>
+              <p className="yazim-bos-not">
+                <ShieldCheck size={14} aria-hidden="true" />
+                <span>
+                  {t({
+                    tr: "Yanıtlar yalnızca bu PDF'e dayanır; doğrulanamayan cevap gösterilmez ve belgeye kendiliğinden girmez. Yazım asistanının sohbetinden ayrıdır.",
+                    en: "Answers rely only on this PDF; unverifiable answers are hidden and never enter your document on their own. Separate from the writing assistant's chat.",
+                  })}
+                </span>
+              </p>
               <div className="kaynak-analiz-liste" aria-live="polite">
                 {analizler.map((a, i) => (
                   <article key={i} className="kaynak-analiz-oge">
@@ -461,7 +821,14 @@ export default function KaynakPdfPaneli({
                           <ul className="kaynak-alintilar">
                             {a.yanit.alintilar.map((al, j) => (
                               <li key={j}>
-                                <button type="button" className="result-link" onClick={() => setGidilecek({ sayfa: al.sayfa, anahtar: Date.now() })}>
+                                <button
+                                  type="button"
+                                  className="result-link"
+                                  onClick={() => {
+                                    setGidilecek({ sayfa: al.sayfa, anahtar: Date.now() });
+                                    setGorunum("pdf");
+                                  }}
+                                >
                                   {t({ tr: `PDF s. ${al.sayfa}`, en: `PDF p. ${al.sayfa}` })}
                                 </button>{" "}
                                 “{ozet(al.metin, 240)}”
@@ -475,16 +842,22 @@ export default function KaynakPdfPaneli({
                     )}
                   </article>
                 ))}
+                {soruluyor ? (
+                  <p className="pdf-durum" role="status">
+                    <Loader2 size={14} className="spin" aria-hidden="true" /> {t({ tr: "PDF'e soruluyor…", en: "Asking the PDF…" })}
+                  </p>
+                ) : null}
               </div>
               <form className="yazim-girdi" onSubmit={(e) => void sor(e)}>
                 <label className="sr-only" htmlFor="kaynak-pdf-soru">
-                  {t({ tr: "Kaynağa sor", en: "Ask the source" })}
+                  {t({ tr: "Bu PDF'e sor", en: "Ask this PDF" })}
                 </label>
                 <textarea
                   id="kaynak-pdf-soru"
                   className="field-control"
                   rows={2}
                   value={soru}
+                  autoFocus
                   onChange={(e) => setSoru(e.target.value.slice(0, 1000))}
                   // Yazım asistanıyla aynı: Enter gönderir, Shift+Enter yeni satır.
                   onKeyDown={(e) => {
@@ -493,26 +866,15 @@ export default function KaynakPdfPaneli({
                       e.currentTarget.form?.requestSubmit();
                     }
                   }}
-                  placeholder={secim ? t({ tr: "Seçili pasaj hakkında sorun…", en: "Ask about the selected passage…" }) : t({ tr: "Bu kaynağa sorun…", en: "Ask this source…" })}
+                  placeholder={secim ? t({ tr: "Seçili pasaj hakkında sorun…", en: "Ask about the selected passage…" }) : t({ tr: "Bu PDF'e sorun…", en: "Ask this PDF…" })}
                 />
                 <button type="submit" className="projects-primary-button" disabled={soruluyor || soru.trim().length < 3}>
                   {soruluyor ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
                   <span className="sr-only">{t({ tr: "Sor", en: "Ask" })}</span>
                 </button>
               </form>
-              <p className="yazim-bos-not">
-                <ShieldCheck size={14} aria-hidden="true" />
-                <span>
-                  {t({
-                    // Görsel uyum 2. tur kapanışı: eskiden üç satırlık bir açıklamaydı ve okuma
-                    // alanını daraltıyordu (dar panelde yarım görünüyordu). Kural aynı, iki satır.
-                    tr: "Yalnızca bu PDF'e dayanır; doğrulanamayan cevap gösterilmez, belgeye kendiliğinden girmez.",
-                    en: "Uses only this PDF; unverifiable answers are hidden and never enter your document on their own.",
-                  })}
-                </span>
-              </p>
             </section>
-          </div>
+          ) : null}
         </>
       )}
     </aside>

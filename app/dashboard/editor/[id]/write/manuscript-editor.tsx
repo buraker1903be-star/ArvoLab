@@ -94,6 +94,7 @@ import {
   gecerliOlcek,
   olcekAdimi,
   olcekTercihiOku,
+  pdfCekmeceGenisligi,
   sagPanelGenisligiSinirla,
   yerlesimKarari,
   SOL_ALAN_DAR_OZNITELIGI,
@@ -187,6 +188,7 @@ import {
   collectHeadings,
   insertSections,
   insertFrontMatter,
+  atifIslemi,
   insertCitation,
   atifSirasi,
   oncekiDipnottaVar,
@@ -749,15 +751,20 @@ export default function ManuscriptEditor({
     window.addEventListener("resize", olc);
     return () => window.removeEventListener("resize", olc);
   }, []);
-  const SAG_ANAHTARI: Record<SagPanel, string> = { ai: "arvolab.sagPanel.ai", pdf: "arvolab.pdfPanelGenisligi" };
-  const [sagGenislikleri, setSagGenislikleri] = useState<Record<SagPanel, number>>({ ai: SAG_PANEL_SINIRI.ai.varsayilan, pdf: SAG_PANEL_SINIRI.pdf.varsayilan });
+  /*
+    PDF çekmecesinin genişliği YENİ anahtarda (20.11.2026): eski anahtar
+    (arvolab.pdfPanelGenisligi) sütun döneminin 360–600 px değerini tutuyor;
+    onu okumak çekmeceyi ilk açılışta %65 yerine 520 px açardı. 0 = ekranın %65'i.
+  */
+  const SAG_ANAHTARI: Record<SagPanel, string> = { ai: "arvolab.sagPanel.ai", pdf: "arvolab.pdfCekmeceGenisligi" };
+  const [sagGenislikleri, setSagGenislikleri] = useState<Record<SagPanel, number>>({ ai: SAG_PANEL_SINIRI.ai.varsayilan, pdf: 0 });
   const [olcekTercihi, setOlcekTercihi] = useState<OlcekTercihi>("sigdir");
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- tercihler yalnızca tarayıcıda okunabilir; ilk çizim sunucuyla aynı kalır
       setSagGenislikleri({
         ai: sagPanelGenisligiSinirla("ai", Number(window.localStorage.getItem(SAG_ANAHTARI.ai))),
-        pdf: sagPanelGenisligiSinirla("pdf", Number(window.localStorage.getItem(SAG_ANAHTARI.pdf))),
+        pdf: Number(window.localStorage.getItem(SAG_ANAHTARI.pdf)) || 0,
       });
       setOlcekTercihi(olcekTercihiOku(window.localStorage.getItem("arvolab.belgeOlcegi")));
     } catch {
@@ -766,8 +773,10 @@ export default function ManuscriptEditor({
     // Anahtarlar sabit; yalnızca açılışta okunur.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const sagGenislikDegisti = (genislik: number, kaydet: boolean) => {
+  const sagGenislikDegisti = (istenen: number, kaydet: boolean) => {
     if (!sag) return;
+    // Çekmece: sınırlar ekran genişliğine göre (lib/calisma-alani-yerlesimi.ts pdfCekmeceGenisligi).
+    const genislik = sag === "pdf" ? pdfCekmeceGenisligi(ekran || window.innerWidth, istenen) : istenen;
     setSagGenislikleri((onceki) => ({ ...onceki, [sag]: genislik }));
     if (kaydet) {
       try {
@@ -925,7 +934,7 @@ export default function ManuscriptEditor({
   const [anaGenislik, setAnaGenislik] = useState(0);
   const otomatikOlcek = karar?.sabitKagit && anaGenislik ? Math.min(1, Math.floor(((anaGenislik - 2) / KAGIT_GENISLIGI) * 100) / 100) : 1;
   const belgeOlcegi = karar?.sabitKagit ? gecerliOlcek(olcekTercihi, otomatikOlcek) : 1;
-  const sagGenislik = karar?.sag === "sutun" ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
+  const sagGenislik = karar && (karar.sag === "sutun" || sag === "pdf") ? karar.sagGenislik : sag ? sagGenislikleri[sag] : 0;
   /* CSS değişkenleri DOM API'siyle (TSX'te satır içi stil yok, check:css). */
   useEffect(() => {
     const kap = yerlesimRef.current;
@@ -1295,6 +1304,25 @@ export default function ManuscriptEditor({
     const kaydet = () => {
       if (editor.isFocused) kayitliImlec.current = { from: editor.state.selection.from, to: editor.state.selection.to };
     };
+    /*
+      ODAK GİDERKEN DOM SEÇİMİ OKUNUR (20.11.2026, kabulde 5 turdan 1'inde
+      ölçüldü). Tıklamanın hemen ardından basılan End gibi bir tuşla taşınan
+      imleç ProseMirror'ın durumuna her zaman yansımıyor: tarayıcıda imleç
+      satır sonunda, editörün seçimi bir karakter geride kalıyor ve alıntı
+      "tanımlanmıştı“…” r" diye yazılıyordu. Odak editörden çıkarken seçim
+      henüz editörün içinde: konum oradan, tarayıcının gördüğü yerden alınır.
+    */
+    const bulanik = () => {
+      const dom = window.getSelection();
+      if (!dom?.anchorNode || !dom.focusNode || !editor.view.dom.contains(dom.anchorNode) || !editor.view.dom.contains(dom.focusNode)) return;
+      try {
+        const a = editor.view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+        const b = editor.view.posAtDOM(dom.focusNode, dom.focusOffset);
+        kayitliImlec.current = { from: Math.min(a, b), to: Math.max(a, b) };
+      } catch {
+        /* DOM konumu çözülemedi (düğüm görünümü): son ProseMirror seçimi kalır. */
+      }
+    };
     const esle = ({ transaction }: { transaction: import("@tiptap/pm/state").Transaction }) => {
       const k = kayitliImlec.current;
       if (!k || !transaction.docChanged) return;
@@ -1304,10 +1332,12 @@ export default function ManuscriptEditor({
     editor.on("selectionUpdate", kaydet);
     editor.on("focus", kaydet);
     editor.on("transaction", esle);
+    editor.on("blur", bulanik);
     return () => {
       editor.off("selectionUpdate", kaydet);
       editor.off("focus", kaydet);
       editor.off("transaction", esle);
+      editor.off("blur", bulanik);
     };
   }, [editor]);
 
@@ -2624,8 +2654,8 @@ export default function ManuscriptEditor({
   */
   const handleCite = async (
     source: LiteratureSource,
-    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean } = {},
-  ): Promise<{ ok: true } | { ok: false; hata: string }> => {
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean } = {},
+  ): Promise<{ ok: true; atif?: string } | { ok: false; hata: string }> => {
     const konum = secenek.kayitliKonum && !editor.isFocused ? kayitliImlec.current : null;
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
@@ -2655,6 +2685,23 @@ export default function ManuscriptEditor({
       }
       hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
     }
+    /*
+      ÖNİZLEME (20.11.2026, PDF çekmecesinin onay katmanı): atıf, eklenecek
+      işlemin AYNISIYLA ama gönderilmeyen bir işlemde kurulur; belgeye hiçbir
+      şey yazılmaz. Önizlenen metin, "Ekle"de yazılanla aynı yoldan gelir
+      (aynı stil, kalıp, sayfa, konum); ayrı bir biçimleyiciyle tahmin edilmez.
+    */
+    if (secenek.onizle) {
+      const { citation } = atifIslemi(editor.state.tr, source, style, {
+        sayfa: secenek.sayfa,
+        erisimTarihi: bugun,
+        kalip: ornekKalibi(ornekAtif),
+        dil: belgeDili,
+        hazir,
+        konum,
+      });
+      return { ok: true, atif: citation };
+    }
     const { citation, addedReference } = insertCitation(editor, source, style, {
       sayfa: secenek.sayfa,
       erisimTarihi: bugun,
@@ -2663,6 +2710,7 @@ export default function ManuscriptEditor({
       hazir,
       alinti: secenek.alinti,
       konum,
+      odaklanma: !secenek.kayitliKonum,
     });
     /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
        Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
@@ -2681,7 +2729,7 @@ export default function ManuscriptEditor({
           : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
-    return { ok: true };
+    return { ok: true, atif: citation };
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
   const handlePrint = async () => {
@@ -4114,6 +4162,12 @@ export default function ManuscriptEditor({
       {sag && karar?.sag === "sutun" ? (
         <SagPanelAyirici panel={sag} genislik={sagGenislik} enCok={karar.sagEnCok} onDegis={sagGenislikDegisti} yerlesim={yerlesimiAl} />
       ) : null}
+      {/*
+        PDF ÇEKMECESİNİN ARKASI (20.11.2026): editör hafifçe kararır, yerinden
+        oynamaz; tıklamak çekmeceyi kapatır (Esc gibi). Telefonda çekmece tam
+        ekran olduğu için örtü yok (workspace.css).
+      */}
+      {kaynakAcik ? <div className="pdf-cekmece-ortu" aria-hidden="true" onClick={pdfKapat} /> : null}
       <KaynakPdfPaneli
         editor={editor}
         projectId={projectId}
@@ -4121,6 +4175,8 @@ export default function ManuscriptEditor({
         acilacak={acilacakPdf}
         onKapat={pdfKapat}
         onCite={handleCite}
+        genislik={kaynakAcik ? sagGenislik : undefined}
+        onGenislik={sagGenislikDegisti}
         onDogrulanmisPasaj={(p) => setDogrulanmisPasajlar((onceki) => [...onceki, p])}
         onBagDegisti={() => setKartVerisi(null)}
       />

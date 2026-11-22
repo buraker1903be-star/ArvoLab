@@ -117,6 +117,30 @@ export const SOL_ALAN_DAR_OZNITELIGI = "data-sol-alan-dar";
 export const SOL_ALAN_SIK_OZNITELIGI = "data-sol-alan-sik";
 export const SOL_ALAN_GENISLET_OLAYI = "arvolab:sol-alan-genislet";
 
+/*
+  PDF ÇEKMECESİ (20.11.2026, kurum sahibinin kararı; 2. tur yan yana
+  yerleşimin YERİNE). PDF artık belgenin yanında sütun değil, sağdan açılan
+  geniş bir çekmece: editörün ÜSTÜNE gelir, editör daralmaz, kaymaz,
+  yeniden ölçeklenmez; arkası hafifçe kararır. Eskiden PDF sütunu belgeyi
+  %85'e indiriyor, kaynak listesini şeride itiyor, 1280 px'te 382 px'lik
+  bir okuma alanı bırakıyordu (canlı deneme: "dar okuma alanı").
+  Başlangıç genişliği ekranın %65'i; kullanıcı kenardan çekip ayarlayabilir
+  (tercih saklanır), tam ekran düğmesi var. Arkada her zaman en az
+  PDF_CEKMECE_ARKA_PAY kadar belge görünür kalır: tıklayınca çekmece kapanır.
+  Telefonda (≤760) tam ekran (workspace.css).
+*/
+export const PDF_CEKMECE_ORANI = 0.65;
+export const PDF_CEKMECE_EN_AZ = 480;
+export const PDF_CEKMECE_ARKA_PAY = 96;
+
+/** Çekmecenin uygulanacak genişliği: istenen (kullanıcının çektiği) ya da ekranın %65'i, sınırlar içinde. */
+export function pdfCekmeceGenisligi(ekran: number, istenen?: number | null): number {
+  const enCok = Math.max(PDF_CEKMECE_EN_AZ, ekran - PDF_CEKMECE_ARKA_PAY);
+  const enAz = Math.min(PDF_CEKMECE_EN_AZ, enCok);
+  const deger = Number.isFinite(istenen) && (istenen ?? 0) > 0 ? (istenen as number) : ekran * PDF_CEKMECE_ORANI;
+  return Math.round(Math.min(enCok, Math.max(enAz, deger)));
+}
+
 export function sagPanelGenisligiSinirla(panel: SagPanel, istenen: number): number {
   const s = SAG_PANEL_SINIRI[panel];
   const deger = Number.isFinite(istenen) && istenen > 0 ? istenen : s.varsayilan;
@@ -164,14 +188,27 @@ export function yerlesimKarari(girdi: {
       sag: sagPanel ? "cekmece" : "yok",
       olcek: 1,
       sabitKagit: false,
-      sagGenislik: istenenSag,
-      sagEnCok: sagPanel ? SAG_PANEL_SINIRI[sagPanel].enCok : 0,
+      sagGenislik: sagPanel === "pdf" ? pdfCekmeceGenisligi(ekran, girdi.sagGenislik) : istenenSag,
+      sagEnCok: sagPanel === "pdf" ? pdfCekmeceGenisligi(ekran, Number.MAX_SAFE_INTEGER) : sagPanel ? SAG_PANEL_SINIRI[sagPanel].enCok : 0,
       inceleme: incelemeIstendi ? "akis" : "yok",
     };
   }
   const olcekFor = (sol: number, sag: number) => Math.min(1, (ekran - sol - (sag ? sag + AYIRICI_PAYI : 0) - SAYFA_PAYI) / KAGIT_GENISLIGI);
   const kenar: YerlesimKarari["kenar"] = solArac ? "arac" : girdi.kenarDar ? "ray" : "tam";
   const solEn = solArac ? SOL_ARAC_GENISLIGI[solArac] : girdi.kenarDar ? KENAR_RAY : KENAR_GENIS;
+
+  /* PDF: her zaman çekmece; editörün kenarı ve ölçeği PDF yokmuş gibi (yukarıda, PDF ÇEKMECESİ). */
+  if (sagPanel === "pdf") {
+    return {
+      kenar,
+      sag: "cekmece",
+      olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)),
+      sabitKagit: true,
+      sagGenislik: pdfCekmeceGenisligi(ekran, girdi.sagGenislik),
+      sagEnCok: pdfCekmeceGenisligi(ekran, Number.MAX_SAFE_INTEGER),
+      inceleme: "yok",
+    };
+  }
 
   if (!sagPanel) {
     if (incelemeIstendi) {
@@ -189,50 +226,6 @@ export function yerlesimKarari(girdi: {
   }
   const enDar = SAG_PANEL_SINIRI[sagPanel].enAz;
   const sinir = SAG_PANEL_SINIRI[sagPanel];
-  /*
-    PDF (görsel uyum 2): ÖNCE sol alan daralır (gezinme raya; kaynak listesi
-    300 → 246 → şerit), sonra PDF belgeyi %85'te tutan EN GENİŞ değere iner
-    (en az 360). Eskiden PDF yalnızca istenen ya da en dar (440) olabiliyordu;
-    arası denenmiyordu.
-  */
-  if (sagPanel === "pdf") {
-    const sigan = (sol: number) => Math.min(istenenSag, Math.floor(ekran - sol - AYIRICI_PAYI - SAYFA_PAYI - BELGE_SUTUNU_EN_AZ));
-    const dizilis: [YerlesimKarari["kenar"], number][] = solArac
-      ? [
-          ["arac", solEn],
-          ...(SOL_ARAC_SIK_OLANLAR.includes(solArac) && !girdi.solGenisIstendi ? ([["aracSik", SOL_ARAC_SIK]] as [YerlesimKarari["kenar"], number][]) : []),
-          ...(!girdi.solGenisIstendi ? ([["aracDar", KENAR_RAY]] as [YerlesimKarari["kenar"], number][]) : []),
-        ]
-      : kenar === "tam"
-        ? [["tam", KENAR_GENIS], ["ray", KENAR_RAY]]
-        : [[kenar, solEn]];
-    if (solArac) {
-      /*
-        Kaynak listesi açık: liste mümkün olduğunca görünür kalır (kurum
-        sahibi: "1440'ta kaynak listesini de koruyabilecek dağılımı dene").
-        Her adımda PDF sığan en geniş değeri alır; 1440'ta liste 246 + PDF
-        360, belge %85. Liste ancak 246'da da sığmıyorsa şeride iner.
-      */
-      for (const [k, sol] of dizilis) {
-        const sag = sigan(sol);
-        if (sag >= enDar) return pdfSutun(k, sol, sag);
-      }
-    } else {
-      // Gezinme: önce raya iner (istenen PDF genişliği sığıyorsa), sonra PDF daralır.
-      for (const [k, sol] of dizilis) {
-        if (sigan(sol) >= istenenSag) return pdfSutun(k, sol, istenenSag);
-      }
-      for (const [k, sol] of dizilis.slice().reverse()) {
-        const sag = sigan(sol);
-        if (sag >= enDar) return pdfSutun(k, sol, sag);
-      }
-    }
-    return { kenar, sag: "cekmece", olcek: yuvarla(Math.max(olcekFor(solEn, 0), 0.5)), sabitKagit: true, sagGenislik: istenenSag, sagEnCok: sinir.enCok, inceleme: "yok" };
-  }
-  function pdfSutun(k: YerlesimKarari["kenar"], sol: number, sag: number): YerlesimKarari {
-    const pay = Math.floor(ekran - sol - AYIRICI_PAYI - SAYFA_PAYI - BELGE_SUTUNU_EN_AZ);
-    return { kenar: k, sag: "sutun", olcek: yuvarla(olcekFor(sol, sag)), sabitKagit: true, sagGenislik: sag, sagEnCok: Math.max(sinir.enAz, Math.min(sinir.enCok, pay)), inceleme: "yok" };
-  }
   const denemeler: [YerlesimKarari["kenar"], number, number][] = [
     [kenar, solEn, istenenSag],
     [kenar, solEn, enDar],
