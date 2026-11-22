@@ -159,6 +159,9 @@ const S11 = {};
   yaz("b", ["puan", "once", "sonra"], (i) => [(50 + ((i * 7) % 40)).toFixed(1), i % 2 ? "evet" : "hayir", i % 3 ? "evet" : "hayir"]);
   yaz("c", ["skor", "sonucDurumu"], (i) => [(30 + ((i * 11) % 50)).toFixed(1), i % 2 ? "olumlu" : "olumsuz"]);
   yaz("d", ["puan", "sure", "sinif"], (i) => [(50 + ((i * 7) % 40)).toFixed(1), (10 + ((i * 3) % 25)).toFixed(1), ["9", "10", "11", "12"][i % 4]]);
+  /* S12: ortak sütunu olmayan ikinci dosya ve üç ikili sütunlu dosya. */
+  yaz("e", ["skor", "sure2", "takim"], (i) => [(30 + ((i * 11) % 50)).toFixed(1), (5 + ((i * 3) % 20)).toFixed(1), i % 2 ? "X" : "Y"]);
+  yaz("f", ["once", "sonra", "ucuncu"], (i) => [i % 2 ? "evet" : "hayir", i % 3 ? "evet" : "hayir", i % 4 ? "var" : "yok"]);
 }
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
@@ -663,6 +666,85 @@ try {
     await analizSec("parametrik", "Mann-Whitney U Testi");
     return await sayfa.locator("label").filter({ hasText: "Sayısal değişken" }).locator("select").first().inputValue();
   }, "sure");
+
+  /* ================= S12: seçim doğrulamasının state'e yazılması =================
+     Düzeltmeden önce iki ayrışma vardı:
+     (1) Dosya yüklerken karşılaştırma tabanı state DEĞİL, az önce okunan
+         sütunlardan kurulan geçici bir nesneydi; değer ona göre
+         "değişmemiş" sayılınca setState hiç çağrılmıyor ve state boş
+         kalıyordu. Kutu "grup" gösterirken hesap "grup değişkeninde 0
+         farklı değer bulundu" diye düşüyordu.
+     (2) McNemar'da 1. kutuda ikinci sütun seçilince 2. kutunun
+         seçenekleri arasından o sütun çıkıyor, state'teki eski değer
+         hiçbir seçeneğe uymuyordu.
+     Bu yüzden her adımda KÜNYE (hesabın gerçekten kullandığı girdi)
+     ekranda görünenle karşılaştırılıyor. */
+  const calistirKunye = async () => {
+    const dugme = sayfa.getByRole("button", { name: /Analizi Çalıştır/ });
+    if (!(await dugme.count())) return "(düğme yok)";
+    await dugme.click();
+    await sayfa.waitForTimeout(2200);
+    const hata = (await sayfa.locator('.alert[data-tone="danger"]').allInnerTexts()).join(" ");
+    if (hata) return `HATA: ${hata.slice(0, 120)}`;
+    return (await sayfa.locator(".analiz-sonuc-kunye").innerText().catch(() => "(künye yok)")).replace(/\n/g, " · ");
+  };
+
+  /* (1) Önce analiz seç (veri yok), sonra dosya yükle: varsayılanlar state'e yazılmalı. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("ttest", "Bağımsız Örneklem t-Testi");
+  await yukle(S11.a);
+  await esit("S12a ilk yüklemede sayısal/grup varsayılanları ekranda", async () => {
+    const say = await kutuDurumu("Sayısal değişken");
+    const grup = await kutuDurumu("Grup değişkeni");
+    return `${say.deger}/${grup.deger}`;
+  }, "yas/basari");
+  await esit("S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor", async () =>
+    await calistirKunye(), (v) => /sayısal değişken · yas/.test(v) && /grup değişkeni · basari/.test(v));
+
+  /* (2) Yeni dosyada sütun adları tamamen farklı. */
+  await esit("S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor", async () => {
+    sayfa.once("dialog", async (dl) => { await dl.accept(); });
+    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
+    await sayfa.waitForTimeout(500);
+    await yukle(S11.e);
+    const say = await kutuDurumu("Sayısal değişken");
+    const grup = await kutuDurumu("Grup değişkeni");
+    return `${say.deger}/${grup.deger}`;
+  }, "skor/takim");
+  await esit("S12b2 yenilenen seçim hesap künyesinde de görünüyor", async () =>
+    await calistirKunye(), (v) => /sayısal değişken · skor/.test(v) && /grup değişkeni · takim/.test(v));
+
+  /* (3) McNemar: ilk sütunu İKİNCİ seçili sütunla değiştir. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("parametrik", "McNemar Testi");
+  await yukle(S11.f);
+  await esit("S12c McNemar başlangıç: iki ayrı geçerli sütun", async () => {
+    const a = await kutuDurumu("Önceki ölçüm");
+    const b = await kutuDurumu("Sonraki ölçüm");
+    return `${a.deger}/${b.deger}`;
+  }, "once/sonra");
+  await esit("S12c2 ilk sütun ikinciyle değiştirilince ikinci de yeniden doğrulanıyor", async () => {
+    await sayfa.locator("label").filter({ hasText: "Önceki ölçüm" }).locator("select").first().selectOption("sonra");
+    await sayfa.waitForTimeout(350);
+    const a = await kutuDurumu("Önceki ölçüm");
+    const b = await kutuDurumu("Sonraki ölçüm");
+    return `${a.deger}/${b.deger} · farkli:${a.deger !== b.deger} · gorunen:${/^sonra/.test(a.gorunen) && a.deger === "sonra"}`;
+  }, (v) => /farkli:true · gorunen:true/.test(v));
+  await esit("S12c3 görünen değer, state ve hesap girdileri tutarlı", async () => {
+    const a = await kutuDurumu("Önceki ölçüm");
+    const b = await kutuDurumu("Sonraki ölçüm");
+    const kunye = await calistirKunye();
+    return `${kunye.includes(`önceki ölçüm · ${a.deger}`)} ${kunye.includes(`sonraki ölçüm · ${b.deger}`)} ${/McNemar/.test(kunye)}`;
+  }, "true true true");
+  await esit("S12c4 tek ikili sütun kalırsa ikinci alan boşalıyor ve hesap engelleniyor", async () => {
+    sayfa.once("dialog", async (dl) => { await dl.accept(); });
+    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
+    await sayfa.waitForTimeout(500);
+    await yukle(S11.a); /* yalnızca "basari" iki kategorili */
+    const a = await kutuDurumu("Önceki ölçüm");
+    const b = await kutuDurumu("Sonraki ölçüm");
+    return `${a.deger}/${b.deger} · bos:${await sayfa.locator(".analiz-eksik-alan").count()} · dugme:${await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).count()}`;
+  }, "basari/ · bos:1 · dugme:0");
 
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);

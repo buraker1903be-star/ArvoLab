@@ -140,6 +140,85 @@ describe("regresyon senaryoları", () => {
   });
 });
 
+/*
+  TEK ALAN DEĞİŞİMİ BAĞIMLI ALANI DA DOĞRULAR (23.11.2026).
+
+  McNemar'da kullanıcı 1. kutuda İKİNCİ sütunu seçtiğinde, 2. kutunun
+  seçenekleri arasından o sütun çıkıyor ve state'teki eski değer hiçbir
+  seçeneğe uymuyordu: ekranda iki kutu yer değiştirmiş gibi görünüyor,
+  hesap "İki farklı, ikişer kategorili sütun seçin" diye düşüyordu.
+*/
+describe("bir alan değişince bağımlı alan yeniden doğrulanıyor", () => {
+  test("McNemar: varA, varB'deki sütuna çevrilince varB farklı bir sütuna geçiyor", () => {
+    const mevcut: DegiskenSecimi = { ...BOS, varA: "once", varB: "sonra" };
+    /* Kullanıcı 1. kutuda "sonra"yı seçti. */
+    const { secim, duzeltilenAlanlar } = secimiDuzelt("mcnemar", { ...mevcut, varA: "sonra" }, HAVUZ_B);
+    assert.equal(secim.varA, "sonra");
+    assert.equal(secim.varB, "once");
+    assert.notEqual(secim.varA, secim.varB);
+    assert.deepEqual(duzeltilenAlanlar, ["varB"]);
+  });
+
+  test("McNemar: üç ikili sütunda da ikinci alan geçerli kalıyor", () => {
+    const havuz: SutunHavuzlari = { sayisal: [], grup: [], ikiDegerli: ["a", "b", "c"] };
+    const { secim } = secimiDuzelt("mcnemar", { ...BOS, varA: "c", varB: "c" }, havuz);
+    assert.equal(secim.varA, "c");
+    assert.ok(["a", "b"].includes(secim.varB));
+  });
+
+  test("McNemar: tek ikili sütun varken varA onu alınca varB eksik kalıyor ve hesap engelleniyor", () => {
+    const { secim, eksikAlanlar } = secimiDuzelt("mcnemar", { ...BOS, varA: "basari", varB: "basari" }, HAVUZ_A);
+    assert.equal(secim.varA, "basari");
+    assert.equal(secim.varB, "");
+    assert.deepEqual(eksikAlanlar, ["varB"]);
+    assert.equal(hesaplanabilirMi("mcnemar", secim, HAVUZ_A), false);
+  });
+
+  test("bağımlılığı olmayan analizde alan değişimi ötekini bozmuyor", () => {
+    /* Korelasyonda iki değişken de sayısal havuzdan; farklı olma kuralı yok. */
+    const { secim, duzeltilenAlanlar } = secimiDuzelt("correlation", { ...BOS, varA: "puan", varB: "sure" }, HAVUZ_A);
+    assert.equal(secim.varA, "puan");
+    assert.equal(secim.varB, "sure");
+    assert.deepEqual(duzeltilenAlanlar, []);
+  });
+});
+
+/*
+  İLK YÜKLEMEDE GEÇERLİ VARSAYILANLAR. Dosya yüklenirken karşılaştırma
+  tabanı state değil, az önce okunan sütunlardan kurulan geçici bir
+  nesneydi: değer ona göre "değişmemiş" sayılınca state'e hiç yazılmıyor
+  ve boş kalıyordu. secimiDuzelt'in döndürdüğü seçim, tabandan bağımsız
+  olarak her zaman eksiksiz ve geçerli olmalı.
+*/
+describe("düzeltme sonucu her zaman eksiksiz", () => {
+  test("ilk yüklemede zorunlu alanların hepsi dolu dönüyor", () => {
+    const { secim, eksikAlanlar } = secimiDuzelt("ttest", BOS, HAVUZ_A);
+    assert.equal(secim.varA, "yas");
+    assert.equal(secim.groupVar, "basari");
+    assert.deepEqual(eksikAlanlar, []);
+    assert.equal(hesaplanabilirMi("ttest", secim, HAVUZ_A), true);
+  });
+
+  test("taban zaten doğruyken de aynı eksiksiz seçim dönüyor (fark yok diye atlanamaz)", () => {
+    const taban: DegiskenSecimi = { ...BOS, varA: "yas", groupVar: "basari" };
+    const a = secimiDuzelt("ttest", BOS, HAVUZ_A).secim;
+    const b = secimiDuzelt("ttest", taban, HAVUZ_A).secim;
+    assert.equal(a.varA, b.varA);
+    assert.equal(a.groupVar, b.groupVar);
+    /* duzeltilenAlanlar boş olsa bile seçimin kendisi eksiksiz. */
+    assert.deepEqual(secimiDuzelt("ttest", taban, HAVUZ_A).duzeltilenAlanlar, []);
+    assert.equal(b.varA, "yas");
+  });
+
+  test("yeni dosyada farklı sütun adları: seçim tamamen yenileniyor", () => {
+    const yeni: SutunHavuzlari = { sayisal: ["skor", "sure"], grup: ["takim"], ikiDegerli: ["takim"] };
+    const eski: DegiskenSecimi = { ...BOS, varA: "yas", groupVar: "grup" };
+    const { secim } = secimiDuzelt("ttest", eski, yeni);
+    assert.equal(secim.varA, "skor");
+    assert.equal(secim.groupVar, "takim");
+  });
+});
+
 describe("havuz kuralları her analiz için tanımlı", () => {
   test("25 analizin her biri varA kuralını taşıyor ya da varA kullanmıyor", () => {
     const kuralsiz: AnalizTuru[] = [];

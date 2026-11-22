@@ -95,6 +95,28 @@ describe("değişken seçimi iki yolda da aynı doğrulamadan geçiyor", () => {
     assert.ok(!/setVarB\(numericColumns\[1\]/.test(analizci));
   });
 
+  test("düzeltme sonucu KOŞULSUZ state'e yazılıyor", () => {
+    /*
+      Eskiden her alan `mevcut` ile karşılaştırılıp yalnızca farklıysa
+      yazılıyordu. Dosya yüklerken `mevcut` state değil geçici bir nesne
+      olduğu için değer "değişmemiş" sayılıyor, setState çağrılmıyor ve
+      state boş kalıyordu: kutu "grup" gösterirken hesap "grup
+      değişkeninde 0 farklı değer bulundu" diyordu.
+    */
+    for (const setter of ["setVarA", "setVarB", "setGroupVar", "setGroupVar2", "setVarY"]) {
+      assert.match(analizci, new RegExp(`\\n      ${setter}\\(secim\\.\\w+\\);`), `${setter} koşulsuz çağrılmalı`);
+    }
+    assert.ok(!/if \(secim\.\w+ !== mevcut\.\w+\)/.test(analizci), "fark karşılaştırmasıyla atlama kalmadı");
+  });
+
+  test("tek alan değişimi de ortak kuraldan geçiyor (bağımlı alan doğrulanır)", () => {
+    assert.match(analizci, /const degiskenSec = useCallback\(/);
+    assert.match(analizci, /secimiUygula\(analysisType, \{ varA, varB, groupVar, groupVar2, varY, \[alan\]: deger \}, havuzlar\)/);
+    /* McNemar/lojistik kutuları ham setter yerine ortak yolu kullanıyor. */
+    assert.match(analizci, /onChange=\{\(e\) => degiskenSec\("varA", e\.target\.value\)\}/);
+    assert.match(analizci, /onChange=\{\(e\) => degiskenSec\("varB", e\.target\.value\)\}/);
+  });
+
   test("zorunlu alana uygun sütun yoksa 'Analizi Çalıştır' çizilmiyor", () => {
     assert.match(analizci, /\{eksikAlanlar\.length \? \(/);
     assert.match(analizci, /className="analiz-eksik-alan"/);

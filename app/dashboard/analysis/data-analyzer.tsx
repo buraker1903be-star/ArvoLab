@@ -392,11 +392,26 @@ export default function DataAnalyzer({
   const secimiUygula = useCallback(
     (tur: AnalysisType, mevcut: DegiskenSecimi, kaynak: SutunHavuzlari) => {
       const { secim } = secimiDuzelt(tur, mevcut, kaynak);
-      if (secim.varA !== mevcut.varA) setVarA(secim.varA);
-      if (secim.varB !== mevcut.varB) setVarB(secim.varB);
-      if (secim.groupVar !== mevcut.groupVar) setGroupVar(secim.groupVar);
-      if (secim.groupVar2 !== mevcut.groupVar2) setGroupVar2(secim.groupVar2);
-      if (secim.varY !== mevcut.varY) setVarY(secim.varY);
+      /*
+        SONUCUN TAMAMI KOŞULSUZ YAZILIYOR (23.11.2026 düzeltmesi).
+
+        Eskiden her alan `mevcut` ile karşılaştırılıp yalnızca farklıysa
+        state'e yazılıyordu. Dosya yüklerken `mevcut` state DEĞİL, az önce
+        okunan sütunlardan kurulan geçici bir nesne: değer ona göre
+        "değişmemiş" sayılınca setState hiç çağrılmıyor ve state eski
+        (çoğu zaman boş) değerinde kalıyordu. Kutu ilk seçeneği
+        gösteriyor, hesap ise "Seçili grup değişkeninde 0 farklı değer
+        bulundu" diye düşüyordu — düzeltmeye çalıştığımız ayrışmanın
+        aynısı, bu kez karşılaştırma tabanı yüzünden.
+
+        React aynı değerde yeniden çizim yapmıyor; koşulsuz yazmanın
+        maliyeti yok, doğruluk kazancı var.
+      */
+      setVarA(secim.varA);
+      setVarB(secim.varB);
+      setGroupVar(secim.groupVar);
+      setGroupVar2(secim.groupVar2);
+      setVarY(secim.varY);
       return secim;
     },
     [],
@@ -543,6 +558,21 @@ export default function DataAnalyzer({
     });
     return map;
   }, [dataset]);
+
+  /*
+    TEK ALAN DEĞİŞİMİ DE ORTAK KURALDAN GEÇER. McNemar'da ilk değişken
+    değişince ikincisi geçersiz kalabiliyor: kullanıcı 1. kutuda ikinci
+    sütunu seçtiğinde 2. kutunun seçenekleri arasından o sütun çıkıyor ve
+    state'teki eski değer hiçbir seçeneğe uymuyordu. Ekranda iki kutu yer
+    değiştirmiş gibi görünüyor, hesap "İki farklı, ikişer kategorili sütun
+    seçin" diye düşüyordu.
+  */
+  const degiskenSec = useCallback(
+    (alan: SecimDegiskeni, deger: string) => {
+      secimiUygula(analysisType, { varA, varB, groupVar, groupVar2, varY, [alan]: deger }, havuzlar);
+    },
+    [secimiUygula, analysisType, havuzlar, varA, varB, groupVar, groupVar2, varY],
+  );
 
   /*
     ANALİZ SEÇİMİ TEK YERDE. Eskiden bu düzeltmeler yöntem kartının
@@ -3592,7 +3622,8 @@ export default function DataAnalyzer({
                     ? t({ tr: "Önceki ölçüm (iki kategorili)", en: "Earlier measurement (two categories)" })
                     : t({ tr: "Bağımlı değişken (iki kategorili)", en: "Dependent variable (two categories)" })}
                 </span>
-                <select value={varA} onChange={(e) => setVarA(e.target.value)}>
+                {/* Ortak kuraldan: ilk değişken değişince ikincisi yeniden doğrulanır. */}
+                <select value={varA} onChange={(e) => degiskenSec("varA", e.target.value)}>
                   {ikiDegerliSutunlar.length ? null : <option value="">{t({ tr: "İki kategorili sütun yok", en: "No two-category column" })}</option>}
                   {ikiDegerliSutunlar.map((c) => (
                     <option key={c.ad} value={c.ad}>
@@ -3606,7 +3637,7 @@ export default function DataAnalyzer({
             {analysisType === "mcnemar" && (
               <label>
                 <span>{t({ tr: "Sonraki ölçüm (iki kategorili)", en: "Later measurement (two categories)" })}</span>
-                <select value={varB} onChange={(e) => setVarB(e.target.value)}>
+                <select value={varB} onChange={(e) => degiskenSec("varB", e.target.value)}>
                   {/* varA dışında kalan iki kategorili sütunlar: aynı sütunla hesap yapılamaz. */}
                   {ikiDegerliSutunlar.filter((c) => c.ad !== varA).length ? null : (
                     <option value="">{t({ tr: "Uygun ikinci sütun yok", en: "No suitable second column" })}</option>
