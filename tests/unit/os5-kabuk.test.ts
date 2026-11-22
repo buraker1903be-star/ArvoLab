@@ -81,11 +81,17 @@ describe("hesap menüsü iki yerleşimde aynı", () => {
   içinde aynı yuva çalışma gezinmesini gösterir. Karar ADRESTEN verilir
   (adrestekiCalisma); yayınlanan bağlama bakmak ilk boyamada menüyü
   zıplatırdı.
+
+  22.11.2026: çalışma düzeyi YALNIZCA çalışmanın kendi sayfalarında
+  (/dashboard/editor/<id>/…). ?calisma= ile süzülmüş modül sayfaları
+  (Kaynaklar, Kaynakça, Analiz Merkezi, Belge Kontrol) genel düzeyde
+  kalıyor: aynı sayfa, hangi yoldan gelindiğine göre iki ayrı gezinme
+  gösteriyordu.
 */
 describe("iki düzeyli gezinme; gruplar erişilebilir", () => {
   const gezinme = yorumsuz(oku("app/dashboard/_components/os-gezinme.tsx"));
   test("çalışma düzeyi adresten; tek <nav>; sol araç yuvası", () => {
-    assert.match(gezinme, /adrestekiCalisma\(yol, sorgu\)/);
+    assert.match(gezinme, /adrestekiCalisma\(yol\)/);
     assert.match(gezinme, /calismaBaglantilari\(calisma, t\)/);
     assert.match(gezinme, /id="sol-alan-yuva"/);
     assert.equal(gezinme.match(/<nav /g)?.length, 1);

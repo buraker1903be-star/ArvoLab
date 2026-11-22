@@ -451,20 +451,29 @@ export function kontrolSayfalari(calisma: CalismaBaglami, t: Cevirici = cevirici
 }
 
 /**
- * Adresteki çalışma: çalışmanın kendi sayfaları (/dashboard/editor/<id>/…)
- * ve ona süzülmüş araçlar (?calisma=<id>). Çalışmalarım listesi
- * (/dashboard/editor, ?sec= ile seçili olsa da) GENEL düzeydir: orası
- * çalışmalar arasında seçim yapılan yer.
+ * Adresteki çalışma: YALNIZCA çalışmanın kendi sayfaları
+ * (/dashboard/editor/<id>/…). Çalışmalarım listesi (/dashboard/editor,
+ * ?sec= ile seçili olsa da) GENEL düzeydir: orası çalışmalar arasında
+ * seçim yapılan yer.
+ *
+ * 22.11.2026: `?calisma=<id>` ARTIK ÇALIŞMA DÜZEYİ SAYILMIYOR. Modül
+ * sayfaları (Kaynaklar, Kaynakça, Analiz Merkezi, Belge Kontrol) dock'tan
+ * açılıyor ve kendi çalışma seçicileri var; o seçiciden başka bir
+ * çalışmaya geçmek sol gezinmeyi tümüyle değiştiriyor, "Ana Sayfa" ve
+ * "Çalışmalarım" ekrandan kayboluyordu — aynı sayfa, hangi yoldan
+ * gelindiğine göre iki ayrı gezinme gösteriyordu. Hangi çalışmaya
+ * bakıldığı sayfanın KENDİ seçicisinde yazıyor; gezinme sabit kalıyor.
+ * Çalışmanın içindeki sayfalar (yazım ekranı, kanıt, makale, etik)
+ * eskisi gibi çalışma menüsünü gösterir.
  *
  * Kimlik ADRESTEN okunur, sayfanın yayınladığı bağlamdan değil: bağlam
  * istemcide, sayfa çizildikten sonra geliyor; ona bakan gezinme ilk
  * boyamada genel menüyü gösterip sonra çalışma menüsüne zıplardı.
  */
-export function adrestekiCalisma(yol: string, sorgu: URLSearchParams): string | null {
+export function adrestekiCalisma(yol: string): string | null {
   const m = /^\/dashboard\/editor\/([^/?#]+)(?:\/|$)/.exec(yol);
   if (m && m[1] !== "new") return decodeURIComponent(m[1]);
-  if (yol.startsWith("/dashboard/editor")) return null;
-  return sorgu.get("calisma") || null;
+  return null;
 }
 
 /**
@@ -472,8 +481,8 @@ export function adrestekiCalisma(yol: string, sorgu: URLSearchParams): string | 
  * karar verir (adrestekiCalisma); başka bir çalışmaya ya da genel
  * sayfaya geçince çalışma menüsü kalkar.
  */
-export function calismaIcindeMi(calismaId: string, yol: string, sorgu: URLSearchParams): boolean {
-  return adrestekiCalisma(yol, sorgu) === calismaId;
+export function calismaIcindeMi(calismaId: string, yol: string): boolean {
+  return adrestekiCalisma(yol) === calismaId;
 }
 
 /**

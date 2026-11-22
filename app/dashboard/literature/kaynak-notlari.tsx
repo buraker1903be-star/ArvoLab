@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { updateLiteratureNotes } from "@/app/actions/literature";
 import { showToast } from "../_components/toast-events";
@@ -24,10 +24,17 @@ export default function KaynakNotlari({
   kaynakId,
   baslangic,
   onKaydedildi,
+  onTaslak,
 }: {
   kaynakId: string;
   baslangic: string;
   onKaydedildi: () => void;
+  /*
+    Kaydedilmemiş metni üst bileşene bildirir (null: temiz). Kaynak
+    değiştirmek, paneli kapatmak ya da sayfadan ayrılmak yazılanı sessizce
+    atmasın diye karar orada veriliyor (kaynak-alani.tsx).
+  */
+  onTaslak: (metin: string | null) => void;
 }) {
   const t = useCeviri();
   const [deger, setDeger] = useState(baslangic);
@@ -43,11 +50,17 @@ export default function KaynakNotlari({
   */
   const degisti = deger !== kayitli;
 
+  /* Taslağı üst bileşene bildir: geçişlerde "kaydet / vazgeç" sorulabilsin. */
+  useEffect(() => {
+    onTaslak(degisti ? deger : null);
+  }, [degisti, deger, onTaslak]);
+
   const kaydet = () => {
     if (!degisti || bekliyor) return;
     const gonderilen = deger;
     basla(async () => {
       const sonuc = await updateLiteratureNotes(kaynakId, gonderilen);
+      /* Başarısız kayıtta METİN KORUNUR: yalnızca uyarı verilir, alan ellenmez. */
       if (sonuc.error) return showToast("error", sonuc.error);
       setKayitli(gonderilen);
       showToast("success", t({ tr: "Not kaydedildi.", en: "Note saved." }));

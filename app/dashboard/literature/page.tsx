@@ -1,4 +1,3 @@
-import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import DoiEkleKutusu from "./doi-ekle-kutusu";
 import Link from "next/link";
 import { BookMarked, Download, FileUp, Link2, Plus, Sparkles } from "lucide-react";
@@ -180,15 +179,11 @@ export default async function KaynaklarPage({
   return (
     <main className="dashboard-page gb gb-tek-ekran kaynaklar-sayfasi">
       {/*
-        Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın
-        bölümlerini gösterir (Phase 3, os-gezinme.tsx). Bu tur DEĞİŞTİRİLMEDİ:
-        kararı veren kural ortak (lib/os/uygulamalar.ts, adrestekiCalisma) ve
-        Analiz Merkezi gibi öteki modül sayfalarını da kapsıyor; yalnızca
-        Kaynaklar için değiştirmek gezinmeyi iki ayrı kurala bölerdi.
-        Burada yayınlanan şey yalnızca BAŞLIK: kaldırılsaydı çalışma menüsü
-        yine çıkar, üstünde adı boş bir satır kalırdı.
+        ÇALIŞMA BAĞLAMI YAYINLANMIYOR (22.11.2026). Gezinme artık modül
+        sayfalarında çalışma menüsüne geçmiyor (lib/os/uygulamalar.ts,
+        adrestekiCalisma): hangi çalışmaya bakıldığı yukarıdaki çalışma
+        seçicisinde yazıyor. Bağlamı yayınlamanın tek tüketicisi o menüydü.
       */}
-      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       {/*
         ÜST ALAN (22.11.2026, onaylı mockup): Çalışmalarım ve ana sayfayla
         aynı dil — üst başlık, sayfa başlığı, tek cümlelik açıklama, sağda

@@ -1566,6 +1566,26 @@
 .pdf-goruntuleyici { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 220px; }
 .pdf-arac { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); }
 .pdf-arac-grup { display: inline-flex; align-items: center; gap: 4px; }
+/*
+  KOMPAKT ARAÇ ÇUBUĞU (22.11.2026, Kaynaklar panelinin telefon görünümü;
+  pdf-goruntuleyici.tsx `kompakt`). Dar sütunda çubuk iki-üç satıra sarıp
+  PDF'e kalan yüksekliği yarıya indiriyordu. Kompakt kipte çubuk TEK
+  satır: sayfa gezinmesi açıkta, ikincil araçlar bu menüde — ADLARIYLA ve
+  dokunma hedefi küçülmeden. Editörde bu kip kullanılmıyor.
+*/
+.pdf-arac:has(.pdf-arac-daha) { flex-wrap: nowrap; justify-content: space-between; }
+.pdf-arac-daha { position: relative; flex: none; margin-left: auto; }
+.pdf-arac-daha > summary { list-style: none; cursor: pointer; }
+.pdf-arac-daha > summary::-webkit-details-marker { display: none; }
+.pdf-arac-daha-liste {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: var(--z-acilir);
+  display: flex; flex-direction: column; align-items: stretch; min-width: 216px; padding: 6px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface-raised); box-shadow: var(--shadow-lg);
+}
+.pdf-arac-daha-liste .yazim-ikon { width: auto; min-width: 0; justify-content: flex-start; gap: 10px; padding: 0 10px; }
+.pdf-arac-daha-liste .pdf-yuzde { padding: 0 10px; color: var(--muted); font-size: var(--fs-sm); }
+.pdf-arac-ad { font-size: var(--fs-base); font-weight: 500; }
 .pdf-sayfa-girdi { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
 .pdf-sayfa-girdi input { width: 3.2em; min-height: 32px; text-align: center; }
 /*

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUpDown, BookOpen, ChevronRight, ExternalLink, FileText, MoreHorizontal, Paperclip, SlidersHorizontal, Trash2 } from "lucide-react";
-import { deleteLiteratureSource, updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
+import { ArrowUpDown, BookOpen, ChevronRight, ExternalLink, FileText, MoreHorizontal, Paperclip, SlidersHorizontal, Trash2 } from "lucide-react";
+import { deleteLiteratureSource, updateLiteratureNotes, updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 import { acilacakPdf, editorPdfAdresi, kaynakDurumlari, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
@@ -97,6 +97,19 @@ export default function KaynakAlani({
   const [panelGenislik, setPanelGenislik] = useState(PANEL_VARSAYILAN);
   const [genis, setGenis] = useState(false);
   const [bekleyen, setBekleyen] = useState<string | null>(null);
+  /*
+    KAYDEDİLMEMİŞ NOT. Panelin not sekmesi yazılanı buraya bildiriyor
+    (null: temiz). Kaynak değiştirmek ya da paneli kapatmak yazılanı
+    SESSİZCE ATMIYOR: önce "kaydet / kaydetme / vazgeç" soruluyor.
+    Sayfadan büsbütün ayrılmak (çalışma değiştirmek, başka modüle
+    geçmek) uygulamanın denetiminde olmadığı için tarayıcının kendi
+    uyarısına bağlanıyor (beforeunload).
+  */
+  const [notTaslagi, setNotTaslagi] = useState<{ kaynakId: string; metin: string } | null>(null);
+  const [bekleyenGecis, setBekleyenGecis] = useState<
+    { tur: "sec"; kaynak: LiteratureSource; dugme: HTMLButtonElement | null; sekme?: "pdf" | "kunye" | "notlar" } | { tur: "kapat" } | null
+  >(null);
+  const [notKaydediliyor, setNotKaydediliyor] = useState(false);
   const [, basla] = useTransition();
   const kapRef = useRef<HTMLDivElement>(null);
   /* Ayırıcının üst sınırı kabın genişliğine bağlı; render sırasında ref
@@ -182,11 +195,35 @@ export default function KaynakAlani({
     sonSatirRef.current?.focus();
   }, [secili]);
 
+  /*
+    SEÇİLİ SATIR GÖRÜNÜR KALSIN. Derin bağlantıyla gelen ya da liste
+    kaydırılmışken açılan kaynağın satırı ekran dışında kalabiliyordu:
+    panelde bir kayıt açık ama listede hangisi olduğu görünmüyordu.
+    Yalnızca GEREKİRSE kaydırılıyor (nearest), yoksa her seçimde liste
+    zıplardı.
+  */
+  useEffect(() => {
+    if (!seciliId) return;
+    const alan = listeRef.current;
+    const satir = alan?.querySelector<HTMLElement>(`#kaynak-${CSS.escape(seciliId)}`);
+    if (!alan || !satir) return;
+    const a = alan.getBoundingClientRect();
+    const r = satir.getBoundingClientRect();
+    if (r.top < a.top || r.bottom > a.bottom) satir.scrollIntoView({ block: "nearest" });
+  }, [seciliId, gorunen]);
+
   const sec = (k: LiteratureSource, dugme: HTMLButtonElement | null, hedefSekme?: "pdf" | "kunye" | "notlar") => {
-    listeKonumu.current = listeRef.current?.scrollTop ?? 0;
-    sonSatirRef.current = dugme;
-    setSeciliId(k.id);
-    if (hedefSekme) setSekme(hedefSekme);
+    if (k.id === seciliId) {
+      if (hedefSekme) setSekme(hedefSekme);
+      return;
+    }
+    const gecis = { tur: "sec", kaynak: k, dugme, sekme: hedefSekme } as const;
+    if (notTaslagi) return setBekleyenGecis(gecis);
+    gecisiUygula(gecis);
+  };
+  const kapat = () => {
+    if (notTaslagi) return setBekleyenGecis({ tur: "kapat" });
+    gecisiUygula({ tur: "kapat" });
   };
 
   const durumDegistir = (k: LiteratureSource, yeni: Durum) => {
@@ -213,6 +250,51 @@ export default function KaynakAlani({
   };
 
   const tazele = useCallback(() => router.refresh(), [router]);
+
+  const notTaslagiBildir = useCallback(
+    (metin: string | null) => setNotTaslagi(metin === null || !seciliId ? null : { kaynakId: seciliId, metin }),
+    [seciliId],
+  );
+
+  /* Sayfadan ayrılmak (çalışma değiştirmek, sekmeyi kapatmak): tarayıcı uyarısı. */
+  useEffect(() => {
+    if (!notTaslagi) return;
+    const uyar = (olay: BeforeUnloadEvent) => olay.preventDefault();
+    window.addEventListener("beforeunload", uyar);
+    return () => window.removeEventListener("beforeunload", uyar);
+  }, [notTaslagi]);
+
+  const gecisiUygula = (gecis: NonNullable<typeof bekleyenGecis>) => {
+    setNotTaslagi(null);
+    if (gecis.tur === "kapat") {
+      setSeciliId(null);
+      return;
+    }
+    listeKonumu.current = listeRef.current?.scrollTop ?? 0;
+    sonSatirRef.current = gecis.dugme;
+    setSeciliId(gecis.kaynak.id);
+    if (gecis.sekme) setSekme(gecis.sekme);
+  };
+
+  /* "Kaydet ve devam et": başarısız olursa geçiş YAPILMAZ, metin yerinde kalır. */
+  const notuKaydetVeDevam = () => {
+    const taslak = notTaslagi;
+    const gecis = bekleyenGecis;
+    if (!taslak || !gecis) return;
+    setNotKaydediliyor(true);
+    basla(async () => {
+      const sonuc = await updateLiteratureNotes(taslak.kaynakId, taslak.metin);
+      setNotKaydediliyor(false);
+      if (sonuc.error) {
+        showToast("error", sonuc.error);
+        return;
+      }
+      showToast("success", t({ tr: "Not kaydedildi.", en: "Note saved." }));
+      setBekleyenGecis(null);
+      gecisiUygula(gecis);
+      router.refresh();
+    });
+  };
 
   const SUZGECLER: { kod: Suzgec; ad: string }[] = [
     { kod: "hepsi", ad: t({ tr: "Hepsi", en: "All" }) },
@@ -314,31 +396,40 @@ export default function KaynakAlani({
                           {[htmlVarliklariniCoz(k.authors) || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year].filter(Boolean).join(" · ")}
                         </small>
                         {k.container_title ? <small className="kaynak-satir-dergi">{htmlVarliklariniCoz(k.container_title)}</small> : null}
-                        <span className="kaynak-satir-rozetler">
-                          {pdfDurumu ? (
-                            <span className="kaynak-rozet" data-ton={pdfDurumu.ton} title={t(pdfDurumu.aciklama)}>
-                              <Paperclip size={12} aria-hidden="true" /> {t(pdfDurumu.kisa)}
-                            </span>
-                          ) : null}
-                          <span className="status-pill" data-tone={ETIKET[durum].ton}>
-                            {t(ETIKET[durum].ad)}
-                          </span>
-                        </span>
                       </span>
                     </button>
 
-                    {/* Eksik künye uyarısı: küçük, satır içi; düzeltme akışı aynı panelde. */}
-                    {eksik.length || yazarBicimiBelirsiz(k.authors) ? (
-                      <p className="kaynak-satir-uyari">
-                        {eksik.length
-                          ? t({ tr: `Künye eksik: ${eksik.join(", ")}`, en: `Reference incomplete: ${eksik.join(", ")}` })
-                          : t({ tr: "Yazar biçimi belirsiz", en: "Author format is ambiguous" })}
-                        {" · "}
-                        <button type="button" className="link-button" onClick={(e) => sec(k, e.currentTarget.closest("li")?.querySelector(".kaynak-satir-sec") ?? null, "kunye")}>
-                          {t({ tr: "Tamamla", en: "Complete" })} <ChevronRight size={12} aria-hidden="true" />
-                        </button>
-                      </p>
-                    ) : null}
+                    {/*
+                      Rozetler ve uyarı AYNI SATIRDA (22.11.2026). Eskiden
+                      rozetler bir, eksik künye uyarısı ayrı bir satırdı ve
+                      uyarı eksik alanların tamamını sayıyordu
+                      ("dergi adı, cilt, sayı, sayfa aralığı, DOI") — iki
+                      satır daha. Listede yalnızca DURUM var; alanların
+                      tamamı "Tamamla" ile açılan Künye sekmesinde.
+                      Rozetler seçim düğmesinin DIŞINDA: uyarının kendi
+                      düğmesi var, iç içe düğme olamaz.
+                    */}
+                    <div className="kaynak-satir-alt">
+                      {pdfDurumu ? (
+                        <span className="kaynak-rozet" data-ton={pdfDurumu.ton} title={t(pdfDurumu.aciklama)}>
+                          <Paperclip size={12} aria-hidden="true" /> {t(pdfDurumu.kisa)}
+                        </span>
+                      ) : null}
+                      <span className="status-pill" data-tone={ETIKET[durum].ton}>
+                        {t(ETIKET[durum].ad)}
+                      </span>
+                      {eksik.length || yazarBicimiBelirsiz(k.authors) ? (
+                        <span className="kaynak-satir-uyari">
+                          {eksik.length
+                            ? t({ tr: "Künye eksik", en: "Reference incomplete" })
+                            : t({ tr: "Yazar biçimi belirsiz", en: "Author format is ambiguous" })}
+                          {" · "}
+                          <button type="button" className="link-button" onClick={(e) => sec(k, e.currentTarget.closest("li")?.querySelector(".kaynak-satir-sec") ?? null, "kunye")}>
+                            {t({ tr: "Tamamla", en: "Complete" })} <ChevronRight size={12} aria-hidden="true" />
+                          </button>
+                        </span>
+                      ) : null}
+                    </div>
 
                     {/* Diğer işlemler satırın ⋯ menüsünde (mockup). */}
                     <details className="kart-menu kaynak-satir-menu">
@@ -410,12 +501,54 @@ export default function KaynakAlani({
         />
       ) : null}
 
+      {/*
+        KAYDEDİLMEMİŞ NOT. Geçiş ancak kullanıcı karar verince yapılıyor;
+        "Kaydet ve devam et" başarısız olursa geçiş de yapılmıyor ve
+        yazılan metin panelde duruyor.
+      */}
+      {bekleyenGecis && notTaslagi ? (
+        <div className="kaynak-not-uyari-ortu" role="presentation" onClick={() => setBekleyenGecis(null)}>
+          <div
+            className="kaynak-not-uyari"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="kaynak-not-uyari-baslik"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="kaynak-not-uyari-baslik">{t({ tr: "Kaydedilmemiş notunuz var", en: "You have an unsaved note" })}</h2>
+            <p>
+              {t({
+                tr: "Bu kaynak için yazdığınız not henüz kaydedilmedi. Kaydetmeden devam ederseniz yazdığınız kaybolur.",
+                en: "The note you wrote for this source hasn't been saved yet. If you continue without saving, it will be lost.",
+              })}
+            </p>
+            <div className="kaynak-not-uyari-eylem">
+              <button type="button" className="projects-primary-button button-compact" disabled={notKaydediliyor} onClick={notuKaydetVeDevam} autoFocus>
+                {notKaydediliyor ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Kaydet ve devam et", en: "Save and continue" })}
+              </button>
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                disabled={notKaydediliyor}
+                onClick={() => {
+                  const gecis = bekleyenGecis;
+                  setBekleyenGecis(null);
+                  gecisiUygula(gecis);
+                }}
+              >
+                {t({ tr: "Kaydetmeden devam et", en: "Continue without saving" })}
+              </button>
+              <button type="button" className="link-button" disabled={notKaydediliyor} onClick={() => setBekleyenGecis(null)}>
+                {t({ tr: "Vazgeç", en: "Cancel" })}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {secili ? (
         <aside className="kaynak-paneli" aria-label={t({ tr: "Seçili kaynak", en: "Selected source" })}>
-          {/* Dar ekranda panel listenin yerini alır; dönüş belirgin. */}
-          <button type="button" className="kaynak-panel-geri" onClick={() => setSeciliId(null)}>
-            <ArrowLeft size={15} aria-hidden="true" /> {t({ tr: "Kaynaklara dön", en: "Back to sources" })}
-          </button>
+          {/* Dar ekranda dönüş panelin kendi başlık satırında (kaynak-paneli.tsx). */}
           {/*
             key={secili.id}: kaynak değişince PDF, künye ve not sıfırdan
             kurulur. Anahtarsız bırakılsa görüntüleyici yeni baytları
@@ -429,10 +562,11 @@ export default function KaynakAlani({
             eslesme={eslesmeler.get(secili.id) ?? null}
             sekme={sekme}
             onSekme={setSekme}
-            onKapat={() => setSeciliId(null)}
+            onKapat={kapat}
             genis={genis}
             onGenis={setGenis}
             onDegisti={tazele}
+            onNotTaslagi={notTaslagiBildir}
           />
         </aside>
       ) : null}

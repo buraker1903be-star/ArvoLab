@@ -16,7 +16,7 @@ import { useEffect } from "react";
 /* Tek liste: açık hâli (SECICI) ve kapsayıcı arama (KAPSAYICI) aynı
    kaynaktan türüyor; eskiden iki yerde ayrı yazılıyordu ve yeni bir menü
    birine eklenip ötekinde unutulabiliyordu. */
-const MENULER = ["details.os-kullanici", "details.kart-menu", "details.ust-dil", "details.kaynak-ekle", "details.kaynak-arac-menu"];
+const MENULER = ["details.os-kullanici", "details.kart-menu", "details.ust-dil", "details.kaynak-ekle", "details.kaynak-arac-menu", "details.pdf-arac-daha"];
 const KAPSAYICI = MENULER.join(", ");
 const SECICI = MENULER.map((m) => `${m}[open]`).join(", ");
 

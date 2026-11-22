@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowLeft,
   BookOpen,
   ExternalLink,
   FileText,
@@ -92,6 +93,7 @@ export default function KaynakPaneli({
   genis,
   onGenis,
   onDegisti,
+  onNotTaslagi,
 }: {
   kaynak: LiteratureSource;
   /** Kaynağın bağlı olduğu çalışma; PDF yükleme ve editörde açma buna bağlı. */
@@ -104,10 +106,26 @@ export default function KaynakPaneli({
   onGenis: (g: boolean) => void;
   /** Kayıt değişti: liste tazelensin. */
   onDegisti: () => void;
+  /** Kaydedilmemiş not metni (null: temiz); geçişlerde sorulabilsin diye yukarı bildirilir. */
+  onNotTaslagi: (metin: string | null) => void;
 }) {
   const t = useCeviri();
   const dil = useDil();
   const dosyaRef = useRef<HTMLInputElement>(null);
+  /*
+    Dar ekran: panel listenin yerini alıyor (CSS 1100 px) ve PDF araç
+    çubuğu kompakt kipte çiziliyor. Ölçü JS'te de gerekiyor çünkü
+    görüntüleyicinin kipi bir PROP; CSS ile araçları gizlemek onları
+    klavyeden de erişilemez kılardı.
+  */
+  const [dar, setDar] = useState(false);
+  useEffect(() => {
+    const sorgu = window.matchMedia("(max-width: 1100px)");
+    const uygula = () => setDar(sorgu.matches);
+    uygula();
+    sorgu.addEventListener("change", uygula);
+    return () => sorgu.removeEventListener("change", uygula);
+  }, []);
   const [yukleniyor, setYukleniyor] = useState(false);
   const [duzenle, setDuzenle] = useState(false);
 
@@ -170,14 +188,34 @@ export default function KaynakPaneli({
 
   return (
     <div className="kaynak-panel-govde">
+      {/*
+        BAŞLIK. Geniş ekranda panelin ne olduğunu söyleyen genel başlık,
+        altında kaynağın adı. DAR ekranda (22.11.2026) yer kazanmak için
+        tek satır: doğrudan KAYNAĞIN ADI — "Kaynak önizlemesi" zaten
+        apaçık, ad ise hangi kayda bakıldığını söyleyen asıl bilgi.
+        Kapatma düğmesi de dar ekranda çizilmiyor: "Kaynaklara dön" ile
+        aynı işi yapıyordu, iki ayrı dönüş kontrolü kafa karıştırıyordu.
+      */}
       <header className="kaynak-panel-bas">
+        {/*
+          Dar ekranda dönüş BAŞLIK SATIRINDA (22.11.2026): ayrı bir satır
+          olarak ~50 px yer kaplıyor ve PDF'e kalan yüksekliği yiyordu.
+          Geniş ekranda gizli; orada dönüş sağdaki "×".
+        */}
+        <button type="button" className="kaynak-panel-geri" onClick={onKapat}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>{t({ tr: "Kaynaklar", en: "Sources" })}</span>
+        </button>
         <span className="kaynak-panel-simge" aria-hidden="true">
           <FileText size={16} />
         </span>
-        <h2 title={htmlVarliklariniCoz(kaynak.title)}>{t({ tr: "Kaynak önizlemesi", en: "Source preview" })}</h2>
+        <h2 title={htmlVarliklariniCoz(kaynak.title)}>
+          <span className="kaynak-panel-genel">{t({ tr: "Kaynak önizlemesi", en: "Source preview" })}</span>
+          <span className="kaynak-panel-kisa">{htmlVarliklariniCoz(kaynak.title)}</span>
+        </h2>
         <button
           type="button"
-          className="yazim-ikon"
+          className="yazim-ikon kaynak-panel-boy"
           onClick={() => onGenis(!genis)}
           aria-pressed={genis}
           aria-label={genis ? t({ tr: "Paneli daralt", en: "Collapse panel" }) : t({ tr: "Paneli genişlet", en: "Expand panel" })}
@@ -185,12 +223,11 @@ export default function KaynakPaneli({
         >
           {genis ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
         </button>
-        <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "Paneli kapat", en: "Close panel" })} title={t({ tr: "Paneli kapat", en: "Close panel" })}>
+        <button type="button" className="yazim-ikon kaynak-panel-kapat" onClick={onKapat} aria-label={t({ tr: "Paneli kapat", en: "Close panel" })} title={t({ tr: "Paneli kapat", en: "Close panel" })}>
           <X size={16} aria-hidden="true" />
         </button>
       </header>
 
-      {/* Panelin başlığı KAYNAĞIN adı: hangi kayda baktığı her sekmede görünür. */}
       <p className="kaynak-panel-ad" title={htmlVarliklariniCoz(kaynak.title)}>
         {htmlVarliklariniCoz(kaynak.title)}
       </p>
@@ -207,7 +244,7 @@ export default function KaynakPaneli({
         {sekme === "pdf" ? (
           pdf ? (
             /* Gerçek görüntüleyici; `key` ile PDF değişince sıfırdan kurulur. */
-            <PdfGoruntuleyici key={pdf.id} pdfId={pdf.id} onSecim={() => undefined} />
+            <PdfGoruntuleyici key={pdf.id} pdfId={pdf.id} onSecim={() => undefined} kompakt={dar} />
           ) : (
             <div className="kaynak-panel-bos">
               <Paperclip size={20} aria-hidden="true" />
@@ -315,7 +352,10 @@ export default function KaynakPaneli({
           </div>
         ) : null}
 
-        {sekme === "notlar" ? <KaynakNotlari kaynakId={kaynak.id} baslangic={kaynak.notes ?? ""} onKaydedildi={onDegisti} /> : null}
+        {/* Not sekmesi kapalıyken de MONTAJLI kalıyor: sekme değiştirmek yazılanı atmasın. */}
+        <div className="kaynak-panel-not-yuva" hidden={sekme !== "notlar"}>
+          <KaynakNotlari kaynakId={kaynak.id} baslangic={kaynak.notes ?? ""} onKaydedildi={onDegisti} onTaslak={onNotTaslagi} />
+        </div>
       </div>
 
       <footer className="kaynak-panel-alt">

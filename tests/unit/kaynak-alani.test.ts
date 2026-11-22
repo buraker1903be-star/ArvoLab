@@ -71,6 +71,25 @@ describe("liste", () => {
     assert.match(alan, /className="status-pill" data-tone=\{ETIKET\[durum\]\.ton\}/);
   });
 
+  /*
+    22.11.2026: rozetler ve eksik künye uyarısı TEK satırda; uyarı da
+    kısaldı. Eskiden rozetler bir, uyarı ayrı bir satırdı ve uyarı eksik
+    alanların tamamını sayıyordu — satır gereksiz uzuyordu.
+  */
+  test("rozetler ve uyarı tek satırda; uyarı KISA, alan listesi satırda değil", () => {
+    assert.match(alan, /className="kaynak-satir-alt"/);
+    assert.match(alan, /tr: "Künye eksik", en: "Reference incomplete"/);
+    assert.doesNotMatch(yorumsuz(alan), /Künye eksik: \$\{eksik\.join/);
+    const css = oku("app/styles/kaynak-alani.css");
+    assert.match(css, /\.kaynak-satir-alt \{ display: flex;/);
+  });
+
+  test("seçili satır ekran dışında kalmıyor; liste konumu korunuyor", () => {
+    assert.match(alan, /satir\.scrollIntoView\(\{ block: "nearest" \}\)/);
+    assert.match(alan, /listeKonumu\.current = listeRef\.current\?\.scrollTop \?\? 0;/);
+    assert.match(alan, /if \(alan && listeKonumu\.current\) alan\.scrollTop = listeKonumu\.current;/);
+  });
+
   test("okuma durumlarının anlamı değişmedi", () => {
     assert.match(alan, /to_review: \{ ad: \{ tr: "Okunacak", en: "To read" \}/);
     assert.match(alan, /read: \{ ad: \{ tr: "Okundu", en: "Read" \}/);
@@ -138,6 +157,66 @@ describe("kaynak paneli", () => {
     /* Hiçbir alan kendiliğinden uygulanmaz: seçilenler gönderilir. */
     assert.match(duzeltme, /kaynakDuzeltmeUygula\(kaynakId, \[\.\.\.secilen\]\)/);
     assert.match(duzeltme, /disabled=\{!secilen\.size \|\| durum === "uygulaniyor"\}/);
+  });
+});
+
+/*
+  KAYDEDİLMEMİŞ NOT (22.11.2026). Yazılan not kaynak değiştirince,
+  panel kapanınca ya da sayfadan ayrılınca SESSİZCE kaybolmuyor.
+*/
+describe("not kaybı", () => {
+  test("geçişten önce soruluyor: kaydet / kaydetme / vazgeç", () => {
+    const kod = yorumsuz(alan);
+    assert.match(kod, /if \(notTaslagi\) return setBekleyenGecis\(gecis\);/);
+    assert.match(kod, /if \(notTaslagi\) return setBekleyenGecis\(\{ tur: "kapat" \}\);/);
+    assert.match(alan, /tr: "Kaydet ve devam et"/);
+    assert.match(alan, /tr: "Kaydetmeden devam et"/);
+    assert.match(alan, /role="alertdialog"/);
+  });
+
+  test("sayfadan ayrılmak (çalışma değiştirmek) tarayıcı uyarısı veriyor", () => {
+    assert.match(alan, /window\.addEventListener\("beforeunload", uyar\)/);
+  });
+
+  test("başarısız kayıtta metin korunuyor; geçiş de yapılmıyor", () => {
+    /* Not alanı yalnızca BAŞARIDA "kayıtlı" sayılıyor; hata yalnızca uyarı. */
+    assert.match(notlar, /if \(sonuc\.error\) return showToast\("error", sonuc\.error\);\s*\n\s*setKayitli\(gonderilen\);/);
+    assert.match(alan, /if \(sonuc\.error\) \{\s*\n\s*showToast\("error", sonuc\.error\);\s*\n\s*return;/);
+  });
+
+  test("not sekmesi kapalıyken de montajlı: sekme değiştirmek taslağı atmıyor", () => {
+    assert.match(panel, /className="kaynak-panel-not-yuva" hidden=\{sekme !== "notlar"\}/);
+  });
+});
+
+describe("mobil okuyucu", () => {
+  test("tek dönüş kontrolü: dar ekranda kapatma ve genişletme gizli", () => {
+    const css = oku("app/styles/kaynak-alani.css");
+    assert.match(css, /\.kaynak-panel-kapat,\s*\n\s*\.kaynak-panel-boy \{ display: none; \}/);
+    assert.match(panel, /className="kaynak-panel-geri" onClick=\{onKapat\}/);
+  });
+
+  test("kompakt başlıkta kaynağın adı; sekmeler duruyor", () => {
+    assert.match(panel, /className="kaynak-panel-genel"/);
+    assert.match(panel, /className="kaynak-panel-kisa"/);
+    const css = oku("app/styles/kaynak-alani.css");
+    assert.match(css, /\.kaynak-panel-genel, \.kaynak-panel-ad \{ display: none; \}/);
+    assert.match(panel, /\{ kod: "pdf", ad: \{ tr: "PDF", en: "PDF" \} \}/);
+    assert.match(panel, /\{ kod: "kunye"/);
+    assert.match(panel, /\{ kod: "notlar"/);
+  });
+
+  test("PDF araç çubuğu kompakt kipte tek satır; editör bu kipi kullanmıyor", () => {
+    const goruntuleyici = oku("app/dashboard/editor/[id]/write/pdf-goruntuleyici.tsx");
+    assert.match(goruntuleyici, /kompakt = false,/);
+    /* İkincil araçlar TEK yerde yazılıyor: iki kip aynı listeden türüyor. */
+    assert.match(goruntuleyici, /const ikincilDugmeler = \(etiketli: boolean\)/);
+    assert.match(goruntuleyici, /className="pdf-arac-daha"/);
+    assert.match(panel, /kompakt=\{dar\}/);
+    const editor = oku("app/dashboard/editor/[id]/write/kaynak-pdf-paneli.tsx");
+    assert.doesNotMatch(editor, /kompakt/);
+    /* Menüdeki düğmeler küçülmüyor: genişlik serbest, yükseklik ortak kural. */
+    assert.match(oku("app/styles/workspace.css"), /\.pdf-arac-daha-liste \.yazim-ikon \{ width: auto; min-width: 0;/);
   });
 });
 
