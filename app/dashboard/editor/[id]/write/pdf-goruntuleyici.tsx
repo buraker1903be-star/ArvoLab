@@ -92,6 +92,8 @@ export default function PdfGoruntuleyici({
   onPasaj,
   onGidisUygulandi,
   katman,
+  kaliciPasajlar,
+  onSurum,
 }: {
   pdfId: string;
   /**
@@ -111,6 +113,14 @@ export default function PdfGoruntuleyici({
   onKonum?: (pdfId: string, konum: OkumaKonumu) => void;
   /** Sayfa alanının içinde, sayfayla birlikte kayan katman (seçim araç çubuğu ve kısa onay; kaynak-pdf-paneli.tsx). */
   katman?: ReactNode;
+  /**
+   * Belgede kullanılmış pasajlar (lib/tiptap-pdf-dayanak.ts): fosforlu sarı
+   * kalıcı vurgu. Her çizimde METİNLE bulunur (koordinat saklanmaz): yakınlaştırma,
+   * yeniden boyutlandırma ve iki sütunlu düzende metinle hizalı kalır.
+   */
+  kaliciPasajlar?: { sayfa: number; metin: string }[];
+  /** Yüklenen PDF'in sürümü (pdf.js parmak izi, içerikten): dosya değişince değişir. */
+  onSurum?: (pdfId: string, surum: string) => void;
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
@@ -155,6 +165,11 @@ export default function PdfGoruntuleyici({
   */
   const [pasajBulundu, setPasajBulundu] = useState<boolean | null>(null);
   const onPasajRef = useRef(onPasaj);
+  const onSurumRef = useRef(onSurum);
+  const kaliciRef = useRef(kaliciPasajlar ?? []);
+  useEffect(() => {
+    onSurumRef.current = onSurum;
+  }, [onSurum]);
   useEffect(() => {
     onPasajRef.current = onPasaj;
   }, [onPasaj]);
@@ -201,6 +216,24 @@ export default function PdfGoruntuleyici({
         const ilk = Math.min(Math.max(1, Math.trunc(konumAlRef.current?.(pdfId)?.sayfa ?? 1)), yuklenen.numPages);
         setBelge(yuklenen);
         setBelgeninPdfi(pdfId);
+        /*
+          Sürüm = dosya baytlarının SHA-256 özeti. pdf.js'in parmak izi
+          (fingerprints[0]) kullanılmadı: o değer PDF'in /ID alanından gelir ve
+          dosyayı değiştiren araçların çoğu ilk kimliği KORUR; aynı künyeye
+          yeni PDF yüklenince (kaynak_pdfleri satırı aynı kalır) eski
+          koordinatlar yeni dosyada sessizce uygulanırdı.
+        */
+        void yuklenen
+          .getData()
+          .then((veri) => crypto.subtle.digest("SHA-256", new Uint8Array(veri)))
+          .then((oz) => {
+            if (iptal) return;
+            const hex = Array.from(new Uint8Array(oz), (b) => b.toString(16).padStart(2, "0")).join("");
+            onSurumRef.current?.(pdfId, `sha256:${hex.slice(0, 32)}`);
+          })
+          .catch(() => {
+            /* Sürüm hesaplanamazsa işaret ne konur ne gösterilir (kaynak-pdf-paneli.tsx). */
+          });
         setSayfaNo(ilk);
         setSayfaGirdi(String(ilk));
         setDurum("hazir");
@@ -332,6 +365,12 @@ export default function PdfGoruntuleyici({
     /* Doğrulanmış pasaj: yalnızca istenen sayfada ve metin bütünüyle bulunursa. */
     const parcalar = Array.from(katman.querySelectorAll<HTMLSpanElement>("span:not(.markedContent)"));
     parcalar.forEach((p) => p.classList.remove("pdf-pasaj"));
+    /* Kalıcı işaretler: bu sayfadaki her kullanılmış pasaj (birden çok olabilir). */
+    parcalar.forEach((p) => p.classList.remove("pdf-kalici"));
+    for (const k of kaliciRef.current) {
+      if (katman.dataset.sayfa !== String(k.sayfa)) continue;
+      pasajParcalari(parcalar.map((p) => p.textContent ?? ""), k.metin)?.forEach((i) => parcalar[i].classList.add("pdf-kalici"));
+    }
     const pasaj = pasajRef.current;
     if (pasaj && katman.dataset.sayfa === String(pasaj.sayfa)) {
       const kapsanan = pasajParcalari(parcalar.map((p) => p.textContent ?? ""), pasaj.metin);
@@ -342,6 +381,12 @@ export default function PdfGoruntuleyici({
     }
   }, []);
 
+  /* Belgedeki işaretler değişince (ekleme, geri alma, silme) çizili sayfa yeniden boyanır. */
+  const kaliciAnahtar = JSON.stringify(kaliciPasajlar ?? []);
+  useEffect(() => {
+    kaliciRef.current = JSON.parse(kaliciAnahtar) as { sayfa: number; metin: string }[];
+    vurgula();
+  }, [kaliciAnahtar, vurgula]);
   /* Aynı sayfaya gidişte sayfa yeniden çizilmez; pasaj vurgusu burada uygulanır (farklı sayfada çizim sonrası). */
   useEffect(() => {
     pasajRef.current = pasaj;

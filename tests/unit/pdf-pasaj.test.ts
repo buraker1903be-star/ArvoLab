@@ -16,3 +16,11 @@ test("bulunamayan pasaj: hiçbir şey işaretlenmez", () => {
   assert.equal(pasajParcalari(SAYFA, "students"), null);
   assert.equal(pasajParcalari([], "Remote learning increased reported isolation"), null);
 });
+
+test("satır sonu tirelemesi: metin katmanında 'com-' + 'pile', pasajda 'compile'", () => {
+  // Gerçek iki sütunlu makalede (PLDI 2009) ölçülen parçalanma; eskiden null dönüyordu.
+  const parcalar = ["Dynamic languages such as JavaScript are more difficult to com-", "pile than statically typed ones. Since no concrete type", "information is available."];
+  assert.deepEqual(pasajParcalari(parcalar, "more difficult to compile than statically typed ones"), [0, 1]);
+  // Gerçek tireli sözcük iki tarafta da tireli: yine eşleşir.
+  assert.deepEqual(pasajParcalari(["a state-of-the-art tracing compiler for loops"], "state-of-the-art tracing compiler"), [0]);
+});

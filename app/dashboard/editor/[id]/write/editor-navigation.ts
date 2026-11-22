@@ -1,3 +1,4 @@
+import { PDF_DAYANAK, type PdfDayanagi } from "@/lib/tiptap-pdf-dayanak";
 import type { Editor } from "@tiptap/react";
 import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
@@ -267,6 +268,12 @@ export type AtifSecenekleri = AtifSecenegi &
     konum?: { from: number; to: number } | null;
     /** false: işlem editöre odak vermez (PDF çekmecesi). */
     odaklanma?: boolean;
+    /**
+     * PDF'te doğrulanmış pasaja bağlı ekleme (çekmece): alıntı ve atıf
+     * görünmez pdfDayanak işaretiyle yazılır (lib/tiptap-pdf-dayanak.ts).
+     * Genel kaynak atfında (pasaj yok) verilmez; o atıf işaret taşımaz.
+     */
+    dayanak?: PdfDayanagi | null;
   };
 
 /**
@@ -326,15 +333,22 @@ export function atifIslemi(
   }
 
   const icerik: Record<string, unknown>[] = [];
+  /* PDF dayanağı yalnızca alıntıya ve atfın kendisine konur; aradaki boşluklara değil. */
+  const dayanak = secenek.dayanak;
+  const isaretle = (dugum: Record<string, unknown>) =>
+    dayanak ? { ...dugum, marks: [...((dugum.marks as unknown[]) ?? []), { type: PDF_DAYANAK, attrs: { ...dayanak } }] } : dugum;
   const alinti = secenek.alinti?.trim();
-  if (alinti) icerik.push({ type: "text", text: `${sozcukOnce ? " " : ""}“${alinti}”` });
+  if (alinti) {
+    if (sozcukOnce) icerik.push({ type: "text", text: " " });
+    icerik.push(isaretle({ type: "text", text: `“${alinti}”` }));
+  }
   if (dipnot) {
-    icerik.push({ type: "footnoteReference", attrs: { text: citation } });
+    icerik.push(isaretle({ type: "footnoteReference", attrs: { text: citation } }));
   } else {
     /* Üst simge atıf sözcüğe (ya da alıntıya) yapışır ("bulunmuştur¹"); öteki biçimlerde öncesine boşluk. */
     const ustSimge = /^[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(citation);
     if (!ustSimge && (alinti || sozcukOnce)) icerik.push({ type: "text", text: " " });
-    icerik.push(...metinDugumleri(atifParcalari));
+    icerik.push(...metinDugumleri(atifParcalari).map(isaretle));
   }
   /* Sözcüğün ortasına yazılıyorsa sonrasına da boşluk: atıf ardındaki sözcüğe yapışmasın. */
   if (/[\p{L}\p{N}]/u.test(sonra)) icerik.push({ type: "text", text: " " });

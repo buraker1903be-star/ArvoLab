@@ -1,5 +1,6 @@
 "use client";
 
+import { pdfIsaretleri, type PdfDayanagi } from "@/lib/tiptap-pdf-dayanak";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Editor } from "@tiptap/react";
@@ -51,8 +52,8 @@ export default function KaynakPdfPaneli({
   projectId,
   acik,
   acilacak = null,
-  onDogrulanmisPasaj,
   onBagDegisti,
+  dayanaklar = [],
   onKapat,
   onCite,
   genislik,
@@ -63,15 +64,19 @@ export default function KaynakPdfPaneli({
   acik: boolean;
   /** Kaynaklar aracından "PDF'i aç" (sol-araclar.tsx): panel bu PDF'le açılır. */
   acilacak?: { id: string; anahtar: number; sayfa?: number; pasaj?: string } | null;
-  /** Doğrulanmış alıntı belgeye eklenince: atıf kartının "Dayanağa git"i bu oturumda bunu kullanır (kalıcı kayıt yok, K3-ek onaylı değil). */
-  onDogrulanmisPasaj?: (pasaj: { kaynakId: string; pdfId: string; sayfa: number; metin: string }) => void;
+  /**
+   * Belgede kullanılmış PDF pasajları (editörün belgesinden, lib/tiptap-pdf-dayanak.ts).
+   * 20.11.2026'ya kadar "Dayanağa git" yalnızca bu oturumda eklenen pasajları
+   * biliyordu (bellekte); sayfa yenilenince kayboluyordu. Artık belgeden okunur.
+   */
+  dayanaklar?: PdfDayanagi[];
   /** PDF'in kaynak bağı değişince (K2-A): editör atıf kartının verisini tazeler. */
   onBagDegisti?: () => void;
   onKapat: () => void;
   /* Sonuç döner: atıf üretilemezse panel açık kalır ve belge değişmez (20.11.2026). */
   onCite: (
     source: LiteratureSource,
-    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean },
+    secenek: { sayfa?: string | null; alinti?: string | null; kayitliKonum?: boolean; onizle?: boolean; dayanak?: PdfDayanagi | null },
   ) => Promise<{ ok: true; atif?: string } | { ok: false; hata: string }>;
   /** Çekmecenin şu anki genişliği (px) ve kenardan çekilince yeni değer; kaydet: bırakınca kalıcı. */
   genislik?: number;
@@ -213,6 +218,10 @@ export default function KaynakPdfPaneli({
   );
   const konumAl = useCallback((id: string) => konumlarRef.current[id] ?? null, []);
 
+  /* PDF sürümleri (dosyanın SHA-256 özeti), görüntüleyici yükleyince bildirir. */
+  const [surumlar, setSurumlar] = useState<Record<string, string>>({});
+  const surumGeldi = useCallback((id: string, surum: string) => setSurumlar((o) => (o[id] === surum ? o : { ...o, [id]: surum })), []);
+  const isaretler = pdf ? pdfIsaretleri(dayanaklar, pdf.id, surumlar[pdf.id] ?? null) : null;
   /* Dışarıdan istenen PDF (Kaynaklar aracı): anahtar her istekte değişir, aynı PDF'e ikinci basış da işler. */
   const [islenenAcilis, setIslenenAcilis] = useState<number | null>(null);
   /* İstenen PDF bu çalışmanın listesinde yoksa (silinmiş, başka çalışmanın, henüz işlenmemiş) panel bunu SÖYLER; sessizce başka PDF'te kalmaz. */
@@ -320,15 +329,20 @@ export default function KaynakPdfPaneli({
         boşluk konmadan yazılıyor; atıf üretilemezse alıntı belgede atıfsız
         kalıyor ve panel yine "eklendi" gibi kapanıyordu.
       */
-      const sonuc = await onCite(kaynak, { sayfa: basiliSayfa.trim() || null, alinti: alintiEkle ? atif.alinti : null, kayitliKonum: true });
+      /*
+        KALICI İŞARET (20.11.2026): doğrulanmış pasaja bağlı ekleme, alıntı ve
+        atfı görünmez pdfDayanak işaretiyle yazar; PDF'teki sarı vurgu belgedeki
+        bu işaretten türer. İşaret eklemeyle AYNI işlemde: ekleme başarısızsa
+        işaret de yok. Sürüm (dosya özeti) bilinmiyorsa işaret konmaz.
+      */
+      const surum = pdf ? surumlar[pdf.id] : undefined;
+      const dayanak = pdf && surum ? { pdf: pdf.id, surum, sayfa: atif.pdfSayfa, pasaj: atif.alinti, kaynak: kaynak.id } : null;
+      const sonuc = await onCite(kaynak, { sayfa: basiliSayfa.trim() || null, alinti: alintiEkle ? atif.alinti : null, kayitliKonum: true, dayanak });
       if (!sonuc.ok) {
         setAtif({ adim: "hata", mesaj: sonuc.hata });
         return;
       }
-      if (pdf) {
-        onDogrulanmisPasaj?.({ kaynakId: kaynak.id, pdfId: pdf.id, sayfa: atif.pdfSayfa, metin: atif.alinti });
-        if (alintiEkle) setSonAlinti({ pdfId: pdf.id, sayfa: atif.pdfSayfa });
-      }
+      if (pdf && alintiEkle) setSonAlinti({ pdfId: pdf.id, sayfa: atif.pdfSayfa });
       secimiBirak();
       /*
         Çekmece AÇIK KALIR (20.11.2026): öğrenci aynı PDF'ten okumaya ve
@@ -561,7 +575,13 @@ export default function KaynakPdfPaneli({
     üstünde sürekli yer kaplıyordu.
   */
   const kayitBagli = Boolean(pdf?.kaynak_id);
-  const alintiVar = Boolean(pdf && sonAlinti?.pdfId === pdf.id);
+  /*
+    Alıntı durumu belgedeki kalıcı işaretlerden de okunur (20.11.2026). Eskiden
+    yalnızca bu oturumda eklenen alıntıya bakıyordu: sayfa yenilenince PDF'te
+    sarı işaret görünürken başlık "Alıntı: henüz yok" diyordu.
+  */
+  const kaliciSayfalar = [...new Set((isaretler?.gecerli ?? []).map((d) => d.sayfa))].sort((x, y) => x - y);
+  const alintiVar = Boolean(pdf && (sonAlinti?.pdfId === pdf.id || kaliciSayfalar.length));
   const durumOzeti = pdf ? (
     <div className="pdf-durum-ozeti" data-acik={ayrintiAcik ? "" : undefined}>
       {/* Telefonda tek satırlık kısa özet: üç durum ayrı işaretlerle, ayrıntılar dokununca açılır. */}
@@ -584,10 +604,12 @@ export default function KaynakPdfPaneli({
         {pdf.kaynak_id ? t({ tr: "Kaynak kaydı: bağlı", en: "Source record: linked" }) : t({ tr: "Kaynak kaydı: bağlı değil", en: "Source record: not linked" })}
       </span>
       <span className="guven-cip" data-tur="kunye">{t({ tr: "PDF: açık", en: "PDF: open" })}</span>
-      <span className="guven-cip" data-tur={sonAlinti?.pdfId === pdf.id ? "kunye" : "notr"}>
+      <span className="guven-cip" data-tur={alintiVar ? "kunye" : "notr"}>
         {sonAlinti?.pdfId === pdf.id
           ? t({ tr: `Alıntı: PDF s. ${sonAlinti.sayfa}'de birebir`, en: `Quote: exact on PDF p. ${sonAlinti.sayfa}` })
-          : t({ tr: "Alıntı: henüz yok", en: "Quote: none yet" })}
+          : kaliciSayfalar.length
+            ? t({ tr: `Belgede kullanılan pasaj: PDF s. ${kaliciSayfalar.join(", ")}`, en: `Passage used in the document: PDF p. ${kaliciSayfalar.join(", ")}` })
+            : t({ tr: "Alıntı: henüz yok", en: "Quote: none yet" })}
       </span>
       <button type="button" className="link-button" aria-expanded={ayrintiAcik} aria-controls="pdf-durum-ayrinti" onClick={() => setAyrintiAcik((a) => !a)}>
         {ayrintiAcik ? t({ tr: "Ayrıntıları gizle", en: "Hide details" }) : t({ tr: "Ayrıntılar", en: "Details" })}
@@ -722,6 +744,14 @@ export default function KaynakPdfPaneli({
         </button>
       </header>
 
+      {isaretler?.eski ? (
+        <p className="pdf-durum" role="status">
+          {t({
+            tr: `Bu PDF dosyası değişmiş: belgede kullanılan ${isaretler.eski} pasajın işareti eski sürüme ait, bu dosyada gösterilmiyor.`,
+            en: `This PDF file has changed: ${isaretler.eski} passage mark(s) used in the document belong to the old version and aren't shown on this file.`,
+          })}
+        </p>
+      ) : null}
       {acilamayanPdf && liste ? (
         <p className="pdf-durum" role="alert">
           {t({ tr: "İstenen PDF bu çalışmada bulunamadı; aşağıdaki listeden seçin.", en: "The requested PDF wasn't found in this work; choose one from the list below." })}
@@ -801,6 +831,8 @@ export default function KaynakPdfPaneli({
                 konumAl={konumAl}
                 onKonum={konumDegisti}
                 katman={secimKatmani}
+                kaliciPasajlar={isaretler?.gecerli.map((d) => ({ sayfa: d.sayfa, metin: d.pasaj }))}
+                onSurum={surumGeldi}
               />
             ) : null}
           </div>
