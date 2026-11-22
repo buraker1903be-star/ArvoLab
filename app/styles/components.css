@@ -10,7 +10,29 @@
 @keyframes ui-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
 
+/*
+  ORTAK İÇERİK KABI (22.11.2026). Panelin BÜTÜN sayfaları aynı kapta:
+  aynı azami genişlik (--content-max) ve aynı yan boşluklar
+  (.dashboard-main-content padding, shell.css). Başlıklar, üst eylemler
+  ve ana kartların dış kenarları sayfa geçişinde yerinden oynamasın.
+
+  Eskiden `gb` yardımcı sınıfı bu sınırı sessizce kaldırıyordu
+  (.dashboard-page.gb { max-width: none }) ve onu taşıyan on üç sayfa
+  (Ana Sayfa, Kaynaklar, Analiz Merkezi, Belge Kontrol, Ayarlar…)
+  geniş ekranda tam genişliğe yayılırken Çalışmalarım 1480'de
+  duruyordu: 1920 px'te Çalışmalarım solda 340'tan başlayıp 1820'de
+  bitiyor, Ana Sayfa ve Kaynaklar 272–1888 arasını kaplıyordu (ölçüm).
+  Sınır artık tek yerde ve istisna AÇIKÇA yazılıyor.
+*/
 .dashboard-page { max-width: var(--content-max); margin: 0 auto; }
+/*
+  TEK İSTİSNA: editörün yazım ekranı bir içerik sayfası değil, tam
+  genişlik çalışan bir alan. Yerleşim kararı (belge sütunu mu, sağ panel
+  mi, çekmece mi) ölçülen genişlikten veriliyor
+  (lib/calisma-alani-yerlesimi.ts); 1480'e sıkıştırmak geniş ekranda
+  paneli gereksiz yere çekmeceye düşürürdü.
+*/
+.dashboard-page.yazma-sayfasi { max-width: none; }
 /* "backwards": animasyon bitince transform kalmaz (fixed konumlu çocuklar kapsayıcıya hapsolmasın) */
 .dashboard-page > * { animation: ui-rise .55s var(--ease-spring) backwards; }
 .dashboard-page > :nth-child(2) { animation-delay: .04s; }

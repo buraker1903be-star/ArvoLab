@@ -6,10 +6,14 @@
    ============================================================ */
 
 .gb { display: flex; flex-direction: column; gap: 16px; }
-/* Ana sayfa ArvoOS'taki gibi tam genişlik: dört sütun 1480 pikselde
-   sıkışıyor, geniş ekranda iki yanda boşluk kalıyordu. Diğer sayfalar
-   okunabilir genişlikte (--content-max) kalıyor. */
-.dashboard-page.gb { max-width: none; }
+/*
+  22.11.2026: `gb` ARTIK ORTAK KABI KALDIRMIYOR. Sınıf bir düzen
+  yardımcısı (dikey akış ve 16 px aralık); genişlik kararı sayfanın değil,
+  ortak kabın işi (components.css, .dashboard-page). Eskiden buradaki
+  `max-width: none` onu taşıyan her sayfaya yayılıyordu ve aynı panelde
+  iki ayrı sayfa genişliği oluşuyordu. Tam genişlik gereken tek yer
+  editörün yazım ekranı; istisna orada ve açıkça yazılı.
+*/
 
 /* ---------- Selamlama ---------- */
 .gb-selam { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
