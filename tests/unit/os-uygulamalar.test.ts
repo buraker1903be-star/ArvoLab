@@ -184,7 +184,7 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
 
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
-import { ALT_CUBUK, anaUygulamalar, aracUygulamalari, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, personelAraclari, yardimUygulamalari } from "@/lib/os/uygulamalar";
+import { ALT_CUBUK, anaUygulamalar, aracUygulamalari, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, hesapUygulamalari, kontrolSayfalari, personelAraclari, solAracBasligi, solAracGirisi, solAracOku, yardimUygulamalari } from "@/lib/os/uygulamalar";
 import { ekranSinifi } from "@/lib/os/kirilimlar";
 
 test("gezinme yerleri: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
@@ -213,14 +213,33 @@ test("ekran sınıfı kırılımları", () => {
   assert.equal(ekranSinifi(1200), "masaustu");
 });
 
-test("çalışma bağlamı: Makale yalnızca makale türünde, araçlar çalışmaya süzülü", () => {
+test("çalışma bağlamı: dört ana giriş, grup başlığı yok (20.11.2026)", () => {
   const tez = calismaBaglantilari({ id: "c1", baslik: "Tez", tur: "thesis" });
-  const makale = calismaBaglantilari({ id: "c1", baslik: "M", tur: "article" });
-  assert.equal(tez.some((b) => b.key === "makale"), false);
-  assert.equal(makale.some((b) => b.key === "makale"), true);
-  // 19.11.2026: "Kaynaklar" yazım ekranının sol aracı; kütüphane sayfası o panelden açılır.
+  assert.deepEqual(tez.map((b) => b.key), ["yazim", "kaynaklar", "ai", "kontrol"]);
+  assert.ok(tez.every((b) => b.grup === "ana"));
   assert.equal(tez.find((b) => b.key === "kaynaklar")?.href, "/dashboard/editor/c1/write?sol=kaynaklar");
-  assert.equal(tez.find((b) => b.key === "analiz")?.href, "/dashboard/analysis?calisma=c1");
+  assert.equal(tez.find((b) => b.key === "kontrol")?.href, "/dashboard/editor/c1/write?sol=kontrol");
+});
+
+test("Kontrol ve teslim eski 'Diğer araçlar'ı ve Özet ve teslim'i taşır; Makale yalnızca makale türünde", () => {
+  const tez = kontrolSayfalari({ id: "c1", baslik: "Tez", tur: "thesis" }).map((x) => x.key);
+  const makale = kontrolSayfalari({ id: "c1", baslik: "M", tur: "article" }).map((x) => x.key);
+  for (const k of ["merkez", "kanit", "etik", "analiz", "belge"]) assert.ok(tez.includes(k), k);
+  assert.equal(tez.includes("makale"), false);
+  assert.equal(makale.includes("makale"), true);
+  assert.equal(kontrolSayfalari({ id: "c1", baslik: "", tur: "" }).find((x) => x.key === "analiz")?.href, "/dashboard/analysis?calisma=c1");
+});
+
+test("eski sol değerleri bugünkü girişe düşer", () => {
+  assert.equal(solAracOku("kilavuz"), "kontrol");
+  assert.equal(solAracOku("arama"), "arama");
+  assert.equal(solAracOku("yok"), null);
+  assert.equal(solAracGirisi("arama"), "kaynaklar");
+  assert.equal(solAracGirisi("kaynakca"), "kaynaklar");
+  assert.equal(solAracGirisi("bolumler"), "yazim");
+  assert.equal(solAracGirisi("kontrol"), "kontrol");
+  assert.equal(solAracBasligi("kaynakca"), "Kaynaklar");
+  assert.equal(solAracBasligi("kilavuz"), "Kontrol ve teslim");
 });
 
 test("bağlam yalnızca o çalışmanın sayfalarında görünür", () => {
@@ -235,17 +254,25 @@ test("bağlam yalnızca o çalışmanın sayfalarında görünür", () => {
   assert.equal(calismaIcindeMi("c1", "/dashboard", q("")), false);
 });
 
-test("bağlamda etkin bağlantı", () => {
+test("bağlamda etkin giriş", () => {
   const b = calismaBaglantilari({ id: "c1", baslik: "Tez", tur: "thesis" });
-  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/kanit")?.key, "kanit");
-  assert.equal(etkinBaglanti(b, "/dashboard/editor")?.key, "merkez");
-  assert.equal(etkinBaglanti(b, "/dashboard/analysis")?.key, "analiz");
-  assert.equal(etkinBaglanti(b, "/dashboard/literature")?.key, "kaynaklar");
-  // Yazım ekranında araç adresin sol/sag değişkeninden okunur.
   const q = (s: string) => new URLSearchParams(s);
+  // Ayrı sayfalar: kontrol ve kaynak sayfaları kendi girişlerinde.
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/kanit")?.key, "kontrol");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/etik")?.key, "kontrol");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor")?.key, "kontrol");
+  assert.equal(etkinBaglanti(b, "/dashboard/analysis")?.key, "kontrol");
+  assert.equal(etkinBaglanti(b, "/dashboard/documents")?.key, "kontrol");
+  assert.equal(etkinBaglanti(b, "/dashboard/literature")?.key, "kaynaklar");
+  // Yazım ekranı: sol/sag değişkeni.
   assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q(""))?.key, "yazim");
-  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=arama"))?.key, "arama");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=bolumler"))?.key, "yazim");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=arama"))?.key, "kaynaklar");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=kaynakca"))?.key, "kaynaklar");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=kilavuz"))?.key, "kontrol");
   assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sag=ai"))?.key, "ai");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sag=pdf"))?.key, "yazim");
   // Bilinmeyen değer belgeye düşer (elle yazılmış ya da eski adres).
   assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/write", q("sol=yok"))?.key, "yazim");
 });
+

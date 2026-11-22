@@ -434,6 +434,24 @@
   color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
 }
 .os-calisma-geri { color: var(--muted); }
+/*
+  Dört ana giriş (20.11.2026): grup başlığı yok. Belge'nin altındaki
+  "Bölümler" girintili bir alt satır; yalnızca açık kenar çubuğunda görünür
+  (rayda ve telefonda açık "Belge"ye yeniden dokunmak ağacı açar/kapatır).
+*/
+.os-calisma-liste { display: flex; flex-direction: column; gap: 2px; }
+.os-calisma-liste > li { display: flex; flex-direction: column; gap: 2px; }
+.os-calisma-alt, .os-belge-agaci { display: none; }
+@media (min-width: 1200px) {
+  html:not([data-gezinme="dar"]) .os-calisma-alt.os-gezinme-oge {
+    display: flex; min-height: var(--os5-gezinme-alt); padding-left: calc(var(--os5-gezinme-ic) + 20px); font-size: var(--os5-fs-meta);
+  }
+  .os-calisma-alt[aria-expanded="false"] .os-gezinme-takim-ok { transform: rotate(-90deg); }
+  html:not([data-gezinme="dar"]) .os-belge-agaci:not([hidden]) {
+    display: flex; flex-direction: column; max-height: 50vh; min-height: 0; overflow-y: auto;
+    margin: 2px 0 var(--s-2) calc(var(--os5-gezinme-ic) + 12px); border-left: 1px solid var(--os5-kenar-cizgi);
+  }
+}
 
 @media (max-width: 760px) {
   .os-calisma-govde { display: none; }
@@ -483,9 +501,8 @@
 /* ============================================================
    SOL ARAÇ ALANI (19.11.2026): Bölümler, Kaynaklar, Makale bul.
    Gezinmenin KARDEŞİ, sabit konumlu (os-gezinme.tsx'teki gerekçe).
-   Masaüstünde gezinmenin logo satırının altını kaplar ve yuvanın
-   genişliğini göreve göre büyütür (--os5-kenar-genis; içerik de
-   aynı değişkenle kayar). Tablette içeriğin üstünde açılan bir yaprak,
+   Masaüstünde menünün SAĞINDA ikinci sütun (--os5-sol-arac-en; içerik
+   menü + araç toplamı kadar kayar). Tablette içeriğin üstünde açılan bir yaprak,
    telefonda üst çubukla alt çubuk arasında tam ekran. Genişlikler
    lib/calisma-alani-yerlesimi.ts (SOL_ARAC_GENISLIGI) ile aynı.
    ============================================================ */
@@ -509,16 +526,41 @@
 .os-sol-alan-yuva > [hidden] { display: none; }
 
 @media (min-width: 1200px) {
-  .os-sol-alan { top: var(--topbar-height); left: 0; bottom: 0; width: var(--os5-kenar-genis); border-right: 1px solid var(--os5-kenar-cizgi); border-top: 1px solid var(--os5-kenar-cizgi); }
-  .os-root:has(> .os-sol-alan[data-acik="bolumler"]),
-  .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]),
-  .os-root:has(> .os-sol-alan[data-acik="kaynakca"]),
-  .os-root:has(> .os-sol-alan[data-acik="kilavuz"]) { --os5-kenar-genis: 300px; }
-  .os-root:has(> .os-sol-alan[data-acik="arama"]) { --os5-kenar-genis: 372px; }
-  /* Kullanıcı kenar çubuğunu daraltmış olsa da araç kendi genişliğinde açılır; içerik onunla kayar. */
-  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .os-gezinme { width: var(--os5-kenar-genis); }
-  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .dashboard-content-shell { margin-left: var(--os5-kenar-genis); }
+  /*
+    MENÜNÜN YANINDA (21.11.2026, kurum sahibinin kararı). Eskiden araç
+    alanı menünün ÜSTÜNE açılıyordu: --os5-kenar-genis araca göre 300/372
+    px'e büyüyor, menü altında kalıyor ve geri dönmek için "Geri: çalışma
+    menüsü" bağlantısı gerekiyordu; kullanıcı aracı açınca Belge, Kaynaklar,
+    Arvo AI ve Kontrol ve teslim girişlerini kaybediyordu. Artık menü kendi
+    genişliğinde sabit; araç onun sağında ikinci bir sütun, içerik ikisinin
+    toplamı kadar kayar. Genişlikler lib/calisma-alani-yerlesimi.ts
+    (SOL_ARAC_GENISLIGI) ile aynı; ölçek hesabı da menü + araç toplamıyla.
+  */
+  .os-root { --os5-sol-arac-en: 300px; }
+  .os-root:has(> .os-sol-alan[data-acik="arama"]) { --os5-sol-arac-en: 372px; }
+  .os-sol-alan { top: 0; left: var(--os5-kenar-genis); bottom: 0; width: var(--os5-sol-arac-en); border-right: 1px solid var(--os5-kenar-cizgi); }
+  html[data-gezinme="dar"] .os-sol-alan { left: var(--os5-kenar-ray); }
+  .os-root:has(> .os-sol-alan[data-acik]) .dashboard-content-shell { margin-left: calc(var(--os5-kenar-genis) + var(--os5-sol-arac-en)); }
+  html[data-gezinme="dar"] .os-root:has(> .os-sol-alan[data-acik]) .dashboard-content-shell { margin-left: calc(var(--os5-kenar-ray) + var(--os5-sol-arac-en)); }
+  /*
+    Bölüm ağacı açık kenar çubuğunda menünün İÇİNDE, Belge'nin altında
+    (20.11.2026): araç alanı açılmaz, içerik kaymaz. Dar çubukta yer
+    olmadığı için eskisi gibi araç alanında açılır.
+  */
+  html:not([data-gezinme="dar"]) .os-sol-alan[data-acik="bolumler"] { display: none; }
+  html:not([data-gezinme="dar"]) .os-root:has(> .os-sol-alan[data-acik="bolumler"]) .dashboard-content-shell { margin-left: var(--os5-kenar-genis); }
+  /* Menü yerinde durduğu için "Geri" bağlantısı gereksiz; aracı başlıktaki kapatma düğmesi kapatır. */
+  .os-sol-geri { display: none; }
+  .os-sol-alan-bas { flex-direction: row; align-items: center; justify-content: space-between; min-height: var(--topbar-height); padding-block: 0; }
+  /* Özgüllük bilerek yüksek: aşağıdaki temel kural (display:none) medya sorgusundan SONRA geliyor. */
+  .os-sol-alan .os-sol-kapat { display: inline-flex; }
 }
+.os-sol-kapat {
+  display: none; align-items: center; justify-content: center; flex: none;
+  width: 32px; height: 32px; border-radius: var(--os5-kontrol-r); color: var(--muted);
+}
+.os-sol-kapat:hover { background: var(--os5-kenar-hover); color: var(--ink); }
+.os-sol-kapat:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 /*
   ŞERİT (4. tur, 18.11.2026): PDF belgenin yanında sütun kalsın diye araç
   64 px'e iner (html[data-sol-alan-dar], editör koyar; karar
@@ -528,7 +570,7 @@
 */
 .os-sol-genislet { display: none; }
 @media (min-width: 1200px) {
-  html[data-sol-alan-dar] .os-root:has(> .os-sol-alan[data-acik]) { --os5-kenar-genis: var(--os5-kenar-ray); }
+  html[data-sol-alan-dar] .os-root:has(> .os-sol-alan[data-acik]) { --os5-sol-arac-en: var(--os5-kenar-ray); }
   html[data-sol-alan-dar] .os-sol-alan-bas,
   html[data-sol-alan-dar] .os-sol-alan-yuva { display: none; }
   html[data-sol-alan-dar] .os-sol-genislet {

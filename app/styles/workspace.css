@@ -1873,6 +1873,18 @@
 .sol-arac-kilavuz b { color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
 .sol-arac-kilavuz span, .sol-arac-kilavuz small { color: var(--muted); }
 .sol-arac-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Kaynaklar'ın sekmeleri (20.11.2026): Kütüphanem | Kaynakça ve belirgin "Makale bul". */
+.sol-kaynak-sekmeleri { display: grid; gap: 8px; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--line-soft); margin-bottom: var(--s-2); }
+.sol-kaynak-sekme-satiri { display: flex; gap: 4px; }
+.sol-kaynak-sekme {
+  flex: 1 1 0; min-height: 36px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  background: transparent; color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.sol-kaynak-sekme[aria-selected="true"] { border-color: var(--primary-ink); background: var(--primary-soft); color: var(--primary-ink); }
+.sol-kaynak-sekme:focus-visible { outline: 2px solid var(--primary-ink); outline-offset: 2px; }
+.sol-kaynak-gec { justify-content: center; width: 100%; }
+/* Kontrol ve teslim: çalışmanın öteki sayfaları (eskiden menüde "Diğer araçlar"). */
+.sol-sayfa-listesi { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .sol-sorun-listesi { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .sol-sorun-listesi li { display: grid; gap: 6px; padding: 8px 10px; border-left: 3px solid var(--warning); border-radius: var(--r-xs); background: var(--surface-sunken); color: var(--ink-soft); font-size: var(--os5-fs-meta); line-height: 1.45; }
 .sol-sorun-listesi li[data-ton="danger"] { border-left-color: var(--danger); }

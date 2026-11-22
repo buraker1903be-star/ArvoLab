@@ -31,10 +31,12 @@ describe("Yazım Stüdyosu: belge odakta, kontroller istenince", () => {
     19.11.2026 (kabul turu 2): kalıcı "kılavuz yok" şeridi editörden kalktı;
     durumu ve iki yolu (Kılavuzumu yükle, Kurumu seç) çalışma menüsündeki
     "Kılavuz ve biçim" aracında. İki yolun da kaybolmadığını sabitler.
+    20.11.2026: araç "Kontrol ve teslim" adını aldı (sol=kontrol; eski
+    sol=kilavuz oraya düşer); yükleme yolu aynı yerde.
   */
-  test("kılavuz yok şeridi editörde yok; yükleme yolu Kılavuz ve biçim aracında, kurum seçimi yok", () => {
+  test("kılavuz yok şeridi editörde yok; yükleme yolu Kontrol ve teslim aracında, kurum seçimi yok", () => {
     assert.doesNotMatch(editor, /className="kilavuz-satiri"/);
-    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kilavuz")'), editor.indexOf('acilanAraclar.includes("kilavuz")') + 6000);
+    const arac = editor.slice(editor.indexOf('acilanAraclar.includes("kontrol")'), editor.indexOf('acilanAraclar.includes("kontrol")') + 6000);
     assert.match(arac, /calismaAdresi\(projectId, \{ kilavuz: true \}\)/);
     // "Kurumu seç" 20.11.2026'da kalktı: kılavuz isteğe bağlı, ArvoLab kurum seçtirmiyor.
     assert.doesNotMatch(arac, /href=\{editHref\}|Kurumu seç/);

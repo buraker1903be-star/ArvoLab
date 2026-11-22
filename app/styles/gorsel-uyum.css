@@ -182,7 +182,7 @@
 
 /* Kaynak listesi sıkı genişlik (lib/calisma-alani-yerlesimi.ts SOL_ARAC_SIK = 246): PDF açıkken liste görünür kalır. */
 @media (min-width: 1200px) {
-  html[data-sol-alan-sik] .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]) { --os5-kenar-genis: 246px; }
+  html[data-sol-alan-sik] .os-root:has(> .os-sol-alan[data-acik="kaynaklar"]) { --os5-sol-arac-en: 246px; }
 }
 
 /*
