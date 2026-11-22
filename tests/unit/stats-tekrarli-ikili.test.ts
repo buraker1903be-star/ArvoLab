@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { tekrarliIkiliKarsilastirmalar } from "@/lib/stats-anova-ek";
+import { tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
 
 /*
   TEKRARLI ÖLÇÜMLER SONRASI İKİLİ KARŞILAŞTIRMALAR — BAĞIMSIZ DOĞRULAMA
@@ -154,6 +154,30 @@ describe("sınır durumları sessizce yanıltmıyor", () => {
       kalınmamalı.
     */
     assert.throws(() => tekrarliIkiliKarsilastirmalar([[1, 2, 3], [4, 5]], ["a", "b"]), /uzunluğu eşit olmalı/i);
+  });
+
+  test("MAUCHLY HESAPLANAMADIYSA 'varsayım sağlanıyor' denmez", () => {
+    /*
+      Bir ölçüm ötekinin sabit kaydırılmışıysa (sabit = on + 3) kovaryans
+      matrisi tekil; Mauchly W = 0, χ² ve p tanımsız kalıyor. Arayüz
+      `isSignificant(NaN)` false döndüğü için "küresellik varsayımı
+      sağlanıyor" yazıyordu: denetlenmemiş bir varsayım, denetlenip
+      geçmiş gibi görünüyordu.
+    */
+    const on = [10, 12, 11, 14, 13, 15, 9, 12, 13, 11];
+    const r = tekrarliOlcumlerAnova([on, on.map((x) => x + 3), [15, 18, 17, 19, 19, 21, 13, 18, 19, 15]]);
+    assert.ok(!Number.isFinite(r.mauchlyP), "bu veride Mauchly p tanımsız olmalı");
+    assert.equal(r.kuresellikDenetlendi, false, "denetlenemediği AÇIKÇA bildirilmeli");
+  });
+
+  test("Mauchly hesaplanabilen veride denetlendi olarak işaretlenir", () => {
+    const r = tekrarliOlcumlerAnova([
+      [10, 12, 11, 14, 13, 15, 9, 12, 13, 11],
+      [12, 15, 13, 16, 15, 18, 11, 14, 16, 13],
+      [15, 18, 17, 19, 19, 21, 13, 18, 19, 15],
+    ]);
+    assert.ok(Number.isFinite(r.mauchlyP));
+    assert.equal(r.kuresellikDenetlendi, true);
   });
 
   test("ETİKET EKSİKSE çağrı reddedilir", () => {

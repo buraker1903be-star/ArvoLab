@@ -813,6 +813,11 @@ try {
     const sabitSatir = bolum.split("\n").find((x) => /on — sabit|sabit/.test(x) && /t hesaplanamadı/.test(x)) ?? "";
     return `${/varyans sıfır/.test(sabitSatir)} · ${!/on — sabit.*anlamlı değil/.test(bolum)}`;
   }, "true · true");
+  await esit("S13f Mauchly hesaplanamadıysa 'varsayım sağlanıyor' denmiyor", async () => {
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("Küresellik"), metin.indexOf("İkili karşılaştırmalar"));
+    return `${/Mauchly testi hesaplanamadı/.test(bolum)} · ${!/küresellik varsayımı sağlanıyor/.test(bolum)}`;
+  }, "true · true");
   await cek(sayfa, "20-sabit-fark-hesaplanamadi");
 
   /* ================= S10: ölçüler, tema, klavye ================= */

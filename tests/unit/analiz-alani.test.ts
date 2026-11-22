@@ -167,6 +167,15 @@ describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
     assert.match(analizci, /en az iki eşleşen gözlem gerekir/);
   });
 
+  test("Mauchly denetlenemediyse 'varsayım sağlanıyor' yazılmıyor", () => {
+    assert.match(analizci, /const kuresellikBozuk = r\.k > 2 && r\.kuresellikDenetlendi && isSignificant\(r\.mauchlyP\);/);
+    assert.match(analizci, /\{r\.kuresellikDenetlendi \? \(/);
+    assert.match(analizci, /Mauchly testi hesaplanamadı/);
+    assert.match(analizci, /no verdict about sphericity is possible/);
+    /* Denetlenemeyen durumda temkinli taraf: Greenhouse-Geisser. */
+    assert.match(analizci, /const onerilen = kuresellikBelirsiz \? "gg"/);
+  });
+
   test("ikili karşılaştırmalar yalnızca ANOVA anlamlıyken çiziliyor", () => {
     assert.match(analizci, /const ikili = sig \? tekrarliIkiliKarsilastirmalar\(/);
   });

@@ -1554,8 +1554,17 @@ export default function DataAnalyzer({
           görüyor (Girden, 1992). Hepsi tabloda; ekran hangisini
           önerdiğini yazıyor.
         */
-        const kuresellikBozuk = r.k > 2 && isSignificant(r.mauchlyP);
-        const onerilen = !kuresellikBozuk ? "kuresel" : r.ggEpsilon > 0.75 ? "hf" : "gg";
+        /*
+          DENETLENEMEDİYSE "SAĞLANIYOR" DENMEZ (23.11.2026). Bir ölçüm
+          ötekinin sabit kaydırılmışıysa kovaryans matrisi tekil: W = 0,
+          χ² ve p tanımsız. isSignificant(NaN) false döndüğü için satır
+          "küresellik varsayımı sağlanıyor" diye bitiyor ve hiç
+          denetlenmemiş bir varsayım geçmiş gibi görünüyordu.
+        */
+        const kuresellikBozuk = r.k > 2 && r.kuresellikDenetlendi && isSignificant(r.mauchlyP);
+        /* Denetlenemediyse temkinli taraf: Greenhouse-Geisser raporlanır. */
+        const kuresellikBelirsiz = r.k > 2 && !r.kuresellikDenetlendi;
+        const onerilen = kuresellikBelirsiz ? "gg" : !kuresellikBozuk ? "kuresel" : r.ggEpsilon > 0.75 ? "hf" : "gg";
         const raporP = onerilen === "kuresel" ? r.p : onerilen === "gg" ? r.ggP : r.hfP;
         const eps = onerilen === "gg" ? r.ggEpsilon : onerilen === "hf" ? r.hfEpsilon : 1;
         const sig = isSignificant(raporP);
@@ -1585,10 +1594,19 @@ export default function DataAnalyzer({
               <ul className="muted text-sm">
                 {r.k > 2 ? (
                   <li>
-                    {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
-                    {kuresellikBozuk
-                      ? t({ tr: "küresellik varsayımı sağlanmıyor", en: "the sphericity assumption is violated" })
-                      : t({ tr: "küresellik varsayımı sağlanıyor", en: "the sphericity assumption is met" })}
+                    {r.kuresellikDenetlendi ? (
+                      <>
+                        {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
+                        {kuresellikBozuk
+                          ? t({ tr: "küresellik varsayımı sağlanmıyor", en: "the sphericity assumption is violated" })
+                          : t({ tr: "küresellik varsayımı sağlanıyor", en: "the sphericity assumption is met" })}
+                      </>
+                    ) : (
+                      t({
+                        tr: "Mauchly testi hesaplanamadı (ölçümlerden biri bir diğerinin sabit kaydırılmışı olabilir); küresellik hakkında hüküm verilemez. Aşağıdaki Greenhouse-Geisser düzeltmeli p temkinli seçenektir.",
+                        en: "Mauchly's test could not be computed (one measurement may be a constant shift of another), so no verdict about sphericity is possible. The Greenhouse-Geisser corrected p below is the cautious choice.",
+                      })
+                    )}
                   </li>
                 ) : (
                   <li>{t({ tr: "İki ölçümde küresellik tanım gereği sağlanır.", en: "With two measurements, sphericity is met by definition." })}</li>

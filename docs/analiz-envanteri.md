@@ -109,7 +109,7 @@ tarayıcıda yapılıyor; dosya sunucuya gitmiyor.
 |---|---|
 | Hesap | `tekrarliOlcumlerAnova`, `tekrarliIkiliKarsilastirmalar` (`stats-anova-ek.ts`) |
 | Gerekli değişken | 3+ ölçüm sütunu |
-| Varsayım | **Küresellik**: Greenhouse–Geisser ve Huynh–Feldt epsilon değerleri hesaplanıyor |
+| Varsayım | **Küresellik**: Mauchly testi, Greenhouse–Geisser ve Huynh–Feldt epsilon değerleri. Mauchly hesaplanamazsa (tekil kovaryans matrisi) hüküm verilmiyor, GG düzeltmesi raporlanıyor |
 | Üretilen | F, df, p (düzeltilmiş df'lerle birlikte), ikili karşılaştırmalar |
 | GA | — |
 | Etki | **Kısmi η²** |
@@ -229,8 +229,8 @@ analiz bulunmadı**: 25 adın 25'i gerçekten hesaplanıyor.
 
 ## Düzeltilen kusurlar (23.11.2026)
 
-Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan iki
-kusur. İkisi de hesabın kendisinde değil, **hesaplanamayan durumun
+Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan üç
+kusur. Üçü de hesabın kendisinde değil, **hesaplanamayan durumun
 bildirilmesinde**:
 
 1. **Hesaplanamayan çift "anlamlı değil" diye görünüyordu.** Farkların
@@ -247,6 +247,16 @@ bildirilmesinde**:
    liste bazlı eleme + "N = … (x satır düştü)" notu); doğrudan çağrı
    artık hata veriyor. Etiket sayısı ölçüm sayısından azsa da hata
    veriliyor (eskiden `undefined` etiketli çift üretiliyordu).
+
+3. **Mauchly hesaplanamadığında "küresellik varsayımı sağlanıyor"
+   yazılıyordu.** Ölçümlerden biri bir diğerinin sabit kaydırılmışıysa
+   kovaryans matrisi tekil olur: W = 0, χ² ve p tanımsız kalır.
+   `isSignificant(NaN)` false döndüğü için satır "küresellik varsayımı
+   sağlanıyor" diye bitiyordu — hiç denetlenmemiş bir varsayım,
+   denetlenip geçmiş gibi görünüyordu. Sonuç artık
+   `kuresellikDenetlendi` taşıyor; denetlenemediğinde arayüz hüküm
+   vermiyor ve temkinli taraf olan Greenhouse-Geisser düzeltmeli p'yi
+   raporluyor. (Aynı alan karma ANOVA sonucunda da var.)
 
 Sonuç tablosunun başlığı çoklu karşılaştırma düzeltmesinin adını açıkça
 yazıyor: "İkili karşılaştırmalar (eşleştirilmiş t, **Bonferroni

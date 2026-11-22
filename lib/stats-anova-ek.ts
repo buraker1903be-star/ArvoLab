@@ -128,7 +128,15 @@ function kuresellik(S: number[][], N: number, a: number) {
     mauchlyChi = -dfS * d * Math.log(mauchlyW);
     mauchlyP = Number.isFinite(mauchlyChi) ? 1 - chiKareCDF(mauchlyChi, mauchlyDf) : NaN;
   }
-  return { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon };
+  /*
+    KÜRESELLİK DENETLENEBİLDİ Mİ (23.11.2026). Bir ölçüm ötekinin sabit
+    kaydırılmışıysa kovaryans matrisi tekil olur: W = 0, χ² ve p
+    tanımsız kalır. Arayüz `isSignificant(NaN)` false döndüğü için
+    "küresellik varsayımı sağlanıyor" yazıyordu — hiç denetlenmemiş bir
+    varsayım, denetlenip geçmiş gibi görünüyordu.
+  */
+  const kuresellikDenetlendi = Number.isFinite(mauchlyP);
+  return { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, kuresellikDenetlendi, ggEpsilon, hfEpsilon };
 }
 
 /* ---------- Tekrarlı ölçümler ANOVA ---------- */
@@ -150,6 +158,8 @@ export interface TekrarliAnovaSonucu {
   mauchlyChi: number;
   mauchlyDf: number;
   mauchlyP: number;
+  /** Mauchly hesaplanabildi mi; false ise varsayım hakkında hüküm verilemez. */
+  kuresellikDenetlendi: boolean;
   ggEpsilon: number;
   hfEpsilon: number;
   /** Greenhouse-Geisser düzeltmeli p (df'ler ε ile çarpılır). */
@@ -185,7 +195,7 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
       return t / (n - 1);
     }),
   );
-  const { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon } = kuresellik(S, n, 1);
+  const { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, kuresellikDenetlendi, ggEpsilon, hfEpsilon } = kuresellik(S, n, 1);
 
   return {
     n,
@@ -202,6 +212,7 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
     mauchlyChi,
     mauchlyDf,
     mauchlyP,
+    kuresellikDenetlendi,
     ggEpsilon,
     hfEpsilon,
     ggP: Number.isFinite(f) ? fTestP(f, df1 * ggEpsilon, df2 * ggEpsilon) : NaN,
@@ -420,6 +431,8 @@ export interface KarmaAnovaSonucu {
   mauchlyChi: number;
   mauchlyDf: number;
   mauchlyP: number;
+  /** Mauchly hesaplanabildi mi; false ise varsayım hakkında hüküm verilemez. */
+  kuresellikDenetlendi: boolean;
   ggEpsilon: number;
   hfEpsilon: number;
 }
