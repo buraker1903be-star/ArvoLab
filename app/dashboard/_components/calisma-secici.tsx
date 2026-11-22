@@ -14,15 +14,24 @@ export default function CalismaSecici({
   calismalar,
   secili,
   yol,
+  hepGoster = false,
 }: {
   calismalar: { id: string; title: string }[];
   secili: string;
   /** Sayfanın adresi; seçim ?calisma= ile ona eklenir. */
   yol: string;
+  /*
+    Tek çalışması olanda da çizilsin (22.11.2026, Kaynaklar araştırma
+    alanı): orada "hangi çalışmanın kaynaklarına bakıyorum" sorusunun
+    cevabı ekranda GÖRÜNMELİ. Seçici tek seçenekle de aynı bileşen;
+    öteki sayfalarda davranış değişmedi.
+  */
+  hepGoster?: boolean;
 }) {
   const router = useRouter();
   const t = useCeviri();
-  if (calismalar.length < 2) return null;
+  if (calismalar.length < 2 && !hepGoster) return null;
+  if (!calismalar.length) return null;
   return (
     <div className="kaynaklar-secici">
       <Secici
