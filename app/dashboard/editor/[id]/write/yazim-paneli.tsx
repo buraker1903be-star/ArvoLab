@@ -46,7 +46,7 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
   anahat: { tr: "Ana hat", en: "Outline" },
   tamamla: { tr: "Öneri", en: "Suggestion" },
 };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean; secimMetni?: string };
+type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean; secimMetni?: string; uyarilar?: string[] };
 
 /** B-16: AI metnindeki atıfların kaynakçaya yazılması için editörün hazırlığı (manuscript-editor.tsx). */
 export type AiAtifHazirlik = { uygula: (tr: Transaction, kayitId: string | null) => { donusen: number; kaynakcaya: number }; belirsiz: string[]; hata?: string };
@@ -57,6 +57,21 @@ const KISALTMA_UYARISI: Record<KisaltmaUyarisi, { tr: string; en: string }> = {
   atif: { tr: "Seçimdeki bir atıf kısaltmada yok.", en: "A citation in your selection is missing." },
   sayi: { tr: "Seçimdeki bir sayı kısaltmada yok.", en: "A number in your selection is missing." },
 };
+
+/*
+  Kartta gösterilecek bütün kısaltma uyarıları, tek listede ve sabit
+  sırada: önce sunucunun niteleme denetimi (anlam-koruma; istatistiksel
+  niteleme, belirsizlik, zaman, örneklem, sınırlılık), sonra istemcinin
+  kendi sayımı (kisaltmaUyarilari; kısalmadı, olumsuzluk, atıf, sayı).
+  İkisi AYRI şeyler ölçer ve hiçbiri "anlam korundu" demez: ikisinin de
+  sessiz kalması kısaltmanın güvenli olduğunu KANITLAMAZ, yalnızca bu iki
+  denetimin bir şey bulmadığını söyler.
+*/
+function kartUyarilari(m: Kayit, t: (metin: { tr: string; en: string }) => string): string[] {
+  if (m.gorev !== "kisalt" || !m.ekMetin) return [];
+  const istemci = m.secimMetni ? kisaltmaUyarilari(m.secimMetni, m.ekMetin).map((u) => t(KISALTMA_UYARISI[u])) : [];
+  return [...(m.uyarilar ?? []), ...istemci];
+}
 
 export default function YazimPaneli({
   editor,
@@ -81,6 +96,18 @@ export default function YazimPaneli({
   const [sekme, setSekme] = useState<"sohbet" | "kayitli">("sohbet");
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
+  /*
+    İSTEK SIRASI VE DURDURMA (21.11.2026). Yazım isteği 20 saniyeyi
+    bulabiliyor (gerçek model kabulünde kısaltma 19,5 sn sürdü) ve
+    öğrencinin bekleyişten çıkmaktan başka yolu yoktu. Sunucu eylemi
+    gerçekten iptal EDİLEMEZ: model çağrısı tamamlanır ve ai_assistant_runs'a
+    yazılır (ücret zaten doğdu). Durduran şey BEKLEYİŞTİR: sıra numarası
+    artar, geç gelen cevap sohbete hiç girmez. Cevap zaten belgeye
+    kendiliğinden girmiyor ("İmlece ekle" kullanıcının eylemi); burada
+    kapatılan, durdurulmuş bir isteğin kartının sonradan belirip
+    öğrencinin o kartı -artık başka yerde olan- imlecine eklemesi.
+  */
+  const istekSira = useRef(0);
   const listeRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
@@ -120,8 +147,11 @@ export default function YazimPaneli({
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: gorunen }]);
     setIstek("");
     setBekliyor(true);
+    const sira = ++istekSira.current;
+    const guncel = () => sira === istekSira.current;
     try {
       const cevap = await yazimAsistani({ projectId, istek: gorunen, gorev, bolum, oncesi, secim: secim || null, gecmis, zorunluBolumler });
+      if (!guncel()) return;
       if (cevap.hata) {
         setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: cevap.hata! }]);
         return;
@@ -129,14 +159,31 @@ export default function YazimPaneli({
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev, secimMetni: secim || undefined },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev, secimMetni: secim || undefined, uyarilar: cevap.uyarilar },
       ]);
     } catch (hata) {
+      if (!guncel()) return;
       console.error(hata);
       setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: t({ tr: "Asistana ulaşılamadı; bağlantınızı kontrol edin.", en: "Couldn't reach the assistant; check your connection." }) }]);
     } finally {
-      setBekliyor(false);
+      if (guncel()) setBekliyor(false);
     }
+  };
+
+  /* Bekleyişi durdurur; geç gelen cevap sohbete girmez (bkz. istekSira). */
+  const durdur = () => {
+    istekSira.current += 1;
+    setBekliyor(false);
+    setMesajlar((onceki) => [
+      ...onceki,
+      {
+        rol: "asistan",
+        metin: t({
+          tr: "Bekleme bırakıldı. İstek sağlayıcıda sürer ve ücreti doğar; iptal edilmedi. Gelen cevap gösterilmeyecek; yeniden sorabilirsiniz.",
+          en: "Stopped waiting. The request keeps running at the provider and is still billed; it was not cancelled. The answer won't be shown; you can ask again.",
+        }),
+      },
+    ]);
   };
 
   /* Eklenen metin paragraf düğümleri olarak girer; boş satırlar paragraf sınırıdır. */
@@ -579,11 +626,28 @@ export default function YazimPaneli({
                         paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
                       )}
                     </div>
-                    {m.gorev === "kisalt" && m.secimMetni && kisaltmaUyarilari(m.secimMetni, m.ekMetin).length ? (
-                      <ul className="yazim-oneri-uyari" aria-label={t({ tr: "Kontrol edin", en: "Check" })}>
-                        {kisaltmaUyarilari(m.secimMetni, m.ekMetin).map((u) => (
-                          <li key={u}>{t(KISALTMA_UYARISI[u])}</li>
+                    {/*
+                      Kısaltma uyarıları TEK listede (21.11.2026): istemcinin
+                      kendi sayımı (kisaltmaUyarilari: kısalmadı, olumsuzluk,
+                      atıf, sayı) ve sunucunun niteleme denetimi
+                      (cevap.uyarilar: istatistiksel niteleme, belirsizlik,
+                      zaman, örneklem, sınırlılık). İkisi ayrı şeyler ölçüyor
+                      ve ikisi de kartın kendi kutusunda, "İmlece ekle"
+                      düğmesinden ÖNCE durmalı; iki ayrı kutu öğrencinin
+                      ikincisini gözden kaçırmasına yol açardı.
+                    */}
+                    {kartUyarilari(m, t).length ? (
+                      <ul className="yazim-oneri-uyari" role="alert" aria-label={t({ tr: "Kontrol edin", en: "Check" })}>
+                        {kartUyarilari(m, t).map((u, j) => (
+                          <li key={j}>{u}</li>
                         ))}
+                        {/* Liste bir güvence listesi değil: yakalananları sayar, yakalayamadıklarını değil. */}
+                        <li>
+                          {t({
+                            tr: "Bu denetimler her kaybı yakalamaz; kısaltmayı aslıyla karşılaştırın.",
+                            en: "These checks don't catch every loss; compare the shortened text with the original.",
+                          })}
+                        </li>
                       </ul>
                     ) : null}
                     <div className="yazim-oneri-eylem">
@@ -615,6 +679,17 @@ export default function YazimPaneli({
                 <i />
                 <i />
               </span>
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                onClick={durdur}
+                title={t({
+                  tr: "Yalnızca bu ekrandaki bekleme biter. İstek sağlayıcıda sürer, ücreti doğar ve kaydı tutulur; iptal edilmez. Gelen cevap size gösterilmez.",
+                  en: "Only the wait on this screen ends. The request keeps running at the provider, is still billed and still recorded; it is not cancelled. The answer won't be shown to you.",
+                })}
+              >
+                {t({ tr: "Beklemeyi bırak", en: "Stop waiting" })}
+              </button>
             </div>
           </div>
         ) : null}

@@ -92,7 +92,8 @@ KESİN KURALLAR:
 5. Kaynakta geçmeyen bir yazara, çalışmaya ya da künyeye atıf yapma.
 6. Cevabı kullanıcının arayüz diliyle yaz (aşağıda belirtilir); alıntılar kaynağın dilinde kalır.
 7. Kaynakta AÇIKÇA yazanla kendi çıkarımını ayır ve çıkarımı kaynağın sözü gibi sunma. Sorulan bir unsur (sınırlılık, yöntem, örneklem, sonuç…) verilen sayfalarda yazılı değilse onu kendin üretme; bunun yerine yazılı olmadığını açıkça söyle (örn. "Okunan sayfalarda yazarların belirttiği bir sınırlılık yok."). Yazarların söylemediği bir değerlendirmeyi ("genellenebilirliği sınırlayabilir", "nedensellik tartışılmamış" gibi) cevaba koyma.
-8. Sana kaynağın yalnızca bazı sayfaları verildiyse (KAYNAK satırının altında "OKUNAN SAYFALAR" yazar) "kaynakta yok" deme, "okunan sayfalarda yok" de: kalan sayfalarda yazıyor olabilir.`;
+8. Sana kaynağın yalnızca bazı sayfaları verildiyse (KAYNAK satırının altında "OKUNAN SAYFALAR" yazar) "kaynakta yok" deme, "okunan sayfalarda yok" de: kalan sayfalarda yazıyor olabilir.
+9. YALNIZCA SON SORUYU cevapla. Önceki turlar bağlamdır (zamir ve "bu çalışma" gibi göndermeleri onlarla çöz), cevaplanacak soru değil: önceki cevabını tekrarlama, özetleme ya da yeni cevabın içine katma. "bulundu" ve "alintilar", SON sorunun cevabına aittir; önceki turda verdiğin alıntı, yeni soruyu da birebir cevaplamıyorsa bu cevabın kanıtı değildir. Son sorunun cevabı okunan sayfalarda yazmıyorsa — önceki soruların cevabı yazıyor olsa bile — "bulundu": false yap ve "alintilar" listesini BOŞ bırak.`;
 
 /*
   SEÇİLİ PASAJ İÇİN HAZIR SORU (17.11.2026, RC06i). Eskiden "…ana iddiasını,
@@ -139,16 +140,31 @@ export function kaynakIstemi(g: {
   const kismi = g.toplamSayfa && g.sayfalar.length < g.toplamSayfa;
   const okunan = kismi ? `\nOKUNAN SAYFALAR: ${g.sayfalar.map((s) => s.num).join(", ")} (kaynak ${g.toplamSayfa} sayfa; kalanı sana verilmedi)` : "";
   const ust = `KAYNAK: ${g.kunye.slice(0, 600)}${okunan}\nCEVAP DİLİ: ${g.dil === "en" ? "İngilizce" : "Türkçe"}`;
+  /*
+    GEÇMİŞ GERÇEK SOHBET TURU OLARAK (21.11.2026, gerçek AI kabulü bulgusu).
+    Eskiden önceki cevap `rol: "sistem"` ile veriliyordu; Anthropic gövdesinde
+    bütün sistem mesajları tek `system` alanında birleştiği için önceki cevap
+    kaynak metninin arkasına talimat gibi yapışıyor, messages dizisinde de
+    arka arkaya iki kullanıcı turu kalıyordu. Kabulde model ikisini birden
+    cevapladı: cevabı PDF'te OLMAYAN soruya, önceki cevabı tekrarlayıp
+    "bulundu": true ve önceki turun alıntılarıyla karşılık verdi. Geçmiş
+    SİLİNMEDİ — takip sorusunun ("peki ya ikinci yıl?") bağlamı buna bağlı;
+    yalnızca doğru role taşındı ve bağlam olduğu açıkça söylendi.
+  */
   const gecmis: Mesaj[] = g.gecmis.slice(-6).map((m) => ({
-    rol: m.rol === "kullanici" ? "kullanici" : "sistem",
-    metin: m.rol === "kullanici" ? m.metin.slice(0, SORU_EN_UZUN) : `ÖNCEKİ CEVABIN: ${m.metin.slice(0, 1_500)}`,
+    rol: m.rol === "kullanici" ? "kullanici" : "asistan",
+    metin: m.rol === "kullanici" ? m.metin.slice(0, SORU_EN_UZUN) : m.metin.slice(0, 1_500),
   }));
+  const gecmisUyarisi: Mesaj[] = gecmis.length
+    ? [{ rol: "sistem", metin: "Aşağıdaki turlar BAĞLAMDIR: göndermeleri çözmek içindir, yeniden cevaplanacak sorular değil. Cevabın, 'bulundu' bayrağın ve alıntıların yalnızca SON kullanıcı mesajına aittir." }]
+    : [];
   const soru = g.soru.slice(0, SORU_EN_UZUN);
   return {
     mesajlar: [
       { rol: "sistem", metin: KAYNAK_ISTEMI },
       { rol: "sistem", metin: `${ust}\n\nKAYNAK METNİ:\n${kaynakMetni}` },
       ...secimMesaji,
+      ...gecmisUyarisi,
       ...gecmis,
       { rol: "kullanici", metin: soru },
     ],
@@ -280,5 +296,20 @@ export function kaynakCevabiDenetle(cevap: KaynakCevabi, sayfalar: Sayfa[], soru
       sunucuMetni: { neden: "soru_atfi", atiflar: tekil },
     };
   }
+  /*
+    "BULUNAMADI" CEVABI KANIT TAŞIMAZ (21.11.2026, gerçek AI kabulü bulgusu).
+    Alıntı, cevabın DAYANAĞI olarak gösteriliyor: ekranda cevabın altında
+    "PDF s. 2" düğmesiyle duruyor ve tıklayınca o sayfaya götürüyor. Model
+    "okunan sayfalarda yok" derken alıntı verirse öğrenci, olmadığı söylenen
+    bilginin dayanağı varmış gibi bir sayfaya yönlendirilir. Kabulde tam bu
+    görüldü: etik kurul onay numarası sorusunun cevabının altında, bir
+    önceki sorunun örnekleme ait iki alıntısı duruyordu.
+    Cevap DÜŞÜRÜLMEZ, alıntı listesi boşaltılır: alıntıların kendisi
+    kaynakta birebir geçiyordu (yukarıdaki denetim onları doğruladı), hatalı
+    olan onları bu cevabın kanıtı diye sunmak. Düşürmek, dürüst bir
+    "bulunamadı" cevabını da yok ederdi — yanlış alarm, kaçırılan
+    uydurmadan sinsidir.
+  */
+  if (!cevap.bulundu) return { gecti: true, cevap: { ...cevap, alintilar: [] } };
   return { gecti: true, cevap: { ...cevap, alintilar: duzeltilmis } };
 }

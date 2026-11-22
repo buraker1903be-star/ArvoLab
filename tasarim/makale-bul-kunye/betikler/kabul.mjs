@@ -127,15 +127,46 @@ if (AŞAMA === "normal") {
   kayit("ikinci arama: yeni listenin her kaydı en çok bir kez soruldu (iki listede ortak olan önbellekten)", bBitti && bSayim.every((n) => n <= 1) && bSayim.filter((n) => n === 1).length >= bSayim.length - 1, { bSayim });
   kayit("ikinci arama: listede yalnızca yeni aramanın kayıtları, hepsinin rozeti sonuçlandı", bRozet.every((r) => r.durum !== "kontrol_ediliyor") && bRozet.every((r) => !/mentor/i.test(r.baslik)), { ornek: bRozet.slice(0, 2) });
 
-  // 4) Ekleme kontrol edilmiş bilgiyle: TraceMonkey'i ekle, satırdaki yıl/DOI öteki dizinle tutarlı.
+  /*
+    4) Ekleme kontrol edilmiş bilgiyle.
+
+    22.11.2026: bu adım TraceMonkey satırının "eşleşti" rozetiyle gelmesini
+    ŞART koşuyordu ve koşudan koşuya düşüyordu. Sebep ürün hatası değil:
+    TraceMonkey'in PLDI bildirisi ile SIGPLAN Notices baskısı aynı kayda
+    katılıyor ve yalnızca DOI'leri farklı; ürün bunu bilerek "belirsiz"
+    (başka bir sürümü olabilir) diye gösteriyor (PR #127). Hangi rozetin
+    geleceği canlı dizinin o günkü yanıtına bağlı.
+
+    Artık rozet DAYATILMIYOR; sınanan şey şu: hangi rozet gelirse gelsin
+    yanlış eşleşme yapılmaz (eşleşti dendiyse dizin adıyla ve sürüm uyarısı
+    olmadan), belirsizse bunun sebebi kullanıcıya yazılır, ve EKLENEN kayıt
+    öteki dizinle teyitli yıl ve DOI taşır.
+  */
   await ara(s, "trace-based just-in-time type specialization dynamic languages");
   await s.waitForSelector("li[data-kunye-anahtari]", { timeout: 60000 });
   await bekleBitis(s);
-  const satir = s.locator("li[data-kunye-anahtari]").filter({ hasText: /Trace-based just-in-time/i }).filter({ has: s.locator('[data-kunye-durumu="eslesti"]') }).first();
+  const satir = s.locator("li[data-kunye-anahtari]").filter({ hasText: /Trace-based just-in-time/i }).first();
+  /* Rozet SATIRIN kendisinden okunur: sayfa genelindeki liste başlığı <strong> dışında çizebiliyor. */
+  const tmRozet = await satir.evaluate((li) => {
+    const d = li.querySelector("[data-kunye-durumu]");
+    return d ? { durum: d.getAttribute("data-kunye-durumu"), metin: d.textContent ?? "", ton: d.getAttribute("data-tone"), neden: li.querySelector("[data-kunye-nedeni]")?.textContent ?? "" } : null;
+  });
+  const tmGecerli = Boolean(tmRozet) && ["eslesti", "belirsiz", "kontrol_edilemedi", "eksik"].includes(tmRozet.durum) && tmRozet.durum !== "kontrol_ediliyor";
+  kayit("TraceMonkey: rozet kesin bir duruma indi (eşleşti ZORUNLU değil)", tmGecerli, { durum: tmRozet?.durum, metin: tmRozet?.metin?.slice(0, 120) });
+  /* Sürüm belirsizliği: "eşleşti" denmişse sürüm uyarısı olmamalı; "belirsiz" denmişse sebebi yazılmalı. */
+  kayit(
+    "TraceMonkey: yanlış eşleşme yok — belirsizse sebebi yazılı, eşleştiyse sürüm uyarısı yok",
+    tmRozet?.durum === "belirsiz"
+      ? /sürüm|version|belirsiz/i.test(`${tmRozet.metin} ${tmRozet.neden}`)
+      : tmRozet?.durum === "eslesti"
+        ? !/sürüm|version/i.test(`${tmRozet.metin} ${tmRozet.neden}`)
+        : true,
+    { durum: tmRozet?.durum, neden: (tmRozet?.neden ?? "").slice(0, 160) },
+  );
   await satir.getByRole("button", { name: /Listeme ekle/ }).click();
   await s.waitForTimeout(2500);
   const eklenen = psql(`select coalesce(year,'') || '|' || coalesce(doi_or_url,'') from public.literature_sources where owner_id='${KUL.id}' and title ilike 'Trace-based just-in-time%' order by created_at desc limit 1`);
-  kayit("eklenen kaynak: yıl 2009 ve DOI (öteki dizinle teyitli bilgi)", /^2009\|https:\/\/doi\.org\/10\.1145\//.test(eklenen), { eklenen });
+  kayit("eklenen kaynak: yıl 2009 ve DOI (öteki dizinle teyitli bilgi)", /^2009\|https:\/\/doi\.org\/10\.1145\//.test(eklenen), { eklenen, tmDurum: tmRozet?.durum });
   await s.screenshot({ path: `${OUT}3-eklendi.png` });
 
   // 5) PLOS makalesi YENİ kayıt olarak "PDF'yi oku" yoluyla: yazarlar iki ayrı yazar olarak yazılır.
@@ -209,9 +240,44 @@ if (AŞAMA === "normal") {
   });
   const bitti = await bekleBitis(s, 120000);
   const r = await rozetler(s);
+  /*
+    22.11.2026: eskiden BÜTÜN kayıtların "kontrol edilemedi" olması isteniyordu
+    ve arıza aşaması hep düşüyordu. Sebep ürün hatası değil, ürünün kendi
+    tasarımı (PR #127): aramada İKİ dizinden birden gelen kayıtların ham
+    künyeleri birbirine karşı sınanır ve bunun için AĞA ÇIKILMAZ. Dizinler
+    kapalıyken bile o kayıtlar doğru biçimde değerlendirilir; "kontrol
+    edilemedi" demek, elde duran kanıtı yok saymak olurdu.
+
+    Bu yüzden kayıtlar iki sınıfa ayrılıp AYRI AYRI doğrulanıyor:
+      - iki dizinin verisini zaten taşıyanlar → arızada da karşılaştırılır
+        (kesin bir hükme iner, "kontrol edilemedi"de takılı kalmaz);
+      - dış servise ihtiyaç duyanlar → "Kontrol edilemedi", nötr ton ve
+        "ulaşılamadı / yanlış olduğu anlamına gelmez" metni.
+    Sınıflar aramanın ham yanıtından (yanit.json) okunur, ekrandan değil.
+  */
+  const ciftDizinli = new Set(
+    (yanit.kayitlar ?? []).filter((k) => Object.keys(k.ham ?? {}).length > 1).map((k) => k.baslik),
+  );
+  const esitMi = (a, b) => String(a).trim().slice(0, 60).toLowerCase() === String(b).trim().slice(0, 60).toLowerCase();
+  const cift = r.filter((x) => [...ciftDizinli].some((b) => esitMi(b, x.baslik)));
+  const tek = r.filter((x) => ![...ciftDizinli].some((b) => esitMi(b, x.baslik)));
+
   kayit("dizinlere ulaşılamıyor: sonuçlar yine listelenir", r.length > 0, { n: r.length });
-  kayit("servis arızası → 'Kontrol edilemedi' (nötr ton)", bitti && r.length > 0 && r.every((x) => x.durum === "kontrol_edilemedi" && x.ton === "neutral"), { ornek: r.slice(0, 2) });
-  kayit("servis arızası 'yanlış kaynak' demez, ulaşılamadığını söyler", r.length > 0 && r.every((x) => /ulaşılamadı/.test(x.neden) && /yanlış olduğu anlamına gelmez/.test(x.neden)), { neden: r[0]?.neden });
+  kayit(
+    "iki dizinin verisini taşıyan kayıtlar arızada da karşılaştırılır (ağa çıkmadan)",
+    cift.length > 0 && cift.every((x) => x.durum !== "kontrol_ediliyor" && x.durum !== "kontrol_edilemedi"),
+    { n: cift.length, ornek: cift.slice(0, 2).map((x) => ({ durum: x.durum, metin: x.metin.slice(0, 60) })) },
+  );
+  kayit(
+    "dış servis gereken kayıtlar: servis arızası → 'Kontrol edilemedi' (nötr ton)",
+    bitti && tek.length > 0 && tek.every((x) => x.durum === "kontrol_edilemedi" && x.ton === "neutral"),
+    { n: tek.length, ornek: tek.slice(0, 2) },
+  );
+  kayit(
+    "dış servis gereken kayıtlar: 'yanlış kaynak' demez, ulaşılamadığını söyler",
+    tek.length > 0 && tek.every((x) => /ulaşılamadı/.test(x.neden) && /yanlış olduğu anlamına gelmez/.test(x.neden)),
+    { neden: (tek[0]?.neden ?? "").slice(0, 160) },
+  );
   kayit("arıza aşaması: ekleme düğmeleri hâlâ kullanılabilir", (await s.getByRole("button", { name: /Listeme ekle/ }).count()) > 0, {});
   await s.screenshot({ path: `${OUT}6-ariza.png` });
   kayit("arıza aşaması: sayfa hatası yok", hatalar.length === 0, hatalar);

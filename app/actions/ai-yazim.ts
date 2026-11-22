@@ -8,6 +8,7 @@ import { asistanKaydet } from "@/lib/ai/kayit";
 import { TAMAMLAMA_EN_AZ_ARALIK_SN, saatlikHakaSayilir } from "@/lib/ai/sinirlar";
 import { bulguIddiasi, ilkCumle } from "@/lib/ai/yazim-metni";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
+import { ANLAM_SINIFI_ADI, anlamKaybi, korunduIddiasi } from "@/lib/ai/anlam-koruma";
 import { belgeDili } from "@/lib/belge-dili";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
 import {
@@ -65,6 +66,15 @@ export type YazimYaniti = {
    * deneme: deneme hakkı bitti.
    */
   sinir?: { tur: "aralik" | "saatlik" | "kapi" | "deneme"; tekrarSaniye?: number | null };
+  /**
+   * Kısaltmada kaynakta olup çıktıda olmayan NİTELEMELER
+   * (lib/ai/anlam-koruma.ts), kartta uyarı olarak çizilir. Panelin kendi
+   * kisaltmaUyarilari'sinden (lib/ai/yazim-metni.ts) ayrıdır ve onu
+   * değiştirmez: o, sayı/atıf/olumsuzluk sayımı ve "kısalmadı" ölçer;
+   * bu, istatistiksel niteleme, belirsizlik, zaman, örneklem ve sınırlılık
+   * gibi anlam taşıyan ifadelerin düşmesini.
+   */
+  uyarilar?: string[];
 };
 
 const temizle = (deger: unknown, n: number) => (typeof deger === "string" ? deger.slice(0, n) : "");
@@ -210,12 +220,60 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
     }
 
     /*
+      ANLAM KORUMA (21.11.2026, gerçek AI kabulü bulgusu). Yalnızca
+      kısaltmada: görev "anlamını koruyarak kısalt" diyor ve kabulde model
+      "istatistiksel olarak"ı düşürüp açıklamasına "anlam korundu" yazdı.
+      Cevap DÜŞÜRÜLMEZ (kısaltma zaten metin atmak demek, her atılan
+      sözcük hata değil); kullanıcı neyin düştüğünü görür ve modelin
+      yanıltıcı iddiası ekrana çıkmaz. Öteki görevlerde ölçülmez: "devam"
+      ya da "paragraf" kaynağı kısaltmıyor, orada aynı denetim yalnızca
+      gürültü üretirdi.
+    */
+    const kayiplar = gorev === "kisalt" && secim ? anlamKaybi(secim, sonuc.metin) : [];
+    const uyarilar = kayiplar.map((k) =>
+      t({
+        tr: `Kaynakta olup kısaltmada düşen: ${t(ANLAM_SINIFI_ADI[k.sinif])} (${k.dusenler.join(", ")}). Metni eklemeden önce kontrol edin.`,
+        en: `Dropped from the shortened text: ${t(ANLAM_SINIFI_ADI[k.sinif])} (${k.dusenler.join(", ")}). Check before inserting.`,
+      }),
+    );
+    /*
+      "ANLAM KORUNDU" İDDİASI HİÇBİR DURUMDA EKRANA ÇIKMAZ (22.11.2026).
+      Kayıp bulunduğunda iddia yanlıştır. Kayıp BULUNMADIĞINDA da iddia
+      DOĞRULANMAMIŞTIR: anlam-koruma kalıp arar, anlam karşılaştırmaz ve
+      sınıf düzeyindeki kör noktaları bilinir (modül belgesi ve
+      tests/unit/anlam-koruma.test.ts'teki karşı örnekler). Asistanın
+      ağzından çıkan "anlam korundu", öğrencinin kısaltmayı karşılaştırmadan
+      kabul etmesi için yeterli sebep olur; bu yüzden iki durumda da
+      sunucunun metniyle değiştirilir. Modelin ham açıklaması kayda
+      (ai_assistant_runs.output) olduğu gibi girer.
+    */
+    const gorunenYanit = !korunduIddiasi(sonuc.yanit)
+      ? sonuc.yanit
+      : kayiplar.length
+        ? t({
+            tr: "Kısaltma güvenli değil: aşağıdaki nitelemeler metinden düştü, bu yüzden anlamın korunduğunu söyleyemem.",
+            en: "This shortening isn't safe: the qualifications below were dropped, so I can't say the meaning is preserved.",
+          })
+        : t({
+            tr: "Kısalttım. Yaptığım denetimler bir kayıp bulmadı, ama bu anlamın korunduğunun güvencesi değildir: iki metni karşılaştırın.",
+            en: "Shortened it. My checks found no loss, but that is not a guarantee the meaning is preserved: compare the two texts.",
+          });
+
+    /*
       İstek de bulgulara yazılır (19.11.2026): Kayıtlı sekme cevabın neye
       verildiğini gösterebilsin. Eskiden yalnızca istem metninin (context)
       içindeydi ve oradan güvenle ayıklanamıyordu. Yeni sütun yok; jsonb.
+      Anlam kaybı da kayda girer: modelin ham açıklaması ("cikti") ile
+      kullanıcının gördüğü açıklama ayrışabiliyor.
     */
-    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: { gorev, istek: istek.slice(0, 300) } });
-    return { yanit: sonuc.yanit, metin: sonuc.metin, kayitId, krediUyarisi: kapi.uyari ?? undefined };
+    const kayitId = await asistanKaydet({
+      ...ortak,
+      durum: "completed",
+      model: yanit.model,
+      cikti: yanit.metin,
+      bulgular: { gorev, istek: istek.slice(0, 300), ...(kayiplar.length ? { anlamKaybi: kayiplar } : {}) },
+    });
+    return { yanit: gorunenYanit, metin: sonuc.metin, kayitId, krediUyarisi: kapi.uyari ?? undefined, uyarilar: uyarilar.length ? uyarilar : undefined };
   } catch (hata) {
     const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });
     console.error("[ai-yazim] başarısız", mesaj);

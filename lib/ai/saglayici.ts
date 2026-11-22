@@ -34,7 +34,19 @@
 import type { Dil, Metin } from "@/lib/dil";
 import type { YetenekAdi } from "./kayit-gorunum";
 
-export type Rol = "sistem" | "kullanici";
+/*
+  "asistan" (21.11.2026, gerçek AI kabulü): sohbet geçmişindeki ÖNCEKİ
+  CEVAP artık asistan turu olarak gidiyor. Eskiden yalnızca "sistem" ve
+  "kullanici" vardı; geçmişteki cevap "sistem" rolüyle veriliyordu ve
+  Anthropic gövdesinde bütün sistem mesajları tek bir `system` alanında
+  birleştiği için önceki cevap, kaynak metninin hemen ardına, TALİMAT gibi
+  yapışıyordu. Geriye kalan messages dizisi de arka arkaya iki "user"
+  turuydu (önceki soru + güncel soru): modelin "iki soru soruldu, ikisini
+  de cevapla" diye okuması için her koşul vardı. Kabulde tam bu oldu —
+  PDF'e sorulan ikinci soru, birincinin cevabı baştan tekrarlanarak
+  yanıtlandı ve birincinin alıntıları ikincinin kanıtı gibi göründü.
+*/
+export type Rol = "sistem" | "kullanici" | "asistan";
 export type Mesaj = { rol: Rol; metin: string };
 
 export type SorSecenek = {
@@ -300,7 +312,7 @@ export function bilinenBayraklar(model: string, bicimi: Bicim): IstekBayraklari 
   return { json: !prefill, sicaklik: !sicaklik };
 }
 
-type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBayraklari;
+export type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBayraklari;
 
 /*
   Anthropic'te sistem istemi bir mesaj değil, üst düzey "system" alanı; ve
@@ -308,14 +320,52 @@ type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBa
   (prefill): model devamını yazıyor, biz başa "{" ekliyoruz. Belgelenmiş,
   güvenli bir yöntem ve çözümleyiciyi kurtarıyor.
 */
-function anthropicGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
-  const sistem = mesajlar.filter((m) => m.rol === "sistem").map((m) => m.metin).join("\n\n");
+/*
+  Sistem dışı turlar, sohbet sırasıyla. Baştaki asistan turları ATILIR:
+  her iki sağlayıcı da ilk turun kullanıcıya ait olmasını bekler ve
+  geçmiş pencereye göre kırpıldığında (slice(-6)) dizi bir asistan
+  cevabıyla başlayabilir. Kırpmayı çağıranlara bırakmak, her yeni
+  yetenekte aynı tuzağı yeniden kurmak olurdu.
+*/
+export function sistemAlani(mesajlar: Mesaj[]): string {
+  return mesajlar.filter((m) => m.rol === "sistem").map((m) => m.metin).join("\n\n");
+}
+
+export function sohbetTurlari(mesajlar: Mesaj[]): Mesaj[] {
+  const turlar = mesajlar.filter((m) => m.rol !== "sistem");
+  const ilk = turlar.findIndex((m) => m.rol === "kullanici");
+  return ilk <= 0 ? turlar : turlar.slice(ilk);
+}
+
+/*
+  OpenAI uyumlu gövde. anthropicGovde ile AYNI iki yardımcıyı kullanır
+  (sistemAlani, sohbetTurlari): rol eşlemesi iki biçimde ayrışırsa sohbet
+  geçmişi bir sağlayıcıda doğru, ötekinde yanlış gider ve bu ancak gerçek
+  çağrıda görülür. İkisi de tests/unit/ai-saglayici-govde.test.ts'te
+  aynı mesaj dizisiyle sınanır.
+*/
+export function openaiGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
+  const sistem = sistemAlani(mesajlar);
+  return {
+    model,
+    messages: [
+      ...(sistem ? [{ role: "system", content: sistem }] : []),
+      ...sohbetTurlari(mesajlar).map((m) => ({ role: m.rol === "asistan" ? "assistant" : "user", content: m.metin })),
+    ],
+    ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
+    max_tokens: secenek.enFazlaJeton ?? 2200,
+    ...(json ? { response_format: { type: "json_object" } } : {}),
+  };
+}
+
+export function anthropicGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
+  const sistem = sistemAlani(mesajlar);
   const govde: Record<string, unknown> = {
     model,
     max_tokens: secenek.enFazlaJeton ?? 2200,
     ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
     messages: [
-      ...mesajlar.filter((m) => m.rol !== "sistem").map((m) => ({ role: "user", content: m.metin })),
+      ...sohbetTurlari(mesajlar).map((m) => ({ role: m.rol === "asistan" ? "assistant" : "user", content: m.metin })),
       ...(json ? [{ role: "assistant", content: "{" }] : []),
     ],
   };
@@ -324,7 +374,7 @@ function anthropicGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
 }
 
 async function gonder(istek: Istek) {
-  const { model, mesajlar, secenek, json, sicaklik } = istek;
+  const { secenek } = istek;
   const basliklar: Record<string, string> = { "Content-Type": "application/json" };
   const key = anahtar();
   const anthropic = bicim() === "anthropic";
@@ -344,13 +394,7 @@ async function gonder(istek: Istek) {
     body: JSON.stringify(
       anthropic
         ? anthropicGovde(istek)
-        : {
-            model,
-            messages: mesajlar.map((m) => ({ role: m.rol === "sistem" ? "system" : "user", content: m.metin })),
-            ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
-            max_tokens: secenek.enFazlaJeton ?? 2200,
-            ...(json ? { response_format: { type: "json_object" } } : {}),
-          },
+        : openaiGovde(istek),
     ),
   });
 }
