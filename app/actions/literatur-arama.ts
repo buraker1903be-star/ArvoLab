@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
+import { kaynakYazarDizesi, literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 import { ceviri } from "@/lib/dil-sunucu";
 import { lookupDoi } from "@/app/actions/literature";
 import { htmlVarliklariniCoz } from "@/lib/html-varlik";
@@ -252,8 +252,7 @@ export async function aramaKaydiniEkle(kayit: {
     durumdaki kayıt Kaynaklar'da "yazar biçimi doğrulanmadı" diye işaretlenir.
   */
   const doiBilgisi = kayit.doi ? (await lookupDoi(kayit.doi).catch(() => ({ metadata: undefined }))).metadata : undefined;
-  const kesinYazar = htmlVarliklariniCoz(kayit.kunyeYazarlari);
-  const yazarlar = doiBilgisi?.authors || kesinYazar || (kayit.yazarlar ?? []).map(htmlVarliklariniCoz).filter(Boolean).join("; ");
+  const yazarlar = kaynakYazarDizesi({ doiYazarlari: doiBilgisi?.authors, kunyeYazarlari: kayit.kunyeYazarlari, yazarlar: kayit.yazarlar }) ?? "";
   const satir = {
     owner_id: ctx.user.id,
     project_id: String(kayit.projectId ?? "").trim() || null,
@@ -300,6 +299,8 @@ export async function aramaKaydiniEkle(kayit: {
 export async function okumayaAl(kayit: {
   baslik: string;
   yazarlar?: string[];
+  /** Sağlayıcının yapılandırılmış yazar dizesi (aramaKaydiniEkle ile aynı). */
+  kunyeYazarlari?: string | null;
   yil?: number | null;
   tur?: string;
   dergi?: string | null;
@@ -339,17 +340,29 @@ export async function okumayaAl(kayit: {
   if (mevcut) {
     kaynakId = String(mevcut.id);
   } else {
+    /*
+      Yazar ve yayın bilgisi "Listeme ekle" ile AYNI yoldan (kaynakYazarDizesi):
+      DOI'nin Crossref künyesi, sonra yapılandırılmış ad, sonra "; " ile adlar.
+      Eskiden burada adlar ", " ile birleşiyordu ve atıf iki yazarı tek yazar
+      sayıyordu ("(Markus Knauff, 2014)", 21.11.2026). Yalnızca YENİ kayıtlar:
+      eski kayıtlar toplu dönüştürülmez.
+    */
+    const doiBilgisi = doi ? (await lookupDoi(doi).catch(() => ({ metadata: undefined }))).metadata : undefined;
     const satir = {
       owner_id: ctx.user.id,
       project_id: projectId,
-      title: baslik,
-      authors: (kayit.yazarlar ?? []).join(", ").slice(0, 500) || null,
-      year: kayit.yil ? String(kayit.yil) : null,
+      title: htmlVarliklariniCoz(baslik).slice(0, 500) || baslik,
+      authors: kaynakYazarDizesi({ doiYazarlari: doiBilgisi?.authors, kunyeYazarlari: kayit.kunyeYazarlari, yazarlar: kayit.yazarlar }),
+      year: kayit.yil ? String(kayit.yil) : doiBilgisi?.year ?? null,
       source_type: TURLER.includes(String(kayit.tur)) ? String(kayit.tur) : "other",
       doi_or_url: (doi ? `https://doi.org/${doi}` : String(kayit.url ?? "")).slice(0, 500) || null,
       status: "to_review" as const,
       notes: null,
-      container_title: (kayit.dergi ?? "").slice(0, 500) || null,
+      container_title: (doiBilgisi?.containerTitle || htmlVarliklariniCoz(kayit.dergi)).slice(0, 500) || null,
+      volume: doiBilgisi?.volume ?? null,
+      issue: doiBilgisi?.issue ?? null,
+      pages: doiBilgisi?.pages ?? null,
+      publisher: doiBilgisi?.publisher ?? null,
     };
     const { data: eklenen, error } = await ctx.supabase.from("literature_sources").insert(satir).select("id").single();
     if (error || !eklenen) {
