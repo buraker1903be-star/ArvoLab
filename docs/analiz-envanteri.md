@@ -133,12 +133,12 @@ tarayıcıda yapılıyor; dosya sunucuya gitmiyor.
 |---|---|
 | Hesap | `ancova` (`stats-anova-ek.ts`) |
 | Gerekli değişken | Grup değişkeni + bağımlı değişken + kovaryat(lar) |
-| Varsayım | Hata durumları ayrı ("az-grup", "az-gozlem", "tekil"); **eğim homojenliği sınanmıyor** |
+| Varsayım | Hata durumları ayrı ("az-grup", "az-gozlem", "tekil"); **eğim homojenliği (grup × kovaryat) hesaplanıyor** (`egimF`, `egimDf1`, `egimDf2`, `egimP`) |
 | Üretilen | Düzeltilmiş ortalamalar, her etki için F/df/p |
 | GA | — |
 | Etki | **Kısmi η²** |
-| Doğrulama | `pingouin` / `statsmodels`; SPSS'in düzeltilmiş kestirimleriyle karşılaştırma |
-| Eksik | Regresyon eğimlerinin homojenliği (kovaryat × grup etkileşimi) kullanıcıya gösterilmiyor |
+| Doğrulama | `pingouin` / `statsmodels`; SPSS'in düzeltilmiş kestirimleriyle karşılaştırma. Eğim homojenliği `statsmodels` iç içe model karşılaştırmasıyla sınanıyor (`stats-anova-ek.test.ts`: F = 0,169305, p = 0,846233, sd 2/12) |
+| Eksik | Düzeltilmiş ortalamaların güven aralığı yok |
 
 ## 10–14. Korelasyon / Regresyon
 
@@ -192,17 +192,31 @@ Dunn post hoc, Friedman sonrası ikili karşılaştırma yok.
 
 ## Boşluklar — doğrulanmış özet
 
-1. **`tekrarliIkiliKarsilastirmalar` hiç test edilmiyor.** Tekrarlı
-   ölçümler ANOVA'nın kendisi `pingouin`'e karşı sınanıyor, ardından
-   gelen ikili karşılaştırmalar sınanmıyor. Ekranda görünen bir
-   çıktıdır; sessizce yanlış olabilir.
+1. ~~`tekrarliIkiliKarsilastirmalar` hiç test edilmiyor.~~ **Kapatıldı
+   (23.11.2026).** SciPy `ttest_rel` ve statsmodels `multipletests`
+   ("bonferroni") ile bağımsız referanslara karşı sınanıyor
+   (`tests/unit/stats-tekrarli-ikili.test.ts`, referanslar
+   `scripts/referans/tekrarli-ikili-referans.py` ile üretiliyor).
+   Doğrulanan: ortalama farkı, t, düzeltilmiş p, anlamlılık, çift
+   sayısı ve etiketler; üç ve dört ölçüm, anlamlı/anlamsız sonuçlar,
+   negatif fark, ölçüm sırası değişimi ve p'nin 1'de sınırlanması.
+   **Hesap doğru çıktı** — SciPy/statsmodels ile toleranslar içinde
+   birebir. Sınır durumlarında iki kusur bulundu ve düzeltildi
+   (aşağıda, "Düzeltilen kusurlar").
 2. **`describeNumeric` için doğrudan test yok** (alt parçaları SPSS'e
    karşı sınanıyor, dolaylı kapsam).
 3. **Güven aralığı yalnızca 6 analizde:** üç t-testi, lojistik Exp(B),
    aracılık/düzenleyicilik bootstrap. Korelasyon r, η², Cohen d,
    Cronbach α, RMSEA ve regresyon katsayıları için GA yok.
-4. **ANCOVA'da eğim homojenliği sınanmıyor** — varsayım çiğnenirse
-   kullanıcı bunu göremiyor.
+4. ~~ANCOVA'da eğim homojenliği sınanmıyor.~~ **Bu madde yanlıştı
+   (23.11.2026 düzeltmesi).** Üç başlık ayrı ayrı denetlendi ve üçü de
+   karşılanıyor: *hesap* `lib/stats-anova-ek.ts`'te (`egimF`, `egimDf1`,
+   `egimDf2`, `egimP`); *arayüzde gösterim* ANCOVA sonucunun altında, F,
+   sd ve p ile birlikte ve varsayım bozuksa uyarı tonuyla
+   ("varsayım sağlanmıyor; kovaryatın etkisi gruplarda farklı, ANCOVA
+   sonucu yanıltıcı olabilir"); *test* `stats-anova-ek.test.ts` içinde
+   `statsmodels` iç içe model karşılaştırmasına karşı. Envanterin ilk
+   sürümü bu üçünü ayırmadan "eksik" demişti.
 5. **Post hoc eksikleri:** Kruskal-Wallis (Dunn), Friedman (ikili),
    karma ANOVA'da gruplar arası.
 6. **Varsayım şeridi yalnızca 6 analizde çiziliyor** (betimsel, iki
@@ -212,3 +226,28 @@ Dunn post hoc, Friedman sonrası ikili karşılaştırma yok.
 
 Mevcut yetenekler arasında "arayüzde var ama hesabı yok" **hiçbir
 analiz bulunmadı**: 25 adın 25'i gerçekten hesaplanıyor.
+
+## Düzeltilen kusurlar (23.11.2026)
+
+Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan iki
+kusur. İkisi de hesabın kendisinde değil, **hesaplanamayan durumun
+bildirilmesinde**:
+
+1. **Hesaplanamayan çift "anlamlı değil" diye görünüyordu.** Farkların
+   varyansı sıfırken (her katılımcıda tam olarak aynı değişim) t
+   tanımsız kalıyor; `p` NaN olduğu için `anlamli` false oluyordu ve
+   ekranda satır "anlamlı değil" diye bitiyordu. Bulunabilecek en güçlü
+   örüntü, kullanıcıya raporlanmaması gereken bir sonuç gibi
+   görünüyordu. Artık çift `engel` alanı taşıyor ("sabit-fark" /
+   "az-gozlem") ve arayüz sebebi yazıyor.
+2. **Eşleşmeyen uzunluk sessizce kırpılıyordu.** Eşleştirilmiş t fazla
+   gözlemi atıyor; farklı uzunluktaki ölçümlerde her çift başka bir n
+   ile hesaplanıyor ve Bonferroni ailesi tutarsız kalıyordu. Arayüz
+   zaten satırları eşleştirerek veriyor (`lib/veri-eslestirme.ts`,
+   liste bazlı eleme + "N = … (x satır düştü)" notu); doğrudan çağrı
+   artık hata veriyor. Etiket sayısı ölçüm sayısından azsa da hata
+   veriliyor (eskiden `undefined` etiketli çift üretiliyordu).
+
+Sonuç tablosunun başlığı çoklu karşılaştırma düzeltmesinin adını açıkça
+yazıyor: "İkili karşılaştırmalar (eşleştirilmiş t, **Bonferroni
+düzeltmesi**)".

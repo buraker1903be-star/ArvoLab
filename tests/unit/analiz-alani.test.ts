@@ -137,6 +137,41 @@ describe("değişken seçimi iki yolda da aynı doğrulamadan geçiyor", () => {
   });
 });
 
+/*
+  TEKRARLI ÖLÇÜMLER SONRASI İKİLİ KARŞILAŞTIRMALAR (23.11.2026).
+  Hesap bağımsız referanslara karşı sınanıyor
+  (tests/unit/stats-tekrarli-ikili.test.ts); burada arayüzün o hesaba
+  NE VERDİĞİ ve sonucu NASIL yazdığı sabitleniyor.
+*/
+describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
+  test("satır eşleşmesi korunuyor: fonksiyona eşleşmiş sütunlar veriliyor", () => {
+    /* eslesenSutunlar, bütün ölçümleri dolu satırları hizasını bozmadan
+       veriyor; doğrudan ham sütun geçirmek çiftleri kaydırırdı. */
+    assert.match(analizci, /const veri = eslesenSutunlar\(\.\.\.olcumler\);/);
+    assert.match(analizci, /tekrarliIkiliKarsilastirmalar\(veri\.sutunlar, olcumler\)/);
+  });
+
+  test("eksik veri politikası sessiz değil: düşen satır sayısı yazılıyor", () => {
+    assert.match(analizci, /\{elemeNotu\(veri, dil\) \? <p className="muted text-sm">\{elemeNotu\(veri, dil\)\}<\/p> : null\}/);
+  });
+
+  test("çoklu karşılaştırma düzeltmesinin ADI tabloda yazılı", () => {
+    assert.match(analizci, /İkili karşılaştırmalar \(eşleştirilmiş t, Bonferroni düzeltmesi\)/);
+    assert.match(analizci, /Pairwise comparisons \(paired t, Bonferroni correction\)/);
+  });
+
+  test("hesaplanamayan çift 'anlamlı değil' diye yazılmıyor", () => {
+    /* engel null değilse p basılmıyor, sebebi yazılıyor. */
+    assert.match(analizci, /\{c\.engel === null \? \(/);
+    assert.match(analizci, /fark bütün katılımcılarda aynı \(varyans sıfır\)/);
+    assert.match(analizci, /en az iki eşleşen gözlem gerekir/);
+  });
+
+  test("ikili karşılaştırmalar yalnızca ANOVA anlamlıyken çiziliyor", () => {
+    assert.match(analizci, /const ikili = sig \? tekrarliIkiliKarsilastirmalar\(/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);

@@ -37,19 +37,23 @@ boşluğu**.
 
 ## A. Birinci aşama — yakın vadede değerli ve tarayıcıda uygun
 
-### A1. `tekrarliIkiliKarsilastirmalar` için doğrulama testi
+### A1. `tekrarliIkiliKarsilastirmalar` için doğrulama testi — **TAMAMLANDI (23.11.2026)**
 
-- **Var mı:** Fonksiyon var, **testi yok**.
-- **İhtiyaç / öncelik:** **En yüksek.** Ekranda görünen, teze giren bir
-  çıktı bağımsız bir uygulamaya karşı hiç sınanmadı. Yeni bir yöntem
-  eklemekten önce gelir: var olanın doğruluğu, olmayanın yokluğundan
-  önemlidir.
-- **Bağımlılık / maliyet:** Yok. Yalnızca test dosyası; yarım gün.
-- **Varsayım / sınır:** Yöntem değişmiyor.
-- **Doğrulama planı:** `pingouin.pairwise_tests` (paired=True,
-  padjust='bonf') çıktısıyla t, p_ham ve p_düzeltilmiş karşılaştırması;
-  3 ve 4 ölçümlü iki veri seti.
-- **Tarayıcı:** Uygun (zaten çalışıyor).
+- **Durum:** Kapatıldı. SciPy `ttest_rel` ve statsmodels
+  `multipletests("bonferroni")` ile üretilen bağımsız referanslara karşı
+  sınanıyor (`tests/unit/stats-tekrarli-ikili.test.ts`; referans üretici
+  `scripts/referans/tekrarli-ikili-referans.py`, sürümler ve toleranslar
+  `tests/fixtures/tekrarli-ikili-referans.json` içinde kayıtlı).
+- **Sonuç:** Eşleştirilmiş t ve Bonferroni düzeltmesi **doğru** —
+  ortalama farkı, t ve düzeltilmiş p toleranslar içinde birebir
+  eşleşti (üç ve dört ölçüm, anlamlı/anlamsız, negatif fark, sıra
+  değişimi, p tavanı).
+- **Yan ürün:** Sınır durumlarında iki kusur bulunup düzeltildi:
+  sıfır fark varyansında çiftin "anlamlı değil" görünmesi ve eşleşmeyen
+  uzunluğun sessizce kırpılması (bkz. `docs/analiz-envanteri.md`,
+  "Düzeltilen kusurlar").
+- **Sırada ne var:** Bu madde listeden düştü; öncelik sırası A2
+  (McDonald ω) ile başlıyor.
 
 ### A2. McDonald ω (omega)
 
@@ -228,8 +232,8 @@ boşluğu**.
 
 ## Öneri — sıra
 
-1. **A1** (`tekrarliIkiliKarsilastirmalar` testi) — yarım gün, en yüksek
-   getiri: var olan bir çıktının doğruluğunu güvence altına alır.
+1. ~~**A1** (`tekrarliIkiliKarsilastirmalar` testi)~~ — **tamamlandı
+   (23.11.2026);** hesap doğru çıktı, iki sınır durumu düzeltildi.
 2. **A2** (McDonald ω) — mevcut DFA altyapısının üstüne düşük maliyetle
    oturuyor, hakem talebi somut.
 3. **A3** (Dunn + Friedman post hoc) — parametrik tarafta kapalı olan

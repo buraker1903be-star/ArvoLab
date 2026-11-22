@@ -1601,12 +1601,39 @@ export default function DataAnalyzer({
             </div>
             {ikili.length ? (
               <div className="mt-sm">
-                <strong>{t({ tr: "İkili karşılaştırmalar (eşleştirilmiş t, Bonferroni)", en: "Pairwise comparisons (paired t, Bonferroni)" })}</strong>
+                <strong>
+                  {t({
+                    tr: "İkili karşılaştırmalar (eşleştirilmiş t, Bonferroni düzeltmesi)",
+                    en: "Pairwise comparisons (paired t, Bonferroni correction)",
+                  })}
+                </strong>
                 <ul className="muted text-sm">
                   {ikili.map((c) => (
                     <li key={`${c.a}-${c.b}`}>
-                      {c.a} — {c.b}: {t({ tr: "fark", en: "difference" })} {yazSayi(c.fark)}, {yazP(c.p)}
-                      {c.anlamli ? t({ tr: " — anlamlı", en: " — significant" }) : t({ tr: " — anlamlı değil", en: " — not significant" })}
+                      {c.a} — {c.b}: {t({ tr: "fark", en: "difference" })} {yazSayi(c.fark)}
+                      {/*
+                        HESAPLANAMAYAN ÇİFT "ANLAMLI DEĞİL" DEĞİLDİR. Farkların
+                        varyansı sıfırken (her katılımcıda tam olarak aynı
+                        değişim) t tanımsız; eskiden p boş basılıp satır
+                        "anlamlı değil" diye bitiyordu ve kullanıcı o çifti
+                        raporlamaktan vazgeçiyordu.
+                      */}
+                      {c.engel === null ? (
+                        <>
+                          , {yazP(c.p)}
+                          {c.anlamli ? t({ tr: " — anlamlı", en: " — significant" }) : t({ tr: " — anlamlı değil", en: " — not significant" })}
+                        </>
+                      ) : c.engel === "sabit-fark" ? (
+                        t({
+                          tr: " — t hesaplanamadı: fark bütün katılımcılarda aynı (varyans sıfır), p üretilemez.",
+                          en: " — t could not be computed: the difference is identical for every participant (zero variance), so no p is produced.",
+                        })
+                      ) : (
+                        t({
+                          tr: " — t hesaplanamadı: en az iki eşleşen gözlem gerekir.",
+                          en: " — t could not be computed: at least two matched observations are required.",
+                        })
+                      )}
                     </li>
                   ))}
                 </ul>

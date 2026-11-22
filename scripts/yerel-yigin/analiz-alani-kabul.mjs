@@ -162,6 +162,25 @@ const S11 = {};
   /* S12: ortak sütunu olmayan ikinci dosya ve üç ikili sütunlu dosya. */
   yaz("e", ["skor", "sure2", "takim"], (i) => [(30 + ((i * 11) % 50)).toFixed(1), (5 + ((i * 3) % 20)).toFixed(1), i % 2 ? "X" : "Y"]);
   yaz("f", ["once", "sonra", "ucuncu"], (i) => [i % 2 ? "evet" : "hayir", i % 3 ? "evet" : "hayir", i % 4 ? "var" : "yok"]);
+  /*
+    S13: tekrarlı ölçümler. Üç ölçüm; "sabit" sütunu ön testten TAM
+    OLARAK 3 puan yüksek (farkların varyansı sıfır) ve bir satırda
+    eksik veri var — eleme notunun çalıştığı da görülsün.
+  */
+  {
+    const satirlar = ["katilimci,on,son,izleme,sabit"];
+    const on = [10, 12, 11, 14, 13, 15, 9, 12, 13, 11, 10, 14];
+    const son = [12, 15, 13, 16, 15, 18, 11, 14, 16, 13, 12, 17];
+    const izleme = [15, 18, 17, 19, 19, 21, 13, 18, 19, 15, 14, 20];
+    for (let i = 0; i < on.length; i += 1) {
+      /* 4. satırda "son" eksik: liste bazlı eleme devreye girer. */
+      const sonDeger = i === 3 ? "" : son[i];
+      satirlar.push(`K${i + 1},${on[i]},${sonDeger},${izleme[i]},${on[i] + 3}`);
+    }
+    const p = path.join(KOK, `.tmp-s13-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.tekrarli = p;
+  }
 }
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
@@ -745,6 +764,56 @@ try {
     const b = await kutuDurumu("Sonraki ölçüm");
     return `${a.deger}/${b.deger} · bos:${await sayfa.locator(".analiz-eksik-alan").count()} · dugme:${await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).count()}`;
   }, "basari/ · bos:1 · dugme:0");
+
+  /* ================= S13: tekrarlı ölçümler sonrası ikili karşılaştırmalar =================
+     Hesap bağımsız referanslara karşı sınanıyor (tests/unit/stats-tekrarli-ikili.test.ts);
+     burada arayüzün o hesabı NASIL sunduğu doğrulanıyor. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("anova", "Tekrarlı Ölçümler ANOVA");
+  await yukle(S11.tekrarli);
+  const olcumSec = async (adlar) => {
+    const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: "Ölçümler" });
+    const kutular = alan.locator('.sutun-secimi-liste input[type="checkbox"]');
+    const etiketler = await alan.locator(".sutun-secimi-liste label span").allInnerTexts();
+    for (const ad of adlar) {
+      const i = etiketler.indexOf(ad);
+      if (i < 0) throw new Error(`ölçüm listesinde ${ad} yok: ${etiketler.join(",")}`);
+      await kutular.nth(i).check();
+    }
+    await sayfa.waitForTimeout(150);
+  };
+  await esit("S13a üç ölçümde ikili karşılaştırma tablosu çiziliyor", async () => {
+    await olcumSec(["on", "son", "izleme"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const satir = (metin.match(/—/g) ?? []).length;
+    return `${/İkili karşılaştırmalar/.test(metin)} · ${satir >= 3}`;
+  }, "true · true");
+  await esit("S13b düzeltmenin ADI tabloda yazılı", async () =>
+    (await sayfa.locator(".analiz-sonuc").innerText()), (v) => /eşleştirilmiş t, Bonferroni düzeltmesi/.test(v));
+  await esit("S13c eksik veri politikası sessiz değil: düşen satır yazılıyor", async () =>
+    (await sayfa.locator(".analiz-sonuc").innerText()), (v) => /1 satır eksik veri yüzünden analiz dışı bırakıldı/.test(v));
+  await cek(sayfa, "19-tekrarli-ikili-karsilastirmalar");
+  await esit("S13d üç ölçümde üç çift (k(k−1)/2)", async () => {
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("İkili karşılaştırmalar"));
+    return (bolum.match(/fark /g) ?? []).length;
+  }, 3);
+  /*
+    SIFIR FARK VARYANSI: "sabit" sütunu ön testten tam olarak 3 puan
+    yüksek. Eskiden bu çift "anlamlı değil" diye görünüyordu.
+  */
+  await esit("S13e sabit farklı çift 'anlamlı değil' demiyor, sebebini yazıyor", async () => {
+    await olcumSec(["sabit"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("İkili karşılaştırmalar"));
+    const sabitSatir = bolum.split("\n").find((x) => /on — sabit|sabit/.test(x) && /t hesaplanamadı/.test(x)) ?? "";
+    return `${/varyans sıfır/.test(sabitSatir)} · ${!/on — sabit.*anlamlı değil/.test(bolum)}`;
+  }, "true · true");
+  await cek(sayfa, "20-sabit-fark-hesaplanamadi");
 
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);
