@@ -37,6 +37,21 @@ function cevapUret(mesajlar) {
   if (/YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür/.test(hepsi) && /ARAS/.test(String(mesajlar.at(-1)?.content ?? ""))) {
     return { yanit: "Belirsiz atıflı bir cümle yazdım.", metin: "Bu görüş alanda tartışmalıdır (Aras, 2020)." };
   }
+  /*
+    Satır içi tamamlama (20.11.2026, M10 kabulü): istem "kaldığı yerden
+    sürdür" görevini taşır. İmleçten önceki metnin son sözcüğüne göre üç
+    davranış: "SAYI" → bağlamda olmayan bir sayı (sunucu düşürmeli),
+    "GECIKME" → 2,5 sn geç cevap (geç gelen cevap yanlış yere düşmemeli),
+    öteki her şey → kısa, sayısız, atıfsız bir devam. Dil istemdeki belge
+    dilinden: İngilizce belgede İngilizce devam.
+  */
+  if (/kaldığı yerden sürdür/.test(hepsi)) {
+    const son = (hepsi.match(/İMLEÇTEN ÖNCEKİ METİN:\n([\s\S]*?)\n\nGÖREV:/)?.[1] ?? "").trim();
+    if (/SAYI\s*$/.test(son)) return { yanit: "", metin: "katılımcıların yüzde 73'ü bunu doğruladı." };
+    if (/GECIKME\s*$/.test(son)) return { gecikme: 2500, yanit: "", metin: "geç gelen bir devam cümlesi." };
+    const ingilizce = /BELGENİN DİLİ: İngilizce/.test(hepsi);
+    return { yanit: "", metin: ingilizce ? "which shapes how students plan their study time." : "bu da öğrencilerin çalışma planlarını doğrudan etkiler." };
+  }
   if (/YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür/.test(hepsi)) {
     return { yanit: "Akran gruplarıyla ilgili kısa bir paragraf yazdım.", metin: "Akran çalışma grupları birinci sınıf öğrencilerinde yalnızlığı azaltıyor (Demir, 2019)." };
   }
@@ -63,7 +78,9 @@ http
       }
       const veri = JSON.parse(govde || "{}");
       fs.appendFileSync(KAYIT, `${JSON.stringify({ zaman: Date.now(), mesajlar: veri.messages })}\n`);
-      const icerik = JSON.stringify(cevapUret(veri.messages ?? []));
+      const { gecikme = 0, ...cevap } = cevapUret(veri.messages ?? []);
+      const icerik = JSON.stringify(cevap);
+      setTimeout(() => {
       yanit.writeHead(200, { "Content-Type": "application/json" });
       yanit.end(
         JSON.stringify({
@@ -74,6 +91,7 @@ http
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
         }),
       );
+      }, gecikme);
     });
   })
   .listen(PORT, "127.0.0.1", () => console.log(`model taklidi: http://127.0.0.1:${PORT}/v1 · kayıt ${KAYIT}`));

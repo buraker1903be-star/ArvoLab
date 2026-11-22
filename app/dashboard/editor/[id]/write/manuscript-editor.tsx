@@ -151,6 +151,7 @@ import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules"
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { calismaAdresi } from "@/lib/calisma-karti";
+import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
@@ -263,6 +264,15 @@ const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as Cita
   kapalıysa varsayılan geçerli.
 */
 const ONERI_TERCIHI = "arvolab:otomatik-oneri";
+/*
+  Deneme hesabının ayrı tercihi (21.11.2026): aynı tarayıcıda daha önce
+  açılmış abone tercihi deneme hesabına taşınıp öneriyi KENDİLİĞİNDEN
+  açmasın. Denemede her öneri isteği iki asistan hakkından birini yiyor;
+  açmak bilerek verilen bir karar olmalı.
+*/
+const ONERI_TERCIHI_DENEME = "arvolab:otomatik-oneri:deneme";
+/* Denemede açma iki adımlı: ilk tıklama bedeli söyler, bu süre içindeki ikinci tıklama açar. */
+const DENEME_ONAY_SURESI_MS = 15_000;
 const INCELEME_TERCIHI = "arvolab:inceleme-paneli";
 const TERCIH_OLAYI = "arvolab:editor-tercihi";
 function tercihAboneligi(degisti: () => void) {
@@ -326,6 +336,8 @@ interface ManuscriptEditorProps {
   etik?: EtikKaydi | null;
   /** Oturumdaki kullanıcı: yerel taslağın anahtarı ona bağlı (ortak bilgisayar). */
   kullaniciId: string | null;
+  /** Deneme hesabında kalan asistan hakkı; abone ve kurum üyesi için null. */
+  denemeKalan?: number | null;
   /** Belgenin dili (lib/belge-dili.ts): şekil/tablo etiketleri, atıf biçimi, kapak, yazım denetimi. */
   belgeDili?: Dil;
   /*
@@ -544,6 +556,7 @@ export default function ManuscriptEditor({
   projectId,
   etik = null,
   kullaniciId,
+  denemeKalan = null,
   belgeDili = "tr",
   acilacakMadde = null,
   asistanAcikBasla = false,
@@ -1454,8 +1467,18 @@ export default function ManuscriptEditor({
     değerinde okumak sunucu ile tarayıcının farklı çizmesine (hydration
     uyuşmazlığı) yol açardı. Değer bir dış kaynak gibi okunuyor.
   */
-  const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
-  const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
+  const denemede = denemeKalan !== null;
+  const oneriTercihi = denemede ? ONERI_TERCIHI_DENEME : ONERI_TERCIHI;
+  const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(oneriTercihi, false), () => false);
+  const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(oneriTercihi, acik), [oneriTercihi]);
+  /* Denemede açma onayı bekleniyorsa ilk tıklamanın zamanı (DENEME_ONAY_SURESI_MS). */
+  const [denemeOnayi, setDenemeOnayi] = useState<number | null>(null);
+  /* Onay süresi dolunca düğme "Öneri · onayla"da asılı kalmasın. */
+  useEffect(() => {
+    if (denemeOnayi === null) return;
+    const zamanlayici = window.setTimeout(() => setDenemeOnayi(null), DENEME_ONAY_SURESI_MS);
+    return () => window.clearTimeout(zamanlayici);
+  }, [denemeOnayi]);
   /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
@@ -1475,8 +1498,8 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", tus);
     };
   }, [odak, pdfCekmecesiAcik, escDurumu]);
-  const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
-  useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
+  const { durum: oneriDurumu, kalanDk: oneriAcilisDk, durumuSifirla: oneriDurumunuSifirla } = useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, belgeDili, atifStili: citationStyle });
+  const oneriDuraklatildi = otomatikOneri && oneriDurumu.tur === "duraklatildi";
 
   const toolbarState = useEditorState({ editor, selector: selectToolbarState });
 
@@ -3541,17 +3564,77 @@ export default function ManuscriptEditor({
             <FileText size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label={t({
+            label={oneriDuraklatildi && oneriDurumu.tur === "duraklatildi" ? t({
+              tr: `Otomatik öneri duraklatıldı: ${oneriDurumu.mesaj}${oneriAcilisDk ? ` Yaklaşık ${oneriAcilisDk} dk sonra kendiliğinden sürer.` : ""} Kapatmak için tıklayın.`,
+              en: `Automatic suggestions paused: ${oneriDurumu.mesaj}${oneriAcilisDk ? ` Resumes in about ${oneriAcilisDk} min.` : ""} Click to turn off.`,
+            }) : denemede ? t({
               tr: otomatikOneri
-                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri bir asistan hakkı kullanır; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
+                ? `Otomatik öneri açık (deneme hesabı): her öneri isteği ${DENEME_ASISTAN_HAKKI} deneme hakkınızdan birini kullanır; kalan: ${denemeKalan}. Kapatmak için tıklayın.`
+                : `Otomatik öneri kapalı. Deneme hesabında her öneri isteği — otomatik ya da Alt+/ ile — ${DENEME_ASISTAN_HAKKI} deneme hakkınızdan birini kullanır; kalan: ${denemeKalan}. Açmak için iki kez tıklayın.`,
+              en: otomatikOneri
+                ? `Automatic suggestions on (trial account): each suggestion request uses one of your ${DENEME_ASISTAN_HAKKI} trial runs; left: ${denemeKalan}. Click to turn off.`
+                : `Automatic suggestions off. On a trial account every suggestion request — automatic or Alt+/ — uses one of your ${DENEME_ASISTAN_HAKKI} trial runs; left: ${denemeKalan}. Click twice to turn on.`,
+            }) : t({
+              tr: otomatikOneri
+                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri AI kredinizden düşer; sohbetin saatlik hakkını kullanmaz. Alt+/ ile istediğiniz an isteyebilirsiniz.)"
                 : "Otomatik öneri kapalı. Alt+/ ile imlece öneri isteyin; Tab kabul eder, Esc vazgeçer. Açmak için tıklayın.",
               en: otomatikOneri
-                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses an assistant credit; press Alt+/ any time.)"
+                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses AI credits but not the chat's hourly limit; press Alt+/ any time.)"
                 : "Automatic suggestions off. Press Alt+/ for a suggestion at the cursor; Tab accepts, Esc dismisses. Click to turn on.",
             })}
-            metin={t({ tr: "Öneri", en: "Suggest" })}
+            metin={oneriDuraklatildi
+              ? t({ tr: oneriAcilisDk ? `Öneri · ${oneriAcilisDk} dk` : "Öneri · duraklatıldı", en: oneriAcilisDk ? `Suggest · ${oneriAcilisDk} min` : "Suggest · paused" })
+              : denemeOnayi !== null && !otomatikOneri
+                ? t({ tr: "Öneri · onayla", en: "Suggest · confirm" })
+                : t({ tr: "Öneri", en: "Suggest" })}
             active={otomatikOneri}
-            onClick={() => otomatikOneriAyarla(!otomatikOneri)}
+            onClick={() => {
+              oneriDurumunuSifirla();
+              const acik = !otomatikOneri;
+              /*
+                Deneme hesabı (21.11.2026): açmadan önce bedel söylenir.
+                İlk tıklama yalnızca uyarır ("Öneri · onayla"); 15 sn
+                içindeki ikinci tıklama açar. Tek tıklamayla açılsaydı ilk
+                otomatik istek, uyarı okunmadan iki haktan birini yerdi.
+                Kapatmak her zaman tek tıklama. Abonede davranış aynı.
+              */
+              if (acik && denemede) {
+                const simdi = Date.now();
+                if (denemeOnayi === null || simdi - denemeOnayi > DENEME_ONAY_SURESI_MS) {
+                  setDenemeOnayi(simdi);
+                  showToast(
+                    "info",
+                    t({
+                      tr: `Deneme hesabı: otomatik önerinin her isteği ${DENEME_ASISTAN_HAKKI} deneme hakkınızdan birini kullanır (kalan: ${denemeKalan}). Hak bitince asistan aboneliğe kadar kapanır. Yine de açmak için düğmeye bir kez daha tıklayın.`,
+                      en: `Trial account: every automatic suggestion request uses one of your ${DENEME_ASISTAN_HAKKI} trial runs (left: ${denemeKalan}). When they run out the assistant stays closed until you subscribe. Click the button once more to turn it on anyway.`,
+                    }),
+                  );
+                  return;
+                }
+              }
+              setDenemeOnayi(null);
+              /*
+                Geri bildirim (20.11.2026): düğme eskiden yalnızca modu
+                sessizce değiştiriyordu; tıklayan öğrenci bir öneri
+                bekliyor, hiçbir şey görmüyor ve "çalışmıyor" diyordu.
+              */
+              otomatikOneriAyarla(acik);
+              showToast(
+                "info",
+                acik && denemede
+                  ? t({
+                      tr: `Otomatik öneri açık. Her öneri isteği bir deneme hakkı kullanır (kalan: ${denemeKalan}). Tab (telefonda “Ekle”) kabul eder, Esc kapatır; kabul etmek ek hak kullanmaz.`,
+                      en: `Automatic suggestions on. Each suggestion request uses one trial run (left: ${denemeKalan}). Tab (“Add” on phones) accepts, Esc dismisses; accepting uses nothing extra.`,
+                    })
+                  : acik
+                  ? t({
+                      tr: "Otomatik öneri açık: paragrafın sonunda yazmayı bıraktığınızda gri bir devam görünür. Tab (telefonda “Ekle”) kabul eder, Esc kapatır.",
+                      en: "Automatic suggestions on: when you pause at the end of a paragraph a grey continuation appears. Tab (“Add” on phones) accepts, Esc dismisses.",
+                    })
+                  : t({ tr: "Otomatik öneri kapalı. Alt+/ ile istediğiniz an öneri isteyebilirsiniz.", en: "Automatic suggestions off. Press Alt+/ any time for a suggestion." }),
+              );
+              editor?.commands.focus();
+            }}
           >
             <WandSparkles size={16} />
           </ToolbarButton>

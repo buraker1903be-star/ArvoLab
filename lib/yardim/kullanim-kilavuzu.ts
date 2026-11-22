@@ -463,8 +463,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "The \"Authorship\" card in the right panel shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
       },
       {
-        tr: "Satır içi öneri: editörde Alt+/ imlecin önüne gri bir devam önerir; Tab kabul eder, Esc ya da yazmaya devam etmek vazgeçer. Araç çubuğundaki \"Öneri\" açıksa yazma durduğunda öneri kendiliğinden gelir. Her öneri bir asistan hakkı kullanır; öneri de kütüphanenizde olmayan kaynağa atıf yapamaz ve metninizde olmayan sayı yazamaz.",
-        en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With \"Suggest\" on the toolbar turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit; suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
+        tr: "Satır içi öneri: editörde Alt+/ imlecin önüne gri bir devam önerir; Tab kabul eder, Esc ya da yazmaya devam etmek vazgeçer. Araç çubuğundaki \"Öneri\" açıksa yazma durduğunda öneri kendiliğinden gelir. Her öneri bir asistan hakkı kullanır (ücretsiz denemede iki deneme hakkından biri; bu yüzden denemede otomatik öneri kapalı başlar ve açarken onay istenir); öneri de kütüphanenizde olmayan kaynağa atıf yapamaz ve metninizde olmayan sayı yazamaz.",
+        en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With \"Suggest\" on the toolbar turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit (on the free trial, one of the two trial runs; that is why automatic suggestions start off on the trial and ask for confirmation when turned on); suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
       },
       {
         tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"İmlece ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
@@ -497,8 +497,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Every number the assistant gives must appear in your input; if one doesn't, the whole answer is withheld.",
       },
       {
-        tr: `Kullanım hakkı: saatte en fazla ${SAATLIK_HAK} istek; aylık kredi ve satın alınan ek kredi Abonelik ve Kredi sayfasında görünür.`,
-        en: `Usage: at most ${SAATLIK_HAK} requests an hour; your monthly credits and any extra credits you buy are shown on the Subscription and Credits page.`,
+        tr: `Kullanım hakkı: saatte en fazla ${SAATLIK_HAK} istek (satır içi öneri bu sayıya girmez, yalnızca krediden düşer); aylık kredi ve satın alınan ek kredi Abonelik ve Kredi sayfasında görünür.`,
+        en: `Usage: at most ${SAATLIK_HAK} requests an hour (inline suggestions don't count towards this; they only use credits); your monthly credits and any extra credits you buy are shown on the Subscription and Credits page.`,
       },
       {
         tr: `Ücretsiz deneme süresinde asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; sonra asistan, aboneliğinizi başlatana kadar kapanır. Editör, kaynaklar ve analiz deneme boyunca açık kalır.`,

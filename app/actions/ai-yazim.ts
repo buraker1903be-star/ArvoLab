@@ -3,8 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { aiHataMesaji, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
+import { asistanHakkiAcilisiSn, asistanHakkiVar, asistanKapisi, tamamlamaAraligiUygun } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
+import { TAMAMLAMA_EN_AZ_ARALIK_SN, saatlikHakaSayilir } from "@/lib/ai/sinirlar";
+import { bulguIddiasi, ilkCumle } from "@/lib/ai/yazim-metni";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 import { belgeDili } from "@/lib/belge-dili";
 import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
@@ -55,6 +57,14 @@ export type YazimYaniti = {
   metin?: string;
   kayitId?: string | null;
   krediUyarisi?: string;
+  /**
+   * Sınır yüzünden üretilmediyse NEDEN (20.11.2026): satır içi öneri bunu
+   * görünür bir duruma çevirir ("duraklatıldı · 12 dk"), sessizce bozuk
+   * görünmez. aralik: en az aralık doldu, kısa süre sonra yeniden denenir;
+   * saatlik: kullanıcı başına saatlik hak; kapi: abonelik, kredi ya da kurulum;
+   * deneme: deneme hakkı bitti.
+   */
+  sinir?: { tur: "aralik" | "saatlik" | "kapi" | "deneme"; tekrarSaniye?: number | null };
 };
 
 const temizle = (deger: unknown, n: number) => (typeof deger === "string" ? deger.slice(0, n) : "");
@@ -74,7 +84,11 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
     return { hata: t({ tr: "Öneri için imleçten önce metin olmalı.", en: "There must be text before the cursor for a suggestion." }) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli, sinir: { tur: kapi.odemeGerekli ? "deneme" : "kapi" } };
+
+  /* Tamamlamanın en az aralığı saatlik haktan ÖNCE: frene takılan istek hak tüketmesin. */
+  if (gorev === "tamamla" && !(await tamamlamaAraligiUygun(kapi.kullaniciId)))
+    return { hata: t({ tr: "Öneriler çok sık istendi; birkaç saniye sonra yeniden denenecek.", en: "Suggestions were requested too often; retrying in a few seconds." }), sinir: { tur: "aralik", tekrarSaniye: TAMAMLAMA_EN_AZ_ARALIK_SN } };
 
   // RLS: başkasının çalışması okunmaz; bağlam da kayıt da ona iliştirilmez.
   const calisma = await calismaBaglami(girdi.projectId);
@@ -131,8 +145,15 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
       .map((b) => b.slice(0, 120)),
   });
 
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
-  if (hakHatasi) return { hata: hakHatasi };
+  /*
+    Tamamlama saatlik haktan düşmez (lib/ai/sinirlar.ts →
+    saatlikHakaSayilir, gerekçe orada). Kapı (abonelik, deneme, kredi)
+    ve en az aralık yukarıda her görev için çalıştı; kredi kayıttan düşer.
+  */
+  if (saatlikHakaSayilir(gorev)) {
+    const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
+    if (hakHatasi) return { hata: hakHatasi, sinir: { tur: "saatlik", tekrarSaniye: await asistanHakkiAcilisiSn(kapi.kullaniciId) } };
+  }
 
   const basladi = Date.now();
   const ortak = { kullaniciId: kapi.kullaniciId, calismaId: calisma.id, yetenek: "yazim" as const, baglam: kaynak, basladi };
@@ -166,6 +187,26 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
                 en: `The text wasn't shown because the assistant wrote a number that isn't in the context (${ayrinti}). Add the data to your request or text and try again.`,
               }),
       };
+    }
+
+    /*
+      Satır içi önerinin bulgu denetimi (20.11.2026). Gösterilecek olan
+      yalnızca ilk cümle (istemci ilkCumle ile keser), denetlenen de o.
+      Red nedeni sütununun izinli değerleri arasında "bulgu" yok; yeni
+      değer için migration açmak yerine neden boş, ayrıntı bulgulara
+      yazılıyor (kayıt yine "rejected" ve sayılabilir).
+    */
+    if (gorev === "tamamla") {
+      const iddia = bulguIddiasi(ilkCumle(sonuc.metin.replace(/\s+/g, " ").trim()), oncesi ?? "");
+      if (iddia) {
+        await asistanKaydet({ ...ortak, durum: "rejected", model: yanit.model, cikti: yanit.metin, bulgular: { gorev, neden: "bulgu", ayrinti: [iddia] } });
+        return {
+          hata: t({
+            tr: `Öneri, metinde dayanağı olmayan bir bulgu iddiası taşıdığı için gösterilmedi ("${iddia.slice(0, 60)}").`,
+            en: `The suggestion wasn't shown because it claimed a finding with no basis in your text ("${iddia.slice(0, 60)}").`,
+          }),
+        };
+      }
     }
 
     /*
