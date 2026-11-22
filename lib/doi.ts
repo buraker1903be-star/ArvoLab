@@ -1,4 +1,6 @@
 // DOI → kaynak bilgileri (Crossref yanıtını literatür kaynağına çevirir; saf, test edilebilir).
+import { htmlVarliklariniCoz } from "./html-varlik";
+import { splitAuthors } from "./citation-format";
 
 export const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 
@@ -80,14 +82,10 @@ const TYPE_MAP: Record<string, DoiMetadata["sourceType"]> = {
   "report-component": "report",
 };
 
+/* Varlık çözme tek yerde (lib/html-varlik.ts). Eskiden burada yalnızca
+   &amp; &lt; &gt; tek kez çözülüyordu: "&amp;amp;" künyeye "&amp;" diye giriyordu. */
 const clean = (value: string | undefined | null, max: number) => {
-  const text = (value ?? "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
+  const text = htmlVarliklariniCoz(value);
   return text ? text.slice(0, max) : null;
 };
 
@@ -106,14 +104,26 @@ export const initials = (given: string) =>
 export function formatAuthors(people: { given?: string; family?: string; name?: string }[] | undefined): string | null {
   const names = (people ?? [])
     .map((person) => {
-      if (person.family) return `${person.family.trim()}${person.given ? `, ${initials(person.given)}` : ""}`;
-      return person.name?.trim() ?? "";
+      const family = htmlVarliklariniCoz(person.family);
+      const given = htmlVarliklariniCoz(person.given);
+      if (family) return `${family}${given ? `, ${initials(given)}` : ""}`;
+      /* Kurum ({name}) ya da yalnızca given'ı olan tek adlı yazar: olduğu gibi,
+         ters çevrilmeden. Eskiden yalnızca given'ı olan kişi düşüyordu. */
+      return htmlVarliklariniCoz(person.name) || given;
     })
     .filter(Boolean)
     .slice(0, 20);
   if (names.length === 0) return null;
   if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")}, & ${names[names.length - 1]}`;
+  /*
+    APA dizisi ("A, B., C, & D") yalnızca geri bölünebiliyorsa (20.11.2026).
+    Ortada kurum ya da tek adlı yazar varsa ("van der Berg, J., World Health
+    Organization, Plato, & Madonna") virgül sınırı tanınmıyor, ad öncekiyle
+    birleşip "given" alanına düşüyordu. O durumda ayırıcı "; ": her biçimde
+    tek anlamlı bölünür, APA çıktısı stilYazarlari'nda yeniden dizi olur.
+  */
+  const apa = `${names.slice(0, -1).join(", ")}, & ${names[names.length - 1]}`;
+  return splitAuthors(apa).length === names.length ? apa : names.join("; ");
 }
 
 const yearOf = (...dates: (CrossrefDate | undefined)[]) => {

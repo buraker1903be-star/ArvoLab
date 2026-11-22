@@ -1,6 +1,7 @@
 "use client";
 
 import { ornekKalibi } from "@/lib/atif/tyk";
+import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
@@ -2617,11 +2618,13 @@ export default function ManuscriptEditor({
       dil: belgeDili,
       hazir,
     });
-    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
+    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor.
+       Atıf EKLENDİ: bildirim "info". Eskiden "error" türündeydi ve başarılı bir
+       ekleme kırmızı "İşlem tamamlanamadı" başlığıyla gösteriliyordu (20.11.2026). */
     const eksik = addedReference ? eksikAlanlar(source, dil) : [];
     const eksikMetni = eksik.join(", ");
     showToast(
-      eksik.length ? "error" : "success",
+      eksik.length ? "info" : "success",
       eksik.length
         ? t({
             tr: `${citation} eklendi; künyede eksik: ${eksikMetni}. Literatür'den kaynağı tamamlayın.`,
@@ -4258,18 +4261,22 @@ export default function ManuscriptEditor({
           <section className="sorun-grubu" aria-label={t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}>
             <header>
               <strong>{t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}</strong>
-              {checkResult.atif.referenceSectionFound && checkResult.atif.complianceScore !== null ? (
-                <span
-                  className="status-pill"
-                  data-tone={
-                    checkResult.atif.complianceScore >= 85 ? "success" : checkResult.atif.complianceScore >= 60 ? "warning" : "danger"
-                  }
-                >
-                  {t({
-                    tr: `${checkResult.stil.ad} uyum ${checkResult.atif.complianceScore}/100`,
-                    en: `${checkResult.stil.ad} compliance ${checkResult.atif.complianceScore}/100`,
-                  })}
-                </span>
+              {/* "uyum /100" yerine açık sorun sayısı (20.11.2026): puan biçim
+                  uyarılarını saymadığı için uyarı varken 100 görünüyordu. */}
+              {checkResult.atif.referenceSectionFound ? (
+                (() => {
+                  const ozet = kaynakcaOzeti(checkResult.atif);
+                  return (
+                    <span className="status-pill" data-tone={ozet.ton}>
+                      {ozet.acikSorun
+                        ? t({
+                            tr: `${ozet.kunye} künyede ${ozet.acikSorun} açık sorun`,
+                            en: `${ozet.acikSorun} open ${ozet.acikSorun === 1 ? "issue" : "issues"} in ${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"}`,
+                          })
+                        : t({ tr: `${ozet.kunye} künye · açık sorun yok`, en: `${ozet.kunye} references · no open issues` })}
+                    </span>
+                  );
+                })()
               ) : null}
             </header>
             {!checkResult.atif.referenceSectionFound ? (
