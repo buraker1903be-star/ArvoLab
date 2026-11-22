@@ -207,7 +207,10 @@ export async function GET(
         { status: 500 }
       );
     }
-    return NextResponse.json({ downloadUrl: imzali.signedUrl, fileName: dosyaAdi }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { downloadUrl: imzali.signedUrl, fileName: dosyaAdi, guncellendi: manuscript.updated_at ?? null },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   return new NextResponse(new Uint8Array(buffer), {
@@ -215,6 +218,9 @@ export async function GET(
       "Content-Type": WORD_TURU,
       "Content-Disposition": contentDisposition(project.title ?? "arvolab-calisma"),
       "Cache-Control": "no-store",
+      /* Dosyanın hangi kayıttan üretildiği: tarayıcıda bundan YENİ kaydedilmemiş
+         taslak varsa indirme yapılmaz (word-indir.ts, 20.11.2026). */
+      ...(manuscript.updated_at ? { "X-Belge-Guncellendi": String(manuscript.updated_at) } : {}),
     },
   });
 }
