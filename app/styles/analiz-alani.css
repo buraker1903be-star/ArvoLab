@@ -439,3 +439,13 @@
   .analiz-merkez { gap: 8px; }
   .analiz-alan { gap: 8px; }
 }
+
+/* ---------- Uygun sütun yok: açık boş durum, hesap başlatılmıyor ---------- */
+.analiz-eksik-alan {
+  display: grid; gap: 6px; margin-top: 16px; padding: 12px 14px;
+  border: 1px solid var(--warning); border-radius: var(--kart-r); background: var(--surface-2);
+}
+.analiz-eksik-alan > b { font-size: var(--os5-fs-govde); }
+.analiz-eksik-alan ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.analiz-eksik-alan li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
+.analiz-eksik-alan > p { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }

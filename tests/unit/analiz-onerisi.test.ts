@@ -266,14 +266,16 @@ describe("bağımsız / tekrarlı ayrımı", () => {
 });
 
 describe("eksik bilgi aday listesini daraltmaz", () => {
-  test("ölçüm düzeyi bilinmiyorsa parametrik VE sıra temelli adaylar birlikte", () => {
+  test("ölçüm düzeyi bilinmiyorsa parametrik, sıra temelli VE kategorik adaylar birlikte", () => {
     const o = oner({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "bagimsiz", grupSayisi: "iki" });
-    assert.deepEqual(o.adaylar.map((a) => a.tur), ["ttest", "mannwhitney"]);
+    /* Kategorik aday da listede: ayrıntı "bilinmeyen sonuç türü" bölümünde. */
+    assert.deepEqual(o.adaylar.map((a) => a.tur), ["ttest", "mannwhitney", "chisquare"]);
     assert.ok(o.sinirlar.some((s) => /ölçüm düzeyine karar verin/i.test(s.tr)));
   });
 
   test("normallik sonucuna göre otomatik seçim yok: iki aday da listede kalır", () => {
     const o = oner({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "tekrarli", grupSayisi: "ucDahaCok" });
+    /* Üç tekrarlı ölçümde kategorik karşılık (Cochran Q) ArvoLab'da yok. */
     assert.deepEqual(o.adaylar.map((a) => a.tur), ["tekrarlianova", "friedman"]);
   });
 
@@ -303,6 +305,113 @@ describe("eksik bilgi aday listesini daraltmaz", () => {
       turleri({ amac: "fark", sonucTuru: "surekli", dagilim: "uygun", olcumDuzeni: "bagimsiz", grupSayisi: "ucDahaCok", faktorSayisi: "tek", kovaryat: BILMIYORUM }),
       ["anova", "ancova"],
     );
+  });
+});
+
+/*
+  "BİLMİYORUM" UYUMLU ADAYI ELEMİYOR (23.11.2026 düzeltmesi).
+
+  Sonuç türü bilinmediğinde bazı dallar yalnızca SAYISAL adayları
+  döndürüyordu: "Bilmiyorum" diyen kullanıcı, sonucu aslında kategorik
+  olsa bile Ki-kare'yi ya da McNemar'ı hiç göremiyordu. Bilinmeyen cevabı
+  bilinen SÜREKLİ sonuç gibi ele almak, "eksik bilgi listeyi daraltmaz"
+  kuralını da çiğniyordu.
+
+  Aşağıdaki testler BİLİNEN dalların adaylarını "Bilmiyorum" dalıyla
+  karşılaştırıyor: desteklenen hiçbir aday sessizce kaybolmamalı.
+*/
+describe("bilinmeyen sonuç türü uyumlu adayları elemiyor", () => {
+  const bilinmiyor = (ek: Yanitlar) => new Set(turleri({ amac: "fark", sonucTuru: BILMIYORUM, ...ek }));
+  const bilinen = (tur: string, ek: Yanitlar) =>
+    new Set(turleri({ amac: "fark", sonucTuru: tur, ...(tur === "surekli" ? { dagilim: "uygun" } : {}), ...(tur === "kategorik" ? { kategoriSayisi: "iki" } : {}), ...ek }));
+
+  const desen = (ad: string, ek: Yanitlar) => {
+    test(`${ad}: bilinen dalların adayları "Bilmiyorum" dalında da var`, () => {
+      const belirsiz = bilinmiyor(ek);
+      const kayip: string[] = [];
+      for (const tur of ["surekli", "sirali", "kategorik"]) {
+        for (const aday of bilinen(tur, ek)) {
+          if (!belirsiz.has(aday)) kayip.push(`${tur} → ${aday}`);
+        }
+      }
+      assert.deepEqual(kayip, [], `"Bilmiyorum" dalında kaybolan aday: ${kayip.join(", ")}`);
+    });
+  };
+
+  desen("iki bağımsız grup", { olcumDuzeni: "bagimsiz", grupSayisi: "iki" });
+  desen("üç bağımsız grup", { olcumDuzeni: "bagimsiz", grupSayisi: "ucDahaCok" });
+  desen("iki tekrarlı ölçüm", { olcumDuzeni: "tekrarli", grupSayisi: "iki" });
+
+  test("iki bağımsız grupta Ki-Kare olasılığı kaybolmuyor", () => {
+    assert.deepEqual(
+      turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "bagimsiz", grupSayisi: "iki" }),
+      ["ttest", "mannwhitney", "chisquare"],
+    );
+  });
+
+  test("iki tekrarlı ölçümde McNemar olasılığı kaybolmuyor", () => {
+    assert.deepEqual(
+      turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "tekrarli", grupSayisi: "iki" }),
+      ["pairedttest", "wilcoxon", "mcnemar"],
+    );
+  });
+
+  test("kategorik adayın ÖN KOŞULU açıkça yazılı (sessizce eklenmiyor)", () => {
+    const bagimsiz = oner({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "bagimsiz", grupSayisi: "iki" });
+    assert.ok(bagimsiz.sinirlar.some((s) => /ÖN KOŞUL/.test(s.tr) && /Ki-Kare/.test(s.tr)));
+    const tekrarli = oner({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "tekrarli", grupSayisi: "iki" });
+    assert.ok(tekrarli.sinirlar.some((s) => /İKİ ÖN KOŞUL/.test(s.tr) && /tam olarak iki kategorisi/.test(s.tr)));
+  });
+
+  /* KISITLAR KORUNUYOR: desteklenmeyen desende kategorik aday EKLENMİYOR. */
+  test("üç tekrarlı ölçümde McNemar eklenmiyor (Cochran Q yok)", () => {
+    const adaylar = turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "tekrarli", grupSayisi: "ucDahaCok" });
+    assert.deepEqual(adaylar, ["tekrarlianova", "friedman"]);
+    assert.ok(!adaylar.includes("mcnemar"));
+  });
+
+  test("tek örneklemde kategorik aday eklenmiyor", () => {
+    assert.deepEqual(turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "bagimsiz", grupSayisi: "tek" }), ["tekorneklem"]);
+  });
+
+  test("düzen de bilinmiyorsa iki kategorik aday da listede", () => {
+    const adaylar = turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: BILMIYORUM, grupSayisi: "iki" });
+    assert.deepEqual(adaylar, ["ttest", "mannwhitney", "pairedttest", "wilcoxon", "chisquare", "mcnemar"]);
+  });
+
+  test("düzen bilinmiyor + üç grup: McNemar yok, Ki-Kare var", () => {
+    const adaylar = turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: BILMIYORUM, grupSayisi: "ucDahaCok" });
+    assert.ok(adaylar.includes("chisquare"));
+    assert.ok(!adaylar.includes("mcnemar"));
+  });
+
+  test("ilişkide de kategorik karşılık kaybolmuyor", () => {
+    assert.deepEqual(
+      turleri({ amac: "iliski", sonucTuru: BILMIYORUM, kontrolDegiskeni: "yok" }),
+      ["correlation", "spearman", "chisquare"],
+    );
+    /* Bilinen kategorik dalın adayı da listede. */
+    assert.ok(turleri({ amac: "iliski", sonucTuru: BILMIYORUM, kontrolDegiskeni: "yok" })
+      .includes(turleri({ amac: "iliski", sonucTuru: "kategorik" })[0]));
+  });
+
+  test("kontrol değişkeni istenirse Ki-Kare ÖNERİLMİYOR (katmanlı karşılığı yok)", () => {
+    const o = oner({ amac: "iliski", sonucTuru: BILMIYORUM, kontrolDegiskeni: "var" });
+    assert.ok(!o.adaylar.some((a) => a.tur === "chisquare"));
+    assert.ok(o.sinirlar.some((s) => /Mantel-Haenszel/.test(s.tr)));
+  });
+
+  test("bilinmeyen cevap bilinen SÜREKLİ sonuç gibi ele alınmıyor", () => {
+    const belirsiz = turleri({ amac: "fark", sonucTuru: BILMIYORUM, olcumDuzeni: "bagimsiz", grupSayisi: "iki" });
+    const surekli = turleri({ amac: "fark", sonucTuru: "surekli", dagilim: "uygun", olcumDuzeni: "bagimsiz", grupSayisi: "iki" });
+    assert.notDeepEqual(belirsiz, surekli);
+    assert.ok(belirsiz.length > surekli.length, "belirsizlik listeyi genişletmeli");
+  });
+
+  /* İKİLİ SONUÇ KISITI "Bilmiyorum" dalında da korunuyor. */
+  test("kategori sayısı ÜÇ bilindiğinde McNemar ve ikili lojistik yok", () => {
+    assert.deepEqual(turleri({ amac: "fark", sonucTuru: "kategorik", kategoriSayisi: "ucDahaCok", olcumDuzeni: "tekrarli", grupSayisi: "iki" }), []);
+    assert.deepEqual(turleri({ amac: "yordama", sonucTuru: "kategorik", kategoriSayisi: "ucDahaCok" }), []);
   });
 });
 

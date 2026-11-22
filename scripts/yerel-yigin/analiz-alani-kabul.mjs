@@ -137,6 +137,29 @@ const BUYUK_YOLU = path.join(KOK, `.tmp-analiz-buyuk-${ek}.csv`);
   for (let i = 0; i < 20000; i++) parcalar.push(satir(i));
   fs.writeFileSync(BUYUK_YOLU, parcalar.join("\n"), "utf8");
 }
+/*
+  S11 SENARYO DOSYALARI (23.11.2026). Değişken seçiminin analize göre
+  doğrulanması: ekranda görünen sütun ile hesabın kullandığı değer
+  ayrışabiliyordu.
+    A: sayısal yordayıcılar + TEK ikili kategorik sonuç (lojistik)
+    B: iki ikili sütun (McNemar)
+    C: A ile ORTAK SÜTUNU OLMAYAN dosya (veri değiştirme)
+    D: hiç ikili sütun yok (boş durum)
+*/
+const S11 = {};
+{
+  const yaz = (ad, basliklar, satirUret) => {
+    const satirlar = [basliklar.join(",")];
+    for (let i = 0; i < 40; i++) satirlar.push(satirUret(i).join(","));
+    const p = path.join(KOK, `.tmp-s11-${ad}-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11[ad] = p;
+  };
+  yaz("a", ["yas", "puan", "sure", "basari"], (i) => [18 + (i % 12), (50 + ((i * 7) % 40)).toFixed(1), (10 + ((i * 3) % 25)).toFixed(1), i % 3 ? "gecti" : "kaldi"]);
+  yaz("b", ["puan", "once", "sonra"], (i) => [(50 + ((i * 7) % 40)).toFixed(1), i % 2 ? "evet" : "hayir", i % 3 ? "evet" : "hayir"]);
+  yaz("c", ["skor", "sonucDurumu"], (i) => [(30 + ((i * 11) % 50)).toFixed(1), i % 2 ? "olumlu" : "olumsuz"]);
+  yaz("d", ["puan", "sure", "sinif"], (i) => [(50 + ((i * 7) % 40)).toFixed(1), (10 + ((i * 3) % 25)).toFixed(1), ["9", "10", "11", "12"][i % 4]]);
+}
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
 fs.writeFileSync(BOZUK_YOLU, "ad;soyad\nAli\nVeli;Yilmaz;fazla\n", "utf8");
@@ -545,6 +568,102 @@ try {
   }, false);
   await cek(sayfa, "11-kaydedilen-analizler");
 
+  /* ================= S11: değişken seçiminin analize göre doğrulanması =================
+     Hatanın kendisi: ekranda görünen sütun ile state'teki değer ayrışıyordu.
+     Kontrollü bir <select>'in value'su hiçbir seçeneğe uymazsa tarayıcı İLK
+     seçeneği gösterir ama React state değişmez; ekran doğru görünürken hesap
+     düşer ve kullanıcı ekrana bakarak bunu düzeltemez. Bu yüzden her senaryoda
+     hem kutunun gösterdiği hem HESABIN KULLANDIĞI değer (künye) sınanıyor. */
+  const kutuDurumu = async (etiket) =>
+    await sayfa.evaluate((et) => {
+      const l = [...document.querySelectorAll(".analiz-veri-govde > .project-form-grid label")]
+        .find((x) => (x.querySelector("span")?.textContent || "").includes(et));
+      if (!l) return "etiket yok";
+      const sel = l.querySelector("select");
+      if (!sel) return "select yok";
+      return { deger: sel.value, gorunen: sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent.trim() : "(hiç)" };
+    }, etiket);
+  const yukle = async (p) => {
+    await sayfa.locator('.dropzone input[type="file"]').setInputFiles(p);
+    await sayfa.waitForSelector(".analiz-veri-serit", { timeout: 25000 });
+    await sayfa.waitForTimeout(250);
+  };
+
+  /* (a) ÖNCE lojistik seç, SONRA dosya yükle. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("iliski", "İkili Lojistik Regresyon");
+  await yukle(S11.a);
+  await esit("S11a lojistik: bağımlı değişken iki kategorili sütundan, görünen = state", async () => {
+    const k = await kutuDurumu("Bağımlı değişken");
+    return `${k.deger} · ${/^basari/.test(k.gorunen)}`;
+  }, "basari · true");
+  await esit("S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor", async () => {
+    const yordayicilar = sayfa.locator("fieldset.sutun-secimi", { hasText: "Yordayıcı" });
+    await yordayicilar.locator('.sutun-secimi-liste input[type="checkbox"]').first().check();
+    await sayfa.waitForTimeout(150);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    return (await sayfa.locator(".analiz-sonuc-kunye").innerText()).replace(/\n/g, " ");
+  }, (v) => /bağımlı değişken basari/.test(v));
+
+  /* (b) ÖNCE McNemar seç, SONRA iki ikili sütunlu dosya. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("parametrik", "McNemar Testi");
+  await yukle(S11.b);
+  await esit("S11b McNemar: iki AYRI geçerli sütun seçiliyor", async () => {
+    const once = await kutuDurumu("Önceki ölçüm");
+    const sonra = await kutuDurumu("Sonraki ölçüm");
+    return `${once.deger}/${sonra.deger} · farkli:${once.deger !== sonra.deger} · gorunen:${/^once/.test(once.gorunen) && /^sonra/.test(sonra.gorunen)}`;
+  }, "once/sonra · farkli:true · gorunen:true");
+  await esit("S11b2 McNemar hesabı çalışıyor", async () => {
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    return (await sayfa.locator(".analiz-sonuc").innerText()).includes("McNemar");
+  }, true);
+
+  /* (c) Veri değiştir: yeni dosyada eski sütun adları YOK. */
+  await esit("S11c veri değişince seçimler yeni sütunlara yenileniyor", async () => {
+    sayfa.once("dialog", async (dl) => { await dl.accept(); });
+    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
+    await sayfa.waitForTimeout(500);
+    await yukle(S11.c);
+    const once = await kutuDurumu("Önceki ölçüm");
+    return `${once.deger} · ${/^sonucDurumu/.test(once.gorunen)}`;
+  }, "sonucDurumu · true");
+  await esit("S11c2 ikinci sütun bulunamadığı için hesap engelleniyor", async () => {
+    return `${await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).count()} · ${await sayfa.locator(".analiz-eksik-alan").count()}`;
+  }, "0 · 1");
+
+  /* (d) Uygun ikili sütun yok: görünüm ve state tutarlı, hesap engelli. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("parametrik", "McNemar Testi");
+  await yukle(S11.d);
+  await esit("S11d uygun sütun yok: state boş, ekranda açık boş durum", async () => {
+    const k = await kutuDurumu("Önceki ölçüm");
+    const bos = await sayfa.locator(".analiz-eksik-alan").innerText();
+    return `${k.deger === ""} · ${/İki kategorili sütun yok/.test(k.gorunen)} · ${/çalıştırılamıyor/.test(bos)} · ${await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).count()}`;
+  }, "true · true · true · 0");
+  await esit("S11d2 boş durum ne yapılacağını söylüyor", async () =>
+    (await sayfa.locator(".analiz-eksik-alan").innerText()), (v) => /başka bir analiz seçebilir/.test(v) && /Veriyi değiştir/.test(v));
+
+  /* (e) ÖNCE dosya, SONRA analiz: eski akış bozulmadı. */
+  await git(sayfa, ANALIZ_YOLU);
+  await yukle(S11.a);
+  await esit("S11e önce dosya sonra analiz akışı da doğru seçiyor", async () => {
+    await analizSec("iliski", "İkili Lojistik Regresyon");
+    const k = await kutuDurumu("Bağımlı değişken");
+    return `${k.deger} · ${/^basari/.test(k.gorunen)}`;
+  }, "basari · true");
+  await esit("S11e2 geçerli bir seçim analiz değişiminde KORUNUYOR", async () => {
+    await analizSec("ttest", "Bağımsız Örneklem t-Testi");
+    const kutu = sayfa.locator("label").filter({ hasText: "Sayısal değişken" }).locator("select").first();
+    await kutu.selectOption({ label: "sure" });
+    await sayfa.waitForTimeout(150);
+    /* Mann-Whitney de sayısal havuz kullanıyor: seçim değişmemeli. */
+    await analizSec("parametrik", "Mann-Whitney U Testi");
+    return await sayfa.locator("label").filter({ hasText: "Sayısal değişken" }).locator("select").first().inputValue();
+  }, "sure");
+
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);
   for (const g of [1440, 1280, 768]) {
@@ -717,6 +836,7 @@ try {
   fs.rmSync(VERI_YOLU, { force: true });
   fs.rmSync(BOZUK_YOLU, { force: true });
   fs.rmSync(BUYUK_YOLU, { force: true });
+  for (const p of Object.values(S11)) fs.rmSync(p, { force: true });
 }
 
 const gecen = sonuclar.filter((s) => s.durum === "PASS").length;

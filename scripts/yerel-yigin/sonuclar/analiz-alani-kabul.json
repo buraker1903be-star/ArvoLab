@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-22T19:51:36.155Z",
-  "head": "bd74b0b834955b1df815fc957f22173101dfc501",
-  "buildId": "by3nHKYH1Um2kROOeAY3k",
+  "tarih": "2026-11-22T20:41:05.563Z",
+  "head": "433f6e8aa3d799bd36f52ae4ee5fad0d5a4f2af1",
+  "buildId": "F2x5spykZ9QBqc8R-EG-1",
   "uygulama": "http://localhost:3133",
-  "gecen": 78,
+  "gecen": 88,
   "dusen": 0,
   "sonuclar": [
     {
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-cb6d43.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-d0b5b4.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-cb6d43.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d0b5b4.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-cb6d43.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d0b5b4.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "f383a1e3-1478-403b-bf1d-1f60be9e9b78"
+      "not": "785e515a-4404-4492-8b8f-1d3b989d39b7"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -300,6 +300,56 @@
       "ad": "S8g öteki çalışmada bu kayıt GÖRÜNMÜYOR",
       "durum": "PASS",
       "not": "false"
+    },
+    {
+      "ad": "S11a lojistik: bağımlı değişken iki kategorili sütundan, görünen = state",
+      "durum": "PASS",
+      "not": "basari · true"
+    },
+    {
+      "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
+      "durum": "PASS",
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-d0b5b4.csv bağımlı değ"
+    },
+    {
+      "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
+      "durum": "PASS",
+      "not": "once/sonra · farkli:true · gorunen:true"
+    },
+    {
+      "ad": "S11b2 McNemar hesabı çalışıyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S11c veri değişince seçimler yeni sütunlara yenileniyor",
+      "durum": "PASS",
+      "not": "sonucDurumu · true"
+    },
+    {
+      "ad": "S11c2 ikinci sütun bulunamadığı için hesap engelleniyor",
+      "durum": "PASS",
+      "not": "0 · 1"
+    },
+    {
+      "ad": "S11d uygun sütun yok: state boş, ekranda açık boş durum",
+      "durum": "PASS",
+      "not": "true · true · true · 0"
+    },
+    {
+      "ad": "S11d2 boş durum ne yapılacağını söylüyor",
+      "durum": "PASS",
+      "not": "“McNemar Testi” bu veriyle çalıştırılamıyor\nBu analiz iki kategorili (ör. Evet/Hayır, Geçti/Kaldı) bir sütun i"
+    },
+    {
+      "ad": "S11e önce dosya sonra analiz akışı da doğru seçiyor",
+      "durum": "PASS",
+      "not": "basari · true"
+    },
+    {
+      "ad": "S11e2 geçerli bir seçim analiz değişiminde KORUNUYOR",
+      "durum": "PASS",
+      "not": "sure"
     },
     {
       "ad": "S10a-1440 yatay kaydırma yok",

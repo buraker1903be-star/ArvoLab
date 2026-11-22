@@ -68,6 +68,53 @@ describe("hesaplama davranışı korunuyor", () => {
   });
 });
 
+/*
+  DEĞİŞKEN SEÇİMİ TEK KURALDAN (23.11.2026). Analiz değişimi ve dosya
+  yükleme eskiden AYRI kurallar uyguluyordu: handleFile seçili analiz ne
+  olursa olsun varA'yı ilk sayısal sütuna atıyor, lojistik/McNemar
+  seçiliyken ekranda görünen sütun ile state ayrışıyordu.
+*/
+describe("değişken seçimi iki yolda da aynı doğrulamadan geçiyor", () => {
+  test("kural lib/analiz-secim.ts'te, bileşen yalnızca uyguluyor", () => {
+    assert.match(analizci, /from "@\/lib\/analiz-secim"/);
+    assert.match(analizci, /const secimiUygula = useCallback\(/);
+    assert.match(analizci, /secimiDuzelt\(tur, mevcut, kaynak\)/);
+  });
+
+  test("analiz değişimi ortak uygulayıcıyı çağırıyor", () => {
+    assert.match(analizci, /secimiUygula\(tur, \{ varA, varB, groupVar, groupVar2, varY \}, havuzlar\)/);
+  });
+
+  test("dosya yükleme de aynı uygulayıcıyı TAZE sütunlarla çağırıyor", () => {
+    /* dataset state'i o anda henüz güncellenmediği için havuzlar az önce
+       okunan sütunlardan kuruluyor. */
+    assert.match(analizci, /const yeniHavuzlar = havuzlariKur\(\{ sayisal: numericColumns, kategorik: categoricalColumns \}, json\)/);
+    assert.match(analizci, /secimiUygula\(analysisType, baslangic, yeniHavuzlar\)/);
+    /* Eski koşulsuz atamalar kalmadı. */
+    assert.ok(!/setVarA\(numericColumns\[0\]/.test(analizci), "handleFile artık koşulsuz atama yapmıyor");
+    assert.ok(!/setVarB\(numericColumns\[1\]/.test(analizci));
+  });
+
+  test("zorunlu alana uygun sütun yoksa 'Analizi Çalıştır' çizilmiyor", () => {
+    assert.match(analizci, /\{eksikAlanlar\.length \? \(/);
+    assert.match(analizci, /className="analiz-eksik-alan"/);
+    assert.match(analizci, /bu veriyle çalıştırılamıyor/);
+  });
+
+  test("boş havuzda select'in value'su ile görünen seçenek aynı kalıyor", () => {
+    /* Her seçim kutusunun boş havuz için açık bir value="" seçeneği var. */
+    assert.match(analizci, /İki kategorili sütun yok/);
+    assert.match(analizci, /Uygun ikinci sütun yok/);
+    assert.match(analizci, /Grup sütunu yok/);
+    assert.match(analizci, /Kategorik sütun yok/);
+    assert.match(analizci, /Sayısal sütun yok/);
+  });
+
+  test("McNemar'ın ikinci kutusu birinciyle aynı sütunu sunmuyor", () => {
+    assert.match(analizci, /ikiDegerliSutunlar\.filter\(\(c\) => c\.ad !== varA\)/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);

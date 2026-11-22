@@ -351,6 +351,14 @@ const SINIR = {
     tr: "Sonucun kaç kategorili olduğu bilinmiyor. Aşağıdaki aday YALNIZCA iki kategorili sonuç için geçerlidir; üç ve daha çok kategoride uygun değildir.",
     en: "The number of outcome categories is unknown. The candidate below is valid ONLY for a two-category outcome; it is not appropriate with three or more.",
   },
+  kategorikOnKosul: {
+    tr: "Listede kategorik sonuç için de bir aday var (Ki-Kare). ÖN KOŞUL: sonuç değişkeni sayı değil, sayılabilir bir etiket olmalı (evet/hayır, tercih edilen seçenek). Sonucunuz sürekli bir puansa bu adayı kullanmayın.",
+    en: "The list also includes a candidate for a categorical outcome (chi-square). PRECONDITION: the outcome must be a countable label rather than a number (yes/no, the option chosen). If your outcome is a continuous score, do not use this candidate.",
+  },
+  kategorikOnKosulEslesmis: {
+    tr: "Listede kategorik sonuç için de bir aday var (McNemar). İKİ ÖN KOŞUL: sonuç değişkeni etiket olmalı VE tam olarak iki kategorisi bulunmalı (ör. evet/hayır). Üç ve daha çok kategoride McNemar uygulanamaz.",
+    en: "The list also includes a candidate for a categorical outcome (McNemar). TWO PRECONDITIONS: the outcome must be a label AND have exactly two categories (e.g. yes/no). McNemar does not apply with three or more categories.",
+  },
   olcumBilinmiyor: {
     tr: "Sonuç değişkeninin türü bilinmediği için hem parametrik hem parametrik olmayan adaylar listede. Dağılım testinin sonucu tek başına yöntem seçmeye yetmez; önce değişkenin ölçüm düzeyine karar verin.",
     en: "Because the outcome's type is unknown, both parametric and non-parametric candidates are listed. A distribution test's result alone is not enough to choose a method; first decide the variable's measurement level.",
@@ -561,15 +569,40 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
           }
         } else {
           /*
-            Sonuç türü bilinmiyor. Parametrik ve parametrik olmayan
-            adaylar BİRLİKTE: dağılım testinin sonucuna bakıp otomatik
-            seçim yapmak, ölçüm düzeyi kararını istatistiğe devretmek olur.
+            SONUÇ TÜRÜ BİLİNMİYOR (23.11.2026 düzeltmesi).
+
+            Eskiden bu dal yalnızca SAYISAL adayları döndürüyordu:
+            "Bilmiyorum" diyen kullanıcı, sonucu aslında kategorik olsa
+            bile Ki-kare'yi ya da McNemar'ı hiç göremiyordu. Bilinmeyen
+            cevabı bilinen SÜREKLİ sonuç gibi ele almak, eksik bilginin
+            listeyi daraltmaması kuralını da çiğniyordu.
+
+            Şimdi desenin DESTEKLEDİĞİ bütün adaylar listede: sürekli,
+            sıralı ve kategorik dalların kesişimi değil BİRLEŞİMİ.
+            Kategorik adayın ön koşulu (iki kategorili sonuç) ayrıca
+            yazılıyor; desteklenmeyen desenlerde (üç tekrarlı ölçüm)
+            kategorik aday eklenmiyor.
           */
+          const kategorikAday = (): AnalizTuru[] => {
+            /* Bağımsız gruplarda ki-kare kategori sayısından bağımsız çalışır. */
+            if (duzen === "bagimsiz") return sayi === "tek" ? [] : ["chisquare"];
+            /* Tekrarlı ölçümde yalnızca İKİ ölçüm ve iki kategorili sonuç:
+               üç ölçüm Cochran Q ister ve ArvoLab'da yok. */
+            if (duzen === "tekrarli") return sayi === "iki" ? ["mcnemar"] : [];
+            /* Düzen de bilinmiyorsa ikisi de olabilir. */
+            return sayi === "ucDahaCok" ? ["chisquare"] : sayi === "tek" ? [] : ["chisquare", "mcnemar"];
+          };
           if (duzen === "bagimsiz") adaylar = sayi === "iki" ? al("ttest", "mannwhitney") : sayi === "ucDahaCok" ? al("anova", "kruskalwallis") : sayi === "tek" ? al("tekorneklem") : al("ttest", "mannwhitney", "anova", "kruskalwallis");
           else if (duzen === "tekrarli") adaylar = sayi === "iki" ? al("pairedttest", "wilcoxon") : sayi === "ucDahaCok" ? al("tekrarlianova", "friedman") : al("pairedttest", "wilcoxon", "tekrarlianova", "friedman");
           else {
             adaylar = al("ttest", "mannwhitney", "pairedttest", "wilcoxon");
             sinirlar.push(SINIR.duzenBilinmiyor);
+          }
+          const kategorikler = kategorikAday();
+          if (kategorikler.length) {
+            adaylar = [...adaylar, ...al(...kategorikler)];
+            /* Kategorik adayın ön koşulu açıkça yazılı: sessizce eklenmiyor. */
+            sinirlar.push(kategorikler.includes("mcnemar") ? SINIR.kategorikOnKosulEslesmis : SINIR.kategorikOnKosul);
           }
           sinirlar.push(SINIR.olcumBilinmiyor);
         }
@@ -620,7 +653,26 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
               });
             }
           } else {
-            adaylar = al("correlation", "spearman");
+            /*
+              Ölçüm düzeyi bilinmiyor: sürekli ve sıralı adayların yanına
+              KATEGORİK karşılık da ekleniyor. Eskiden yalnızca Pearson ve
+              Spearman dönüyordu; iki kategorik değişken arasındaki ilişkiyi
+              arayan kullanıcı Ki-kare'yi hiç göremiyordu.
+
+              Kontrol değişkeni İSTENİYORSA Ki-kare eklenmiyor: üçüncü bir
+              değişkeni sabit tutmanın kategorik karşılığı ArvoLab'da yok ve
+              Ki-kare'yi orada önermek yanlış yöntem önermek olurdu.
+            */
+            if (kontrol === "var") {
+              adaylar = al("kismikorelasyon", "spearman");
+              sinirlar.push({
+                tr: "Üçüncü bir değişkeni sabit tutmanın KATEGORİK karşılığı (katmanlı Ki-kare / Mantel-Haenszel) ArvoLab'da yok; sonucunuz kategorikse bu listedeki adaylar uygun değildir.",
+                en: "The CATEGORICAL counterpart of holding a third variable constant (stratified chi-square / Mantel-Haenszel) is not in ArvoLab; if your outcome is categorical, the candidates listed here are not appropriate.",
+              });
+            } else {
+              adaylar = kontrol === "yok" ? al("correlation", "spearman", "chisquare") : al("correlation", "kismikorelasyon", "spearman", "chisquare");
+              sinirlar.push(SINIR.kategorikOnKosul);
+            }
             sinirlar.push(SINIR.olcumBilinmiyor);
           }
           tamam = true;
