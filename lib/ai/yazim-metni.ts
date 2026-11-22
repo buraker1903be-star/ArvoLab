@@ -64,3 +64,35 @@ export function oneriTemizle(oneri: string, oncesi: string): string {
   const bosluk = oncesi === "" || /\s$/.test(oncesi) || /^[.,;:!?)\]]/.test(o) ? "" : " ";
   return (bosluk + o).slice(0, ONERI_EN_UZUN);
 }
+
+/*
+  KISALTMA UYARILARI (20.11.2026). Sözcük örtüşme oranı anlamın korunduğunu
+  KANITLAMAZ (kurum sahibinin kararı): yüksek örtüşmeli bir kısaltma tek
+  bir "değil"i düşürüp anlamı tersine çevirebilir. Bu yüzden oran
+  hesaplanmıyor; bunun yerine somut ve denetlenebilir kayıplar aranır ve
+  kısa bir uyarı olarak gösterilir. Karar öğrencinindir: uyarı eklemeyi
+  engellemez. Sayı ve atıf UYDURMASI zaten sunucuda düşürülüyor; burada
+  aranan, seçimde OLAN bir şeyin kısaltmada KAYBOLMASI.
+*/
+export type KisaltmaUyarisi = "kisalmadi" | "olumsuzluk" | "atif" | "sayi";
+
+const OLUMSUZLUK = /\b(değil\p{L}*|yok\p{L}*|hiç|asla|ne\s+de|not|no|never|without|neither|nor|cannot|n't)\b/giu;
+const SAYI = /\d+(?:[.,]\d+)?/g;
+const ATIF = /\(([^()]*\d{4}[a-z]?[^()]*)\)|\b(\p{Lu}\p{L}+)\s+\((\d{4}[a-z]?)\)/gu;
+
+const say = (metin: string, desen: RegExp) => (metin.match(desen) ?? []).length;
+const yillar = (metin: string) => new Set([...metin.matchAll(ATIF)].flatMap((e) => (e[0].match(/\d{4}[a-z]?/g) ?? [])));
+
+export function kisaltmaUyarilari(secim: string, kisaltma: string): KisaltmaUyarisi[] {
+  const u: KisaltmaUyarisi[] = [];
+  const a = secim.trim();
+  const b = kisaltma.trim();
+  if (!a || !b) return u;
+  if (b.length >= a.length * 0.95) u.push("kisalmadi");
+  if (say(a, OLUMSUZLUK) !== say(b, OLUMSUZLUK)) u.push("olumsuzluk");
+  const atifYillari = yillar(b);
+  if ([...yillar(a)].some((y) => !atifYillari.has(y))) u.push("atif");
+  const kalanSayilar = new Set(b.match(SAYI) ?? []);
+  if ((a.match(SAYI) ?? []).some((n) => !kalanSayilar.has(n))) u.push("sayi");
+  return u;
+}

@@ -251,7 +251,7 @@ const metinDugumleri = (parcalar: Parca[]) =>
   seçimi güvenilir değil). Yazım her zaman konumun SONUNA yapılır; seçili
   metin silinmez.
 */
-type AtifSecenekleri = AtifSecenegi &
+export type AtifSecenekleri = AtifSecenegi &
   KunyeSecenegi & {
     kalip?: AtifKalibi | null;
     dil?: Dil;
@@ -343,7 +343,27 @@ export function atifIslemi(
   tr.setSelection(TextSelection.create(tr.doc, hedef + satirIci.size));
 
   if (existingIndex >= 0) return { citation, addedReference: false };
-  const parts = hazir?.kunye.length ? hazir.kunye : formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
+  kaynakcaGirdisiIslemi(tr, source, style, { dil, erisimTarihi: secenek.erisimTarihi, kunye: hazir?.kunye, numara: number });
+  return { citation, addedReference: true };
+}
+
+/**
+ * Kaynağın künyesini Kaynakça'ya VERİLEN işlemde yazar (yoksa başlığı
+ * açar); zaten varsa dokunmaz ve false döner. atifIslemi ve AI metni
+ * eklemesi (yazim-paneli.tsx, B-16) aynı yolu kullanır: iki ayrı kopya
+ * künyeyi iki ayrı biçimde yazardı.
+ */
+export function kaynakcaGirdisiIslemi(
+  tr: Transaction,
+  source: CitableSource,
+  style: CitationStyle,
+  secenek: { dil?: Dil; erisimTarihi?: string | null; kunye?: Parca[]; numara?: number } = {},
+): boolean {
+  const schema = tr.doc.type.schema;
+  const dil = secenek.dil ?? "tr";
+  const { number, existingIndex } = atifSirasi(tr.doc, source);
+  if (existingIndex >= 0) return false;
+  const parts = secenek.kunye?.length ? secenek.kunye : formatReferenceParts(source, style, secenek.numara ?? number, { erisimTarihi: secenek.erisimTarihi ?? undefined }, dil);
   const paragraph = schema.nodeFromJSON({ type: "paragraph", content: metinDugumleri(parts) });
   const current = findReferencesSection(tr.doc);
   if (!current) {
@@ -354,7 +374,64 @@ export function atifIslemi(
     if (last && last.node.childCount === 0) tr.replaceWith(last.pos, last.pos + last.node.nodeSize, paragraph);
     else tr.insert(current.end, paragraph);
   }
-  return { citation, addedReference: true };
+  return true;
+}
+
+/*
+  AI ATIFLARINI ATIF ALTYAPISINA BAĞLAMA (B-16, 20.11.2026, ikinci adım).
+  Yazım asistanının metni "(Demir, 2019)" gibi düz metin atıflar taşır.
+  İlk adımda yalnızca künye Kaynakça'ya yazılıyordu: belge IEEE'de ya da
+  dipnotlu stildeyse metinde yanlış biçimde yazar–tarih atfı kalıyordu.
+  Artık o asistan kaydının izini taşıyan metinde, TEK atıf içeren ve
+  kütüphanede TEK esere uyan her parantez silinir ve yerine atifIslemi'nin
+  ürettiği atıf konur: belgenin stilinde metin içi atıf, numara ya da
+  dipnot düğümü; kaynakça girdisi de aynı yoldan. Hepsi çağıranın işleminde
+  (tek geri alma adımı). Belirsiz (birden çok esere uyan) ya da eşleşmeyen
+  atıf DOKUNULMADAN düz metin kalır: doğrulanmış bir atıf gibi görünmez.
+  Çoklu parantez ("(A, 2019; B, 2020)") ve anlatı atfı ("Demir (2019)")
+  çevrilmez; eşleşen kaynağın künyesi yine Kaynakça'ya yazılır.
+*/
+export type AiAtifBaglama = {
+  /** Asistan izinin kayıt kimliği: yalnızca bu kaydın eklediği metin taranır. */
+  kayitId: string;
+  /** Bir atıf metninin ("(Demir, 2019)") TEK eşleşen kaynağı; belirsizse ya da yoksa null. */
+  kaynakBul: (atif: string) => CitableSource | null;
+  /** Metinde çevrilemeyen ama eşleşen kaynaklar: yalnızca künyeleri yazılır. */
+  digerEslesenler?: CitableSource[];
+  style: CitationStyle;
+  secenek?: Omit<AtifSecenekleri, "konum" | "alinti" | "hazir"> & { hazir?: (k: CitableSource) => AtifSecenekleri["hazir"] };
+};
+
+const TEK_ATIF = /\(([^()]{2,160}?\d{4}[a-z]?)\)/g;
+
+export function aiAtiflariniBagla(tr: Transaction, b: AiAtifBaglama): { donusen: number; kaynakcaya: number } {
+  const adaylar: { from: number; to: number; kaynak: CitableSource }[] = [];
+  tr.doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return;
+    if (!node.marks.some((m) => m.type.name === "asistanIzi" && m.attrs.kayit === b.kayitId)) return;
+    for (const e of node.text.matchAll(TEK_ATIF)) {
+      if (e[1].includes(";")) continue;
+      const kaynak = b.kaynakBul(e[0]);
+      if (kaynak) adaylar.push({ from: pos + (e.index ?? 0), to: pos + (e.index ?? 0) + e[0].length, kaynak });
+    }
+  });
+  const m0 = tr.steps.length;
+  const cevrilen = new Set<CitableSource>();
+  for (const a of adaylar) {
+    const from = tr.mapping.slice(m0).map(a.from, -1);
+    const to = tr.mapping.slice(m0).map(a.to, 1);
+    // Önündeki boşluk da gider: atifIslemi gerekirse kendisi koyar (dipnot/üst simge sözcüğe yapışır).
+    const bas = tr.doc.textBetween(Math.max(0, from - 1), from) === " " ? from - 1 : from;
+    tr.delete(bas, to);
+    atifIslemi(tr, a.kaynak, b.style, { ...b.secenek, hazir: b.secenek?.hazir?.(a.kaynak), konum: { from: bas, to: bas } });
+    cevrilen.add(a.kaynak);
+  }
+  let kaynakcaya = 0;
+  for (const k of b.digerEslesenler ?? []) {
+    if (cevrilen.has(k)) continue;
+    if (kaynakcaGirdisiIslemi(tr, k, b.style, { dil: b.secenek?.dil, erisimTarihi: b.secenek?.erisimTarihi, kunye: b.secenek?.hazir?.(k)?.kunye })) kaynakcaya += 1;
+  }
+  return { donusen: adaylar.length, kaynakcaya };
 }
 
 /*

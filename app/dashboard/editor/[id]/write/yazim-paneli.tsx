@@ -5,7 +5,9 @@ import type { Editor } from "@tiptap/react";
 import { ArrowUp, Check, Copy, CornerDownLeft, History, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
-import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
+import { ASISTAN_IZI, asistanKayitlari } from "@/lib/tiptap-asistan-izi";
+import type { Transaction } from "@tiptap/pm/state";
+import { kisaltmaUyarilari, type KisaltmaUyarisi } from "@/lib/ai/yazim-metni";
 import { anaHattiCozumle } from "@/lib/ai/yazim-metni";
 import { paragraflara, type SohbetMesaji } from "@/lib/ai/yazim-metni";
 import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
@@ -44,7 +46,17 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
   anahat: { tr: "Ana hat", en: "Outline" },
   tamamla: { tr: "Öneri", en: "Suggestion" },
 };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean };
+type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean; secimMetni?: string };
+
+/** B-16: AI metnindeki atıfların kaynakçaya yazılması için editörün hazırlığı (manuscript-editor.tsx). */
+export type AiAtifHazirlik = { uygula: (tr: Transaction, kayitId: string | null) => { donusen: number; kaynakcaya: number }; belirsiz: string[]; hata?: string };
+
+const KISALTMA_UYARISI: Record<KisaltmaUyarisi, { tr: string; en: string }> = {
+  kisalmadi: { tr: "Kısaltma aslından belirgin biçimde kısa değil.", en: "The shortened text isn't clearly shorter." },
+  olumsuzluk: { tr: "Olumsuzluk ifadeleri değişmiş; anlamın tersine dönmediğini kontrol edin.", en: "Negations changed; check the meaning hasn't flipped." },
+  atif: { tr: "Seçimdeki bir atıf kısaltmada yok.", en: "A citation in your selection is missing." },
+  sayi: { tr: "Seçimdeki bir sayı kısaltmada yok.", en: "A number in your selection is missing." },
+};
 
 export default function YazimPaneli({
   editor,
@@ -52,11 +64,14 @@ export default function YazimPaneli({
   acik,
   onKapat,
   zorunluBolumler = [],
+  aiAtifHazirla,
 }: {
   editor: Editor;
   projectId: string;
   acik: boolean;
   onKapat: () => void;
+  /** B-16: eklenecek metindeki atıfları kaynakçaya bağlamak için hazırlık; verilmezse kaynakça güncellenmez. */
+  aiAtifHazirla?: (metin: string) => Promise<AiAtifHazirlik>;
   /** Kılavuzun zorunlu bölümleri: ana hat görevinin omurgası. */
   zorunluBolumler?: string[];
 }) {
@@ -114,7 +129,7 @@ export default function YazimPaneli({
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev, secimMetni: secim || undefined },
       ]);
     } catch (hata) {
       console.error(hata);
@@ -138,7 +153,29 @@ export default function YazimPaneli({
     girer, ikisi de asistan izi taşır (yazarlık raporu). Kayıtlı cevapta
     istek anındaki seçim yok; ekleme o anki imlece yapılır.
   */
-  const metniEkle = (kayit: { ekMetin: string; aralik: Aralik; gorev?: YazimGorevi | null; kayitId?: string | null }, yerineKoy: boolean): boolean => {
+  /*
+    B-16 (20.11.2026): metindeki atıflar kütüphanedeki TEK bir kaynakla
+    eşleşiyorsa o kaynağın künyesi Kaynakça'ya, metinle AYNI işlemde yazılır
+    (tek Ctrl+Z ikisini birlikte geri alır). Eskiden metin düz atıflarla
+    giriyor, Kaynakça hiç güncellenmiyordu. Belirsiz eşleşme (iki "Aras,
+    2020") kaynakçaya yazılmaz, doğrulanmış sayılmaz; öğrenciye söylenir.
+    Hazırlık başarısızsa (CSL künyesi üretilemedi) metin de girmez: yarım
+    kalan bir ekleme, atfı olup künyesi olmayan bir belge bırakırdı.
+  */
+  const metniEkle = async (kayit: { ekMetin: string; aralik: Aralik; gorev?: YazimGorevi | null; kayitId?: string | null }, yerineKoy: boolean): Promise<boolean> => {
+    const hazirlik = kayit.gorev === "anahat" || !aiAtifHazirla ? null : await aiAtifHazirla(kayit.ekMetin).catch(() => ({ uygula: () => ({ donusen: 0, kaynakcaya: 0 }), belirsiz: [], hata: t({ tr: "Kaynakça hazırlanamadı.", en: "The reference list couldn't be prepared." }) }) as AiAtifHazirlik);
+    if (hazirlik?.hata) {
+      showToast("error", t({ tr: `Metin eklenmedi: ${hazirlik.hata}`, en: `Text not inserted: ${hazirlik.hata}` }));
+      return false;
+    }
+    let baglanan = { donusen: 0, kaynakcaya: 0 };
+    const bitir = (zincir: ReturnType<Editor["chain"]>) =>
+      zincir
+        .command(({ tr }) => {
+          if (hazirlik) baglanan = hazirlik.uygula(tr, kayit.kayitId ?? null);
+          return true;
+        })
+        .run();
     const boyut = editor.state.doc.content.size;
     const from = Math.min(kayit.aralik.from, boyut);
     const to = Math.min(kayit.aralik.to, boyut);
@@ -155,39 +192,79 @@ export default function YazimPaneli({
         ...s.notlar.map((n) => ({ type: "paragraph", content: [izliMetin(`[${n}]`, kayit.kayitId)] })),
       ]);
       const $pos = editor.state.doc.resolve(to);
-      tamam = editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat).run();
+      tamam = bitir(editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat));
     } else if (yerineKoy && from !== to) {
       const paragraflar = paragraflara(kayit.ekMetin);
       // Tek paragraf seçimin yerine satır içi girer; çok paragraf blok olarak.
       tamam =
         paragraflar.length === 1
-          ? editor.chain().focus().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)).run()
-          : editor.chain().focus().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)).run();
+          ? bitir(editor.chain().focus().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)))
+          : bitir(editor.chain().focus().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)));
     } else {
       /* İmlecin bulunduğu bloğun SONUNA: paragrafın ortasına blok eklemek onu ikiye bölerdi. Boş paragraftaysa onun yerine. */
       const $pos = editor.state.doc.resolve(to);
       const blok = $pos.depth >= 1 ? $pos.node(1) : null;
       const bosParagraf = blok?.type.name === "paragraph" && blok.textContent.trim() === "";
       tamam = bosParagraf
-        ? editor.chain().focus().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)).run()
-        : editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)).run();
+        ? bitir(editor.chain().focus().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)))
+        : bitir(editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)));
     }
     if (!tamam) {
       showToast("error", t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
       return false;
     }
     if (kayit.kayitId) void asistanPuanla(kayit.kayitId, "faydali", "metne eklendi").catch(() => undefined);
-    showToast("success", t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }));
+    const belirsiz = hazirlik?.belirsiz ?? [];
+    showToast(
+      belirsiz.length ? "info" : "success",
+      [
+        t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }),
+        baglanan.donusen ? t({ tr: `${baglanan.donusen} atıf belgenin atıf stiline çevrildi ve Kaynakça'ya bağlandı.`, en: `${baglanan.donusen} citation(s) converted to the document's citation style and linked to the reference list.` }) : "",
+        baglanan.kaynakcaya ? t({ tr: `${baglanan.kaynakcaya} kaynak Kaynakça'ya yazıldı.`, en: `${baglanan.kaynakcaya} source(s) added to the reference list.` }) : "",
+        belirsiz.length
+          ? t({
+              tr: `Belirsiz atıf: ${belirsiz.join(", ")} kütüphanenizde birden çok kaynakla eşleşiyor; Kaynakça'ya eklenmedi. Atıf penceresinden doğru kaynağı seçin.`,
+              en: `Ambiguous citation: ${belirsiz.join(", ")} matches several sources in your library; not added to the reference list. Pick the right source in the citation dialog.`,
+            })
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
     return true;
   };
 
-  const ekle = (indeks: number, yerineKoy: boolean) => {
+  const ekle = async (indeks: number, yerineKoy: boolean) => {
     const kayit = mesajlar[indeks];
     if (!kayit?.ekMetin || !kayit.aralik) return;
-    if (metniEkle({ ekMetin: kayit.ekMetin, aralik: kayit.aralik, gorev: kayit.gorev, kayitId: kayit.kayitId }, yerineKoy)) {
+    if (await metniEkle({ ekMetin: kayit.ekMetin, aralik: kayit.aralik, gorev: kayit.gorev, kayitId: kayit.kayitId }, yerineKoy)) {
       setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true } : m)));
     }
   };
+
+  /*
+    Kartın "Eklendi" durumu belgeden türetilir (20.11.2026): Ctrl+Z ile geri
+    alınan metnin kartı yeniden eklenebilir olur. Tarama yazmayı izleyerek
+    300 ms bekletilir; her tuşta bütün belgeyi gezmek P2.9'da kaldırılan
+    maliyetin aynısı olurdu.
+  */
+  const [belgedekiKayitlar, setBelgedekiKayitlar] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!acik) return;
+    let zamanlayici: ReturnType<typeof setTimeout> | undefined;
+    const tara = () => setBelgedekiKayitlar(asistanKayitlari(editor.state.doc));
+    const planla = () => {
+      clearTimeout(zamanlayici);
+      zamanlayici = setTimeout(tara, 300);
+    };
+    planla();
+    editor.on("update", planla);
+    return () => {
+      clearTimeout(zamanlayici);
+      editor.off("update", planla);
+    };
+  }, [editor, acik]);
+  const eklendiMi = (m: Kayit) => Boolean(m.eklendi) && (!m.kayitId || !belgedekiKayitlar || belgedekiKayitlar.has(m.kayitId));
 
   const kopyala = async (metin: string) => {
     try {
@@ -464,7 +541,7 @@ export default function YazimPaneli({
                   </div>
                 ) : null}
                 {m.ekMetin ? (
-                  <div className="yazim-oneri" data-eklendi={m.eklendi || undefined}>
+                  <div className="yazim-oneri" data-eklendi={eklendiMi(m) || undefined}>
                     <div className="yazim-oneri-bas">
                       <small>{t(ONERI_ADI[m.gorev ?? "serbest"])}</small>
                       <span>
@@ -476,7 +553,7 @@ export default function YazimPaneli({
                             type="button"
                             className="yazim-ikon"
                             data-secili={m.begenilmedi || undefined}
-                            disabled={m.begenilmedi || m.eklendi}
+                            disabled={m.begenilmedi || eklendiMi(m)}
                             onClick={() => begenmedim(i)}
                             aria-label={t({ tr: "Beğenmedim", en: "Not helpful" })}
                             title={m.begenilmedi ? t({ tr: "Bildirildi, teşekkürler", en: "Noted, thanks" }) : t({ tr: "Beğenmedim", en: "Not helpful" })}
@@ -502,13 +579,20 @@ export default function YazimPaneli({
                         paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
                       )}
                     </div>
+                    {m.gorev === "kisalt" && m.secimMetni && kisaltmaUyarilari(m.secimMetni, m.ekMetin).length ? (
+                      <ul className="yazim-oneri-uyari" aria-label={t({ tr: "Kontrol edin", en: "Check" })}>
+                        {kisaltmaUyarilari(m.secimMetni, m.ekMetin).map((u) => (
+                          <li key={u}>{t(KISALTMA_UYARISI[u])}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                     <div className="yazim-oneri-eylem">
-                      <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
-                        {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
-                        {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "İmlece ekle", en: "Insert at cursor" })}
+                      <button type="button" className="projects-primary-button button-compact" onClick={() => void ekle(i, false)} disabled={eklendiMi(m)}>
+                        {eklendiMi(m) ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
+                        {eklendiMi(m) ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "İmlece ekle", en: "Insert at cursor" })}
                       </button>
                       {m.secimVardi ? (
-                        <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, true)} disabled={m.eklendi}>
+                        <button type="button" className="projects-filter-button button-compact" onClick={() => void ekle(i, true)} disabled={eklendiMi(m)}>
                           <Replace size={14} aria-hidden="true" />
                           {t({ tr: "Seçilenin yerine koy", en: "Replace selection" })}
                         </button>
