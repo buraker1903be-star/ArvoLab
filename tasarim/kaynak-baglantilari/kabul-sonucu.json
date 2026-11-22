@@ -1,0 +1,191 @@
+{
+  "tarih": "2026-11-20T19:03:11.491Z",
+  "gecen": 21,
+  "toplam": 21,
+  "sonuc": [
+    {
+      "ad": "telefon: Kaynaklar listesinde yatay taşma yok",
+      "gecti": true,
+      "ayrinti": {
+        "sayfa": 0,
+        "tasan": []
+      }
+    },
+    {
+      "ad": "telefon: ?kaynak= ile gelinen kayıt görünür, vurgulu ve odakta (30 dolgu kaynağın altında)",
+      "gecti": true,
+      "ayrinti": {
+        "odak": "true",
+        "gorunur": true,
+        "etkin": true
+      }
+    },
+    {
+      "ad": "telefon: sayfa hatası yok",
+      "gecti": true,
+      "ayrinti": {
+        "hatalar": []
+      }
+    },
+    {
+      "ad": "masaustu: Kaynaklar listesinde yatay taşma yok",
+      "gecti": true,
+      "ayrinti": {
+        "sayfa": 0,
+        "tasan": []
+      }
+    },
+    {
+      "ad": "masaustu: ?kaynak= ile gelinen kayıt görünür, vurgulu ve odakta (30 dolgu kaynağın altında)",
+      "gecti": true,
+      "ayrinti": {
+        "odak": "true",
+        "gorunur": true,
+        "etkin": true
+      }
+    },
+    {
+      "ad": "bağlı PDF: 'PDF bağlı' onay tonunda ve okunabilir",
+      "gecti": true,
+      "ayrinti": {
+        "pdf": "PDF bağlı",
+        "ton": "tamam",
+        "oku": true
+      }
+    },
+    {
+      "ad": "yalnızca DOI eşleşmesi: uyarı tonunda, 'bağlı' denmez, okunabilir",
+      "gecti": true,
+      "ayrinti": {
+        "pdf": "PDF DOI ile eşleşti",
+        "ton": "uyari",
+        "oku": true
+      }
+    },
+    {
+      "ad": "aynı DOI'de iki PDF: belirsiz yazılır, gizlenmez ve AÇILMAZ",
+      "gecti": true,
+      "ayrinti": {
+        "pdf": "2 PDF aynı DOI'de",
+        "ton": "uyari",
+        "oku": false
+      }
+    },
+    {
+      "ad": "Kaynaklar'dan 'PDF'i oku' editörün çekmecesinde O PDF'i açar, adres temizlenir",
+      "gecti": true,
+      "ayrinti": {
+        "metin": true,
+        "adres": "?sag=pdf"
+      }
+    },
+    {
+      "ad": "editör ?pdf= adresi istenen PDF'i açar",
+      "gecti": true,
+      "ayrinti": {}
+    },
+    {
+      "ad": "bulunamayan PDF kimliği: panel bunu söyler (sessizce başka PDF'te kalmaz)",
+      "gecti": true,
+      "ayrinti": {
+        "yok": "İstenen PDF bu çalışmada bulunamadı; aşağıdaki listeden seçin."
+      }
+    },
+    {
+      "ad": "atıf kartı: üç durum kısa özet olarak, ayrıntı kapalı",
+      "gecti": true,
+      "ayrinti": {
+        "cipler": [
+          [
+            "Künye denetlenmedi",
+            "notr"
+          ],
+          [
+            "PDF DOI ile eşleşti",
+            "uyari"
+          ],
+          [
+            "Doğrulanmış alıntı yok",
+            "notr"
+          ]
+        ],
+        "ayrintiKapali": true,
+        "kayit": "/dashboard/literature?calisma=4b07e981-d53d-4c52-bac0-308a098a5b3b&kaynak=b1382fc7-55ca-4444-b928-a2686e27ebf7",
+        "pdfAc": true
+      }
+    },
+    {
+      "ad": "atıf kartı: DOI eşleşmesi 'uyarı', 'Açılabilir/bağlı' değil",
+      "gecti": true,
+      "ayrinti": {
+        "pdfCip": [
+          "PDF DOI ile eşleşti",
+          "uyari"
+        ]
+      }
+    },
+    {
+      "ad": "atıf kartı: 'Kaynak kaydı' o kaydın kendisine gider",
+      "gecti": true,
+      "ayrinti": {
+        "kayit": "/dashboard/literature?calisma=4b07e981-d53d-4c52-bac0-308a098a5b3b&kaynak=b1382fc7-55ca-4444-b928-a2686e27ebf7"
+      }
+    },
+    {
+      "ad": "atıf kartından kayda gidince satır vurgulu açılır",
+      "gecti": true,
+      "ayrinti": {}
+    },
+    {
+      "ad": "masaustu: sayfa hatası yok",
+      "gecti": true,
+      "ayrinti": {
+        "hatalar": []
+      }
+    },
+    {
+      "ad": "telefon: editör Kaynaklar aracında taşma yok (uzun künye dahil)",
+      "gecti": true,
+      "ayrinti": {
+        "sayfa": 0,
+        "tasan": []
+      }
+    },
+    {
+      "ad": "Kaynaklar aracı: aynı DOI'de iki PDF belirsiz, açılmaz",
+      "gecti": true,
+      "ayrinti": {
+        "cip": "2 PDF aynı DOI'de",
+        "tur": "uyari",
+        "ac": false
+      }
+    },
+    {
+      "ad": "Kaynaklar aracı: her kaynağın kaydına doğrudan bağlantı",
+      "gecti": true,
+      "ayrinti": {
+        "kayitAdresi": "/dashboard/literature?calisma=4b07e981-d53d-4c52-bac0-308a098a5b3b&kaynak=b305e6d9-e156-4c95-8c82-8818286235fa"
+      }
+    },
+    {
+      "ad": "telefon: PDF çekmecesi tam ekran, alt gezinmeyi örter",
+      "gecti": true,
+      "ayrinti": {
+        "panel": {
+          "y": 0,
+          "h": 664
+        },
+        "ekran": 664,
+        "altGezinmeVar": true,
+        "alttakiOge": "panel"
+      }
+    },
+    {
+      "ad": "telefon editör: sayfa hatası yok",
+      "gecti": true,
+      "ayrinti": {
+        "hatalar": []
+      }
+    }
+  ]
+}

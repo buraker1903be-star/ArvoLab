@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Search } from "lucide-react";
+import { BookOpen, ExternalLink, Search } from "lucide-react";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { htmlVarliklariniCoz } from "@/lib/html-varlik";
 import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
+import { acilacakPdf, editorPdfAdresi, kaynakDurumlari, pdfEslesmesi, type KaynakPdfi } from "@/lib/kaynak-durumu";
 import { yazarBicimiBelirsiz } from "@/lib/kaynak-duzeltme";
 import KaynakDuzeltme from "./kaynak-duzeltme";
 
@@ -24,6 +26,15 @@ import KaynakDuzeltme from "./kaynak-duzeltme";
   - EKSİK KÜNYE uyarısı: kaynakçaya girecek bilgisi eksik kaynaklar
     işaretli ve süzülebilir (lib/citation-format eksikAlanlar). Eksiği
     sistem uydurmaz; düzenleme Kaynak bul penceresinde.
+
+  20.11.2026 (M5/M9):
+  - Doğrudan kayıt: ?kaynak=<id> ile gelen satır görünür alana kaydırılır,
+    vurgulanır ve odak alır (atıf kartındaki "Kaynak kaydı" ve editörün
+    Kaynaklar aracı buraya gelir; eskiden öğrenci listede arıyordu).
+  - PDF: satır PDF durumunu ortak kuraldan (lib/kaynak-durumu) gösterir ve
+    "PDF'i oku" editörün PDF çekmecesini açar. Sayfada PDF açan başka bir
+    yol yoktu; Kaynakça penceresindeki "PDF'i aç" de yeni sekme yerine
+    aynı çekmeceye gidiyor.
 */
 type Durum = "to_review" | "read" | "used";
 const ETIKET: Record<Durum, { ad: Metin; ton: string }> = {
@@ -47,7 +58,17 @@ const baglanti = (deger: string | null) => {
   return /^https?:\/\//i.test(temiz) ? temiz : null;
 };
 
-export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSource[] }) {
+export default function KaynakListesi({
+  kaynaklar,
+  projectId,
+  pdfler = null,
+  odak = null,
+}: {
+  kaynaklar: LiteratureSource[];
+  projectId: string;
+  pdfler?: KaynakPdfi[] | null;
+  odak?: string | null;
+}) {
   const router = useRouter();
   const t = useCeviri();
   const dil = useDil();
@@ -55,6 +76,12 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
   const [suzgec, setSuzgec] = useState<Suzgec>("hepsi");
   const [bekleyen, setBekleyen] = useState<string | null>(null);
   const [, basla] = useTransition();
+  const odakRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (!odak || !odakRef.current) return;
+    odakRef.current.scrollIntoView({ block: "center" });
+    odakRef.current.focus({ preventScroll: true });
+  }, [odak]);
 
   /* Eksik alan adları arayüzde gösteriliyor: burada `dil` arayüzün dili (lib/citation-format). */
   const eksikler = useMemo(() => new Map(kaynaklar.map((k) => [k.id, eksikAlanlar(k, dil)])), [kaynaklar, dil]);
@@ -125,8 +152,19 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
             const geri = GERI[durum];
             const eksik = eksikler.get(k.id) ?? [];
             const adres = baglanti(k.doi_or_url);
+            const eslesme = pdfler ? pdfEslesmesi(k, pdfler) : null;
+            const pdf = eslesme ? acilacakPdf(eslesme) : null;
+            const pdfDurumu = eslesme ? kaynakDurumlari({ kunye: null, pdf: eslesme })[1] : null;
+            const odakta = odak === k.id;
             return (
-              <li key={k.id} className="gb-satir kaynak-satiri">
+              <li
+                key={k.id}
+                id={`kaynak-${k.id}`}
+                ref={odakta ? odakRef : undefined}
+                tabIndex={odakta ? -1 : undefined}
+                data-odak={odakta ? "true" : undefined}
+                className="gb-satir kaynak-satiri"
+              >
                 <span className="gb-satir-govde">
                   <b>{htmlVarliklariniCoz(k.title)}</b>
                   <small>
@@ -141,6 +179,11 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
                       </>
                     ) : null}
                   </small>
+                  {pdfDurumu ? (
+                    <small className="kaynak-pdf-durumu" data-ton={pdfDurumu.ton} title={t(pdfDurumu.aciklama)}>
+                      {t(pdfDurumu.kisa)}
+                    </small>
+                  ) : null}
                   {eksik.length ? <small className="kaynak-eksik">{t({ tr: "Kaynakça için eksik:", en: "Missing for the reference list:" })} {eksik.join(", ")}</small> : null}
                   {yazarBicimiBelirsiz(k.authors) ? (
                     <small className="kaynak-eksik">{t({ tr: "Yazar biçimi belirsiz (ad önce ya da “and/et al.” ile yazılmış).", en: "Author format is ambiguous (given name first, or “and/et al.”)." })}</small>
@@ -151,6 +194,11 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
                   <span className="status-pill" data-tone={ETIKET[durum].ton}>
                     {t(ETIKET[durum].ad)}
                   </span>
+                  {pdf ? (
+                    <Link href={editorPdfAdresi(projectId, pdf.id)} className="projects-filter-button button-compact" aria-label={t({ tr: `${k.title}: PDF'i oku`, en: `${k.title}: read PDF` })}>
+                      <BookOpen size={14} aria-hidden="true" /> {t({ tr: "PDF'i oku", en: "Read PDF" })}
+                    </Link>
+                  ) : null}
                   {ileri ? (
                     <button type="button" className="projects-filter-button button-compact" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, ileri.durum)}>
                       {t(ileri.etiket)}

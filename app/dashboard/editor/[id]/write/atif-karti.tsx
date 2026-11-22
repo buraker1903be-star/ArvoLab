@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { FileText, Quote, ShieldCheck, Sparkles, Target, X, SearchCheck } from "lucide-react";
+import { acilacakPdf, kaynakDurumlari, kaynakKaydiAdresi, type DurumSatiri, type PdfEslesmesi } from "@/lib/kaynak-durumu";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { KunyeDurumOzeti } from "@/app/actions/kaynak-pdf";
 import type { LiteratureSource } from "@/app/actions/literature";
@@ -22,6 +23,14 @@ import type { AtifIsabeti } from "@/lib/atif-karti";
     Alıntı — bu oturumda PDF metnine karşı doğrulanıp eklenmiş pasaj.
   Üçü ayrı kontroldür; hiçbiri iddianın desteklendiği anlamına gelmez.
 
+  20.11.2026 (M9): durumların kuralı lib/kaynak-durumu.ts'e taşındı
+  (Kaynaklar aracı ve Kaynaklar sayfası da oradan okuyor). Eskiden kart
+  DOI'si tutan BAĞLANMAMIŞ bir PDF'i de "Açılabilir" diye onay tonunda
+  gösteriyordu; şimdi "DOI ile eşleşti" uyarı tonunda, aynı DOI'deki
+  birden çok PDF de "belirsiz" diye yazılıyor ve açılmıyor. Kart önce
+  üç durumu tek satırda özetler; açıklamalar "Ayrıntılar"da. "Kaynak
+  kaydı" artık o kaydın kendisine gidiyor (?kaynak=), listeye değil.
+
   "Dayanağa git" YALNIZCA ilgili PDF için doğrulanmış sayfa ve metin
   bilgisi varsa çıkar. Bu bilgi bu sürümde KALICI DEĞİL (K3-ek onaylı
   değil): PDF panelinden doğrulanmış alıntıyla atıf eklendiği oturumda
@@ -29,7 +38,6 @@ import type { AtifIsabeti } from "@/lib/atif-karti";
 */
 
 export type DogrulanmisPasaj = { kaynakId: string; pdfId: string; sayfa: number; metin: string };
-export type KartPdf = { id: string; doi: string | null; kaynakId?: string | null };
 
 export type AtifKartiDurumu = {
   isabet: AtifIsabeti;
@@ -38,12 +46,6 @@ export type AtifKartiDurumu = {
   konum: { yan: "sag" | "alt"; x: number; y: number };
 };
 
-const KUNYE_METNI = {
-  dogrulandi: { tr: "Doğrulandı", en: "Verified" },
-  kismen: { tr: "Kısmen eşleşti", en: "Partial match" },
-  uyusmuyor: { tr: "Uyuşmuyor", en: "Mismatch" },
-  dogrulanamadi: { tr: "Doğrulanamadı", en: "Couldn't verify" },
-} as const;
 
 export function AtifKarti({
   durum,
@@ -62,7 +64,7 @@ export function AtifKarti({
   durum: AtifKartiDurumu;
   projectId: string;
   kaynaklar: LiteratureSource[];
-  pdfBul: (kaynak: LiteratureSource) => KartPdf | null;
+  pdfBul: (kaynak: LiteratureSource) => PdfEslesmesi;
   kunye: Map<string, KunyeDurumOzeti>;
   pasajlar: DogrulanmisPasaj[];
   yukleniyor: boolean;
@@ -81,9 +83,11 @@ export function AtifKarti({
   }, [durum.konum.x, durum.konum.y]);
 
   const kaynak = durum.secilen ? kaynaklar.find((k) => k.id === durum.secilen) ?? null : null;
-  const pdf = kaynak ? pdfBul(kaynak) : null;
+  const eslesme: PdfEslesmesi = kaynak ? pdfBul(kaynak) : { tur: "yok" };
+  const pdf = acilacakPdf(eslesme);
   const kunyeDurumu = kaynak ? kunye.get(kaynak.id) ?? null : null;
   const kaynakPasajlari = kaynak ? pasajlar.filter((p) => p.kaynakId === kaynak.id && (!pdf || p.pdfId === pdf.id)) : [];
+  const durumlar = kaynak ? kaynakDurumlari({ kunye: kunyeDurumu, pdf: eslesme, alintiSayfasi: kaynakPasajlari[0]?.sayfa ?? null }) : [];
 
   return (
     <aside
@@ -148,45 +152,27 @@ export function AtifKarti({
             <b>{[kaynak.authors, kaynak.year ? `(${kaynak.year})` : null].filter(Boolean).join(" ")}</b>
             <span>{kaynak.title}</span>
           </p>
-          <dl className="atif-karti-durumlar">
-            <div>
-              <dt>{t({ tr: "Künye", en: "Reference" })}</dt>
-              <dd>
-                {kunyeDurumu ? (
-                  <span className="guven-cip" data-tur={kunyeDurumu.durum === "dogrulandi" ? "kunye" : "uyari"}>
-                    <ShieldCheck size={12} aria-hidden="true" /> {t(KUNYE_METNI[kunyeDurumu.durum])}
-                    {kunyeDurumu.dizin ? ` · ${kunyeDurumu.dizin === "crossref" ? "Crossref" : "OpenAlex"}` : ""}
-                  </span>
-                ) : (
-                  <span className="guven-cip" data-tur="notr">{t({ tr: "Denetlenmedi", en: "Not checked" })}</span>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>PDF</dt>
-              <dd>
-                {pdf ? (
-                  <span className="guven-cip" data-tur="erisim">
-                    <FileText size={12} aria-hidden="true" /> {t({ tr: "Açılabilir", en: "Available" })}
-                  </span>
-                ) : (
-                  <span className="guven-cip" data-tur="notr">{t({ tr: "PDF yok", en: "No PDF" })}</span>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>{t({ tr: "Bu atıftaki alıntı", en: "Quote in this citation" })}</dt>
-              <dd>
-                {kaynakPasajlari.length ? (
-                  <span className="guven-cip" data-tur="alinti">
-                    <Quote size={12} aria-hidden="true" /> {t({ tr: `Birebir eşleşti · PDF s. ${kaynakPasajlari[0].sayfa}`, en: `Exact match · PDF p. ${kaynakPasajlari[0].sayfa}` })}
-                  </span>
-                ) : (
-                  <span className="guven-cip" data-tur="notr">{t({ tr: "Doğrulanmış pasaj yok", en: "No verified passage" })}</span>
-                )}
-              </dd>
-            </div>
-          </dl>
+          {/* Kısa özet: üç durum tek satırda; ayrıntı ikinci adımda. Belirsiz olan hiçbir zaman onay tonunda değil. */}
+          <ul className="atif-karti-ozet" aria-label={t({ tr: "Kaynağın durumu", en: "Source status" })}>
+            {durumlar.map((d) => (
+              <li key={d.anahtar}>
+                <span className="guven-cip" data-tur={cipTuru(d)}>
+                  <DurumSimgesi d={d} /> {t(d.kisa)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <details className="atif-karti-ayrinti">
+            <summary>{t({ tr: "Ayrıntılar", en: "Details" })}</summary>
+            <dl className="atif-karti-durumlar">
+              {durumlar.map((d) => (
+                <div key={d.anahtar}>
+                  <dt>{t(d.ad)}</dt>
+                  <dd>{t(d.aciklama)}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
           <p className="atif-karti-uyari">
             {t({
               tr: "Üçü ayrı kontroldür; hiçbiri iddianın desteklendiği anlamına gelmez.",
@@ -205,7 +191,7 @@ export function AtifKarti({
                 <FileText size={14} aria-hidden="true" /> {t({ tr: "PDF'i aç", en: "Open PDF" })}
               </button>
             ) : null}
-            <Link href={`/dashboard/literature?calisma=${encodeURIComponent(projectId)}`} className="projects-filter-button button-compact">
+            <Link href={kaynakKaydiAdresi(projectId, kaynak.id)} className="projects-filter-button button-compact">
               {t({ tr: "Kaynak kaydı", en: "Source record" })}
             </Link>
           </div>
@@ -213,6 +199,15 @@ export function AtifKarti({
       )}
     </aside>
   );
+}
+
+const cipTuru = (d: DurumSatiri) =>
+  d.ton === "uyari" ? "uyari" : d.ton === "notr" ? "notr" : d.anahtar === "kayit" ? "kunye" : d.anahtar === "pdf" ? "erisim" : "alinti";
+
+function DurumSimgesi({ d }: { d: DurumSatiri }) {
+  if (d.anahtar === "kayit") return <ShieldCheck size={12} aria-hidden="true" />;
+  if (d.anahtar === "pdf") return <FileText size={12} aria-hidden="true" />;
+  return <Quote size={12} aria-hidden="true" />;
 }
 
 export function SecimIslemleri({

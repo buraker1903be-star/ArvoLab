@@ -1844,7 +1844,7 @@
 .sol-kaynak-listesi { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .sol-kaynak { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
 .sol-kaynak-kunye { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
-.sol-kaynak-kunye b { color: var(--ink); font-weight: 600; }
+.sol-kaynak-kunye b { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
 .sol-kaynak-kunye span { color: var(--ink-soft); display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .sol-kaynak-durum, .sol-kaynak-eylem { display: flex; flex-wrap: wrap; gap: 6px; }
 .sol-arama-govde .project-form-grid { grid-template-columns: 1fr 1fr; }
@@ -1927,8 +1927,13 @@
 .atif-karti-kaynak { display: grid; gap: 2px; margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
 .atif-karti-kaynak b { color: var(--ink); }
 .atif-karti-kaynak span { color: var(--ink-soft); }
+/* Kısa özet (M9): üç durum tek satırda; açıklamalar "Ayrıntılar"da. */
+.atif-karti-ozet { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.atif-karti-ayrinti summary { color: var(--muted); font-size: var(--fs-micro); cursor: pointer; }
+.atif-karti-ayrinti[open] summary { margin-bottom: 6px; }
 .atif-karti-durumlar { display: grid; gap: 6px; margin: 0; }
-.atif-karti-durumlar > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.atif-karti-durumlar > div { display: grid; gap: 2px; }
+.atif-karti-durumlar dd { margin: 0; color: var(--ink-soft); font-size: var(--fs-micro); line-height: 1.45; }
 .atif-karti-durumlar dt { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
 .atif-karti-durumlar dd { margin: 0; }
 .atif-karti-uyari, .atif-karti-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: 1.45; }

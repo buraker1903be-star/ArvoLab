@@ -3,6 +3,8 @@ import DoiEkleKutusu from "./doi-ekle-kutusu";
 import Link from "next/link";
 import { BookMarked, Download, FileUp, Link2, Plus, Search, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
+import { goruntuleyiciKaynaklari } from "@/app/actions/kaynak-pdf";
+import { kimlikMi } from "@/lib/kaynak-durumu";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
@@ -61,9 +63,9 @@ const SIRA: Durum[] = ["to_review", "read", "used"];
 export default async function KaynaklarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string }>;
+  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string; kaynak?: string }>;
 }) {
-  const { calisma: istenen, doi: gelenDoi, ekle, sekme } = await searchParams;
+  const { calisma: istenen, doi: gelenDoi, ekle, sekme, kaynak: istenenKaynak } = await searchParams;
   const t = await ceviri();
   const { tarih, tarihSaat } = await tarihler();
   const [
@@ -74,7 +76,10 @@ export default async function KaynaklarPage({
   ] = await Promise.all([getMyProjects(), getLiteratureSources(), getMyCitationChecks(), literaturAsistaniAcik()]);
 
   /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
-  const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
+  /* ?kaynak= (M5): atıf kartı ve editörün Kaynaklar aracı kaydın KENDİSİNE gelir; çalışma verilmemişse kaydın çalışması seçilir. */
+  const odakKaynak = kimlikMi(istenenKaynak) ? tumKaynaklar.find((k) => k.id === istenenKaynak) ?? null : null;
+  const calisma =
+    calismalar.find((c) => c.id === istenen) ?? calismalar.find((c) => !!odakKaynak?.project_id && c.id === odakKaynak.project_id) ?? calismalar[0] ?? null;
   const sonDenetim = calisma ? await sonKaynakcaDenetimi(calisma.id) : null;
   /* Kopyalanan kaynakça çalışmanın diliyle ("n.d." mi "t.y." mi): editörün
      eklediği atıflarla aynı dil (lib/belge-dili.ts). */
@@ -85,6 +90,9 @@ export default async function KaynaklarPage({
         .filter((k) => k.project_id === calisma.id)
         .sort((a, b) => SIRA.indexOf(a.status as Durum) - SIRA.indexOf(b.status as Durum))
     : [];
+  /* Satırdaki "PDF'i oku" ve PDF durumu için: okunamazsa liste yine çizilir, yalnızca PDF eylemi çıkmaz. */
+  const pdfSonucu = calisma && kaynaklar.length ? await goruntuleyiciKaynaklari(calisma.id) : null;
+  const pdfler = pdfSonucu && !("hata" in pdfSonucu) ? pdfSonucu.satirlar.map((p) => ({ id: p.id, doi: p.doi, kaynakId: p.kaynak_id ?? null })) : null;
   const say = (durum: Durum) => kaynaklar.filter((k) => k.status === durum).length;
   const bagsiz = tumKaynaklar.filter((k) => !k.project_id).length;
   const oncekiDenetimler = calisma ? denetimler.filter((d) => d.project_id === calisma.id) : [];
@@ -361,7 +369,7 @@ export default async function KaynaklarPage({
               />
             ) : null}
             {kaynaklar.length ? (
-              <KaynakListesi kaynaklar={kaynaklar} />
+              <KaynakListesi kaynaklar={kaynaklar} projectId={calisma.id} pdfler={pdfler} odak={odakKaynak && odakKaynak.project_id === calisma.id ? odakKaynak.id : null} />
             ) : (
               <div className="pw-kaynak-bos">
                 <Search size={20} aria-hidden="true" />

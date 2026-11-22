@@ -215,8 +215,11 @@ export default function KaynakPdfPaneli({
 
   /* Dışarıdan istenen PDF (Kaynaklar aracı): anahtar her istekte değişir, aynı PDF'e ikinci basış da işler. */
   const [islenenAcilis, setIslenenAcilis] = useState<number | null>(null);
+  /* İstenen PDF bu çalışmanın listesinde yoksa (silinmiş, başka çalışmanın, henüz işlenmemiş) panel bunu SÖYLER; sessizce başka PDF'te kalmaz. */
+  const [acilamayanPdf, setAcilamayanPdf] = useState(false);
   if (acilacak && acilacak.anahtar !== islenenAcilis && liste) {
     setIslenenAcilis(acilacak.anahtar);
+    setAcilamayanPdf(!liste.some((r) => r.id === acilacak.id));
     if (liste.some((r) => r.id === acilacak.id)) {
       if (acilacak.id !== pdfId) {
         setPdfId(acilacak.id);
@@ -719,6 +722,11 @@ export default function KaynakPdfPaneli({
         </button>
       </header>
 
+      {acilamayanPdf && liste ? (
+        <p className="pdf-durum" role="alert">
+          {t({ tr: "İstenen PDF bu çalışmada bulunamadı; aşağıdaki listeden seçin.", en: "The requested PDF wasn't found in this work; choose one from the list below." })}
+        </p>
+      ) : null}
       {listeHatasi ? (
         <p className="pdf-durum" role="alert">{listeHatasi}</p>
       ) : !liste ? (

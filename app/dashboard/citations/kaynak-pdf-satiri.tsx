@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ExternalLink, FileCheck2, FileUp, MessageSquareText } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Download, ExternalLink, FileUp, MessageSquareText } from "lucide-react";
 import KaynakSohbetPenceresi from "./kaynak-sohbet-penceresi";
 import { createClient } from "@/lib/supabase/client";
 import { kaynakPdfiYuklendi } from "@/app/actions/kaynak-pdf";
@@ -10,6 +11,7 @@ import { PDF_EN_FAZLA_BAYT, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 import { showToast } from "../_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { Metin } from "@/lib/dil";
+import { editorPdfAdresi } from "@/lib/kaynak-durumu";
 
 /*
   Bir künyenin PDF durumu ve eylemi (Kaynakça penceresindeki her kaynak
@@ -44,11 +46,17 @@ export default function KaynakPdfSatiri({
   const [yukleniyor, setYukleniyor] = useState(false);
   const [sohbetAcik, setSohbetAcik] = useState(false);
 
-  const ac = async () => {
+  /*
+    İndirme (20.11.2026, M5): okumak artık editörün PDF çekmecesinde
+    ("PDF'i oku"). Eskiden "PDF'i aç" imzalı adresi yeni sekmede açıyordu;
+    orada pasaj seçmek, alıntı eklemek, AI'a sormak yoktu. Ham dosyayı
+    isteyen için ayrı ve ikincil bir "İndir" kaldı.
+  */
+  const indir = async () => {
     if (!satir?.depo_yolu) return;
-    const { data, error } = await createClient().storage.from("project-files").createSignedUrl(satir.depo_yolu, 600);
+    const { data, error } = await createClient().storage.from("project-files").createSignedUrl(satir.depo_yolu, 600, { download: true });
     if (error || !data?.signedUrl) {
-      showToast("error", t({ tr: "PDF açılamadı; tekrar deneyin.", en: "Couldn't open the PDF; please try again." }));
+      showToast("error", t({ tr: "PDF indirilemedi; tekrar deneyin.", en: "Couldn't download the PDF; please try again." }));
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -124,10 +132,10 @@ export default function KaynakPdfSatiri({
         </span>
       ) : null}
       <span className="kaynak-pdf-eylemler">
-        {dosyaVar ? (
-          <button type="button" className="projects-filter-button button-compact" onClick={() => void ac()}>
-            <FileCheck2 size={14} aria-hidden="true" /> {t({ tr: "PDF'i aç", en: "Open PDF" })}
-          </button>
+        {dosyaVar && satir ? (
+          <Link href={editorPdfAdresi(projectId, satir.id)} className="projects-filter-button button-compact">
+            <BookOpen size={14} aria-hidden="true" /> {t({ tr: "PDF'i oku", en: "Read PDF" })}
+          </Link>
         ) : null}
         {/* Kaynakla sohbet (03.11.2026): cevap PDF'ten birebir alıntıyla (kaynak-sohbet-penceresi.tsx). */}
         {dosyaVar && satir ? (
@@ -139,6 +147,11 @@ export default function KaynakPdfSatiri({
           <a className="projects-filter-button button-compact" href={satir.kaynak_adres} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={14} aria-hidden="true" /> {t({ tr: "Kaynağa git", en: "Go to source" })}
           </a>
+        ) : null}
+        {dosyaVar ? (
+          <button type="button" className="link-button" onClick={() => void indir()}>
+            <Download size={14} aria-hidden="true" /> {t({ tr: "İndir", en: "Download" })}
+          </button>
         ) : null}
         <button
           type="button"
