@@ -67,16 +67,22 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
     assert.doesNotMatch(yorumsuz(ogrenci), /ilerleme|progress/i);
   });
   /*
-    Danışmanıma gönder herkesin kendi çalışmasında (20.11.2026, tek ana
-    deneyim). 22.11.2026 sadeleştirmesinde sağ sütun kalkınca kart ayrı bir
-    sütun olmaktan çıkıp öne çıkan kartın "⋯" menüsüne taşındı
-    (calisma-kart-menusu.tsx). Sınanan şey yeri değil VARLIĞI: Çalışmalarım
-    sayfasından paylaşıma ulaşılabilmeli.
+    Paylaşım herkesin kendi çalışmasında (20.11.2026, tek ana deneyim).
+    22.11.2026 sadeleştirmesinde sağ sütun kalkınca kart ayrı bir sütun
+    olmaktan çıkıp öne çıkan kartın "⋯" menüsüne taşındı
+    (calisma-kart-menusu.tsx); menü girişi ve panel başlığı "Paylaş ve
+    indir" oldu, çünkü aynı panelde Word/PDF/ZIP indirme de var.
+    Sınanan şey yeri değil VARLIĞI: Çalışmalarım sayfasından hem paylaşıma
+    hem indirmeye ulaşılabilmeli ve menü girişi ikisini de söylemeli.
   */
-  test("Danışmanıma gönder Çalışmalarım'dan erişilebilir (sadeleştirmede '⋯' menüsüne taşındı)", () => {
+  test("Paylaş ve indir Çalışmalarım'dan erişilebilir (sadeleştirmede '⋯' menüsüne taşındı)", () => {
     const liste = oku("app/dashboard/editor/calisma-listesi.tsx");
     assert.match(liste, /<CalismaKartMenusu /);
     const menu = oku("app/dashboard/editor/calisma-kart-menusu.tsx");
+    /* Menü girişi ve panel başlığı aynı metni taşır. */
+    assert.match(menu, /triggerLabel=\{t\(\{ tr: "Paylaş ve indir", en: "Share and download" \}\)\}/);
+    assert.match(menu, /kicker=\{t\(\{ tr: "Paylaş ve indir", en: "Share and download" \}\)\}/);
+    /* İçerideki işlevler duruyor: paylaşım kartı ve teslim paketi. */
     assert.match(menu, /<DanismanaGonder /);
     assert.match(menu, /<TeslimPaketi /);
   });

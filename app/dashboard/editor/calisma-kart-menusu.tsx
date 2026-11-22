@@ -72,7 +72,7 @@ export default async function CalismaKartMenusu({
 
   return (
     <details className="kart-menu calismalarim-menu">
-      <summary aria-label={t({ tr: `${baslik}: paylaşım ve dışa aktarma`, en: `${baslik}: sharing and export` })}>
+      <summary aria-label={t({ tr: `${baslik}: paylaş ve indir`, en: `${baslik}: share and download` })}>
         <MoreHorizontal size={18} aria-hidden="true" />
       </summary>
       <div className="kart-menu-liste">
@@ -81,11 +81,21 @@ export default async function CalismaKartMenusu({
           (tam kart) bir panelde açılıyor. Bağlantı oluşturma, kopyalama
           ve Word indirme aynı bileşenin işi.
         */}
+        {/*
+          Menü girişi ve panel başlığı "Paylaş ve indir" (22.11.2026):
+          "Danışmanıma gönder" yalnızca paylaşımı anlatıyordu, oysa aynı
+          panelde Word, PDF ve ZIP indirme de var — kullanıcı dosyayı
+          nereden indireceğini menüye bakarak bulamıyordu. Panelin İÇİ
+          değişmedi: paylaşım bölümü kendi başlığıyla ("Danışmanıma
+          gönder") ve altındaki "Dosya olarak: Word · PDF · ZIP" satırıyla
+          duruyor. Eskiden aynı cümle hem panelin üstünde hem kartın
+          başlığında iki kez yazıyordu.
+        */}
         <PanelDrawer
-          triggerLabel={t({ tr: "Danışmanıma gönder", en: "Send to my advisor" })}
+          triggerLabel={t({ tr: "Paylaş ve indir", en: "Share and download" })}
           triggerClassName="calismalarim-menu-oge"
           title={baslik}
-          kicker={t({ tr: "Danışmanıma gönder", en: "Send to my advisor" })}
+          kicker={t({ tr: "Paylaş ve indir", en: "Share and download" })}
           boy="orta"
         >
           <DanismanaGonder projectId={projectId} baslik={baslik} sonGonderim={sonGonderim} sonGonderimMetni={sonGonderimMetni} />
