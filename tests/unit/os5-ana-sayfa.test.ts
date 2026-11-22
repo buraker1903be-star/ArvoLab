@@ -141,6 +141,37 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
   });
 });
 
+/*
+  SON RÖTUŞLAR (22.11.2026): geri bildirim kutusu başlangıçta kapalı
+  küçük bir tetikleyici, telefonda devam kartının belge simgesi yok.
+*/
+describe("son rötuşlar", () => {
+  test("geri bildirim başlangıçta KAPALI; soru, seçenekler, gönderim ve 'Bir daha sorma' korunuyor", () => {
+    const kart = oku("app/dashboard/_components/geri-bildirim-karti.tsx");
+    assert.match(kart, /const \[acik, setAcik\] = useState\(false\);/);
+    /* Tetikleyici bir <button>: klavyeyle odaklanır ve durumu bildirilir. */
+    assert.match(kart, /className="geri-bildirim-tetik"[\s\S]*?aria-expanded=\{acik\}[\s\S]*?aria-controls="geri-bildirim-govde"/);
+    assert.match(kart, /tr: "Geri bildirim ver", en: "Give feedback"/);
+    assert.match(kart, /id="geri-bildirim-govde"[^>]*hidden=\{!acik\}/);
+    /* Davranışların hiçbiri kaldırılmadı. */
+    for (const korunan of ["geriBildirimGonder", "geriBildirimErtele", "geriBildirimIstemiyorum", "geri-bildirim-puan", 'type="submit"']) {
+      assert.ok(kart.includes(korunan), korunan);
+    }
+    /* Kapalıyken kart bir kutu değil: çerçeve, zemin ve dolgu yok. */
+    const css = oku("app/styles/components.css");
+    assert.match(css, /\.geri-bildirim-karti\[data-acik="hayir"\][\s\S]*?border: 0;[\s\S]*?background: none;/);
+    assert.match(css, /\.geri-bildirim-tetik:focus-visible \{/);
+  });
+
+  test("telefonda devam kartının belge simgesi ve simge sütunu yok", () => {
+    const css = oku("app/styles/os5-ana-sayfa.css");
+    const telefon = css.slice(css.indexOf("@media (max-width: 760px)", css.indexOf("pw-devam-onizleme")));
+    assert.match(telefon, /\.os5-ana \.pw-devam-simge \{ display: none; \}/);
+    /* Girinti de kalkıyor: içerik kartın sol iç kenarına hizalanmalı. */
+    assert.match(telefon, /\.os5-ana \.pw-devam-sol \{ gap: 0; \}/);
+  });
+});
+
 describe("veri modeli ve sorgular", () => {
   test("yeni tablo ya da RPC okunmuyor; kaldırılan kartların sorguları da yok", () => {
     const tablolar = new Set([...sayfa.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1]));

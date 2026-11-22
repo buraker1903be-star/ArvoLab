@@ -1711,6 +1711,31 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 }
 /* Genel bakış sayfalarında kartlar arası boşluk sayfanın kendi aralığından gelir; 22 piksel üstüne ekleniyor, kartın üstünde iki kat boşluk açıyordu. */
 .gb > .geri-bildirim-karti { margin-top: 0; }
+/*
+  KAPALIYKEN KART YOK (22.11.2026): yalnızca küçük tetikleyici görünür.
+  Çerçeve, zemin ve dolgu kalkmasa "küçük tetikleyici" yine ~60 px'lik
+  bir kutu olurdu.
+*/
+.geri-bildirim-karti[data-acik="hayir"] {
+  gap: 0; padding: 0; border: 0; background: none; box-shadow: none; justify-items: start;
+}
+.geri-bildirim-tetik {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-pill); background: var(--surface);
+  color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer;
+}
+.geri-bildirim-tetik:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.geri-bildirim-tetik .geri-bildirim-ok { transition: transform var(--sure-hizli) ease; }
+.geri-bildirim-karti[data-acik="evet"] .geri-bildirim-tetik { justify-self: start; border-color: var(--primary-ink); color: var(--primary-ink); }
+.geri-bildirim-karti[data-acik="evet"] .geri-bildirim-ok { transform: rotate(180deg); }
+@media (hover: hover) and (pointer: fine) {
+  .geri-bildirim-tetik:hover { border-color: var(--primary-ink); color: var(--ink); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .geri-bildirim-tetik .geri-bildirim-ok { transition: none; }
+}
+.geri-bildirim-govde { display: grid; gap: 10px; }
+.geri-bildirim-govde[hidden] { display: none; }
 .geri-bildirim-bas { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .geri-bildirim-karti .dashboard-kicker { display: inline-flex; align-items: center; gap: 6px; }
 .geri-bildirim-karti h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; line-height: var(--lh-baslik); }
