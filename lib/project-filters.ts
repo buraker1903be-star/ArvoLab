@@ -48,8 +48,15 @@ export interface ProjectFilterInput {
   controller_approved_at?: string | null;
 }
 
+/*
+  VARSAYILAN SIRALAMA "SON DÜZENLENEN" (22.11.2026). Eskiden "yeni" (son
+  EKLENEN) idi ve Çalışmalarım'ın öne çıkan kartıyla çelişiyordu: kart en
+  son DÜZENLENEN çalışmayı seçiyor (lib/calisma-karti.ts), liste ise en son
+  açılanı başa alıyordu. İki farklı "ilk" aynı ekranda duruyordu. Sıralama
+  seçeneklerinin kendisi değişmedi; yalnızca hangisinin varsayılan olduğu.
+*/
 export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
-  q: "", status: "tumu", sort: "yeni", approval: "tumu", comments: "tumu", ethics: "tumu",
+  q: "", status: "tumu", sort: "duzenleme", approval: "tumu", comments: "tumu", ethics: "tumu",
 };
 
 const SORTS: ProjectSort[] = ["yeni", "duzenleme", "teslim", "baslik"];
@@ -70,7 +77,7 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
   return {
     q: firstValue(params.q).trim().slice(0, 100),
     status: SPECIAL_STATUSES.includes(status) || statuses.includes(status) ? status : "tumu",
-    sort: SORTS.includes(sort) ? sort : "yeni",
+    sort: SORTS.includes(sort) ? sort : DEFAULT_PROJECT_FILTERS.sort,
     approval: APPROVAL_FILTERS.includes(approval) ? approval : "tumu",
     comments: COMMENT_FILTERS.includes(comments) ? comments : "tumu",
     ethics: ETHICS_FILTERS.includes(ethics) ? ethics : "tumu",
@@ -86,7 +93,7 @@ export function filtreAdresi(filters: ProjectFilters, taban = "/dashboard/editor
   const p = new URLSearchParams();
   if (filters.q) p.set("q", filters.q);
   if (filters.status !== "tumu") p.set("durum", filters.status);
-  if (filters.sort !== "yeni") p.set("sirala", filters.sort);
+  if (filters.sort !== DEFAULT_PROJECT_FILTERS.sort) p.set("sirala", filters.sort);
   if (filters.approval !== "tumu") p.set("onay", filters.approval);
   if (filters.comments !== "tumu") p.set("yorum", filters.comments);
   if (filters.ethics !== "tumu") p.set("etik", filters.ethics);

@@ -156,10 +156,16 @@ export default async function CalismaListesi({
     onizleme = belgeOnizlemesi(data?.content);
   }
 
-  const calismaSayisi =
-    visible.length === projects.length
-      ? t({ tr: `${projects.length} çalışma`, en: `${projects.length} work${projects.length === 1 ? "" : "s"}` })
-      : t({ tr: `${visible.length}/${projects.length} çalışma`, en: `${visible.length}/${projects.length} works` });
+  /*
+    TOPLAM SAYI TEK YERDE (22.11.2026). Filtre çubuğu zaten "N çalışma"
+    yazıyor (project-filter-count); "Son çalışmanız" yanında aynı sayıyı
+    tekrarlamak iki ayrı toplam varmış gibi okunuyordu. Çubuk yoksa (az
+    çalışma) sayı başlığın yanında duruyor, böylece hiç kaybolmuyor.
+  */
+  const filtreCubuguVar = filtrelerGorunsun(projects.length);
+  const calismaSayisi = filtreCubuguVar
+    ? null
+    : t({ tr: `${projects.length} çalışma`, en: `${projects.length} work${projects.length === 1 ? "" : "s"}` });
 
   const yazimOzeti = (project: Calisma) => {
     const yazim = stats.get(project.id);
@@ -230,7 +236,7 @@ export default async function CalismaListesi({
       ) : (
         <>
           <ListeKonumunuSakla />
-          {filtrelerGorunsun(projects.length) ? (
+          {filtreCubuguVar ? (
             <ProjectFilters
               key={JSON.stringify(filters)}
               filters={filters}
@@ -255,7 +261,7 @@ export default async function CalismaListesi({
             <>
               <div className="calismalarim-bolum-bas">
                 <h2>{t({ tr: "Son çalışmanız", en: "Your latest work" })}</h2>
-                <span>{calismaSayisi}</span>
+                {calismaSayisi ? <span>{calismaSayisi}</span> : null}
               </div>
 
               <article className="calismalarim-one-cikan">

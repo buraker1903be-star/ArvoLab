@@ -1540,3 +1540,16 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calismalarim-tamamlanan > summary { padding: 10px 4px; color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; }
 .calismalarim-tamamlanan > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
 .calismalarim-tamamlanan[open] > summary { margin-bottom: 6px; }
+
+/* Telefonda filtreler: arama kompakt, durum+sıralama varsayılan kapalı bir düğmede. */
+.project-filter-ac { display: none; }
+.project-filter-nokta { width: 6px; height: 6px; border-radius: 999px; background: var(--primary); }
+@media (max-width: 860px) {
+  .project-filters { gap: 8px; }
+  .project-filter-search { flex: 1 1 100%; min-width: 0; }
+  .project-filter-search input { font-size: var(--fs-body); }
+  .project-filter-ac { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+  .project-filter-govde { display: none; flex-basis: 100%; }
+  .project-filter-govde[data-acik] { display: flex; flex-wrap: wrap; gap: 8px; }
+  .project-filter-count { margin-left: auto; }
+}
