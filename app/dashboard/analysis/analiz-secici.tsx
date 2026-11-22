@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ListMinus, ListPlus, Trash2 } from "lucide-react";
 import { analizSirasi, analizSonucuSil, type CalismaAnalizi } from "@/app/actions/analiz-sonuclari";
@@ -9,6 +9,7 @@ import type { BicimKarari } from "@/lib/sayi-bicimi";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import DataAnalyzer from "./data-analyzer";
+import AnalizGezgini from "./analiz-gezgini";
 
 /*
   Analiz penceresinin içi (analiz-penceresi.tsx). İki kart, tek yer:
@@ -18,6 +19,13 @@ import DataAnalyzer from "./data-analyzer";
   Eskiden solda program ve yöntem kartları vardı, yöntem iç pencerede
   açılıyor ve her yöntemde dosya yeniden yükleniyordu (aynı gün, ilk
   sürüm). Öğrenci iki pencere arasında gidip geliyordu.
+
+  ANALİZ MERKEZİ SAYFASINDA (sayfa=true, 22.11.2026) düzen değişti:
+  iki kart yan yana durmak yerine iki SEKME — "Çalışma alanı" (sol
+  gezgin + veri + değişkenler + sonuç) ve "Kaydedilen analizler".
+  Eskiden kaydedilen analizler listesi ekranın yarısını alıyor, çalışma
+  alanı dar kalıyordu; mockup'ta sonuç tablosunun genişliği asıl
+  gereksinim. Pencere kipi (Çalışmalarım kartı) DEĞİŞMEDİ.
 */
 export default function AnalizSecici({
   projectId,
@@ -37,17 +45,25 @@ export default function AnalizSecici({
   sayfa?: boolean;
 }) {
   const t = useCeviri();
+  /* Sekme yalnızca görünümü değiştirir: açmak hiçbir şey kaydetmez. */
+  const [sekme, setSekme] = useState<"alan" | "kayitli">("alan");
   const sirada = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const eklenen = analizler.filter((a) => a.teze_eklendi);
   const digerleri = analizler.filter((a) => !a.teze_eklenecek && !a.teze_eklendi);
 
-  return (
-    <div className={sayfa ? "gb-sutunlar analiz-ikili" : "pencere-iki-kart"}>
-      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart"}>
-        <DataAnalyzer calismalar={[calisma]} secilenCalisma={projectId} pencere={{ asistanAcik }} />
-      </section>
+  const calismaAlani = (
+    <DataAnalyzer
+      calismalar={[calisma]}
+      secilenCalisma={projectId}
+      pencere={{ asistanAcik }}
+      calismaAlani={{
+        gezgin: ({ secili, sec, veriYuklu }) => <AnalizGezgini secili={secili} sec={sec} veriYuklu={veriYuklu} />,
+      }}
+    />
+  );
 
-      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
+  const kayitliKart = (
+    <section className={sayfa ? "gb-kart analiz-kayitli-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
         <h3 className="pencere-kart-baslik">{sirada.length ? t({ tr: `Teze eklenecekler · ${sirada.length}`, en: `To add to thesis · ${sirada.length}` }) : t({ tr: "Teze eklenecekler", en: "To add to thesis" })}</h3>
         {sirada.length ? (
           <ul className="secim-listesi">
@@ -105,7 +121,64 @@ export default function AnalizSecici({
             </ul>
           </>
         ) : null}
+
+        {sayfa ? (
+          /*
+            KAYITLI SONUÇ METİNDİR, HESAP DEĞİL. Ham veri sunucuya hiç
+            gitmediği için kayıtlı bir analiz açıldığında hesaplamayı
+            sürdürmek mümkün değil; bunu yazmazsak "neden değişken
+            değiştiremiyorum" sorusu doğuyor.
+          */
+          <p className="muted text-sm mt-md">
+            {t({
+              tr: "Kaydedilen yalnızca sonuç metnidir; veri dosyanız sunucuya gitmez. Bir analizi yeni değişkenlerle yeniden hesaplamak için Çalışma alanı sekmesinden veriyi yeniden yükleyin.",
+              en: "Only the result text is saved; your data file never reaches the server. To recompute an analysis with different variables, upload the data again from the Workspace tab.",
+            })}
+          </p>
+        ) : null}
       </section>
+  );
+
+  if (!sayfa) {
+    return (
+      <div className="pencere-iki-kart">
+        <section className="pencere-kart">{calismaAlani}</section>
+        {kayitliKart}
+      </div>
+    );
+  }
+
+  const sekmeler = [
+    { anahtar: "alan" as const, ad: t({ tr: "Çalışma alanı", en: "Workspace" }), sayi: null as number | null },
+    { anahtar: "kayitli" as const, ad: t({ tr: "Kaydedilen analizler", en: "Saved analyses" }), sayi: analizler.length },
+  ];
+
+  return (
+    <div className="analiz-merkez">
+      <div className="analiz-sekmeler" role="tablist" aria-label={t({ tr: "Analiz Merkezi görünümü", en: "Analysis Centre view" })}>
+        {sekmeler.map((s) => (
+          <button
+            key={s.anahtar}
+            type="button"
+            role="tab"
+            id={`analiz-sekme-${s.anahtar}`}
+            aria-selected={sekme === s.anahtar}
+            aria-controls={`analiz-panel-${s.anahtar}`}
+            className="analiz-sekme"
+            onClick={() => setSekme(s.anahtar)}
+          >
+            {s.ad}
+            {s.sayi !== null ? <small>{s.sayi}</small> : null}
+          </button>
+        ))}
+      </div>
+
+      <div role="tabpanel" id="analiz-panel-alan" aria-labelledby="analiz-sekme-alan" hidden={sekme !== "alan"}>
+        {calismaAlani}
+      </div>
+      <div role="tabpanel" id="analiz-panel-kayitli" aria-labelledby="analiz-sekme-kayitli" hidden={sekme !== "kayitli"}>
+        {kayitliKart}
+      </div>
     </div>
   );
 }

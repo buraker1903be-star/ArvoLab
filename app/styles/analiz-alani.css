@@ -1,0 +1,451 @@
+/* ============================================================
+   ANALİZ MERKEZİ — ANALİZ ÇALIŞMA ALANI (22.11.2026, onaylı "A").
+
+   Ana Sayfa, Çalışmalarım ve Kaynaklar'la aynı dil: Inter, mevcut
+   belirteçler, ince kenarlıklar, ölçülü lacivert vurgu. Süs görseli,
+   gradient ve renkli istatistik kutusu yok. Genişlik ortak içerik
+   kabından geliyor (.dashboard-page, components.css); burada sayfa
+   başına genişlik kuralı YOK — PR #132'de düzeltilen ayrışmanın
+   sebebi tam olarak böyle kurallardı.
+
+   Yerleşim: solda analiz gezgini (kategoriler + arama + yardım),
+   sağda çalışma alanı (veri şeridi → adımlar → değişkenler → sonuç).
+   Sekme şeridi ikisinin üstünde: "Çalışma alanı" ve "Kaydedilen
+   analizler".
+
+   1100 px altında iki sütun dar kalıyor; gezgin katlanır bir bölüme
+   iner ve çalışma alanı tam genişliğe geçer. Telefonda aynı kural:
+   ayrı bir iç kenar çubuğu çizilmiyor — Kaynaklar'da da böyle.
+   ============================================================ */
+
+.analiz-merkez { display: flex; flex-direction: column; gap: 12px; min-height: 0; width: 100%; }
+/* gb-tek-ekran çocuklarını flex:none yapıyor; çalışma alanı kalan boyu almalı. */
+.gb-tek-ekran > .analiz-merkez { flex: 1 1 auto; min-height: 0; }
+.analiz-merkez > [role="tabpanel"] { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.analiz-merkez > [role="tabpanel"][hidden] { display: none; }
+
+/* ---------- Sekme şeridi ---------- */
+.analiz-sekmeler { display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line); flex: none; }
+.analiz-sekme {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 0; border-bottom: 2px solid transparent;
+  background: none; color: var(--muted); font: inherit; font-size: var(--os5-fs-govde); font-weight: 600;
+  cursor: pointer; margin-bottom: -1px;
+}
+.analiz-sekme:hover { color: var(--ink); }
+.analiz-sekme[aria-selected="true"] { color: var(--primary-ink); border-bottom-color: var(--primary); }
+.analiz-sekme small {
+  padding: 1px 6px; border-radius: 999px; background: var(--surface-sunken);
+  color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.analiz-sekme[aria-selected="true"] small { background: var(--primary-soft); color: var(--primary-ink); }
+
+/* ---------- İki sütun ---------- */
+.analiz-alan {
+  display: grid; grid-template-columns: minmax(0, var(--analiz-gezgin-genislik, 288px)) minmax(0, 1fr);
+  gap: 12px; align-items: stretch; flex: 1 1 auto; min-height: 0; width: 100%;
+}
+.analiz-alan-gezgin {
+  min-width: 0; min-height: 0; overflow-y: auto; scrollbar-width: thin;
+  border: 1px solid var(--line); border-radius: var(--kart-r); background: var(--surface);
+}
+/*
+  YARDIM ÇALIŞMA ALANINI DARALTMIYOR (22.11.2026 düzeltmesi). İlk
+  sürümde panel açılınca sol sütun 260'tan 420 px'e genişliyor, sağdaki
+  çalışma alanı aynı oranda daralıyordu: yardım isteyen kullanıcı
+  yapılandırmasını kaybediyordu. Şimdi panel gezginin içinde, sütun
+  genişliği SABİT; panel kendi içinde kayar.
+*/
+/* Sağdaki çalışma alanı kendi içinde kayar: sol gezgin ekranda kalsın. */
+.analiz-alan > .analiz-pencere-govde,
+.analiz-alan > .project-form-card { min-width: 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+
+/* ---------- Gezgin ---------- */
+.analiz-gezgin { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.analiz-gezgin-ust { display: grid; gap: 6px; }
+.analiz-gezgin-arama {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--kontrol-r); background: var(--surface-2);
+  color: var(--muted);
+}
+.analiz-gezgin-arama:focus-within { border-color: var(--primary); box-shadow: var(--primary-focus); }
+.analiz-gezgin-arama input {
+  flex: 1; min-width: 0; border: 0; background: none; color: var(--ink);
+  font: inherit; font-size: var(--os5-fs-govde);
+}
+.analiz-gezgin-arama input:focus { outline: none; }
+.analiz-gezgin-arama input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* Yardım ikincil: listenin önüne geçmeyen, bağlantı görünümünde bir düğme. */
+.analiz-gezgin-yardim {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+  padding: 2px 0; border: 0; background: none; color: var(--primary-ink);
+  font: inherit; font-size: var(--os5-fs-govde); font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.analiz-gezgin-yardim:hover { color: var(--primary-hover); }
+.analiz-gezgin-not {
+  margin: 0; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+  background: var(--surface-sunken); color: var(--muted); font-size: var(--os5-fs-govde);
+}
+.analiz-gezgin-bos { display: grid; gap: 6px; justify-items: start; padding: 10px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r); }
+.analiz-gezgin-bos p { margin: 0; }
+
+.analiz-kategori { border-top: 1px solid var(--line-soft); }
+.analiz-kategori:first-of-type { border-top: 0; }
+.analiz-kategori h3 { margin: 0; }
+.analiz-kategori-bas {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 8px 4px; border: 0; background: none; color: var(--ink);
+  font: inherit; font-size: var(--os5-fs-govde); font-weight: 600; text-align: left; cursor: pointer;
+}
+.analiz-kategori-bas:hover { color: var(--primary-ink); }
+.analiz-kategori-bas > span { flex: 1; min-width: 0; }
+.analiz-kategori-bas small { color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-variant-numeric: tabular-nums; }
+.analiz-kategori-bas svg { flex: none; color: var(--muted); transform: rotate(-90deg); transition: transform .12s ease; }
+.analiz-kategori-bas svg[data-acik] { transform: none; }
+.analiz-kategori ul { list-style: none; margin: 0 0 6px; padding: 0 0 0 4px; display: grid; gap: 1px; }
+/* [hidden] UA kuralı display:none verir ama yukarıdaki display:grid onu eziyordu:
+   kapalı kategorinin öğeleri ekranda kalıyor, yalnızca ok dönüyordu. */
+.analiz-kategori ul[hidden] { display: none; }
+.analiz-gezgin-oge {
+  display: block; width: 100%; padding: 6px 10px;
+  border: 0; border-left: 2px solid transparent; border-radius: 0 var(--kontrol-r) var(--kontrol-r) 0;
+  background: none; color: var(--ink-soft); font: inherit; font-size: var(--os5-fs-govde);
+  text-align: left; cursor: pointer;
+}
+.analiz-gezgin-oge:hover { background: var(--surface-sunken); color: var(--ink); }
+/* Seçili satır: renk tek işaret değil — kalın yazı ve sol çizgi de var. */
+.analiz-gezgin-oge[aria-current] {
+  background: var(--primary-soft); border-left-color: var(--primary);
+  color: var(--primary-ink); font-weight: 600;
+}
+
+/* ---------- Yardım paneli ---------- */
+.analiz-yardim {
+  display: grid; gap: 10px; padding: 12px;
+  border: 1px solid var(--line); border-radius: var(--kart-r); background: var(--surface-2);
+}
+.analiz-yardim-ust { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.analiz-yardim-ust b { display: block; font-size: var(--os5-fs-govde); }
+.analiz-yardim-ust small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-soru { margin: 0; padding: 0; border: 0; display: grid; gap: 4px; }
+.analiz-yardim-soru legend { padding: 0; margin-bottom: 4px; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
+.analiz-yardim-secenek {
+  display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px;
+  border: 1px solid var(--line-soft); border-radius: var(--kontrol-r); background: var(--surface); cursor: pointer;
+}
+.analiz-yardim-secenek:hover { border-color: var(--line); }
+.analiz-yardim-secenek[data-secili] { border-color: var(--primary); background: var(--primary-soft); }
+.analiz-yardim-secenek input { margin-top: 3px; flex: none; }
+.analiz-yardim-secenek b { display: block; font-size: var(--os5-fs-govde); font-weight: 600; }
+.analiz-yardim-secenek small { display: block; margin-top: 1px; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-bilmiyorum { margin: 2px 0 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-sonuc {
+  display: grid; gap: 6px; padding: 10px;
+  border: 1px solid var(--line); border-radius: var(--kontrol-r); background: var(--surface);
+}
+.analiz-yardim-sonuc > b { font-size: var(--os5-fs-govde); }
+.analiz-yardim-sonuc p { margin: 0; color: var(--ink-soft); font-size: var(--os5-fs-govde); }
+.analiz-yardim-adaylar { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.analiz-yardim-adaylar li { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.analiz-yardim-adaylar li > div { min-width: 0; display: grid; gap: 2px; }
+.analiz-yardim-adaylar b { font-size: var(--os5-fs-govde); }
+.analiz-yardim-adaylar small { color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-kontrol i { font-style: normal; font-weight: 600; color: var(--ink-soft); }
+.analiz-yardim-sinirlar { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+
+/* ---------- Veri şeridi ve önizleme ---------- */
+.analiz-veri-serit { flex-wrap: wrap; gap: 8px 12px; }
+.analiz-veri-eylem { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.veri-incele {
+  display: grid; gap: 8px; margin-bottom: 16px; padding: 12px;
+  border: 1px solid var(--line); border-radius: var(--kart-r); background: var(--surface-2);
+}
+.veri-incele-bas { margin: 0; font-size: var(--os5-fs-govde); font-weight: 600; display: flex; align-items: baseline; gap: 6px; }
+.veri-incele-bas small { font-size: var(--os5-fs-en-kucuk); font-weight: 400; }
+.veri-incele-sutunlar { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.veri-incele-sutunlar li { min-width: 0; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r); background: var(--surface); }
+.veri-incele-sutunlar b { display: block; font-size: var(--os5-fs-govde); overflow-wrap: anywhere; }
+.veri-incele-sutunlar small { display: block; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+
+/* ---------- Adım şeridi ---------- */
+.analiz-adimlar {
+  list-style: none; margin: 0 0 16px; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 6px;
+}
+.analiz-adimlar li {
+  display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px;
+  border: 1px solid var(--line-soft); border-radius: var(--kontrol-r); background: var(--surface-2);
+}
+.analiz-adim-no {
+  flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px;
+  background: var(--surface-sunken); color: var(--muted);
+  font-size: var(--os5-fs-en-kucuk); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.analiz-adim-govde { min-width: 0; display: grid; gap: 1px; }
+.analiz-adim-govde b { font-size: var(--os5-fs-govde); }
+.analiz-adim-govde small { color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+/* "sirada": şu an yapılacak adım. "tamam" YALNIZCA analiz çalıştıktan
+   sonra verilir — denetim yapılmadan yeşil onay gösterilmez. */
+.analiz-adimlar li[data-durum="sirada"] { border-color: var(--primary); background: var(--primary-soft); }
+.analiz-adimlar li[data-durum="sirada"] .analiz-adim-no { background: var(--primary); color: var(--on-primary); }
+.analiz-adimlar li[data-durum="tamam"] .analiz-adim-no { background: var(--success-soft); color: var(--success); }
+
+/* ---------- Sonuç künyesi ---------- */
+.analiz-sonuc-kunye {
+  display: grid; gap: 4px; margin-bottom: 10px; padding: 10px;
+  border: 1px solid var(--line-soft); border-radius: var(--kontrol-r); background: var(--surface-2);
+}
+.analiz-sonuc-kunye > b { font-size: var(--os5-fs-govde); }
+.analiz-sonuc-kunye > small { color: var(--ink-soft); font-size: var(--os5-fs-en-kucuk); }
+.analiz-sonuc-kunye dl { margin: 2px 0 0; display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.analiz-sonuc-kunye dl > div { display: flex; gap: 4px; min-width: 0; }
+.analiz-sonuc-kunye dt { color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-sonuc-kunye dd { margin: 0; font-size: var(--os5-fs-en-kucuk); font-weight: 600; overflow-wrap: anywhere; }
+/* Eskiyen sonuç: kutu soluklaşır ama okunur kalır (silinmiyor). */
+.results-divider[data-eskidi] { border-color: var(--warning); }
+.results-divider[data-eskidi] .analiz-sonuc { opacity: .72; }
+
+.analiz-kayitli-kart { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+
+/* ---------- Dar ekran: tek sütun, gezgin katlanır ---------- */
+@media (max-width: 1100px) {
+  .analiz-alan { grid-template-columns: minmax(0, 1fr); }
+  /*
+    Gezgin kendi başına kaymaz, sayfayla birlikte kayar: iç içe iki
+    kayan alan telefonda kullanılamaz oluyor (Kaynaklar'da da öyle).
+  */
+  .analiz-alan-gezgin { max-height: none; overflow: visible; }
+  .analiz-alan > .analiz-pencere-govde,
+  .analiz-alan > .project-form-card { overflow: visible; }
+  /* Tek ekran kilidi dar ekranda kalkıyor: içerik sayfayla kayar. */
+  .dashboard-content-shell:has(.gb-tek-ekran) { height: auto; overflow: visible; }
+  .analiz-gezgin { padding: 10px; }
+}
+
+@media (max-width: 760px) {
+  .analiz-sekmeler { overflow-x: auto; scrollbar-width: none; }
+  .analiz-sekme { white-space: nowrap; }
+  .analiz-adimlar { grid-template-columns: minmax(0, 1fr); }
+  .analiz-yardim-adaylar li { flex-direction: column; align-items: stretch; }
+  .veri-incele-sutunlar { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Cevaplanan soru tek satır: panel ekranı aşmasın, aday listesi görünsün. */
+.analiz-yardim-ozet {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 10px;
+  width: 100%; text-align: left;
+  padding: 6px 10px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+  background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+}
+.analiz-yardim-ozet:hover { border-color: var(--primary); }
+.analiz-yardim-ozet small { grid-column: 1; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-ozet b { grid-column: 1; min-width: 0; font-size: var(--os5-fs-govde); }
+.analiz-yardim-ozet span { grid-column: 2; grid-row: 1 / span 2; color: var(--primary-ink); font-size: var(--os5-fs-en-kucuk); font-weight: 600; }
+
+/* ---------- Telefon: gezgin ve çalışma alanı AYRI görünümler ----------
+   Yedi kategori çalışma alanının üstünde alt alta dururken veri yükleme
+   alanına ulaşmak için bütün liste kaydırılıyordu. Kaynaklar'daki
+   liste↔panel kuralının aynısı: özet satırı → tam ekran liste → dönüş.
+   760 px üstünde iki sütun yan yana, bu bölüm hiç uygulanmaz. */
+.analiz-gezgin-telefon { display: none; }
+.analiz-gezgin-geri { display: none; }
+
+@media (max-width: 760px) {
+  .analiz-gezgin-telefon {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .analiz-gezgin-telefon span { display: grid; gap: 1px; min-width: 0; }
+  .analiz-gezgin-telefon small { color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+  .analiz-gezgin-telefon b { font-size: var(--os5-fs-govde); overflow-wrap: anywhere; }
+  .analiz-gezgin-telefon button { flex: none; min-height: 40px; }
+
+  /* Özet kipi: yalnızca tek satır; liste, arama ve yardım gizli. */
+  .analiz-gezgin[data-telefon="ozet"] > .analiz-gezgin-ust,
+  .analiz-gezgin[data-telefon="ozet"] > nav,
+  .analiz-gezgin[data-telefon="ozet"] > .analiz-gezgin-not,
+  .analiz-gezgin[data-telefon="ozet"] > .analiz-gezgin-bos { display: none; }
+  /* Yardım özet kipinde de erişilebilir: analiz adını bilmeyen kullanıcı
+     telefonda yardıma ulaşamıyordu (liste ile birlikte gizleniyordu). */
+
+  /* Liste kipi: özet satırı yerine "dön" düğmesi; çalışma alanı gizli. */
+  .analiz-gezgin[data-telefon="liste"] > .analiz-gezgin-telefon { display: none; }
+  .analiz-gezgin[data-telefon="liste"] > .analiz-gezgin-geri {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    min-height: 40px; padding: 6px 10px;
+    border: 1px solid var(--line); border-radius: var(--kontrol-r);
+    background: var(--surface-2); color: var(--ink); font: inherit; font-size: var(--os5-fs-govde); font-weight: 600;
+    cursor: pointer;
+  }
+  .analiz-alan:has(.analiz-gezgin[data-telefon="liste"]) > .analiz-pencere-govde,
+  .analiz-alan:has(.analiz-gezgin[data-telefon="liste"]) > .project-form-card { display: none; }
+  /* Yardım açıkken sütun genişletmesi telefonda gereksiz: zaten tam genişlik. */
+  .analiz-alan:has(.analiz-yardim) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Çalışma alanı başlığı (veri yüklendikten sonra) ---------- */
+.analiz-alan-bas { display: grid; gap: 2px; margin-bottom: 12px; }
+.analiz-alan-bas h3 { margin: 0; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.2; }
+.analiz-alan-bas p { margin: 0; color: var(--muted); font-size: var(--os5-fs-govde); }
+
+/* ---------- Sayfa başlığı: kısa açıklama + açılabilir ayrıntı ---------- */
+.analiz-bas-bilgi { margin-top: 4px; }
+.analiz-bas-bilgi > summary {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  color: var(--primary-ink); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.analiz-bas-bilgi > p { margin: 6px 0 0; max-width: 72ch; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-bas-calisma { margin-top: 10px; }
+
+/* ---------- Dosya seçme alanında görünür düğme ---------- */
+.dropzone-dugme {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px;
+  padding: 8px 18px; border-radius: var(--kontrol-r);
+  background: var(--primary); color: var(--on-primary);
+  font-size: var(--os5-fs-govde); font-weight: 600;
+}
+
+/* ---------- Kompakt veri kimliği: uzun dosya adı satırı büyütmüyor ---------- */
+.analiz-veri-kimlik { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1; }
+.analiz-veri-kimlik strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analiz-veri-kimlik em { flex: none; color: var(--muted); font-style: normal; font-size: var(--os5-fs-en-kucuk); }
+
+/* ---------- Yardım: Yanıtlarım özeti ---------- */
+.analiz-yardim-ust p { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-yanitlarim { display: grid; gap: 4px; }
+.analiz-yardim-yanitlarim h4 {
+  margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.analiz-yardim-yanitlarim ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.analiz-yardim-yanitlarim button {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 10px;
+  width: 100%; min-height: 40px; text-align: left;
+  padding: 5px 10px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+  background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+}
+.analiz-yardim-yanitlarim button:hover { border-color: var(--primary); }
+.analiz-yardim-yanitlarim small { grid-column: 1; color: var(--muted); font-size: var(--os5-fs-en-kucuk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analiz-yardim-yanitlarim b { grid-column: 1; min-width: 0; font-size: var(--os5-fs-govde); }
+.analiz-yardim-yanitlarim span {
+  grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 4px;
+  color: var(--primary-ink); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.analiz-yardim-sayac {
+  display: block; margin-bottom: 2px; color: var(--muted);
+  font-size: var(--os5-fs-en-kucuk); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.analiz-yardim-geri {
+  justify-self: start; margin-top: 4px; padding: 4px 0; border: 0; background: none;
+  color: var(--primary-ink); font: inherit; font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+}
+/* Aday kartı: ad, gerekçe, kontrol ve "Bu analizi aç" alt alta ve tam görünür. */
+.analiz-yardim-adaylar li {
+  display: grid; gap: 3px; justify-items: start;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--kontrol-r); background: var(--surface-2);
+}
+.analiz-yardim-aday-ad { font-size: var(--os5-fs-govde); }
+.analiz-yardim-adaylar button { margin-top: 4px; min-height: 40px; }
+.analiz-yardim-sonuc[data-tur="yok"] { border-color: var(--warning); }
+
+/* ---------- Kompakt yatay adım şeridi ---------- */
+.analiz-adimlar li[data-durum="okunacak"] { border-color: var(--line); }
+.analiz-adimlar li[data-durum="okunacak"] .analiz-adim-no { background: var(--surface-sunken); color: var(--primary-ink); }
+
+@media (max-width: 760px) {
+  /* Üç büyük dikey kart yerine tek satırlık durum şeridi: ilk ekranda
+     seçili analiz ve ilk değişken alanı görünsün. */
+  .analiz-adimlar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+    margin-bottom: 10px; padding: 4px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+    background: var(--surface-2);
+  }
+  .analiz-adimlar li { padding: 4px 6px; border: 0; background: none; gap: 5px; align-items: center; }
+  .analiz-adim-no { width: 18px; height: 18px; }
+  .analiz-adim-govde b { font-size: var(--os5-fs-en-kucuk); }
+  /* Açıklama tek satırda kırpılıyor; tam metin li'nin title'ında. */
+  .analiz-adim-govde small { display: none; }
+  .analiz-alan-bas { margin-bottom: 8px; }
+  .analiz-veri-kimlik { flex-wrap: wrap; gap: 2px 6px; }
+  .analiz-veri-kimlik em { flex: 1 0 100%; }
+  .analiz-bas-calisma { margin-top: 8px; }
+}
+
+/* ---------- Telefon: yardım AYRI görünüm ----------
+   Masaüstünde panel gezginin içinde, sabit genişlikte durur. Telefonda
+   ekran zaten tek sütun: yardım açıkken çalışma alanı, özet satırı ve
+   liste gizlenir ve ekranda yalnızca yardım kalır. Panelin kapatma
+   düğmesi çalışma alanına döndürür. */
+@media (max-width: 760px) {
+  .analiz-alan:has(.analiz-yardim) > .analiz-pencere-govde,
+  .analiz-alan:has(.analiz-yardim) > .project-form-card { display: none; }
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-telefon,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-yardim,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-ust,
+  .analiz-gezgin:has(.analiz-yardim) > nav,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-not,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-bos { display: none; }
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-geri { display: none; }
+  /* Kapatma düğmesi telefonda metinli: tek "×" simgesi neye döneceğini söylemiyordu. */
+  .analiz-yardim-ust > button::after {
+    content: "Çalışma alanı";
+    margin-left: 6px; font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+  }
+  html[lang="en"] .analiz-yardim-ust > button::after { content: "Workspace"; }
+  .analiz-yardim { border: 0; padding: 0; background: none; }
+}
+
+/* ---------- Telefon: ilk ekranda seçili analiz + ilk değişken alanı ---------- */
+@media (max-width: 760px) {
+  /*
+    Başlık telefonda TEK YERDE: gezgin özeti zaten "Analiz: <ad>" diyor.
+    Çalışma alanının kendi h3'ü aynı adı ikinci kez yazıp ~60 px alıyordu;
+    kısa amaç açıklaması kalıyor.
+  */
+  .analiz-alan-bas h3 { display: none; }
+  .analiz-alan-bas p { font-size: var(--os5-fs-en-kucuk); }
+
+  /* Veri şeridi: ad bir satır, sayımlar bir satır, düğmeler altta yan yana. */
+  .analiz-veri-serit { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .analiz-veri-kimlik { flex-wrap: wrap; }
+  .analiz-veri-kimlik strong { flex: 1 1 auto; }
+  .analiz-veri-eylem { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .analiz-veri-eylem button { min-height: 44px; justify-content: center; }
+
+  /* İsteğe bağlı araçlar değişken alanlarının ALTINA iner. */
+  .analiz-veri-govde { display: flex; flex-direction: column; }
+  .analiz-veri-govde > * { order: 5; }
+  .analiz-veri-govde > .analiz-veri-serit { order: 1; }
+  .analiz-veri-govde > .veri-incele { order: 2; }
+  .analiz-veri-govde > .analiz-adimlar { order: 3; }
+  .analiz-veri-govde > .project-form-grid { order: 4; }
+  .analiz-veri-govde > .project-form-actions { order: 6; }
+  .analiz-veri-govde > .alert { order: 7; }
+  .analiz-veri-govde > .results-divider { order: 8; }
+}
+
+/* ---------- Telefon: dokunma hedefleri 44 px, yer başka yerden kazanılıyor ---------- */
+@media (max-width: 760px) {
+  /* Hedefler küçültülmüyor; yer, başlık ve eylemler arasındaki
+     boşluklardan kazanılıyor. */
+  .analiz-sekme { min-height: 44px; padding: 10px 12px; }
+  .analiz-gezgin-telefon button { min-height: 44px; }
+  .analiz-gezgin { padding: 8px; gap: 6px; }
+  .analiz-bas .pencere-dugmeler { gap: 6px; }
+  .analiz-bas-bilgi { margin-top: 2px; }
+  .analiz-bas-calisma { margin-top: 6px; }
+  .analiz-merkez { gap: 8px; }
+  .analiz-alan { gap: 8px; }
+}
+
+/* ---------- Uygun sütun yok: açık boş durum, hesap başlatılmıyor ---------- */
+.analiz-eksik-alan {
+  display: grid; gap: 6px; margin-top: 16px; padding: 12px 14px;
+  border: 1px solid var(--warning); border-radius: var(--kart-r); background: var(--surface-2);
+}
+.analiz-eksik-alan > b { font-size: var(--os5-fs-govde); }
+.analiz-eksik-alan ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.analiz-eksik-alan li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
+.analiz-eksik-alan > p { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }

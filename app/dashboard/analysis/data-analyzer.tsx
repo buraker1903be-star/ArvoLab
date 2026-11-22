@@ -1,7 +1,7 @@
 "use client";
 
 import { asistanCagir } from "@/lib/asistan-istemci";
-import { csvOku, excelSatirlariniDuzelt, kodluGrupSutunlari, type MetinBicimi } from "@/lib/veri-okuma";
+import { csvOku, excelSatirlariniDuzelt, type MetinBicimi } from "@/lib/veri-okuma";
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save, ListPlus, Sparkles, Code2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,19 @@ import { ANALIZ_ETIKETLERI_METIN, ANALIZ_GRUPLARI, ANALIZ_TURLERI, analizBasligi
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 import { analizBetigi, ARAC_ADI_METIN, programKartlari, yontemGruplari, yontemKartlari, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
+import { TAZE, secimKunyesi, tazelikDenetle, tazelikMetni } from "@/lib/analiz-tazelik";
+import {
+  alanKurali,
+  grupSutunlariniBul,
+  havuzlariKur,
+  ikiDegerliSutunlariBul,
+  secimiDuzelt,
+  type DegiskenSecimi,
+  type SecimAlani as SecimDegiskeni,
+  type SutunHavuzlari,
+} from "@/lib/analiz-secim";
+import VeriIncele from "./veri-incele";
+import AnalizAdimlari from "./analiz-adimlari";
 import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
@@ -134,6 +147,7 @@ export default function DataAnalyzer({
   calismalar = [],
   secilenCalisma = "",
   pencere,
+  calismaAlani,
 }: {
   calismalar?: { id: string; title: string; sayiBicimi?: BicimKarari }[];
   /* Çalışma merkezinden gelindiyse sonuç o çalışmaya kaydedilsin. */
@@ -153,6 +167,19 @@ export default function DataAnalyzer({
     altında isteğe bağlı, kapalı bir bölüm.
   */
   pencere?: { asistanAcik: boolean };
+  /*
+    ANALİZ ÇALIŞMA ALANI (22.11.2026, onaylı "A" tasarımı). Yöntem seçimi
+    sol gezgine taşındı; gezgin BU bileşenin çocuğu olarak çiziliyor
+    (render prop), yani analiz türü state'i yerinde kalıyor.
+
+    Durumu yukarı taşımak gerekmedi ve bilerek taşınmadı: tür dışarıdan
+    gelse, türe bağlı düzeltmeleri (iki değerli sütun listesi değişince
+    eski seçimin ekranda başka bir sütunla hesaplanması) bir effect'te
+    yapmak gerekirdi. Burada seçim tek bir olay işleyicisinde, sırayla.
+  */
+  calismaAlani?: {
+    gezgin: (p: { secili: AnalysisType; sec: (tur: AnalysisType) => void; veriYuklu: boolean }) => React.ReactNode;
+  };
 }) {
   const router = useRouter();
   const t = useCeviri();
@@ -171,6 +198,8 @@ export default function DataAnalyzer({
   */
   /* Analiz kutuları açık mı: seçim yapılınca katlanır (aşağıda, "Hangi analiz?"). */
   const [secimAcik, setSecimAcik] = useState(true);
+  /* "Veriyi incele" önizlemesi (22.11.2026): kapalı başlar, bütün dosya DOM'a yazılmaz. */
+  const [veriAcik, setVeriAcik] = useState(false);
   const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptives");
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
@@ -353,6 +382,41 @@ export default function DataAnalyzer({
 
   const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
+  /*
+    SEÇİM DÜZELTMESİNİ UYGULA. Kural lib/analiz-secim.ts'te; burası
+    yalnızca sonucu state'e yazıyor. Analiz değişimi ve dosya yükleme
+    AYNI fonksiyonu çağırıyor: eskiden ikisi ayrı kurallar uyguluyor ve
+    "önce lojistik seç, sonra dosya yükle" akışında ekranda görünen
+    sütun ile hesabın kullandığı değer ayrışıyordu.
+  */
+  const secimiUygula = useCallback(
+    (tur: AnalysisType, mevcut: DegiskenSecimi, kaynak: SutunHavuzlari) => {
+      const { secim } = secimiDuzelt(tur, mevcut, kaynak);
+      /*
+        SONUCUN TAMAMI KOŞULSUZ YAZILIYOR (23.11.2026 düzeltmesi).
+
+        Eskiden her alan `mevcut` ile karşılaştırılıp yalnızca farklıysa
+        state'e yazılıyordu. Dosya yüklerken `mevcut` state DEĞİL, az önce
+        okunan sütunlardan kurulan geçici bir nesne: değer ona göre
+        "değişmemiş" sayılınca setState hiç çağrılmıyor ve state eski
+        (çoğu zaman boş) değerinde kalıyordu. Kutu ilk seçeneği
+        gösteriyor, hesap ise "Seçili grup değişkeninde 0 farklı değer
+        bulundu" diye düşüyordu — düzeltmeye çalıştığımız ayrışmanın
+        aynısı, bu kez karşılaştırma tabanı yüzünden.
+
+        React aynı değerde yeniden çizim yapmıyor; koşulsuz yazmanın
+        maliyeti yok, doğruluk kazancı var.
+      */
+      setVarA(secim.varA);
+      setVarB(secim.varB);
+      setGroupVar(secim.groupVar);
+      setGroupVar2(secim.groupVar2);
+      setVarY(secim.varY);
+      return secim;
+    },
+    [],
+  );
+
   const handleFile = useCallback(async (file: File) => {
     setLoading(true);
     setParseError(null);
@@ -389,16 +453,34 @@ export default function DataAnalyzer({
       setVeriNotlari(okunan.notlar);
       setMetinBicimi(okunan.metinBicimi);
       setFileName(file.name);
-      setVarA(numericColumns[0] ?? "");
-      setVarB(numericColumns[1] ?? numericColumns[0] ?? "");
-      setGroupVar(categoricalColumns[0] ?? kodluGrupSutunlari(numericColumns, json)[0] ?? "");
+      /*
+        SEÇİLİ ANALİZE GÖRE DOĞRULA. Eskiden burada analiz ne olursa
+        olsun varA = ilk sayısal sütun atanıyordu; McNemar ya da lojistik
+        seçiliyken bu, kutuda görünmeyen bir sütunu state'e yazıyordu.
+        Havuzlar state'ten değil, AZ ÖNCE OKUNAN sütunlardan kuruluyor:
+        dataset state'i bu noktada henüz güncellenmedi.
+      */
+      const yeniHavuzlar = havuzlariKur({ sayisal: numericColumns, kategorik: categoricalColumns }, json);
+      /*
+        Yeni dosyada eski seçim genellikle yok; varsayılan olarak ilk
+        sayısal/grup sütunundan başlanıyor, sonra analizin kuralı
+        uygulanıyor. Aynı adlı sütun yeni dosyada da varsa korunur.
+      */
+      const baslangic: DegiskenSecimi = {
+        varA: columns.includes(varA) ? varA : numericColumns[0] ?? "",
+        varB: columns.includes(varB) ? varB : numericColumns[1] ?? numericColumns[0] ?? "",
+        groupVar: columns.includes(groupVar) ? groupVar : yeniHavuzlar.grup[0] ?? "",
+        groupVar2: columns.includes(groupVar2) ? groupVar2 : "",
+        varY: columns.includes(varY) ? varY : "",
+      };
+      secimiUygula(analysisType, baslangic, yeniHavuzlar);
     } catch (err) {
       console.error(err);
       setParseError(t({ tr: "Dosya okunamadı. Lütfen geçerli bir .xlsx, .xls veya .csv dosyası yükleyin.", en: "The file could not be read. Please upload a valid .xlsx, .xls or .csv file." }));
     } finally {
       setLoading(false);
     }
-  }, [dil, t]);
+  }, [dil, t, analysisType, secimiUygula, varA, varB, groupVar, groupVar2, varY]);
 
   /*
     Grup değişkeni olabilecek sütunlar: kategorikler + sayıyla kodlanmış
@@ -407,7 +489,7 @@ export default function DataAnalyzer({
     sayıldığı için t-testi, ANOVA ve ki-karenin grup listesi boş kalıyordu.
   */
   const grupSutunlari = useMemo(
-    () => (dataset ? [...dataset.categoricalColumns, ...kodluGrupSutunlari(dataset.numericColumns, dataset.rows)] : []),
+    () => (dataset ? grupSutunlariniBul(dataset.categoricalColumns, dataset.numericColumns, dataset.rows) : []),
     [dataset],
   );
 
@@ -427,19 +509,18 @@ export default function DataAnalyzer({
     görünmüyordu; burada türüne bakılmaz, yalnızca iki farklı değer
     taşıması aranır.
   */
-  const ikiDegerliSutunlar = useMemo(() => {
-    if (!dataset) return [] as { ad: string; degerler: string[] }[];
-    return dataset.columns.flatMap((ad) => {
-      const degerler = new Set<string>();
-      for (const r of dataset.rows) {
-        const v = r[ad];
-        if (v === null || v === "") continue;
-        degerler.add(String(v));
-        if (degerler.size > 2) return [];
-      }
-      return degerler.size === 2 ? [{ ad, degerler: [...degerler].sort() }] : [];
-    });
-  }, [dataset]);
+  /* İki kategorili sütun kuralı lib/analiz-secim.ts'te: dosya yükleme
+     akışı da aynı kuralı taze sütunlarla uygulayabilsin diye saf. */
+  const ikiDegerliSutunlar = useMemo(
+    () => (dataset ? ikiDegerliSutunlariBul(dataset.columns, dataset.rows) : []),
+    [dataset],
+  );
+
+  /* Seçim doğrulamasının baktığı sütun havuzları (analiz değişiminde kullanılır). */
+  const havuzlar = useMemo<SutunHavuzlari>(
+    () => ({ sayisal: dataset?.numericColumns ?? [], grup: grupSutunlari, ikiDegerli: ikiDegerliSutunlar.map((x) => x.ad) }),
+    [dataset, grupSutunlari, ikiDegerliSutunlar],
+  );
 
   // Her ikisi de yalnızca dataset'e kapanıyor; useCallback ile kimlikleri
   // dataset değiştiğinde değişiyor. Aşağıdaki iki useCallback zaten dataset'e
@@ -477,6 +558,47 @@ export default function DataAnalyzer({
     });
     return map;
   }, [dataset]);
+
+  /*
+    TEK ALAN DEĞİŞİMİ DE ORTAK KURALDAN GEÇER. McNemar'da ilk değişken
+    değişince ikincisi geçersiz kalabiliyor: kullanıcı 1. kutuda ikinci
+    sütunu seçtiğinde 2. kutunun seçenekleri arasından o sütun çıkıyor ve
+    state'teki eski değer hiçbir seçeneğe uymuyordu. Ekranda iki kutu yer
+    değiştirmiş gibi görünüyor, hesap "İki farklı, ikişer kategorili sütun
+    seçin" diye düşüyordu.
+  */
+  const degiskenSec = useCallback(
+    (alan: SecimDegiskeni, deger: string) => {
+      secimiUygula(analysisType, { varA, varB, groupVar, groupVar2, varY, [alan]: deger }, havuzlar);
+    },
+    [secimiUygula, analysisType, havuzlar, varA, varB, groupVar, groupVar2, varY],
+  );
+
+  /*
+    ANALİZ SEÇİMİ TEK YERDE. Eskiden bu düzeltmeler yöntem kartının
+    onClick'inin içindeydi; sol gezgin eklenince ikinci bir kopya
+    gerekecekti ve kopyalardan biri eksik kalırsa seçim kutusunda
+    görünmeyen bir sütunla hesap yapılırdı.
+  */
+  const analiziSec = useCallback(
+    (tur: AnalysisType) => {
+      setAnalysisType(tur);
+      secimiUygula(tur, { varA, varB, groupVar, groupVar2, varY }, havuzlar);
+      /*
+        Yeni analiz seçilince eski sonuç EKRANDAN KALKAR. Burada
+        silinmesinin sebebi tazelik uyarısından farklı: değişken
+        değiştiğinde aynı testin eski sonucu hâlâ okunabilir bir şeydir,
+        tür değiştiğinde ekranda duran tablo başka bir testin çıktısıdır.
+      */
+      setResult(null);
+      setResultError(null);
+      setCalisanAnaliz(null);
+      setKaydedildi(false);
+      setYorum(null);
+      setSecimAcik(false);
+    },
+    [secimiUygula, havuzlar, varA, varB, groupVar, groupVar2, varY],
+  );
 
   const handleGenerateFullReport = useCallback(() => {
     if (!dataset) return;
@@ -623,6 +745,76 @@ export default function DataAnalyzer({
     );
   }, [dataset, getNumericColumn, yazSayi, yazP, yazYuzde, SONUC_TABLOSU, t]);
 
+  /*
+    EKRANDAKİ YAPILANDIRMANIN KOPYASI. Hem hesaplamayı başlatan kod hem
+    tazelik denetimi (lib/analiz-tazelik.ts) bunu kullanıyor; iki ayrı
+    kopya olsa denetim kendi kopyasını doğrular, gerçek farkı kaçırırdı.
+  */
+  const guncelSecim = useMemo<BetikSecimi>(
+    () => ({
+      varA, varB, groupVar, groupVar2,
+      maddeler: analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova" ? olcumler : reliabilityItems,
+      yordayicilar: yordayicilar.filter((c) => c !== varA),
+      kovaryatlar: kovaryatlar.filter((c) => c !== varA && c !== varB && c !== varY),
+      testDegeri: Number(testDegeri.replace(",", ".")),
+      faktorSayisi: Number(faktorSayisi) > 0 ? Number(faktorSayisi) : undefined,
+      varY,
+      dfaFaktorleri: dfaFaktorleri.filter((f) => f.maddeler.length),
+      dfaHataKovaryanslari,
+      aracilar: analysisType === "aracilik" ? aracilar : undefined,
+      araciModeli,
+      olayDegeri,
+      dosyaAdi: fileName, metinBicimi, gruplar: groupLevels,
+    }),
+    [analysisType, varA, varB, groupVar, groupVar2, olcumler, reliabilityItems, yordayicilar, kovaryatlar, testDegeri, faktorSayisi, varY, dfaFaktorleri, dfaHataKovaryanslari, aracilar, araciModeli, olayDegeri, fileName, metinBicimi, groupLevels],
+  );
+
+  /* Sonuç silinmiyor; ekrandaki seçimle uyuşmadığı YAZILIYOR. */
+  const tazelik = useMemo(
+    () => (result ? tazelikDenetle(calisanAnaliz, { tur: analysisType, secim: guncelSecim }) : TAZE),
+    [result, calisanAnaliz, analysisType, guncelSecim],
+  );
+  const tazelikUyarisi = tazelikMetni(tazelik, dil, calisanAnaliz?.tur);
+  /*
+    ZORUNLU ALANA UYGUN SÜTUN YOKSA HESAP BAŞLAMAZ. Eskiden "Analizi
+    Çalıştır" yine çiziliyor, basınca tek satırlık bir hata dönüyordu;
+    kullanıcı neyin eksik olduğunu ancak düğmeye basınca öğreniyordu.
+  */
+  const eksikAlanlar = useMemo(
+    () => (dataset ? secimiDuzelt(analysisType, { varA, varB, groupVar, groupVar2, varY }, havuzlar).eksikAlanlar : []),
+    [dataset, analysisType, varA, varB, groupVar, groupVar2, varY, havuzlar],
+  );
+  const eksikAciklamasi = useCallback(
+    (alan: SecimDegiskeni) => {
+      const kural = alanKurali(analysisType, alan);
+      if (kural?.havuz === "ikiDegerli") {
+        return alan === "varB"
+          ? t({
+              tr: "Bu analiz İKİ AYRI, iki kategorili sütun ister (ör. eğitim öncesi ve sonrası Evet/Hayır). Verinizde bu koşulu sağlayan ikinci bir sütun yok.",
+              en: "This analysis needs TWO DIFFERENT two-category columns (e.g. Yes/No before and after training). Your data has no second column that meets this.",
+            })
+          : t({
+              tr: "Bu analiz iki kategorili (ör. Evet/Hayır, Geçti/Kaldı) bir sütun ister. Verinizde tam olarak iki farklı değer taşıyan sütun yok.",
+              en: "This analysis needs a two-category column (e.g. Yes/No, Pass/Fail). Your data has no column with exactly two distinct values.",
+            });
+      }
+      if (kural?.havuz === "grup") {
+        return t({
+          tr: "Bu analiz kategorik bir grup değişkeni ister. Verinizde grup olarak kullanılabilecek bir sütun bulunamadı.",
+          en: "This analysis needs a categorical grouping variable. No usable grouping column was found in your data.",
+        });
+      }
+      return t({
+        tr: "Bu analiz sayısal bir değişken ister. Verinizde sayısal okunabilen bir sütun yok.",
+        en: "This analysis needs a numeric variable. Your data has no column that reads as numeric.",
+      });
+    },
+    [analysisType, t],
+  );
+
+  /* Başlık ve kısa amaç açıklaması yöntem kartlarından (lib/analiz-betik.ts): tek kaynak. */
+  const secilenYontem = useMemo(() => yontemKartlari(dil).find((x) => x.tur === analysisType), [dil, analysisType]);
+
   const handleRunAnalysis = useCallback(() => {
     if (!dataset) return;
     setResultError(null);
@@ -659,24 +851,7 @@ export default function DataAnalyzer({
       sorulursa kayıtlı cevap gelir, saatlik hak yanmaz.
     */
     if (pencere?.asistanAcik) window.setTimeout(() => yorumIste(baslik, false), 0);
-    setCalisanAnaliz({
-      secim: {
-        varA, varB, groupVar, groupVar2,
-        maddeler: analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova" ? olcumler : reliabilityItems,
-        yordayicilar: yordayicilar.filter((c) => c !== varA),
-        kovaryatlar: kovaryatlar.filter((c) => c !== varA && c !== varB && c !== varY),
-        testDegeri: Number(testDegeri.replace(",", ".")),
-        faktorSayisi: Number(faktorSayisi) > 0 ? Number(faktorSayisi) : undefined,
-        varY,
-        dfaFaktorleri: dfaFaktorleri.filter((f) => f.maddeler.length),
-        dfaHataKovaryanslari,
-        aracilar: analysisType === "aracilik" ? aracilar : undefined,
-        araciModeli,
-        dosyaAdi: fileName, metinBicimi, gruplar: groupLevels,
-      },
-      tur: analysisType,
-      baslik,
-    });
+    setCalisanAnaliz({ secim: guncelSecim, tur: analysisType, baslik });
 
     try {
       if (analysisType === "descriptives") {
@@ -2931,17 +3106,30 @@ export default function DataAnalyzer({
         }),
       );
     }
-  }, [dataset, fileName, metinBicimi, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, aracilar, araciModeli, dfaFaktorleri, dfaHataKovaryanslari, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, yazYuzde, anlamliYaz, etkiEtiketi, GA95, SONUC_TABLOSU, t, dil, pencere, yorumIste]);
+  /* fileName ve metinBicimi artık doğrudan okunmuyor: ikisi de guncelSecim'in içinde. */
+  }, [dataset, analysisType, guncelSecim, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, aracilar, araciModeli, dfaFaktorleri, dfaHataKovaryanslari, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, yazYuzde, anlamliYaz, etkiEtiketi, GA95, SONUC_TABLOSU, t, dil, pencere, yorumIste]);
 
-  return (
+  const govde = (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
-      {pencere ? (
+      {/*
+        VERİ YÜKLENDİKTEN SONRA BAŞLIK SEÇİLEN ANALİZ (22.11.2026, "A"
+        tasarımı). Eskiden başlık hep "Veriniz"di ve altında dosya
+        yükleme açıklaması duruyordu; veri geldikten sonra o açıklama
+        okunacak bir şey olmaktan çıkıp ekranın üçte birini alıyor,
+        hangi analizi yapılandırdığınız hiçbir yerde yazmıyordu.
+      */}
+      {pencere && dataset && calismaAlani ? (
+        <header className="analiz-alan-bas">
+          <h3>{secilenYontem?.ad ?? t({ tr: "Analiz", en: "Analysis" })}</h3>
+          {secilenYontem?.aciklama ? <p>{secilenYontem.aciklama}</p> : null}
+        </header>
+      ) : pencere ? (
         <>
           <h3 className="pencere-kart-baslik">{t({ tr: "Veriniz", en: "Your data" })}</h3>
           <p className="muted text-sm mb-md">
             {t({
-              tr: "Excel (.xlsx/.xls) ya da CSV dosyanızı yükleyin; analizi ArvoLab yapar. Hesap tarayıcınızda yapılır, dosyanız sunucuya gitmez; kaydedilen yalnızca sonuç metnidir.",
-              en: "Upload your Excel (.xlsx/.xls) or CSV file; ArvoLab runs the analysis. The computation happens in your browser and your file never reaches the server; only the result text is saved.",
+              tr: "Excel (.xlsx, .xls) ya da metin tabanlı (.csv, .tsv, .txt) verinizi yükleyin; analizi ArvoLab yapar. Hesap tarayıcınızda yapılır, dosyanız sunucuya gitmez; kaydedilen yalnızca sonuç metnidir. SPSS'in .sav dosyası okunmaz.",
+              en: "Upload your Excel (.xlsx, .xls) or text-based (.csv, .tsv, .txt) data; ArvoLab runs the analysis. The computation happens in your browser and your file never reaches the server; only the result text is saved. SPSS .sav files are not read.",
             })}
           </p>
         </>
@@ -2960,8 +3148,15 @@ export default function DataAnalyzer({
       {!dataset && (
         <label className="dropzone">
           <UploadCloud size={28} aria-hidden="true" />
+          {/* Görünür düğme: tıklanabilir alanın kendisi görünmediği için
+              kullanıcı nereye basacağını aramak zorunda kalıyordu. */}
+          <span className="dropzone-dugme" aria-hidden="true">
+            {loading ? t({ tr: "Okunuyor…", en: "Reading…" }) : t({ tr: "Dosya seç", en: "Choose a file" })}
+          </span>
           <span className="text-base">
-            {loading ? t({ tr: "Okunuyor...", en: "Reading..." }) : t({ tr: "Excel veya CSV dosyası seçmek için tıklayın", en: "Click to choose an Excel or CSV file" })}
+            {loading
+              ? t({ tr: "Okunuyor...", en: "Reading..." })
+              : t({ tr: "Desteklenen biçimler: .xlsx, .xls, .csv, .tsv, .txt", en: "Supported formats: .xlsx, .xls, .csv, .tsv, .txt" })}
           </span>
           <input
             type="file"
@@ -2976,8 +3171,10 @@ export default function DataAnalyzer({
         </label>
       )}
 
-      {/* Dosya yüklenmeden önce neler yapılabildiği (04.11.2026; lib/analiz-turleri.ts ANALIZ_GRUPLARI). */}
-      {!dataset && !loading ? (
+      {/* Dosya yüklenmeden önce neler yapılabildiği (04.11.2026; lib/analiz-turleri.ts ANALIZ_GRUPLARI).
+          Çalışma alanı kipinde çizilmiyor: aynı 25 analiz solda gezginde zaten duruyor ve
+          iki liste yan yana hangisinin seçim yeri olduğunu belirsizleştiriyordu. */}
+      {!dataset && !loading && !calismaAlani ? (
         <div className="analiz-katalog" aria-label={t({ tr: "Yapılabilen analizler", en: "Available analyses" })}>
           <span className="analiz-katalog-bas">
             {t({ tr: `Yapılabilen ${ANALIZ_TURLERI.length} analiz`, en: `${ANALIZ_TURLERI.length} available analyses` })}
@@ -3004,33 +3201,84 @@ export default function DataAnalyzer({
       )}
 
       {dataset && (
-        <div>
-          <div className="file-info-bar mb-md">
-            <span>
+        /*
+          Telefonda sıra değişiyor (app/styles/analiz-alani.css): veri
+          şeridi ve adımlardan hemen sonra DEĞİŞKEN ALANLARI geliyor,
+          isteğe bağlı araçlar (veri hazırlama, özet raporu) aşağı
+          iniyor. Eskiden iki katlanır araç arada duruyordu ve 390 px'te
+          ilk değişken kutusu ilk ekrana girmiyordu.
+        */
+        <div className="analiz-veri-govde">
+          <div className="file-info-bar analiz-veri-serit mb-md">
+            {/* Uzun dosya adı satırı büyütmeyecek: tek satır, kırpılıyor,
+                tam adı title'da. Telefonda sayımlar kısaltılmış biçimde. */}
+            <span className="analiz-veri-kimlik" title={fileName ?? undefined}>
               <TableIcon size={14} className="inline-icon" aria-hidden="true" />
-              <strong>{fileName}</strong> —{" "}
-              {t({
-                tr: `${dataset.rows.length} satır, ${dataset.columns.length} sütun (${dataset.numericColumns.length} sayısal, ${dataset.categoricalColumns.length} kategorik)`,
-                en: `${dataset.rows.length} rows, ${dataset.columns.length} columns (${dataset.numericColumns.length} numeric, ${dataset.categoricalColumns.length} categorical)`,
-              })}
+              <strong>{fileName}</strong>
+              <em>
+                {t({
+                  tr: `${dataset.rows.length} satır · ${dataset.columns.length} sütun (${dataset.numericColumns.length} sayısal, ${dataset.categoricalColumns.length} kategorik)`,
+                  en: `${dataset.rows.length} rows · ${dataset.columns.length} columns (${dataset.numericColumns.length} numeric, ${dataset.categoricalColumns.length} categorical)`,
+                })}
+              </em>
             </span>
-            <button
-              type="button"
-              className="projects-filter-button"
-              onClick={() => {
-                setDataset(null);
-                setResult(null);
-                setFileName(null);
-                setVeriNotlari([]);
-                setFullReport(null);
-                setCalisanAnaliz(null);
-                setKaydedildi(false);
-                setYorum(null);
-              }}
-            >
-              {t({ tr: "Yeni dosya yükle", en: "Upload a new file" })}
-            </button>
+            <span className="analiz-veri-eylem">
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                aria-expanded={veriAcik}
+                onClick={() => setVeriAcik((a) => !a)}
+              >
+                <TableIcon size={14} aria-hidden="true" />
+                {veriAcik ? t({ tr: "İncelemeyi kapat", en: "Close preview" }) : t({ tr: "Veriyi incele", en: "Inspect data" })}
+              </button>
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                onClick={() => {
+                  /*
+                    DOSYA DEĞİŞTİRMEK YAPILANDIRMAYI DA SİLER: seçili
+                    değişkenler yeni dosyada olmayabilir, ekrandaki sonuç
+                    başka veriye ait kalır. Kaydedilmemiş bir sonuç varken
+                    bunu sessizce yapmak öğrencinin emeğini atmak olur.
+                  */
+                  const kayip = Boolean(result) && !kaydedildi;
+                  if (
+                    kayip &&
+                    !window.confirm(
+                      t({
+                        tr: "Veriyi değiştirirseniz ekrandaki sonuç ve değişken seçimleriniz silinir. Sonucu kaydetmediniz; yine de devam edilsin mi?",
+                        en: "Changing the data clears the result on screen and your variable selections. You have not saved the result; continue anyway?",
+                      }),
+                    )
+                  ) {
+                    return;
+                  }
+                  setDataset(null);
+                  setResult(null);
+                  setFileName(null);
+                  setVeriNotlari([]);
+                  setFullReport(null);
+                  setCalisanAnaliz(null);
+                  setKaydedildi(false);
+                  setYorum(null);
+                  setVeriAcik(false);
+                }}
+              >
+                {t({ tr: "Veriyi değiştir", en: "Change data" })}
+              </button>
+            </span>
           </div>
+          {veriAcik ? (
+            <VeriIncele
+              satirlar={dataset.rows}
+              sutunlar={dataset.columns}
+              sayisalSutunlar={dataset.numericColumns}
+            />
+          ) : null}
+          {calismaAlani ? (
+            <AnalizAdimlari veriYuklu sonucVar={Boolean(result)} eskidi={tazelik.eskidi} />
+          ) : null}
           {veriNotlari.length ? (
             <p className="muted text-sm mb-md" role="status">
               {veriNotlari.join(" ")}{" "}
@@ -3109,8 +3357,9 @@ export default function DataAnalyzer({
             {t({ tr: "Veya Belirli Bir Test Seçin", en: "Or Choose a Specific Test" })}
           </h3>
           )}
-          {/* Pencerede yöntem kartla seçilir; dosya yüklü kalır, yöntem değiştirmek tek dokunuş. */}
-          {pencere ? (
+          {/* Pencerede yöntem kartla seçilir; dosya yüklü kalır, yöntem değiştirmek tek dokunuş.
+              Çalışma alanı kipinde seçim sol gezgindedir; iki yerde iki liste olmaz. */}
+          {pencere && !calismaAlani ? (
             <>
               {/*
                 SEÇİM KATLANIR (04.11.2026). Analiz seçilince 25 kutu tek
@@ -3143,25 +3392,7 @@ export default function DataAnalyzer({
                           type="button"
                           className="analiz-karti"
                           aria-pressed={k.tur === analysisType}
-                          onClick={() => {
-                            setAnalysisType(k.tur);
-                            /* Seçim kutusunun listesi türe göre değişiyor (iki değerli sütunlar);
-                               listede olmayan eski seçim ekranda ilk seçenek gibi görünüp
-                               başka bir sütunla hesaplanmasın. */
-                            if (k.tur === "mcnemar" || k.tur === "lojistik") {
-                              const adlar = ikiDegerliSutunlar.map((x) => x.ad);
-                              if (!adlar.includes(varA)) setVarA(adlar[0] ?? "");
-                              if (k.tur === "mcnemar" && !adlar.includes(varB)) setVarB(adlar[1] ?? adlar[0] ?? "");
-                            } else if (dataset && !dataset.numericColumns.includes(varA) && k.tur !== "chisquare") {
-                              setVarA(dataset.numericColumns[0] ?? "");
-                            }
-                            setResult(null);
-                            setResultError(null);
-                            setCalisanAnaliz(null);
-                            setKaydedildi(false);
-                            setYorum(null);
-                            setSecimAcik(false);
-                          }}
+                          onClick={() => analiziSec(k.tur)}
                         >
                           <b>{k.ad}</b>
                           <small>{k.aciklama}</small>
@@ -3197,6 +3428,8 @@ export default function DataAnalyzer({
                     : t({ tr: "Grup değişkeni (kategorik)", en: "Grouping variable (categorical)" })}
                 </span>
                 <select value={groupVar} onChange={(e) => setGroupVar(e.target.value)}>
+                  {/* Havuz boşken value="" ile görünen seçenek aynı kalsın. */}
+                  {grupSutunlari.length ? null : <option value="">{t({ tr: "Grup sütunu yok", en: "No grouping column" })}</option>}
                   {grupSutunlari.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -3236,6 +3469,7 @@ export default function DataAnalyzer({
                             : t({ tr: "Sayısal değişken", en: "Numeric variable" })}
                 </span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
+                  {dataset.numericColumns.length ? null : <option value="">{t({ tr: "Sayısal sütun yok", en: "No numeric column" })}</option>}
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -3255,6 +3489,7 @@ export default function DataAnalyzer({
                       : t({ tr: "Değişken 2", en: "Variable 2" })}
                 </span>
                 <select value={varB} onChange={(e) => setVarB(e.target.value)}>
+                  {dataset.numericColumns.length ? null : <option value="">{t({ tr: "Sayısal sütun yok", en: "No numeric column" })}</option>}
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -3268,6 +3503,7 @@ export default function DataAnalyzer({
               <label>
                 <span>{t({ tr: "İkinci kategorik değişken", en: "Second categorical variable" })}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
+                  {grupSutunlari.length ? null : <option value="">{t({ tr: "Kategorik sütun yok", en: "No categorical column" })}</option>}
                   {grupSutunlari.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -3386,7 +3622,8 @@ export default function DataAnalyzer({
                     ? t({ tr: "Önceki ölçüm (iki kategorili)", en: "Earlier measurement (two categories)" })
                     : t({ tr: "Bağımlı değişken (iki kategorili)", en: "Dependent variable (two categories)" })}
                 </span>
-                <select value={varA} onChange={(e) => setVarA(e.target.value)}>
+                {/* Ortak kuraldan: ilk değişken değişince ikincisi yeniden doğrulanır. */}
+                <select value={varA} onChange={(e) => degiskenSec("varA", e.target.value)}>
                   {ikiDegerliSutunlar.length ? null : <option value="">{t({ tr: "İki kategorili sütun yok", en: "No two-category column" })}</option>}
                   {ikiDegerliSutunlar.map((c) => (
                     <option key={c.ad} value={c.ad}>
@@ -3400,8 +3637,12 @@ export default function DataAnalyzer({
             {analysisType === "mcnemar" && (
               <label>
                 <span>{t({ tr: "Sonraki ölçüm (iki kategorili)", en: "Later measurement (two categories)" })}</span>
-                <select value={varB} onChange={(e) => setVarB(e.target.value)}>
-                  {ikiDegerliSutunlar.map((c) => (
+                <select value={varB} onChange={(e) => degiskenSec("varB", e.target.value)}>
+                  {/* varA dışında kalan iki kategorili sütunlar: aynı sütunla hesap yapılamaz. */}
+                  {ikiDegerliSutunlar.filter((c) => c.ad !== varA).length ? null : (
+                    <option value="">{t({ tr: "Uygun ikinci sütun yok", en: "No suitable second column" })}</option>
+                  )}
+                  {ikiDegerliSutunlar.filter((c) => c.ad !== varA).map((c) => (
                     <option key={c.ad} value={c.ad}>
                       {c.ad} ({c.degerler.join(" / ")})
                     </option>
@@ -3492,12 +3733,34 @@ export default function DataAnalyzer({
             )}
           </div>
 
-          <div className="project-form-actions mt-md">
-            <button type="button" className="projects-primary-button" onClick={handleRunAnalysis}>
-              <Play size={15} aria-hidden="true" />
-              {t({ tr: "Analizi Çalıştır", en: "Run analysis" })}
-            </button>
-          </div>
+          {eksikAlanlar.length ? (
+            <div className="analiz-eksik-alan" role="status">
+              <b>
+                {t({
+                  tr: `“${secilenYontem?.ad ?? ""}” bu veriyle çalıştırılamıyor`,
+                  en: `“${secilenYontem?.ad ?? ""}” cannot be run with this data`,
+                })}
+              </b>
+              <ul>
+                {eksikAlanlar.map((alan) => (
+                  <li key={alan}>{eksikAciklamasi(alan)}</li>
+                ))}
+              </ul>
+              <p>
+                {t({
+                  tr: "Soldaki listeden verinize uyan başka bir analiz seçebilir ya da “Veriyi değiştir” ile uygun sütunları içeren dosyayı yükleyebilirsiniz.",
+                  en: "Choose another analysis that fits your data from the list on the left, or use “Change data” to upload a file that contains suitable columns.",
+                })}
+              </p>
+            </div>
+          ) : (
+            <div className="project-form-actions mt-md">
+              <button type="button" className="projects-primary-button" onClick={handleRunAnalysis}>
+                <Play size={15} aria-hidden="true" />
+                {t({ tr: "Analizi Çalıştır", en: "Run analysis" })}
+              </button>
+            </div>
+          )}
 
           {resultError && (
             <p className="alert mt-md" data-tone="danger" role="alert">
@@ -3505,28 +3768,75 @@ export default function DataAnalyzer({
             </p>
           )}
 
+          {/*
+            EKSİYEN SONUÇ (lib/analiz-tazelik.ts). Sonuç silinmiyor —
+            silmek "neden kayboldu" sorusunu doğururdu; ekrandaki seçimle
+            uyuşmadığı yazılıyor ve kutu işaretleniyor.
+          */}
+          {tazelikUyarisi ? (
+            <p className="alert mt-md" data-tone="warning" role="status">
+              {tazelikUyarisi}
+            </p>
+          ) : null}
+
           {result && (
-            <div className="results-divider text-base">
+            <div className="results-divider text-base" data-eskidi={tazelik.eskidi ? "1" : undefined}>
               {/*
                 Sonuç JSX olarak tutuluyor ve her analiz türü kendi
                 biçimini üretiyor; kopyalanacak metni her dalda ayrıca
                 kurmak yerine kapsayıcının kendi metni okunuyor. Tek
                 dokunuş, bütün türlerde çalışıyor.
               */}
+              {/*
+                HESAPLANAN SONUÇ ile ASİSTANIN AÇIKLAMASI ayrı: asistan
+                kartı aşağıda, kendi başlığıyla. Künye, tablonun hangi
+                analiz ve hangi seçimle üretildiğini yazıyor — öğrenci
+                yöntem bölümünü buradan yazıyor.
+              */}
+              {calisanAnaliz ? (
+                <div className="analiz-sonuc-kunye">
+                  <b>{t({ tr: "Hesaplanan sonuç", en: "Computed result" })}</b>
+                  <small>{calisanAnaliz.baslik}</small>
+                  <dl>
+                    {secimKunyesi(calisanAnaliz.secim, dil, calisanAnaliz.tur).map((alan) => (
+                      <div key={alan.ad}>
+                        <dt>{alan.ad}</dt>
+                        <dd>{alan.deger}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
               <div ref={sonucKutusu} className="analiz-sonuc">{result}</div>
               {sonucGrafigi}
               <div className="cluster mt-sm">
-                <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala}>
+                {/*
+                  ESKİMİŞ SONUÇ DIŞARI ÇIKAMAZ (22.11.2026). Kopyalama,
+                  kaydetme ve teze ekleme sırası, ekrandaki seçime
+                  UYMAYAN bir sonuç için kapalı: kaydedilen kayıt başlığı
+                  yeni seçimi, sayıları eski seçimi taşır ve öğrenci
+                  editörde o kaydı güncel sanarak tezine ekler. Uyarıyı
+                  okumak yetmiyordu — düğme açık kaldığı sürece basılıyor.
+                */}
+                <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala} disabled={tazelik.eskidi}>
                   {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   {kopyalandi ? t({ tr: "Kopyalandı", en: "Copied" }) : t({ tr: "Sonucu kopyala", en: "Copy result" })}
                 </button>
+                {tazelik.eskidi ? (
+                  <span className="hint" role="status">
+                    {t({
+                      tr: "Kaydetme, kopyalama ve teze ekleme, sonuç güncel seçimle hesaplanana kadar kapalı.",
+                      en: "Saving, copying and queueing are disabled until the result is computed with the current selection.",
+                    })}
+                  </span>
+                ) : null}
                 {pencere && calisanAnaliz && !kaydedildi ? (
                   <>
                     <button
                       type="button"
                       className="projects-primary-button button-compact"
                       onClick={() => sonucuKaydet(true)}
-                      disabled={kaydediliyor}
+                      disabled={kaydediliyor || tazelik.eskidi}
                     >
                       <ListPlus size={14} aria-hidden="true" />
                       {kaydediliyor ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Teze ekleme sırasına koy", en: "Queue for thesis" })}
@@ -3552,7 +3862,7 @@ export default function DataAnalyzer({
                       type="button"
                       className="projects-filter-button button-compact"
                       onClick={() => sonucuKaydet(false)}
-                      disabled={kaydediliyor}
+                      disabled={kaydediliyor || tazelik.eskidi}
                     >
                       <Save size={14} aria-hidden="true" />
                       {kaydediliyor ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Sonucu kaydet", en: "Save result" })}
@@ -3670,5 +3980,20 @@ export default function DataAnalyzer({
         </div>
       )}
     </section>
+  );
+
+  /*
+    Gezgin bu bileşenin içinde çiziliyor (render prop): analiz türü
+    state'i yerinde kalsın diye. Telefonda iki sütun tek sütuna iner ve
+    gezgin ayrı bir görünüme geçer (app/styles/analiz-alani.css).
+  */
+  if (!calismaAlani) return govde;
+  return (
+    <div className="analiz-alan">
+      <aside className="analiz-alan-gezgin">
+        {calismaAlani.gezgin({ secili: analysisType, sec: analiziSec, veriYuklu: Boolean(dataset) })}
+      </aside>
+      {govde}
+    </div>
   );
 }

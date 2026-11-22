@@ -193,7 +193,7 @@ export default async function KaynaklarPage({
       */}
       <section className="kaynaklar-bas">
         <div className="kaynaklar-bas-metin">
-          <p className="kaynaklar-ustbaslik">{t({ tr: "Araştırma alanınız", en: "Your research space" })}</p>
+          <p className="sayfa-ustbaslik">{t({ tr: "Araştırma alanınız", en: "Your research space" })}</p>
           <h1>{t({ tr: "Kaynaklar", en: "Sources" })}</h1>
           <p className="kaynaklar-aciklama">{t({ tr: "Okuyun, inceleyin, çalışmanızla ilişkilendirin.", en: "Read, review and link them to your work." })}</p>
           {/* Aktif çalışma seçimi her zaman görünür (tek çalışmada da). */}

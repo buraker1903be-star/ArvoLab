@@ -197,6 +197,8 @@ export type BetikSecimi = {
   varY?: string;
   /** DFA modeli: faktör adı ve maddeleri. */
   dfaFaktorleri?: { ad: string; maddeler: string[] }[];
+  /** İkili lojistik regresyonda 1 (olay) sayılan kategori; değişince sonuç başkalaşır. */
+  olayDegeri?: string;
   /** Aracılıkta aracılar (bir ya da daha çok) ve çoklu aracının modeli. */
   aracilar?: string[];
   araciModeli?: "paralel" | "seri";

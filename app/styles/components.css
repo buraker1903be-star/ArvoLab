@@ -25,6 +25,14 @@
   Sınır artık tek yerde ve istisna AÇIKÇA yazılıyor.
 */
 .dashboard-page { max-width: var(--content-max); margin: 0 auto; }
+
+/*
+  SAYFA ÜSTBAŞLIĞI (kicker) — Kaynaklar ve Analiz Merkezi başlıklarının
+  üstündeki küçük büyük-harf etiket. Ortak içerik kabıyla aynı gerekçe:
+  iki sayfada iki kopya durursa biri değişir, öteki kalır ve başlıklar
+  sayfa geçişinde ayrışır (PR #132'de genişlikte yaşanan tam olarak buydu).
+*/
+.sayfa-ustbaslik { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 /*
   TEK İSTİSNA: editörün yazım ekranı bir içerik sayfası değil, tam
   genişlik çalışan bir alan. Yerleşim kararı (belge sütunu mu, sağ panel
