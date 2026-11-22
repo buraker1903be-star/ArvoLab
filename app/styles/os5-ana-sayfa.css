@@ -12,7 +12,14 @@
   bileşenler değişmedi, başka sayfalardaki görünüşleri aynı.
 */
 
-.os5-ana { gap: var(--os5-alan-aralik); max-width: var(--os5-icerik-azami); margin-inline: auto; font-family: var(--os5-font-govde); }
+/*
+  Genişlik ORTAK KAPTAN (components.css, .dashboard-page). Buradaki
+  `max-width: var(--os5-icerik-azami)` 22.11.2026'ya kadar ÖLÜ bir
+  kuraldı: `.dashboard-page.gb` daha yüksek özgüllükte `max-width: none`
+  yazıyordu, yani ana sayfa hiçbir zaman 1248'e inmiyordu. Ölçülen
+  değer de "none"du. İki ayrı genişlik kuralı yerine tek kap.
+*/
+.os5-ana { gap: var(--os5-alan-aralik); font-family: var(--os5-font-govde); }
 .os5-ana .gb-selam h1 { font-size: var(--os5-fs-sayfa); }
 .os5-ana .gb-selam p { margin-top: 4px; font-size: var(--os5-fs-govde); }
 
