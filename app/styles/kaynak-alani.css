@@ -1,0 +1,271 @@
+/* ============================================================
+   KAYNAKLAR — ARAŞTIRMA ALANI (22.11.2026, onaylı mockup).
+
+   Ana sayfa ve Çalışmalarım'la aynı dil: Inter, mevcut belirteçler, ince
+   kenarlıklar, ölçülü lacivert vurgu. Süs görseli, gradient ve gölge yok.
+
+   Yerleşim: solda liste, sağda seçili kaynağın paneli. Panel kapalıyken
+   liste TAM GENİŞLİK. Panel açıkken genişlik sürüklenerek ayarlanır
+   (--kaynak-panel-genislik); iki taraf için de kullanılabilir en az
+   genişlik var (liste 360, panel 420 — kaynak-alani.tsx).
+
+   1100 px altında iki sütun dar kalıyor: panel LİSTENİN YERİNİ alır ve
+   başında belirgin bir "Kaynaklara dön" düğmesi çıkar. Sıkıştırılmış iki
+   sütun yerine tek odak; telefonda da aynı kural.
+   ============================================================ */
+
+/* ---------- Sayfa üst alanı ---------- */
+.kaynaklar-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; }
+.kaynaklar-bas-metin { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.kaynaklar-ustbaslik { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.kaynaklar-bas h1 { margin: 0; font-size: clamp(26px, 2.4vw, 32px); line-height: 1.15; letter-spacing: -.02em; }
+.kaynaklar-aciklama { margin: 0; color: var(--muted); font-size: var(--os5-fs-govde); }
+.kaynaklar-bas .kaynaklar-secici { margin-top: 8px; }
+.kaynaklar-bas-eylem { flex: none; align-self: center; }
+
+/* ---------- Sekme şeridi: solda sekmeler, sağda ikincil eylemler ---------- */
+.kaynak-sekme-serit { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.kaynak-sekme-serit > .kaynak-sekmeleri { border-bottom: 0; margin-bottom: -1px; }
+.kaynak-sekme-eylem { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-bottom: 6px; }
+.kaynak-sekme-eylem .link-button { gap: 6px; color: var(--ink-soft); font-size: var(--os5-fs-govde); }
+.kaynak-sekme-eylem .link-button:hover { color: var(--primary-ink); }
+
+/* ---------- İki sütun ---------- */
+.kaynak-arastirma { max-width: none; }
+.kaynak-alani {
+  display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch;
+  flex: 1; min-height: 0; width: 100%;
+}
+.kaynak-alani[data-panel="acik"] { grid-template-columns: minmax(0, 1fr) auto minmax(0, var(--kaynak-panel-genislik, 560px)); }
+/* Genişletilmiş panel: liste gizlenir, panel bütün alanı alır (ayırıcı da çizilmez). */
+.kaynak-alani[data-genis="true"] { grid-template-columns: minmax(0, 1fr); }
+.kaynak-alani[data-genis="true"] > .kaynak-sutun { display: none; }
+
+.kaynak-sutun { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+
+/* ---------- Araç satırı: arama + süzgeç + sıralama ---------- */
+.kaynak-arac-satiri { display: flex; align-items: center; gap: 8px; }
+.kaynak-arama { flex: 1; min-width: 0; }
+.kaynak-arama input {
+  width: 100%; min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface); color: var(--ink); font: inherit; font-size: var(--os5-fs-govde);
+}
+.kaynak-arama input::placeholder { color: var(--muted); }
+.kaynak-arama input:focus-visible { outline: none; border-color: var(--primary-ink); box-shadow: var(--os5-odak-halka); }
+
+.kaynak-arac-menu { position: relative; flex: none; }
+.kaynak-arac-menu > summary { position: relative; width: 40px; height: 40px; list-style: none; cursor: pointer; }
+.kaynak-arac-menu > summary::-webkit-details-marker { display: none; }
+.kaynak-arac-nokta { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary-ink); }
+.kaynak-arac-liste {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: var(--z-acilir);
+  display: flex; flex-direction: column; min-width: 212px; padding: 6px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface-raised); box-shadow: var(--shadow-lg);
+}
+.kaynak-arac-liste button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 36px; padding: 0 10px;
+  border: 0; border-radius: var(--r-sm); background: transparent;
+  color: var(--ink); font: inherit; font-size: var(--os5-fs-govde); text-align: left; cursor: pointer;
+}
+.kaynak-arac-liste button small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.kaynak-arac-liste button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
+.kaynak-arac-liste button:focus-visible { outline: none; box-shadow: inset var(--os5-odak-halka); }
+@media (hover: hover) and (pointer: fine) {
+  .kaynak-arac-liste button:hover { background: var(--surface-2); }
+}
+
+.kaynak-sayim { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+
+/* ---------- Liste ---------- */
+.kaynak-liste-kap { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.kaynak-liste { display: grid; margin: 0; padding: 0; list-style: none; }
+.kaynak-satiri { position: relative; border-bottom: 1px solid var(--line-soft); }
+.kaynak-satiri:first-child { border-top: 1px solid var(--line-soft); }
+/* Seçili satır: hafif zemin + ince vurgu çizgisi (mockup). */
+.kaynak-satiri[data-secili="true"] { background: var(--primary-soft); box-shadow: inset 3px 0 0 var(--primary-ink); }
+
+/* Satır aralıkları 22.11.2026'da sıkılaştı: dikeyde ~%25 daha çok kayıt
+   ekrana sığıyor, başlık ve künye satırı aynı puntoda kalıyor. */
+.kaynak-satir-sec {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 8px 48px 2px 16px;
+  border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.kaynak-satir-sec:focus-visible { outline: none; box-shadow: inset var(--os5-odak-halka); }
+@media (hover: hover) and (pointer: fine) {
+  .kaynak-satiri:not([data-secili="true"]) .kaynak-satir-sec:hover { background: var(--surface-2); }
+}
+.kaynak-satir-simge { flex: none; margin-top: 1px; color: var(--muted); }
+.kaynak-satir-govde { display: grid; gap: 2px; min-width: 0; }
+/* Uzun başlık en çok İKİ satır; tamamı title ile ve panelde okunur. */
+.kaynak-satir-govde > b {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;
+}
+.kaynak-satir-govde > small { overflow: hidden; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.kaynak-satir-dergi { font-style: italic; }
+/* Rozetler + uyarı tek satırda, başlık bloğuyla aynı sol hizada. */
+.kaynak-satir-alt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 48px 8px 45px; }
+.kaynak-rozet {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px;
+  border: 1px solid var(--line); border-radius: var(--os5-r-rozet);
+  color: var(--ink-soft); font-size: var(--os5-fs-en-kucuk); font-weight: 500;
+}
+.kaynak-rozet[data-ton="tamam"] { border-color: color-mix(in srgb, var(--success) 40%, var(--line)); color: var(--success); }
+.kaynak-rozet[data-ton="uyari"] { border-color: color-mix(in srgb, var(--warning) 45%, var(--line)); color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+
+/* Eksik künye uyarısı: küçük ve satır içi. */
+.kaynak-satir-uyari {
+  display: inline-flex; align-items: center; gap: 2px; margin: 0; line-height: 1.35;
+  color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-size: var(--os5-fs-meta);
+}
+.kaynak-satir-uyari::before { content: "⚠ "; }
+.kaynak-satir-uyari .link-button { gap: 2px; color: inherit; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+.kaynak-satir-menu { position: absolute; top: 6px; right: 8px; margin-left: 0; }
+.kaynak-satir-menu > summary { width: 32px; height: 32px; border-color: transparent; background: transparent; }
+.kaynak-satiri:hover .kaynak-satir-menu > summary,
+.kaynak-satir-menu[open] > summary,
+.kaynak-satir-menu > summary:focus-visible { border-color: var(--line); background: var(--surface); }
+
+.kaynak-liste-bos { margin: 0; padding: 28px 16px; color: var(--muted); font-size: var(--os5-fs-govde); text-align: center; }
+.kaynak-liste-alt {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 36px; padding: 0 4px;
+  border-radius: var(--os5-kontrol-r); color: var(--ink-soft); font-size: var(--os5-fs-govde); font-weight: 500; text-decoration: none;
+}
+.kaynak-liste-alt:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; }
+.kaynak-liste-alt:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+
+/* ---------- Ayırıcı ---------- */
+.kaynak-ayirici { align-self: stretch; width: 10px; border-radius: var(--r-sm); cursor: col-resize; touch-action: none; background: transparent; }
+.kaynak-ayirici::after { content: ""; display: block; width: 2px; height: 100%; margin-inline: auto; border-radius: 2px; background: var(--line-soft); }
+.kaynak-ayirici:hover::after, .kaynak-ayirici:focus-visible::after { background: var(--primary); }
+.kaynak-ayirici:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+/* ---------- Sağ panel ---------- */
+.kaynak-paneli {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden;
+}
+.kaynak-panel-govde { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.kaynak-panel-bas { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.kaynak-panel-simge { display: inline-flex; color: var(--muted); }
+.kaynak-panel-bas h2 { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+/* Dar ekranda başlık KAYNAĞIN adı olur; geniş ekranda genel başlık + altında ad. */
+.kaynak-panel-kisa { display: none; }
+.kaynak-panel-ad {
+  margin: 0; padding: 10px 14px 0; color: var(--ink); font-size: var(--os5-fs-meta); font-weight: 600; line-height: 1.35;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
+}
+.kaynak-panel-sekmeler { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--line-soft); }
+.kaynak-panel-sekmeler button {
+  min-height: 36px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: none;
+  color: var(--muted); font: inherit; font-size: var(--os5-fs-govde); font-weight: 500; cursor: pointer;
+}
+.kaynak-panel-sekmeler button[aria-current="page"] { border-bottom-color: var(--primary-ink); color: var(--primary-ink); font-weight: 600; }
+.kaynak-panel-sekmeler button:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); border-radius: var(--os5-kontrol-r) var(--os5-kontrol-r) 0 0; }
+
+/* Gövde: PDF görüntüleyici burada tam yüksekliği alır. */
+.kaynak-panel-ic { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; }
+.kaynak-panel-ic > .pdf-goruntuleyici { flex: 1; min-height: 0; }
+.kaynak-panel-ic .pdf-sayfa-alani { overscroll-behavior: contain; }
+
+.kaynak-panel-bos { display: grid; gap: 12px; justify-items: center; align-content: center; flex: 1; padding: 28px 20px; color: var(--muted); font-size: var(--os5-fs-govde); text-align: center; }
+.kaynak-panel-bos > svg { color: var(--muted); }
+.kaynak-panel-bos p { margin: 0; max-width: 42ch; }
+
+.kaynak-panel-kunye { display: grid; gap: 12px; padding: 14px; }
+.kaynak-kunye-liste { display: grid; gap: 0; margin: 0; }
+.kaynak-kunye-liste > div { display: grid; grid-template-columns: minmax(0, 118px) minmax(0, 1fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+.kaynak-kunye-liste dt { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); }
+.kaynak-kunye-liste dd { margin: 0; color: var(--ink); font-size: var(--os5-fs-meta); overflow-wrap: anywhere; }
+/* Bilinmeyen alan açıkça boş: uydurulmuş bir değer yerine "—". */
+.kaynak-kunye-liste dd[data-bos="true"] { color: var(--muted); }
+.kaynak-panel-kunye .kaynak-eksik { margin: 0; color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-size: var(--os5-fs-meta); font-weight: 550; }
+.kaynak-panel-eylem { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.kaynak-panel-notlar { display: flex; flex: 1; flex-direction: column; gap: 10px; padding: 14px; min-height: 0; }
+.kaynak-panel-notlar textarea {
+  flex: 1; min-height: 180px; padding: 10px 12px; resize: vertical;
+  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
+  background: var(--surface); color: var(--ink); font: inherit; font-size: var(--os5-fs-govde); line-height: 1.55;
+}
+.kaynak-panel-notlar textarea:focus-visible { outline: none; border-color: var(--primary-ink); box-shadow: var(--os5-odak-halka); }
+.kaynak-not-alt { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: var(--os5-fs-meta); }
+
+.kaynak-panel-alt { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 9px 14px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: var(--os5-fs-meta); }
+.kaynak-panel-alt-durum { display: inline-flex; align-items: center; gap: 5px; }
+.kaynak-panel-alt-durum[data-ton="tamam"] { color: var(--success); }
+.kaynak-panel-alt .link-button { gap: 4px; color: var(--ink-soft); font-size: inherit; }
+
+/* Dar ekrandaki dönüş düğmesi: başlık satırında, geniş ekranda yok. */
+.kaynak-panel-geri { display: none; }
+
+/* Kaydedilmemiş not uyarısı: geçiş ancak kullanıcı karar verince yapılır. */
+.kaynak-not-uyari-ortu {
+  position: fixed; inset: 0; z-index: var(--z-pencere);
+  display: grid; place-items: center; padding: 16px; background: var(--overlay);
+}
+.kaynak-not-uyari {
+  display: grid; gap: 10px; width: min(460px, 100%); padding: 20px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised); box-shadow: var(--shadow-lg);
+}
+.kaynak-not-uyari h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; }
+.kaynak-not-uyari p { margin: 0; color: var(--muted); font-size: var(--os5-fs-govde); line-height: 1.5; }
+.kaynak-not-uyari-eylem { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ---------- Dar ekran: panel listenin yerini alır ---------- */
+@media (max-width: 1100px) {
+  .kaynak-alani[data-panel="acik"] { grid-template-columns: minmax(0, 1fr); }
+  .kaynak-alani[data-panel="acik"] > .kaynak-sutun,
+  .kaynak-alani[data-panel="acik"] > .kaynak-ayirici { display: none; }
+  .kaynak-panel-geri {
+    display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 44px; margin-left: -6px; padding: 0 8px;
+    border: 0; border-radius: var(--os5-kontrol-r); background: none;
+    color: var(--primary-ink); font: inherit; font-size: var(--os5-fs-meta); font-weight: 600; cursor: pointer;
+  }
+  .kaynak-panel-geri:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+  .kaynak-panel-simge { display: none; }
+  /*
+    TEK DÖNÜŞ KONTROLÜ (22.11.2026): "Kaynaklara dön" ile başlıktaki "×"
+    aynı işi yapıyordu. Dar ekranda yalnızca "Kaynaklara dön" kalıyor.
+    Tam alan görünümünde genişlet/daralt da bir şey değiştirmiyor.
+  */
+  .kaynak-panel-kapat,
+  .kaynak-panel-boy { display: none; }
+  /*
+    PDF'e KALAN YÜKSEKLİK. Başlık kaynağın adını taşıyor (genel başlık ve
+    altındaki ayrı ad satırı kalkıyor), başlık/sekme dolguları sıkışıyor:
+    390 px'te okuma alanı ~96 px büyüyor.
+  */
+  .kaynak-panel-genel, .kaynak-panel-ad { display: none; }
+  .kaynak-panel-kisa { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kaynak-panel-bas { padding: 6px 8px 6px 12px; border-bottom: 0; }
+  .kaynak-panel-sekmeler { padding: 0 8px; }
+  .kaynak-panel-sekmeler button { min-height: 40px; }
+}
+
+@media (max-width: 760px) {
+  /*
+    Telefonda alt gezinme çubuğu EKRANA SABİT. Panel açıkken araştırma
+    alanı kalan görünür yüksekliği alır ve PDF kendi içinde kayar; yoksa
+    sayfa uzuyor ve panelin alt kenarı (PDF araçları, "Notu kaydet")
+    çubuğun altında kalıyordu.
+  */
+  body[data-kaynak-panel="acik"] .kaynaklar-bas,
+  body[data-kaynak-panel="acik"] .kaynak-sekme-serit { display: none; }
+  /* Satır da sınırlanıyor ve taşma kesiliyor: PDF kendi içinde kaysın, panel uzamasın. */
+  .kaynak-alani[data-panel="acik"] {
+    max-height: calc(100dvh - var(--topbar-height) - var(--dock-alani) - 16px);
+    grid-template-rows: minmax(0, 1fr); overflow: hidden;
+  }
+  .kaynak-alani[data-panel="acik"] > .kaynak-paneli { min-height: 0; }
+  .kaynaklar-bas { gap: 12px; }
+  .kaynaklar-bas-eylem { width: 100%; }
+  .kaynaklar-bas-eylem .kaynak-ekle > summary { width: 100%; justify-content: center; }
+  .kaynak-sekme-eylem { width: 100%; }
+  .kaynak-satir-sec { padding: 8px 44px 2px 12px; }
+  .kaynak-satir-alt { padding: 0 44px 8px 41px; }
+  .kaynak-panel-kunye .kaynak-kunye-liste > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

@@ -1,7 +1,6 @@
-import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import DoiEkleKutusu from "./doi-ekle-kutusu";
 import Link from "next/link";
-import { BookMarked, Download, FileUp, Link2, Plus, Search, Sparkles } from "lucide-react";
+import { BookMarked, ChevronRight, Download, FileUp, Link2, Plus, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { goruntuleyiciKaynaklari } from "@/app/actions/kaynak-pdf";
 import { kimlikMi } from "@/lib/kaynak-durumu";
@@ -16,7 +15,7 @@ import LiteraturPenceresi from "./literatur-penceresi";
 import LiteraturAsistani from "./literatur-asistani";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import CalismaSecici from "../_components/calisma-secici";
-import KaynakListesi from "./kaynak-listesi";
+import KaynakAlani from "./kaynak-alani";
 import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslMi } from "@/lib/atif/csl-kimlik";
@@ -63,9 +62,9 @@ const SIRA: Durum[] = ["to_review", "read", "used"];
 export default async function KaynaklarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string; kaynak?: string }>;
+  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string; kaynak?: string; kapsam?: string }>;
 }) {
-  const { calisma: istenen, doi: gelenDoi, ekle, sekme, kaynak: istenenKaynak } = await searchParams;
+  const { calisma: istenen, doi: gelenDoi, ekle, sekme, kaynak: istenenKaynak, kapsam } = await searchParams;
   const t = await ceviri();
   const { tarih, tarihSaat } = await tarihler();
   const [
@@ -85,13 +84,23 @@ export default async function KaynaklarPage({
      eklediği atıflarla aynı dil (lib/belge-dili.ts). */
   const kaynakcaDili = calisma ? await belgeDili(await createClient(), calisma.id, await aktifDil()) : await aktifDil();
 
-  const kaynaklar = calisma
-    ? tumKaynaklar
-        .filter((k) => k.project_id === calisma.id)
-        .sort((a, b) => SIRA.indexOf(a.status as Durum) - SIRA.indexOf(b.status as Durum))
-    : [];
-  /* Satırdaki "PDF'i oku" ve PDF durumu için: okunamazsa liste yine çizilir, yalnızca PDF eylemi çıkmaz. */
-  const pdfSonucu = calisma && kaynaklar.length ? await goruntuleyiciKaynaklari(calisma.id) : null;
+  /*
+    KAPSAM (22.11.2026): ya seçili çalışmanın kaynakları ya da HİÇBİR
+    çalışmaya bağlı olmayanlar (?kapsam=bagsiz). Bağsız kaynaklar eskiden
+    yalnızca "N kaynağınız bir çalışmaya bağlı değil" cümlesiyle
+    söyleniyordu; açılacak bir yer yoktu.
+  */
+  const kapsamBagsiz = kapsam === "bagsiz";
+  const kaynaklar = kapsamBagsiz
+    ? tumKaynaklar.filter((k) => !k.project_id).sort((a, b) => SIRA.indexOf(a.status as Durum) - SIRA.indexOf(b.status as Durum))
+    : calisma
+      ? tumKaynaklar
+          .filter((k) => k.project_id === calisma.id)
+          .sort((a, b) => SIRA.indexOf(a.status as Durum) - SIRA.indexOf(b.status as Durum))
+      : [];
+  /* Satırdaki PDF durumu için: okunamazsa liste yine çizilir, yalnızca PDF eylemi çıkmaz.
+     Bağsız kapsamda çalışma yok, dolayısıyla çalışmaya bağlı PDF listesi de yok. */
+  const pdfSonucu = !kapsamBagsiz && calisma && kaynaklar.length ? await goruntuleyiciKaynaklari(calisma.id) : null;
   const pdfler = pdfSonucu && !("hata" in pdfSonucu) ? pdfSonucu.satirlar.map((p) => ({ id: p.id, doi: p.doi, kaynakId: p.kaynak_id ?? null })) : null;
   const say = (durum: Durum) => kaynaklar.filter((k) => k.status === durum).length;
   const bagsiz = tumKaynaklar.filter((k) => !k.project_id).length;
@@ -117,24 +126,80 @@ export default async function KaynaklarPage({
 
   const kaynakcaSekmesi = sekme === "kaynakca";
   const ekleMenusuAcik = ekle === "1" || typeof gelenDoi === "string";
+  const kapsamAdresi = (bagsiz: boolean) =>
+    calisma
+      ? `/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}${bagsiz ? "&kapsam=bagsiz" : ""}`
+      : "/dashboard/literature";
+
+  /*
+    TEK BİRİNCİL EYLEM: "Kaynak ekle" (sayfa başlığının sağında). Üç yol
+    (DOI, dosyadan içe aktarma, dizinlerde arama) menüde; hiçbiri
+    kaldırılmadı. Menü <details>: JS'siz açılır, Esc ve dışarı tıklama
+    AcilirKapatici'de.
+  */
+  const kaynakEkle = calisma ? (
+    <details className="kaynak-ekle" open={ekleMenusuAcik || undefined}>
+      <summary className="projects-primary-button">
+        <Plus size={16} aria-hidden="true" />
+        {t({ tr: "Kaynak ekle", en: "Add source" })}
+      </summary>
+      <div className="kaynak-ekle-menu" role="group" aria-label={t({ tr: "Kaynak ekleme yolları", en: "Ways to add a source" })}>
+        <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}&ekle=1`} className="kaynak-ekle-oge">
+          <Link2 size={16} aria-hidden="true" />
+          <span>
+            <b>{t({ tr: "DOI ile ekle", en: "Add by DOI" })}</b>
+            <small>{t({ tr: "Künye Crossref ve OpenAlex'ten dolar", en: "The reference fills in from Crossref and OpenAlex" })}</small>
+          </span>
+        </Link>
+        <PanelDrawer
+          triggerLabel={t({ tr: "Dosyadan içe aktar", en: "Import from a file" })}
+          triggerIcon={<FileUp size={16} aria-hidden="true" />}
+          triggerClassName="kaynak-ekle-oge"
+          kicker={t({ tr: "Literatür", en: "Literature" })}
+          title={t({ tr: "Kaynakları toplu ekleyin", en: "Add sources in bulk" })}
+          description={t({
+            tr: "Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir.",
+            en: "Import your Zotero, Mendeley or EndNote library from a file, or paste DOIs. Sources are added to this work as “To read”.",
+          })}
+          boy="genis"
+          basaridaKapan={false}
+        >
+          <IceAktarma projectId={calisma.id} mevcut={kaynaklar} />
+        </PanelDrawer>
+        <LiteraturPenceresi
+          projectId={calisma.id}
+          projeAdi={calisma.title}
+          triggerLabel={t({ tr: "Dizinlerde ara", en: "Search the indexes" })}
+          triggerClassName="kaynak-ekle-oge kaynak-bul-tetik"
+        />
+      </div>
+    </details>
+  ) : null;
 
   return (
     <main className="dashboard-page gb gb-tek-ekran kaynaklar-sayfasi">
-      {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
-      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
-      <section className="projects-header">
-        <div>
+      {/*
+        ÇALIŞMA BAĞLAMI YAYINLANMIYOR (22.11.2026). Gezinme artık modül
+        sayfalarında çalışma menüsüne geçmiyor (lib/os/uygulamalar.ts,
+        adrestekiCalisma): hangi çalışmaya bakıldığı yukarıdaki çalışma
+        seçicisinde yazıyor. Bağlamı yayınlamanın tek tüketicisi o menüydü.
+      */}
+      {/*
+        ÜST ALAN (22.11.2026, onaylı mockup): Çalışmalarım ve ana sayfayla
+        aynı dil — üst başlık, sayfa başlığı, tek cümlelik açıklama, sağda
+        TEK birincil eylem. Eskiden başlığın altında çalışmanın adını da
+        içeren üç satırlık bir açıklama vardı; aynı bilgi hemen altındaki
+        çalışma seçicisinde zaten duruyor.
+      */}
+      <section className="kaynaklar-bas">
+        <div className="kaynaklar-bas-metin">
+          <p className="kaynaklar-ustbaslik">{t({ tr: "Araştırma alanınız", en: "Your research space" })}</p>
           <h1>{t({ tr: "Kaynaklar", en: "Sources" })}</h1>
-          <p>
-            {calisma
-              ? t({
-                  tr: `“${calisma.title}” çalışmasının literatürü ve kaynakçası. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.`,
-                  en: `Literature and reference list for “${calisma.title}”. No source summaries or commentary are generated; references are verified against the indexes.`,
-                })
-              : t({ tr: "Çalışmalarınızın literatürü ve kaynakçası tek yerde.", en: "Your works' literature and reference lists in one place." })}
-          </p>
+          <p className="kaynaklar-aciklama">{t({ tr: "Okuyun, inceleyin, çalışmanızla ilişkilendirin.", en: "Read, review and link them to your work." })}</p>
+          {/* Aktif çalışma seçimi her zaman görünür (tek çalışmada da). */}
+          {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" hepGoster /> : null}
         </div>
-        {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" /> : null}
+        {calisma ? <div className="kaynaklar-bas-eylem">{kaynakEkle}</div> : null}
       </section>
 
       {calismaOkunamadi || kaynakOkunamadi ? (
@@ -176,15 +241,65 @@ export default async function KaynaklarPage({
             değişmedi; "Doğrulandı"/"Olası eşleşme" ayrımı kaynakça
             sonuçlarında aynen duruyor.
           */}
-          <nav className="calisma-sekmeleri kaynak-sekmeleri" aria-label={t({ tr: "Kaynaklar ve kaynakça", en: "Sources and reference list" })}>
-            <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}`} aria-current={kaynakcaSekmesi ? undefined : "page"}>
-              {t({ tr: "Kütüphanem", en: "My library" })}
-              {kaynaklar.length ? <span className="kaynak-sekme-sayi">{kaynaklar.length}</span> : null}
-            </Link>
-            <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}&sekme=kaynakca`} aria-current={kaynakcaSekmesi ? "page" : undefined}>
-              {t({ tr: "Kaynakça", en: "Reference list" })}
-            </Link>
-          </nav>
+          {/*
+            Sekmeler solda, İKİNCİL eylemler sağda (mockup): tarama asistanı
+            ve dışa aktarma sayfanın ana işi değil. İkisi de eskisi gibi
+            kendi panelinde açılıyor; içerikleri değişmedi.
+          */}
+          <div className="kaynak-sekme-serit">
+            <nav className="calisma-sekmeleri kaynak-sekmeleri" aria-label={t({ tr: "Kaynaklar ve kaynakça", en: "Sources and reference list" })}>
+              <Link href={kapsamAdresi(kapsamBagsiz)} aria-current={kaynakcaSekmesi ? undefined : "page"}>
+                {t({ tr: "Kütüphanem", en: "My library" })}
+                {kaynaklar.length ? <span className="kaynak-sekme-sayi">{kaynaklar.length}</span> : null}
+              </Link>
+              <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}&sekme=kaynakca`} aria-current={kaynakcaSekmesi ? "page" : undefined}>
+                {t({ tr: "Kaynakça", en: "Reference list" })}
+              </Link>
+            </nav>
+            <div className="kaynak-sekme-eylem">
+              {asistanAcik ? (
+                <PanelDrawer
+                  triggerLabel={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                  triggerIcon={<Sparkles size={15} aria-hidden="true" />}
+                  triggerClassName="link-button"
+                  kicker={t({ tr: "Literatür", en: "Literature" })}
+                  title={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                  description={t({
+                    tr: "Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir.",
+                    en: "The assistant doesn't recommend sources: it builds search strings from your research question that you can paste into databases, and shows gaps in your list.",
+                  })}
+                  boy="genis"
+                  basaridaKapan={false}
+                >
+                  <LiteraturAsistani projeler={[{ id: calisma.id, title: calisma.title }]} asistanAcik={asistanAcik} secilenCalisma={calisma.id} />
+                </PanelDrawer>
+              ) : null}
+              {kaynaklar.length ? (
+                <PanelDrawer
+                  triggerLabel={t({ tr: "Dışa aktar", en: "Export" })}
+                  triggerIcon={<Download size={15} aria-hidden="true" />}
+                  triggerClassName="link-button"
+                  kicker={t({ tr: "Literatür", en: "Literature" })}
+                  title={t({ tr: "Kaynakça ve dışa aktarma", en: "Reference list and export" })}
+                  description={t({
+                    tr: "Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın.",
+                    en: "Copy your reference list in your work's citation style, or export your sources to another program.",
+                  })}
+                  boy="genis"
+                  basaridaKapan={false}
+                >
+                  <DisaAktarma
+                    kaynaklar={kaynaklar}
+                    dil={kaynakcaDili}
+                    stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
+                    stilAdi={cslMi(calisma.citation_style) ? stilAdi(calisma.citation_style) : STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
+                    cslStil={cslMi(calisma.citation_style) ? calisma.citation_style : null}
+                    calismaAdi={calisma.title}
+                  />
+                </PanelDrawer>
+              ) : null}
+            </div>
+          </div>
 
           {kaynakcaSekmesi ? (
             <section className="kaynak-tek" aria-label={t({ tr: "Kaynakça", en: "Reference list" })}>
@@ -258,108 +373,8 @@ export default async function KaynaklarPage({
           </article>
             </section>
           ) : (
-          <section className="kaynak-tek" aria-label={t({ tr: "Kaynaklar", en: "Sources" })}>
-          <article className="gb-kart gb-sutun kaynak-tek-kart">
-            <header className="gb-kart-bas kaynak-tek-bas">
-              <div>
-                <p>
-                  {kaynaklar.length
-                    ? t({
-                        tr: `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde`,
-                        en: `${kaynaklar.length} ${kaynaklar.length === 1 ? "source" : "sources"} · ${say("to_review")} to read · ${say("read")} read · ${say("used")} cited`,
-                      })
-                    : t({ tr: "Bu çalışmaya bağlı kaynak yok", en: "No sources linked to this work" })}
-                </p>
-              </div>
-              <div className="pencere-dugmeler">
-                {asistanAcik ? (
-                  <PanelDrawer
-                    triggerLabel={t({ tr: "Tarama asistanı", en: "Search assistant" })}
-                    triggerIcon={<Sparkles size={15} aria-hidden="true" />}
-                    triggerClassName="projects-filter-button button-compact"
-                    kicker={t({ tr: "Literatür", en: "Literature" })}
-                    title={t({ tr: "Tarama asistanı", en: "Search assistant" })}
-                    description={t({
-                      tr: "Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir.",
-                      en: "The assistant doesn't recommend sources: it builds search strings from your research question that you can paste into databases, and shows gaps in your list.",
-                    })}
-                    boy="genis"
-                    basaridaKapan={false}
-                  >
-                    <LiteraturAsistani
-                      projeler={[{ id: calisma.id, title: calisma.title }]}
-                      asistanAcik={asistanAcik}
-                      secilenCalisma={calisma.id}
-                    />
-                  </PanelDrawer>
-                ) : null}
-                {kaynaklar.length ? (
-                  <PanelDrawer
-                    triggerLabel={t({ tr: "Dışa aktar", en: "Export" })}
-                    triggerIcon={<Download size={15} aria-hidden="true" />}
-                    triggerClassName="projects-filter-button button-compact"
-                    kicker={t({ tr: "Literatür", en: "Literature" })}
-                    title={t({ tr: "Kaynakça ve dışa aktarma", en: "Reference list and export" })}
-                    description={t({
-                      tr: "Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın.",
-                      en: "Copy your reference list in your work's citation style, or export your sources to another program.",
-                    })}
-                    boy="genis"
-                    basaridaKapan={false}
-                  >
-                    <DisaAktarma
-                      kaynaklar={kaynaklar}
-                      dil={kaynakcaDili}
-                      stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
-                      stilAdi={cslMi(calisma.citation_style) ? stilAdi(calisma.citation_style) : STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
-                      cslStil={cslMi(calisma.citation_style) ? calisma.citation_style : null}
-                      calismaAdi={calisma.title}
-                    />
-                  </PanelDrawer>
-                ) : null}
-                {/*
-                  TEK GİRİŞ: "Kaynak ekle". Menü <details> (JS'siz açılır, Esc ve
-                  dışarı tıklama AcilirKapatici'de). Üç yol, açık adlarıyla.
-                */}
-                <details className="kaynak-ekle" open={ekleMenusuAcik || undefined}>
-                  <summary className="projects-primary-button button-compact">
-                    <Plus size={15} aria-hidden="true" />
-                    {t({ tr: "Kaynak ekle", en: "Add source" })}
-                  </summary>
-                  <div className="kaynak-ekle-menu" role="group" aria-label={t({ tr: "Kaynak ekleme yolları", en: "Ways to add a source" })}>
-                    <Link href={`/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}&ekle=1`} className="kaynak-ekle-oge">
-                      <Link2 size={16} aria-hidden="true" />
-                      <span>
-                        <b>{t({ tr: "DOI ile ekle", en: "Add by DOI" })}</b>
-                        <small>{t({ tr: "Künye Crossref ve OpenAlex'ten dolar", en: "The reference fills in from Crossref and OpenAlex" })}</small>
-                      </span>
-                    </Link>
-                    <PanelDrawer
-                      triggerLabel={t({ tr: "Dosyadan içe aktar", en: "Import from a file" })}
-                      triggerIcon={<FileUp size={16} aria-hidden="true" />}
-                      triggerClassName="kaynak-ekle-oge"
-                      kicker={t({ tr: "Literatür", en: "Literature" })}
-                      title={t({ tr: "Kaynakları toplu ekleyin", en: "Add sources in bulk" })}
-                      description={t({
-                        tr: "Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir.",
-                        en: "Import your Zotero, Mendeley or EndNote library from a file, or paste DOIs. Sources are added to this work as “To read”.",
-                      })}
-                      boy="genis"
-                      basaridaKapan={false}
-                    >
-                      <IceAktarma projectId={calisma.id} mevcut={kaynaklar} />
-                    </PanelDrawer>
-                    <LiteraturPenceresi
-                      projectId={calisma.id}
-                      projeAdi={calisma.title}
-                      triggerLabel={t({ tr: "Dizinlerde ara", en: "Search the indexes" })}
-                      triggerClassName="kaynak-ekle-oge kaynak-bul-tetik"
-                    />
-                  </div>
-                </details>
-              </div>
-            </header>
-            {/* DOI kutusu yalnızca "DOI ile ekle" seçilince ya da adreste DOI varken (eskiden her zaman açıktı). */}
+          <section className="kaynak-tek kaynak-arastirma" aria-label={t({ tr: "Kaynaklar", en: "Sources" })}>
+            {/* DOI kutusu yalnızca "DOI ile ekle" seçilince ya da adreste DOI varken. */}
             {ekleMenusuAcik ? (
               <DoiEkleKutusu
                 projectId={calisma.id}
@@ -368,28 +383,62 @@ export default async function KaynaklarPage({
                 aramaTetikleyicisi=".kaynak-bul-tetik"
               />
             ) : null}
-            {kaynaklar.length ? (
-              <KaynakListesi kaynaklar={kaynaklar} projectId={calisma.id} pdfler={pdfler} odak={odakKaynak && odakKaynak.project_id === calisma.id ? odakKaynak.id : null} />
+            {kaynakOkunamadi ? (
+              /*
+                HATA ile BOŞ KÜTÜPHANE AYRI (22.11.2026). Okuma düşünce
+                eskiden liste boş çiziliyordu: öğrenci topladığı literatürü
+                kaybettiğini sanıyordu. Yukarıdaki uyarı zaten çıkıyor;
+                burada "kaynak yok" mesajı YAZILMIYOR.
+              */
+              null
+            ) : kaynaklar.length ? (
+              <KaynakAlani
+                /* Derin bağlantı değişince bileşen sıfırdan kurulur: seçim, sekme ve süzgeç yeni isteğe göre başlar. */
+                key={`${kapsamBagsiz ? "bagsiz" : calisma.id}-${odakKaynak?.id ?? ""}`}
+                kaynaklar={kaynaklar}
+                projectId={kapsamBagsiz ? null : calisma.id}
+                pdfler={pdfler}
+                ilkSecim={odakKaynak && kaynaklar.some((k) => k.id === odakKaynak.id) ? odakKaynak.id : null}
+                kapsamBagsiz={kapsamBagsiz}
+              />
             ) : (
               <div className="pw-kaynak-bos">
-                <Search size={20} aria-hidden="true" />
+                <BookMarked size={20} aria-hidden="true" />
                 <p>
-                  {t({
-                    tr: "Henüz kaynak yok. \"Kaynak ekle\" ile DOI yapıştırın, Zotero/Mendeley dosyanızı içe aktarın ya da OpenAlex ve Crossref dizinlerinde arayın. Okuduğunuzu ve metinde kullandığınızı burada işaretlersiniz.",
-                    en: "No sources yet. Use \"Add source\" to paste a DOI, import your Zotero/Mendeley file or search the OpenAlex and Crossref indexes. Mark what you've read and cited here.",
-                  })}
+                  {kapsamBagsiz
+                    ? t({
+                        tr: "Bir çalışmaya bağlı olmayan kaynağınız yok. Bu liste, bir çalışmaya bağlanmadan eklenmiş kaynakları gösterir.",
+                        en: "You have no sources outside a work. This list shows sources added without being linked to a work.",
+                      })
+                    : t({
+                        tr: "Henüz kaynak yok. \"Kaynak ekle\" ile DOI yapıştırın, Zotero/Mendeley dosyanızı içe aktarın ya da OpenAlex ve Crossref dizinlerinde arayın. Okuduğunuzu ve metinde kullandığınızı burada işaretlersiniz.",
+                        en: "No sources yet. Use \"Add source\" to paste a DOI, import your Zotero/Mendeley file or search the OpenAlex and Crossref indexes. Mark what you've read and cited here.",
+                      })}
                 </p>
               </div>
             )}
-            {bagsiz ? (
-              <p className="hint">
+
+            {/*
+              ÇALIŞMAYA BAĞLI OLMAYAN KAYNAKLAR her durumda erişilebilir:
+              bağlantı listeden ayrı, SAYFADA duruyor. Liste bileşeninin
+              içindeyken, seçili çalışmanın hiç kaynağı olmadığında (yani
+              tam da bağımsız kaynaklara bakılacak durumda) bileşenle
+              birlikte kayboluyordu.
+            */}
+            {kapsamBagsiz ? (
+              <Link href={kapsamAdresi(false)} className="kaynak-liste-alt" scroll={false}>
+                {t({ tr: "Çalışmanın kaynaklarına dön", en: "Back to the work's sources" })}
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
+            ) : bagsiz ? (
+              <Link href={kapsamAdresi(true)} className="kaynak-liste-alt" scroll={false}>
                 {t({
-                  tr: `${bagsiz} kaynağınız bir çalışmaya bağlı değil; burada görünmüyor.`,
-                  en: `${bagsiz} of your ${bagsiz === 1 ? "sources isn't" : "sources aren't"} linked to a work and ${bagsiz === 1 ? "doesn't" : "don't"} appear here.`,
+                  tr: `Çalışmaya bağlı olmayanlar · ${bagsiz}`,
+                  en: `Not linked to a work · ${bagsiz}`,
                 })}
-              </p>
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
             ) : null}
-          </article>
           </section>
           )}
         </>

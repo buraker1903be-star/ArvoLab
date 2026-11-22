@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, Search, StretchHorizontal, LocateFixed, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Minus, MoreHorizontal, Plus, Search, StretchHorizontal, LocateFixed, X } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { pasajParcalari } from "@/lib/pdf-pasaj";
@@ -94,6 +94,7 @@ export default function PdfGoruntuleyici({
   katman,
   kaliciPasajlar,
   onSurum,
+  kompakt = false,
 }: {
   pdfId: string;
   /**
@@ -121,6 +122,16 @@ export default function PdfGoruntuleyici({
   kaliciPasajlar?: { sayfa: number; metin: string }[];
   /** Yüklenen PDF'in sürümü (pdf.js parmak izi, içerikten): dosya değişince değişir. */
   onSurum?: (pdfId: string, surum: string) => void;
+  /*
+    KOMPAKT ARAÇ ÇUBUĞU (22.11.2026, Kaynaklar panelinin telefon görünümü).
+    Dar sütunda araç çubuğu iki-üç satıra sarıyor ve PDF'e kalan yükseklik
+    yarıya iniyordu. Kompakt kipte çubuk TEK satır: sayfa gezinmesi açıkta,
+    ikincil araçlar (yakınlaştırma, genişliğe sığdır, pasaja odaklan,
+    PDF içinde ara) "Daha fazla" menüsünde. Düğmeler KÜÇÜLTÜLMEDİ —
+    dokunma hedefleri aynı. Editör bu bayrağı vermiyor; orada çubuk
+    olduğu gibi kalıyor.
+  */
+  kompakt?: boolean;
 }) {
   const t = useCeviri();
   const [belge, setBelge] = useState<PDFDocumentProxy | null>(null);
@@ -536,6 +547,82 @@ export default function PdfGoruntuleyici({
   const sayfaSayisi = belge?.numPages ?? 0;
   const yuzde = Math.round(cizilenOlcek * 100);
 
+  /*
+    İKİNCİL ARAÇLAR tek yerde yazılıyor: normal kipte çubuğun devamı,
+    kompakt kipte "Daha fazla" menüsünün içeriği. İki kopya yazılsaydı
+    biri yeni bir aracı alır, öteki unuturdu. `etiketli` menüde adları
+    da gösterir; düğmelerin dokunma hedefi iki kipte de aynı.
+  */
+  const ikincilDugmeler = (etiketli: boolean) => {
+    const ad = (metin: string) => (etiketli ? <span className="pdf-arac-ad">{metin}</span> : null);
+    return (
+      <>
+        <button type="button" className="yazim-ikon" onClick={() => setOlcek(olcekSinirla(cizilenOlcek - OLCEK_ADIM))} disabled={!belge} aria-label={t({ tr: "Uzaklaştır", en: "Zoom out" })}>
+          <Minus size={16} aria-hidden="true" />
+          {ad(t({ tr: "Uzaklaştır", en: "Zoom out" }))}
+        </button>
+        <span className="pdf-yuzde" aria-live="polite">{yuzde}%</span>
+        <button type="button" className="yazim-ikon" onClick={() => setOlcek(olcekSinirla(cizilenOlcek + OLCEK_ADIM))} disabled={!belge} aria-label={t({ tr: "Yakınlaştır", en: "Zoom in" })}>
+          <Plus size={16} aria-hidden="true" />
+          {ad(t({ tr: "Yakınlaştır", en: "Zoom in" }))}
+        </button>
+        <button type="button" className="yazim-ikon" onClick={() => setOlcek("sigdir")} disabled={!belge} aria-pressed={olcek === "sigdir"} aria-label={t({ tr: "Genişliğe sığdır", en: "Fit to width" })}>
+          <StretchHorizontal size={16} aria-hidden="true" />
+          {ad(t({ tr: "Genişliğe sığdır", en: "Fit to width" }))}
+        </button>
+        {/*
+          PASAJA ODAKLAN (2. tur tasarımı, madde 4): doğrulanmış pasaj varken
+          (atıf kartının "Dayanağa git"i) pasajın sayfasına döner, okunur bir
+          ölçeğe (en az %160, telefonda dar sütunda küçük kalmasın) getirir ve
+          vurgulu satırı ortalar. Pasaj yoksa düğme yok: işaretlenecek bir şey yok.
+        */}
+        {pasaj && pasajBulundu ? (
+          <button
+            type="button"
+            className="yazim-ikon pdf-pasaja-odaklan"
+            disabled={!belge}
+            onClick={() => {
+              if (sayfaNo !== pasaj.sayfa) sayfayaGit(pasaj.sayfa);
+              if (cizilenOlcek < 1.6) setOlcek(1.6);
+              else window.requestAnimationFrame(() => pasajaKaydir(kapRef.current, katmanRef.current?.querySelector(".pdf-pasaj") ?? null));
+            }}
+            aria-label={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+            title={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
+          >
+            <LocateFixed size={16} aria-hidden="true" />
+            {ad(t({ tr: "Pasaja odaklan", en: "Focus on passage" }))}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="yazim-ikon pdf-ara-ac"
+          aria-expanded={aramaAcik}
+          aria-controls={`pdf-ara-${pdfId}-form`}
+          onClick={() => setAramaAcik((a) => !a)}
+          disabled={!belge}
+          aria-label={aramaAcik ? t({ tr: "Aramayı kapat", en: "Close search" }) : t({ tr: "PDF içinde ara", en: "Search in PDF" })}
+          title={t({ tr: "PDF içinde ara", en: "Search in PDF" })}
+        >
+          {aramaAcik ? <X size={16} aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
+          {ad(t({ tr: "PDF içinde ara", en: "Search in PDF" }))}
+        </button>
+      </>
+    );
+  };
+  const ikincilAraclar = (kisa: boolean) =>
+    kisa ? (
+      <details className="pdf-arac-daha">
+        <summary className="yazim-ikon" aria-label={t({ tr: "Daha fazla PDF aracı", en: "More PDF tools" })} title={t({ tr: "Daha fazla", en: "More" })}>
+          <MoreHorizontal size={16} aria-hidden="true" />
+        </summary>
+        <div className="pdf-arac-daha-liste" role="group" aria-label={t({ tr: "PDF araçları", en: "PDF tools" })}>
+          {ikincilDugmeler(true)}
+        </div>
+      </details>
+    ) : (
+      <div className="pdf-arac-grup">{ikincilDugmeler(false)}</div>
+    );
+
   return (
     <div className="pdf-goruntuleyici">
       <div className="pdf-arac" role="toolbar" aria-label={t({ tr: "PDF araçları", en: "PDF tools" })}>
@@ -562,52 +649,12 @@ export default function PdfGoruntuleyici({
             <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
-        <div className="pdf-arac-grup">
-          <button type="button" className="yazim-ikon" onClick={() => setOlcek(olcekSinirla(cizilenOlcek - OLCEK_ADIM))} disabled={!belge} aria-label={t({ tr: "Uzaklaştır", en: "Zoom out" })}>
-            <Minus size={16} aria-hidden="true" />
-          </button>
-          <span className="pdf-yuzde" aria-live="polite">{yuzde}%</span>
-          <button type="button" className="yazim-ikon" onClick={() => setOlcek(olcekSinirla(cizilenOlcek + OLCEK_ADIM))} disabled={!belge} aria-label={t({ tr: "Yakınlaştır", en: "Zoom in" })}>
-            <Plus size={16} aria-hidden="true" />
-          </button>
-          <button type="button" className="yazim-ikon" onClick={() => setOlcek("sigdir")} disabled={!belge} aria-pressed={olcek === "sigdir"} aria-label={t({ tr: "Genişliğe sığdır", en: "Fit to width" })}>
-            <StretchHorizontal size={16} aria-hidden="true" />
-          </button>
-          {/*
-            PASAJA ODAKLAN (2. tur tasarımı, madde 4): doğrulanmış pasaj varken
-            (atıf kartının "Dayanağa git"i) pasajın sayfasına döner, okunur bir
-            ölçeğe (en az %160, telefonda dar sütunda küçük kalmasın) getirir ve
-            vurgulu satırı ortalar. Pasaj yoksa düğme yok: işaretlenecek bir şey yok.
-          */}
-          {pasaj && pasajBulundu ? (
-            <button
-              type="button"
-              className="yazim-ikon pdf-pasaja-odaklan"
-              disabled={!belge}
-              onClick={() => {
-                if (sayfaNo !== pasaj.sayfa) sayfayaGit(pasaj.sayfa);
-                if (cizilenOlcek < 1.6) setOlcek(1.6);
-                else window.requestAnimationFrame(() => pasajaKaydir(kapRef.current, katmanRef.current?.querySelector(".pdf-pasaj") ?? null));
-              }}
-              aria-label={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
-              title={t({ tr: "Pasaja odaklan", en: "Focus on passage" })}
-            >
-              <LocateFixed size={16} aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className="yazim-ikon pdf-ara-ac"
-          aria-expanded={aramaAcik}
-          aria-controls={`pdf-ara-${pdfId}-form`}
-          onClick={() => setAramaAcik((a) => !a)}
-          disabled={!belge}
-          aria-label={aramaAcik ? t({ tr: "Aramayı kapat", en: "Close search" }) : t({ tr: "PDF içinde ara", en: "Search in PDF" })}
-          title={t({ tr: "PDF içinde ara", en: "Search in PDF" })}
-        >
-          {aramaAcik ? <X size={16} aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
-        </button>
+        {/*
+          İkincil araçlar. Normal kipte doğrudan çubukta; kompakt kipte
+          (dar sütun) "Daha fazla" menüsünde, bu kez ADLARIYLA — küçük
+          ikonları yan yana sıkıştırmak dokunmayı zorlaştırırdı.
+        */}
+        {ikincilAraclar(kompakt)}
         <form id={`pdf-ara-${pdfId}-form`} className="pdf-ara" onSubmit={ara} role="search" hidden={!aramaAcik}>
           <label className="sr-only" htmlFor={`pdf-ara-${pdfId}`}>
             {t({ tr: "PDF içinde ara", en: "Search in PDF" })}

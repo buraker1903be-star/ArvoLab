@@ -72,9 +72,18 @@ describe("Kaynaklar: tek liste, tek giriş, kaynakça ayrı sekmede", () => {
     assert.match(menu, /<IceAktarma /);
     assert.match(menu, /<LiteraturPenceresi/);
   });
+  /*
+    22.11.2026 (araştırma alanı): liste bölümü yeniden yazıldı, kural aynı —
+    Kütüphanem görünümünde TEK birincil düğme var ve o "Kaynak ekle".
+    Dilim artık "Kaynak ekle" menüsünden başlayıp Kaynakça SEKMESİNİ
+    dışarıda bırakıyor (o sekmenin kendi ana eylemi ayrı ve aynı anda
+    ekranda değil).
+  */
   test("kaynaklar sekmesinde tek birincil düğme (Kaynak ekle)", () => {
-    const liste = sayfa.slice(sayfa.indexOf(') : (\n          <section className="kaynak-tek"'), sayfa.indexOf("</main>"));
-    assert.equal(liste.match(/projects-primary-button/g)?.length, 1);
+    const kutuphane =
+      sayfa.slice(sayfa.indexOf("const kaynakEkle"), sayfa.indexOf("kaynakcaSekmesi ? (")) +
+      sayfa.slice(sayfa.indexOf('className="kaynak-tek kaynak-arastirma"'), sayfa.indexOf("</main>"));
+    assert.equal(kutuphane.match(/projects-primary-button/g)?.length, 1);
   });
   test("kaynakça ayrı sekmede ve denetim penceresi yerinde", () => {
     assert.match(sayfa, /const kaynakcaSekmesi = sekme === "kaynakca";/);
@@ -84,8 +93,11 @@ describe("Kaynaklar: tek liste, tek giriş, kaynakça ayrı sekmede", () => {
     assert.match(sayfa, /const ekleMenusuAcik = ekle === "1" \|\| typeof gelenDoi === "string";/);
     assert.match(sayfa, /\{ekleMenusuAcik \? \(\s*<DoiEkleKutusu/);
   });
+  /* Seçici 22.11.2026'da tek bir listeden (MENULER) türetiliyor; menü yine kapsamda. */
   test("menü dışarı tıklayınca kapanır (AcilirKapatici)", () => {
-    assert.match(oku("app/dashboard/_components/acilir-kapatici.tsx"), /details\.kaynak-ekle\[open\]/);
+    const kapatici = oku("app/dashboard/_components/acilir-kapatici.tsx");
+    assert.match(kapatici, /const MENULER = \[[^\]]*"details\.kaynak-ekle"/);
+    assert.match(kapatici, /const SECICI = MENULER\.map\(\(m\) => `\$\{m\}\[open\]`\)/);
   });
 });
 

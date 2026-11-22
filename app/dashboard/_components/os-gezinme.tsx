@@ -133,7 +133,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     (makale türüne özgü "Makale" öğesi bağlam gelince eklenir).
   */
   const sorgu = useSearchParams();
-  const calismaId = adrestekiCalisma(yol, sorgu);
+  const calismaId = adrestekiCalisma(yol);
   const yayin = useCalismaBaglami();
   const listeAdresi = useListeAdresi();
   const calisma = calismaId

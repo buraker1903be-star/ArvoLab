@@ -21,6 +21,8 @@ import "./styles/os5-bilesenler.css";
 import "./styles/os5-kimlik.css";
 /* Phase 4: öğrencinin ana sayfası (yalnızca .os5-ana altında). */
 import "./styles/os5-ana-sayfa.css";
+/* Kaynaklar araştırma alanı (22.11.2026): yalnızca o sayfanın sınıfları. */
+import "./styles/kaynak-alani.css";
 /* Görsel uyum (19.11.2026): onaylı prototipe uyum kuralları; öncekilerin ÜSTÜNE yazar, en sonda yüklenir. */
 import "./styles/gorsel-uyum.css";
 

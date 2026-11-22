@@ -243,15 +243,23 @@ test("eski sol değerleri bugünkü girişe düşer", () => {
 });
 
 test("bağlam yalnızca o çalışmanın sayfalarında görünür", () => {
-  const q = (s: string) => new URLSearchParams(s);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c1/write", q("")), true);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c1/write"), true);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c1/kanit"), true);
   // 19.11.2026: Çalışmalarım listesi (seçili olsa da) genel düzey.
-  assert.equal(calismaIcindeMi("c1", "/dashboard/editor", q("sec=c1")), false);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/new", q("")), false);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c1")), true);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c2")), false);
-  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c2/write", q("")), false);
-  assert.equal(calismaIcindeMi("c1", "/dashboard", q("")), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/new"), false);
+  /*
+    22.11.2026: MODÜL SAYFALARI GENEL DÜZEY. ?calisma= ile süzülmüş
+    Kaynaklar, Kaynakça, Analiz Merkezi ve Belge Kontrol artık çalışma
+    menüsüne geçmiyor: dock'tan açılıyorlar, hangi çalışmaya bakıldığını
+    kendi çalışma seçicileri söylüyor ve gezinme sabit kalıyor.
+  */
+  assert.equal(calismaIcindeMi("c1", "/dashboard/literature"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/citations"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/analysis"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/documents"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c2/write"), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard"), false);
 });
 
 test("bağlamda etkin giriş", () => {

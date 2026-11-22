@@ -46,7 +46,7 @@ export default function HeaderTitle() {
   const uygulama = etkinUygulama(uygulamalar, pathname);
   const bolum = uygulama?.bolumler ? etkinBolum(uygulama.bolumler, pathname) : null;
   const sorguParam = new URLSearchParams(sorgu.toString());
-  const calismaIcinde = calisma && calismaIcindeMi(calisma.id, pathname, sorguParam) ? calisma : null;
+  const calismaIcinde = calisma && calismaIcindeMi(calisma.id, pathname) ? calisma : null;
   const arac = calismaIcinde ? etkinBaglanti(calismaBaglantilari(calismaIcinde, t), pathname, sorguParam) : null;
   const label = calismaIcinde
     ? [arac?.label ?? t({ tr: "Çalışma", en: "Work" }), calismaIcinde.baslik].filter(Boolean).join(" · ")

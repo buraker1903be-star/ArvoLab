@@ -13,7 +13,12 @@ import { useEffect } from "react";
   menüdeki bir bağlantıya tıklamayı ve Escape'i dinleyip açık menüyü
   kapatıyor. Menülerin kendisi sunucu bileşeni olarak kalıyor.
 */
-const SECICI = "details.os-kullanici[open], details.kart-menu[open], details.ust-dil[open], details.kaynak-ekle[open]";
+/* Tek liste: açık hâli (SECICI) ve kapsayıcı arama (KAPSAYICI) aynı
+   kaynaktan türüyor; eskiden iki yerde ayrı yazılıyordu ve yeni bir menü
+   birine eklenip ötekinde unutulabiliyordu. */
+const MENULER = ["details.os-kullanici", "details.kart-menu", "details.ust-dil", "details.kaynak-ekle", "details.kaynak-arac-menu", "details.pdf-arac-daha"];
+const KAPSAYICI = MENULER.join(", ");
+const SECICI = MENULER.map((m) => `${m}[open]`).join(", ");
 
 export default function AcilirKapatici() {
   useEffect(() => {
@@ -24,12 +29,12 @@ export default function AcilirKapatici() {
     };
     const onPointerDown = (olay: PointerEvent) => {
       const hedef = olay.target as Element | null;
-      kapat(hedef?.closest("details.os-kullanici, details.kart-menu, details.ust-dil, details.kaynak-ekle"));
+      kapat(hedef?.closest(KAPSAYICI));
     };
     // Menüdeki bağlantıyla sayfa değişince panel yeniden çizilmiyor; menü açık kalıyordu.
     const onClick = (olay: MouseEvent) => {
       const hedef = olay.target as Element | null;
-      if (hedef?.closest("a") && hedef.closest("details.os-kullanici, details.kart-menu, details.ust-dil, details.kaynak-ekle")) kapat();
+      if (hedef?.closest("a") && hedef.closest(KAPSAYICI)) kapat();
     };
     const onKeyDown = (olay: KeyboardEvent) => {
       if (olay.key !== "Escape") return;

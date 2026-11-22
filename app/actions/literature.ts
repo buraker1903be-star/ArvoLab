@@ -181,6 +181,43 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
   return { success: true };
 }
 
+/*
+  YALNIZCA NOTU KAYDET (22.11.2026, Kaynaklar araştırma alanı).
+
+  Neden ayrı bir eylem: updateLiteratureSource formdaki BÜTÜN künye
+  alanlarını yazıyor. Panelin "Notlar" sekmesinden kaydederken o alanları
+  gizli girdilerle taşımak gerekirdi; bu da panel açıkken başka bir yerden
+  (ör. dizinden düzeltme) güncellenen bir alanı sessizce eski değerine
+  döndürürdü. Burada yalnızca `notes` sütunu yazılıyor.
+
+  Yeni tablo, sütun ya da politika YOK: sütun zaten var
+  (literature_sources.notes) ve RLS aynı — sahibi dışında kimse yazamaz,
+  sunucu da owner_id'yi ayrıca süzüyor.
+*/
+export async function updateLiteratureNotes(sourceId: string, notes: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
+  /* Sınır: not bir metin kutusu, roman değil; kaza ile yapıştırılan dev metin kesilir. */
+  const deger = String(notes ?? "").slice(0, 20_000).trim() || null;
+
+  const { data, error } = await ctx.supabase
+    .from("literature_sources")
+    .update({ notes: deger })
+    .eq("id", sourceId)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: t({ tr: "Not kaydedilirken bir hata oluştu.", en: "An error occurred while saving the note." }) };
+  }
+  if (!data?.length) return { error: t({ tr: "Kaynak bulunamadı ya da size ait değil.", en: "Source not found or it doesn't belong to you." }) };
+
+  yenile();
+  return { success: true };
+}
+
 export async function deleteLiteratureSource(sourceId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
