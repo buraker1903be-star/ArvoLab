@@ -84,7 +84,8 @@ export default async function CalismaDurumKarti({
     başlığındaki "Yazmaya devam et" ve teslim paketi, paneli açan kartta
     zaten var; panelde ikinci kez çizilmesi aynı düğmenin iki kopyası
     olurdu. Yalnızca BU İKİSİ gizlenir — ölçümler, eksikler, kılavuz,
-    birim pencereleri ve "⋯" (düzenle/kapak, belge yükle, sil) yerinde.
+    birim pencereleri ve "⋯" (düzenle/kapak, belge yükle) yerinde;
+    "Çalışmayı sil" panel kipinde kartın ana menüsünde.
   */
   panelIcinde?: boolean;
 }) {
@@ -389,7 +390,15 @@ export default async function CalismaDurumKarti({
               <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
             ) : null}
             <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
-            {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
+            {/*
+              Silme girişi YALNIZCA panel kipinde kaldırıldı (22.11.2026):
+              "Çalışma ayrıntıları" panelinde çalışmayı silmek, paneli
+              açan kartın ana "⋯" menüsünden yapılıyor ve aynı işlemin
+              iki kopyası olmasın diye burada ikinci kez çizilmiyor.
+              Bu kart panel dışında da kullanılıyor (çalışma özeti
+              sayfası); orada giriş olduğu gibi duruyor.
+            */}
+            {silebilir && !panelIcinde ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
           </div>
         </details>
       </footer>

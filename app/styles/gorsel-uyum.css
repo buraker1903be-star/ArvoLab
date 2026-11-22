@@ -63,7 +63,12 @@
 .secim-islemleri[data-yan="sag"] button { justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- Ana ekran (öğrenci): prototipin hiyerarşisi ---------- */
-.os5-ana .pw-devam-ust { margin: 0; color: var(--muted); font-family: var(--os5-font-govde); font-size: var(--os5-fs-meta); font-weight: 500; line-height: 1.4; }
+/*
+  .pw-devam-ust buradan kaldırıldı (22.11.2026): ana sayfa yenilenince
+  "KALDIĞINIZ YER" üst bilgisi büyük harfli ve harf aralıklı oldu ve
+  kuralın tamamı os5-ana-sayfa.css'e taşındı. Bu dosya en son
+  yüklendiği için buradaki eski kural yenisini eziyordu.
+*/
 .os5-ana .pw-tablo-kap { overflow-x: auto; }
 .os5-ana .pw-tablo { width: 100%; border-collapse: collapse; font-size: var(--os5-fs-govde); }
 .os5-ana .pw-tablo th { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: var(--os5-fs-meta); font-weight: 500; text-align: left; white-space: nowrap; }

@@ -6,6 +6,7 @@ import { simdi } from "@/lib/genel-bakis";
 import { aktifDil, aktifSaatDilimi } from "@/lib/dil-sunucu";
 import TeslimPaketi from "../_components/teslim-paketi";
 import DanismanaGonder from "../_components/danismana-gonder";
+import DeleteProjectButton from "./delete-project-button";
 import PanelDrawer from "../_components/panel-drawer";
 
 /*
@@ -28,10 +29,19 @@ export default async function CalismaKartMenusu({
   projectId,
   baslik,
   kelime,
+  silebilir,
 }: {
   projectId: string;
   baslik: string;
   kelime: number | null;
+  /*
+    Silme yetkisi SUNUCUDA hesaplanır (çağıran: calisma-listesi.tsx,
+    ana-sayfa-icerik.tsx) ve RLS'in kuralıyla aynıdır: sahibi ya da
+    Yönetici/Sistem Yöneticisi/Kurucu. Burada ikinci bir kural
+    yazılmıyor; girişin görünmemesi de tek başına koruma değil —
+    deleteProject yetkisiz silmede sıfır satır döndürüp hata veriyor.
+  */
+  silebilir: boolean;
 }) {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -72,7 +82,12 @@ export default async function CalismaKartMenusu({
 
   return (
     <details className="kart-menu calismalarim-menu">
-      <summary aria-label={t({ tr: `${baslik}: paylaş ve indir`, en: `${baslik}: share and download` })}>
+      {/*
+        Erişilebilir ad artık "diğer işlemler" (22.11.2026): menüde
+        paylaşımın yanında teslim paketi ve ÇALIŞMAYI SİL de var;
+        "paylaş ve indir" menünün tamamını anlatmıyordu.
+      */}
+      <summary aria-label={t({ tr: `${baslik}: diğer işlemler`, en: `${baslik}: more actions` })}>
         <MoreHorizontal size={18} aria-hidden="true" />
       </summary>
       <div className="kart-menu-liste">
@@ -102,6 +117,23 @@ export default async function CalismaKartMenusu({
         </PanelDrawer>
         {/* Word + kaynak PDF'leri + rapor; metin yokken indirilecek bir şey de yok. */}
         {kelime ? <TeslimPaketi projectId={projectId} className="calismalarim-menu-oge" /> : null}
+        {/*
+          ÇALIŞMAYI SİL (22.11.2026). Eskiden yalnızca "Çalışma
+          ayrıntıları" panelinin en altındaki ikinci bir "⋯" menüsünün
+          içindeydi: üç tıklama derinde, kullanıcı çalışmasını silmek
+          için önce ayrıntıları açmak gerektiğini bilmiyordu. Artık
+          kartın ana menüsünde, ayırıcıdan sonra ve en altta — geri
+          alınamaz olduğu için paylaşma/indirme ile aynı grupta değil.
+          Bileşen, onay penceresi ve sunucu eylemi AYNI
+          (delete-project-button.tsx); panel kipinde oradan kaldırıldı,
+          çalışma özeti sayfasındaki kullanımı olduğu gibi duruyor.
+        */}
+        {silebilir ? (
+          <>
+            <hr className="kart-menu-ayirici" />
+            <DeleteProjectButton projectId={projectId} projectTitle={baslik} className="button-danger calismalarim-menu-oge" />
+          </>
+        ) : null}
       </div>
     </details>
   );

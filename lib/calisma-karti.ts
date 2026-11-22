@@ -102,8 +102,17 @@ export function seciliCalismaId(
   (personel orada kalıyor). Personelle ORTAK sayfalardaki bağlantılar bu
   yüzden eski adreste kaldı; karar o sayfada veriliyor.
 */
-export function calismaAdresi(id: string, secenek: { kilavuz?: boolean; takvim?: boolean } = {}): string {
-  return `/dashboard/editor?sec=${encodeURIComponent(id)}${secenek.kilavuz ? "&kilavuz=1" : ""}${secenek.takvim ? "&takvim=1" : ""}`;
+export function calismaAdresi(
+  id: string,
+  /*
+    `ayrinti` (22.11.2026): Çalışmalarım'daki "Çalışma ayrıntıları"
+    paneli o çalışma için AÇIK gelir. Ana sayfadaki bağlantı bu yolu
+    kullanıyor; panelin ikinci bir uygulaması yazılmadı, mevcut panel
+    (CalismaDurumKarti, panel kipinde) açılıyor.
+  */
+  secenek: { kilavuz?: boolean; takvim?: boolean; ayrinti?: boolean } = {},
+): string {
+  return `/dashboard/editor?sec=${encodeURIComponent(id)}${secenek.kilavuz ? "&kilavuz=1" : ""}${secenek.takvim ? "&takvim=1" : ""}${secenek.ayrinti ? "&ayrinti=1" : ""}`;
 }
 
 /** Satırın adresi: filtreler (q, durum, sirala…) korunur, yalnızca seçim değişir. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageSquareHeart } from "lucide-react";
+import { ChevronDown, MessageSquareHeart } from "lucide-react";
 import ActionForm from "../action-form";
 import { geriBildirimErtele, geriBildirimGonder, geriBildirimIstemiyorum } from "@/app/actions/geri-bildirim";
 import { BAGLAM_METNI_METIN, BOLUM_SECENEKLERI_METIN, PUAN_ETIKETLERI_METIN } from "@/lib/geri-bildirim";
@@ -17,10 +17,22 @@ import { showToast } from "./toast-events";
   gerisi (bölüm ve yorum) iniyor. Uzun bir form ana sayfanın ortasında
   duvar gibi durur ve kimse doldurmaz; tek tık her zaman yapılır, gerisi
   isteyene kalır.
+
+  BAŞLANGIÇTA KAPALI (22.11.2026). Kart açıkken ana sayfanın altında
+  başlığı, açıklaması ve beş puan düğmesiyle ~170 piksellik bir kutu
+  duruyordu: telefonda "Son kaynaklar"dan sonraki ekranın tamamı bu
+  kutuydu. Artık yalnızca küçük bir "Geri bildirim ver" tetikleyicisi
+  görünüyor; soru, seçenekler, gönderim, "Sonra" ve "Bir daha sorma"
+  DEĞİŞMEDİ, yalnızca tetikleyicinin arkasına alındı. Tetikleyici bir
+  <button>: klavyeyle odaklanır, Enter/Boşluk ile açılır ve durumu
+  aria-expanded ile bildirilir. Kapalıyken kartın çerçevesi ve zemini
+  de yok (data-acik="hayir"), yoksa "küçük tetikleyici" yine bir kutu
+  olurdu.
 */
 export default function GeriBildirimKarti({ baglam }: { baglam: string | null }) {
   const t = useCeviri();
   const [puan, setPuan] = useState<number | null>(null);
+  const [acik, setAcik] = useState(false);
   const [gizli, setGizli] = useState(false);
   const [bekliyor, startTransition] = useTransition();
 
@@ -41,7 +53,25 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
   const baglamMetni = baglam && BAGLAM_METNI_METIN[baglam] ? t(BAGLAM_METNI_METIN[baglam]) : null;
 
   return (
-    <section className="geri-bildirim-karti" aria-label={t({ tr: "Kullanım geri bildirimi", en: "Usage feedback" })}>
+    <section
+      className="geri-bildirim-karti"
+      data-acik={acik ? "evet" : "hayir"}
+      aria-label={t({ tr: "Kullanım geri bildirimi", en: "Usage feedback" })}
+    >
+      <button
+        type="button"
+        className="geri-bildirim-tetik"
+        aria-expanded={acik}
+        aria-controls="geri-bildirim-govde"
+        onClick={() => setAcik((a) => !a)}
+      >
+        <MessageSquareHeart size={15} aria-hidden="true" />
+        {t({ tr: "Geri bildirim ver", en: "Give feedback" })}
+        <ChevronDown size={15} aria-hidden="true" className="geri-bildirim-ok" />
+      </button>
+
+      {/* Kapalıyken gövde DOM'da ama gizli: açılış durumu ve seçilen puan korunur. */}
+      <div id="geri-bildirim-govde" className="geri-bildirim-govde" hidden={!acik}>
       <div className="geri-bildirim-bas">
         <span className="dashboard-kicker">
           <MessageSquareHeart size={14} aria-hidden="true" />
@@ -123,6 +153,7 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
           </div>
         ) : null}
       </ActionForm>
+      </div>
     </section>
   );
 }

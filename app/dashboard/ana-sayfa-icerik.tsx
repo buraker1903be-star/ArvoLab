@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
 import Link from "next/link";
-import { BookOpen, FileText, PenLine, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronRight, FileText, PenLine, Plus } from "lucide-react";
 import { DugmeBaglanti } from "@/app/_components/ui/dugme";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
@@ -23,9 +23,10 @@ import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { hareketSerisi, ilkAd, selamlama, simdi } from "@/lib/genel-bakis";
-import { yazimRitmi } from "@/lib/yazim-ritmi";
 import { kisiselCalismalar, KISISEL_CALISMALAR } from "@/lib/kisisel-calismalar";
 import { calismaAdresi } from "@/lib/calisma-karti";
+import { belgeOnizlemesi, onizlemeDolu } from "@/lib/calisma-onizleme";
+import CalismaKartMenusu from "./editor/calisma-kart-menusu";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, SeriKarti } from "./_components/genel-bakis";
 import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
 
@@ -150,7 +151,6 @@ export default async function AnaSayfaIcerik() {
       { count: resumeKullanilan },
     ],
     [hareketYaniti, yorumYaniti],
-    ritimYaniti,
   ] = await Promise.all([
     /*
       calismaKilavuzu kullanılıyor, loadAppliedGuidelines DEĞİL: ikincisi
@@ -222,15 +222,6 @@ export default async function AnaSayfaIcerik() {
             .limit(GENEL_BAKIS_SATIR)
         : Promise.resolve({ data: [], error: null }),
     ]),
-    /*
-      Öğrencinin haftalık yazım ritmi (public.yazim_ritmi): selamlamanın alt
-      satırı. Personelde istenmiyor. 17.11.2026'ya kadar burada kanıt
-      matrisinin iki sayısı, tez takvimi, asistan kredisi ve son danışman
-      bağlantısı da okunuyordu; o kartlar ana sayfadan çalışma özetine,
-      editöre ve hesap menüsüne geçti (premium çalışma alanı), sorguları
-      kalktı — okunup gösterilmeyen veri her açılışta boşuna maliyetti.
-    */
-    ogrenciGorunumu ? supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }) : Promise.resolve({ data: null, error: null }),
   ]);
   const resumeReadiness =
     resume && resumeManuscript
@@ -294,19 +285,16 @@ export default async function AnaSayfaIcerik() {
 
   /* Yeni çalışma herkes için aynı pencerede (Çalışmalarım, ?yeni=1). */
   const yeniCalismaHref = "/dashboard/editor?yeni=1";
-  if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
 
   if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();
   const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn, 14, dil);
-  const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.words ?? null, dil);
 
   const okunamayanlar = [
     projelerOkunamadi ? t({ tr: "çalışmalar", en: "works" }) : "",
     hareketYaniti.error ? t({ tr: "çalışma hareketi", en: "work activity" }) : "",
     yorumYaniti.error ? t({ tr: "yorumlar", en: "comments" }) : "",
-    ritimYaniti.error ? t({ tr: "yazım ritmi", en: "writing rhythm" }) : "",
   ].filter(Boolean);
 
   const calismaAdi = new Map(projects.map((p) => [p.id, p.title]));
@@ -380,6 +368,29 @@ export default async function AnaSayfaIcerik() {
       : { data: null, error: null };
   const sonKaynaklar = (sonKaynakSatirlari ?? []) as { id: string; title: string; authors: string | null; year: string | null }[];
 
+  /*
+    BELGE ÖNİZLEMESİ (22.11.2026). Çalışmalarım'daki kartla AYNI saf
+    yardımcı (lib/calisma-onizleme.ts) ve aynı kaynak: KAYDEDİLMİŞ
+    içerik. Editör başlatılmıyor, otomatik kayıt tetiklenmiyor, sürüm
+    yazılmıyor — content zaten teslim hazırlığı için okunan satırdan
+    geliyor, ek sorgu yok. İçerik yoksa önizleme BOŞ döner ve kartın
+    sağ bölümü ile ayıracı hiç çizilmez (sahte metin gösterilmez).
+  */
+  const onizleme = belgeOnizlemesi(resumeManuscript?.content);
+
+  /*
+    Silme yetkisi: Çalışmalarım'dakiyle BİREBİR aynı kural ve aynı yerde
+    (sunucu) hesaplanıyor — sahibi ya da Yönetici/Sistem Yöneticisi/
+    Kurucu; RLS'in kuralı da bu. Menünün girişi gizlemesi tek başına
+    koruma sayılmıyor: deleteProject yetkisiz silmede sıfır satır
+    döndürüp hata veriyor.
+  */
+  const silebilir =
+    resume?.owner_id === user.id ||
+    profile?.role === "academic_manager" ||
+    profile?.role === "system_admin" ||
+    profile?.role === "founder";
+
   return (
     <main className={ogrenciGorunumu || yeniKullanici ? "dashboard-page gb gb-ana-sayfa os5-ana" : "dashboard-page gb gb-ana-sayfa"}>
       {/*
@@ -408,13 +419,14 @@ export default async function AnaSayfaIcerik() {
           {yeniKullanici ? null : <p>
             {ogrenciGorunumu
                 ? /*
-                    Signature OS 5 / Phase 4: teslim günü ve kelime artık çalışma
-                    panelinin ölçülerinde. Bu satır onları ikinci kez yazıyordu;
-                    yalnızca haftanın ritmi kaldı (panelde yok).
+                    Sabit tek cümle (22.11.2026, onaylı mockup). Eskiden
+                    burada haftalık yazım ritmi vardı ("Bu hafta N kelime
+                    yazdınız"): sayfanın ilk cümlesi bir ÖLÇÜMDÜ ve hiç
+                    yazmamış öğrenciye "Bu hafta henüz yazmadınız" diyordu.
+                    Ritmi okuyan yazim_ritmi RPC'si de kalktı: gösterilmeyen
+                    veri her açılışta boşuna maliyet.
                   */
-                  ritim.buHafta > 0
-                  ? t({ tr: `Bu hafta ${sayi(ritim.buHafta)} kelime yazdınız.`, en: `You wrote ${sayi(ritim.buHafta)} words this week.` })
-                  : t({ tr: "Bu hafta henüz yazmadınız.", en: "You haven't written this week yet." })
+                  t({ tr: "Araştırmanıza kaldığınız yerden devam edin.", en: "Pick up your research where you left off." })
                 : resume
                 ? t({
                     tr: `Kaldığınız yer: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} kelime, ${once(resumeStats.updatedAt)} düzenlendi` : ""}`,
@@ -545,26 +557,71 @@ export default async function AnaSayfaIcerik() {
             hedef kelime verisi olmadığı için ilerleme çubuğu YOK.
           */}
           <section className="pw-bolum" aria-labelledby="pw-devam-baslik">
-            <article className="pw-devam">
-              <span className="pw-devam-simge" aria-hidden="true">
-                <FileText size={20} />
-              </span>
-              <div className="pw-devam-metin">
-                <h2 id="pw-devam-baslik" className="pw-devam-ust">{t({ tr: "Kaldığınız yer", en: "Where you left off" })}</h2>
-                <h3 title={resume.title}>
-                  <Link href={calismaAdresi(resume.id)}>{resume.title}</Link>
-                </h3>
-                <p>
-                  {t(projectTypeLabel(resume.project_type))}
-                  {resumeStats ? ` · ${t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(resumeStats.updatedAt, simdiAn)}` })}` : ""}
-                  {resumeStats ? ` · ${t({ tr: `${sayi(resumeStats.words)} kelime`, en: `${sayi(resumeStats.words)} words` })}` : ""}
-                </p>
+            {/*
+              DEVAM KARTI İKİ BÖLÜMLÜ (22.11.2026, onaylı mockup): solda
+              "kaldığınız yer" kimliği ve eylemler, sağda kaydedilmiş
+              belgenin önizlemesi. İçerik yoksa sağ bölüm ve ayıraç hiç
+              çizilmez; kart dengeli tek bir bölüme iner.
+            */}
+            <article className="pw-devam" data-onizleme={onizlemeDolu(onizleme) ? "var" : "yok"}>
+              <div className="pw-devam-sol">
+                <span className="pw-devam-simge" aria-hidden="true">
+                  <FileText size={20} />
+                </span>
+                <div className="pw-devam-metin">
+                  <h2 id="pw-devam-baslik" className="pw-devam-ust">{t({ tr: "Kaldığınız yer", en: "Where you left off" })}</h2>
+                  <span className="pw-devam-tur">{t(projectTypeLabel(resume.project_type))}</span>
+                  <h3 title={resume.title}>{resume.title}</h3>
+                  <p className="pw-devam-olcu">
+                    {resumeStats
+                      ? [
+                          t({ tr: `${sayi(resumeStats.words)} kelime`, en: `${sayi(resumeStats.words)} words` }),
+                          t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `edited ${once(resumeStats.updatedAt, simdiAn)}` }),
+                        ].join(" · ")
+                      : t({ tr: "henüz yazılmadı", en: "not written yet" })}
+                  </p>
+                  <div className="pw-devam-eylem">
+                    {/* Sayfanın TEK birincil eylemi. */}
+                    <DugmeBaglanti href={`/dashboard/editor/${resume.id}/write`} tur="birincil">
+                      <PenLine size={16} aria-hidden="true" />
+                      {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
+                    </DugmeBaglanti>
+                    {/*
+                      Ayrıntılar paneli İKİNCİ KEZ YAZILMADI: bağlantı
+                      Çalışmalarım'da o çalışmayı seçip mevcut "Çalışma
+                      ayrıntıları" panelini açık getiriyor
+                      (calismaAdresi(..., { ayrinti: true }) → ?sec=&ayrinti=1).
+                      Teslim tarihi, hazırlık, kapak, kılavuz, yapı
+                      uyarıları, literatür, kaynakça, kanıt, etik ve analiz
+                      hepsi o panelde.
+                    */}
+                    <Link href={calismaAdresi(resume.id, { ayrinti: true })} className="pw-devam-ayrinti">
+                      {t({ tr: "Çalışma ayrıntıları", en: "Work details" })}
+                    </Link>
+                  </div>
+                </div>
               </div>
-              {/* Sayfanın TEK birincil eylemi. */}
-              <DugmeBaglanti href={`/dashboard/editor/${resume.id}/write`} tur="birincil">
-                <PenLine size={16} aria-hidden="true" />
-                {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
-              </DugmeBaglanti>
+
+              {onizlemeDolu(onizleme) ? (
+                <aside className="pw-devam-onizleme" aria-label={t({ tr: "Belge önizlemesi", en: "Document preview" })}>
+                  {onizleme.baslik ? <b>{onizleme.baslik}</b> : null}
+                  {onizleme.satirlar.map((satir, i) => (
+                    <p key={i}>{satir}</p>
+                  ))}
+                </aside>
+              ) : null}
+
+              {/*
+                Çalışmalarım'ın ORTAK kart menüsü: paylaş ve indir, teslim
+                paketi ve Çalışmayı sil. Aynı çalışma için aynı seçenekler
+                ve aynı yetki davranışı; silme yetkisi sunucuda hesaplandı.
+              */}
+              <CalismaKartMenusu
+                projectId={resume.id}
+                baslik={resume.title}
+                kelime={resumeStats?.words ?? null}
+                silebilir={silebilir}
+              />
             </article>
           </section>
 
@@ -609,8 +666,10 @@ export default async function AnaSayfaIcerik() {
           <section className="pw-bolum" aria-labelledby="pw-kaynak-baslik">
             <header className="pw-bolum-bas">
               <h2 id="pw-kaynak-baslik">{t({ tr: "Son kaynaklar", en: "Recent sources" })}</h2>
+              {/* Mockup: başlığın sağında "Tüm kaynaklar →"; hedef değişmedi (mevcut kütüphane). */}
               <Link href={`/dashboard/literature?calisma=${encodeURIComponent(resume.id)}`} className="pw-bolum-baglanti">
-                {t({ tr: "Kaynakları aç", en: "View library" })}
+                {t({ tr: "Tüm kaynaklar", en: "All sources" })}
+                <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </header>
             {sonKaynakHatasi ? (
@@ -625,11 +684,14 @@ export default async function AnaSayfaIcerik() {
                     <Link href={`/dashboard/literature?calisma=${encodeURIComponent(resume.id)}`} className="pw-satir">
                       <FileText size={18} aria-hidden="true" className="pw-satir-simge" />
                       <span className="pw-satir-metin">
+                        {/* Başlık en çok iki satır (pw-satir-metin b), ikincil satır yazar ve yıl. */}
                         <b>{k.title}</b>
                         <small>
                           {[k.authors, k.year ? `(${k.year})` : null].filter(Boolean).join(" ")}
                         </small>
                       </span>
+                      {/* Açılış göstergesi: satırın tıklanabilir olduğunu söyler. */}
+                      <ChevronRight size={16} aria-hidden="true" className="pw-satir-ok" />
                     </Link>
                   </li>
                 ))}
@@ -645,11 +707,13 @@ export default async function AnaSayfaIcerik() {
             )}
           </section>
 
-          <p className="pw-not">
-            {t({ tr: "Teslim durumu, takvim, kılavuz ve kontroller ", en: "Submission status, schedule, guideline and checks are in the " })}
-            <Link href={calismaAdresi(resume.id)}>{t({ tr: "çalışma özetinde", en: "work overview" })}</Link>
-            {t({ tr: ".", en: "." })}
-          </p>
+          {/*
+            ALTTAKİ AÇIKLAMA KALDIRILDI (22.11.2026): "Teslim durumu,
+            takvim, kılavuz ve kontroller çalışma özetinde" cümlesi
+            sayfanın sonunda duruyordu ve aynı yere devam kartındaki
+            "Çalışma ayrıntıları" bağlantısı zaten götürüyor. İŞLEV
+            kalkmadı, yalnızca ikinci kez anlatılmıyor.
+          */}
         </>
       ) : (
         <>
