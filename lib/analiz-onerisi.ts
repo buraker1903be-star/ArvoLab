@@ -37,6 +37,8 @@ import type { AnalizTuru } from "@/lib/analiz-turleri";
 export type SoruAnahtari =
   | "amac"
   | "sonucTuru"
+  | "dagilim"
+  | "kategoriSayisi"
   | "olcumDuzeni"
   | "grupSayisi"
   | "faktorSayisi"
@@ -91,13 +93,76 @@ const SORULAR: Record<SoruAnahtari, Soru> = {
       bilmiyorumSecenegi,
     ],
   },
+  /*
+    SONUÇ TÜRÜ = ÖLÇÜM DÜZEYİ, dağılım değil (22.11.2026 düzeltmesi).
+    Eskiden "Sıralı ya da çarpık dağılan" tek seçenekti ve açıklaması
+    "küçük örneklem, uç değerli dağılım" diyordu: çarpık dağılan bir
+    SÜREKLİ değişkeni sıralı ilan ediyordu. İkisi ayrı şeydir —
+    puan sürekli kalır, çarpıklık yalnızca hangi testin varsayımının
+    kuşkulu olduğunu söyler. Karıştırmak, yöntem bölümünde ölçüm
+    düzeyini yanlış yazdırır.
+  */
   sonucTuru: {
     anahtar: "sonucTuru",
-    baslik: { tr: "Sonuç (bağımlı) değişkeniniz hangi türde?", en: "What kind of outcome (dependent) variable do you have?" },
+    baslik: { tr: "Sonuç (bağımlı) değişkeniniz hangi ÖLÇÜM DÜZEYİNDE?", en: "What is your outcome (dependent) variable's MEASUREMENT LEVEL?" },
     secenekler: [
-      { anahtar: "surekli", etiket: { tr: "Sürekli sayı", en: "Continuous number" }, aciklama: { tr: "Puan, süre, ağırlık, ölçek toplamı.", en: "Score, duration, weight, scale total." } },
-      { anahtar: "sirali", etiket: { tr: "Sıralı ya da çarpık dağılan", en: "Ordinal or skewed" }, aciklama: { tr: "Likert tek madde, küçük örneklem, uç değerli dağılım.", en: "A single Likert item, a small sample, a distribution with outliers." } },
-      { anahtar: "kategorik", etiket: { tr: "Kategorik", en: "Categorical" }, aciklama: { tr: "Evet/hayır, başarılı/başarısız, tercih edilen seçenek.", en: "Yes/no, pass/fail, the option chosen." } },
+      {
+        anahtar: "surekli",
+        etiket: { tr: "Sürekli", en: "Continuous" },
+        aciklama: {
+          tr: "Aralıkları eşit sayı: puan, süre, ağırlık, ölçek toplamı. Dağılımı çarpık olsa da sürekli sayılır.",
+          en: "A number with equal intervals: score, duration, weight, scale total. It stays continuous even when its distribution is skewed.",
+        },
+      },
+      {
+        anahtar: "sirali",
+        etiket: { tr: "Sıralı", en: "Ordinal" },
+        aciklama: {
+          tr: "Sıra bildirir ama aralıkları eşit değildir: tek bir Likert maddesi, derece, az/orta/çok.",
+          en: "It ranks but the intervals are not equal: a single Likert item, a grade, low/medium/high.",
+        },
+      },
+      {
+        anahtar: "kategorik",
+        etiket: { tr: "Kategorik", en: "Categorical" },
+        aciklama: { tr: "Sıra bildirmeyen etiket: evet/hayır, başarılı/başarısız, tercih edilen seçenek.", en: "An unordered label: yes/no, pass/fail, the option chosen." },
+      },
+      bilmiyorumSecenegi,
+    ],
+  },
+  /*
+    DAĞILIM AYRI SORU. Çarpıklık ve küçük örneklem ölçüm düzeyini
+    değiştirmez; yalnızca parametrik testin varsayımını kuşkulu kılar ve
+    sıra temelli karşılığı AYRICA aday yapar. Bu soru olmadan kullanıcı
+    "çarpık" demek için değişkenini sıralı işaretliyordu.
+  */
+  dagilim: {
+    anahtar: "dagilim",
+    baslik: { tr: "Dağılım ve örneklem hakkında ne biliyorsunuz?", en: "What do you know about the distribution and the sample?" },
+    secenekler: [
+      { anahtar: "uygun", etiket: { tr: "Dağılım normale yakın, örneklem yeterli", en: "Roughly normal, sample large enough" } },
+      {
+        anahtar: "sorunlu",
+        etiket: { tr: "Çarpık, uç değerli ya da küçük örneklem", en: "Skewed, has outliers, or a small sample" },
+        aciklama: {
+          tr: "Değişkeniniz sürekli olmaya devam eder; bu yalnızca sıra temelli karşılığı da aday yapar.",
+          en: "Your variable stays continuous; this only adds the rank-based counterpart as a candidate.",
+        },
+      },
+      bilmiyorumSecenegi,
+    ],
+  },
+  /*
+    KATEGORİ SAYISI. McNemar, Cochran Q ve ikili lojistik regresyon
+    İKİ kategorili sonuç ister; üç kategoride bunları önermek sessizce
+    yanlış analiz yaptırır.
+  */
+  kategoriSayisi: {
+    anahtar: "kategoriSayisi",
+    baslik: { tr: "Sonuç değişkeninin kaç kategorisi var?", en: "How many categories does the outcome have?" },
+    secenekler: [
+      { anahtar: "iki", etiket: { tr: "İki", en: "Two" }, aciklama: { tr: "Evet/hayır, geçti/kaldı.", en: "Yes/no, pass/fail." } },
+      { anahtar: "ucDahaCok", etiket: { tr: "Üç ya da daha çok", en: "Three or more" } },
       bilmiyorumSecenegi,
     ],
   },
@@ -221,7 +286,7 @@ const ADAYLAR: Record<AnalizTuru, Aday> = {
   pairedttest: aday("pairedttest", { tr: "Aynı kişilerin iki ölçümünü karşılaştırıyorsunuz.", en: "You are comparing two measurements of the same people." }, K.esleme),
   tekorneklem: aday("tekorneklem", { tr: "Tek grubun ortalamasını bilinen bir değerle karşılaştırıyorsunuz.", en: "You are comparing one group's mean against a known value." }, K.normallik),
   anova: aday("anova", { tr: "Üç ya da daha çok bağımsız grubu tek bir değişkene göre karşılaştırıyorsunuz.", en: "You are comparing three or more independent groups on one variable." }, K.normallik),
-  ikiyonluanova: aday("ikiyonluanova", { tr: "Grupları iki değişken birlikte belirliyor; etkileşim ancak bu testte görünür.", en: "Two variables define the groups together; only this test shows the interaction." }, K.normallik),
+  ikiyonluanova: aday("ikiyonluanova", { tr: "Grupları iki değişken birlikte belirliyor; iki yönlü ANOVA iki ana etkiyi ve aralarındaki etkileşimi aynı modelde kestirir.", en: "Two variables define the groups together; two-way ANOVA estimates both main effects and their interaction in one model." }, K.normallik),
   tekrarlianova: aday("tekrarlianova", { tr: "Aynı kişilerin üç ya da daha çok ölçümünü karşılaştırıyorsunuz.", en: "You are comparing three or more measurements of the same people." }, K.esleme),
   karmaanova: aday("karmaanova", { tr: "Hem farklı gruplar hem tekrarlı ölçümler var (deney/kontrol × ön test/son test).", en: "There are both different groups and repeated measurements (experimental/control × pre/post)." }, K.esleme),
   ancova: aday("ancova", { tr: "Grupları karşılaştırırken sürekli bir değişkenin etkisini kontrol etmek istiyorsunuz.", en: "You want to control for a continuous variable while comparing groups." }, {
@@ -229,13 +294,13 @@ const ADAYLAR: Record<AnalizTuru, Aday> = {
     en: "The covariate must not be affected by the grouping, and the regression slopes must be similar.",
   }),
   correlation: aday("correlation", { tr: "İki sürekli değişkenin birlikte değişimine bakıyorsunuz.", en: "You are looking at how two continuous variables vary together." }, K.dogrusallik),
-  spearman: aday("spearman", { tr: "Sıralı ya da çarpık dağılan değişkenlerde ilişkiye bakıyorsunuz.", en: "You are looking at a relationship among ordinal or skewed variables." }, K.olcum),
+  spearman: aday("spearman", { tr: "Sıralı değişkende ya da dağılım varsayımı kuşkuluyken ilişkiye sıralar üzerinden bakılır.", en: "With an ordinal variable, or when the distributional assumption is doubtful, the relationship is examined through ranks." }, K.olcum),
   kismikorelasyon: aday("kismikorelasyon", { tr: "Üçüncü bir değişkenin etkisini sabit tutarak ilişkiye bakıyorsunuz.", en: "You are examining the relationship while holding a third variable constant." }, K.dogrusallik),
   regression: aday("regression", { tr: "Sürekli bir sonucu bir ya da daha çok değişkenle yorduyorsunuz.", en: "You are predicting a continuous outcome from one or more variables." }, {
     tr: "Çoklu bağlantı (VIF) ve artıkların dağılımı: ikisi de çıktıda yazılı.",
     en: "Multicollinearity (VIF) and the distribution of residuals: both are reported in the output.",
   }),
-  lojistik: aday("lojistik", { tr: "Sonuç değişkeniniz iki kategorili; doğrusal regresyon bu durumda uygun değil.", en: "Your outcome has two categories; linear regression is not appropriate here." }, {
+  lojistik: aday("lojistik", { tr: "Sonuç değişkeniniz iki kategorili; lojistik regresyon bu sonuç türü için kurulmuş bir modeldir.", en: "Your outcome has two categories; logistic regression is a model built for this outcome type." }, {
     tr: "Her sonuç kategorisinde yeterli gözlem olmalı; nadir olayda katsayılar kararsızdır.",
     en: "Each outcome category needs enough observations; with a rare event the coefficients are unstable.",
   }),
@@ -243,7 +308,10 @@ const ADAYLAR: Record<AnalizTuru, Aday> = {
   kruskalwallis: aday("kruskalwallis", { tr: "Üç ya da daha çok bağımsız grubu sıralar üzerinden karşılaştırıyorsunuz.", en: "You are comparing three or more independent groups through ranks." }, K.bagimsizlik),
   wilcoxon: aday("wilcoxon", { tr: "Aynı kişilerin iki ölçümünü sıralar üzerinden karşılaştırıyorsunuz.", en: "You are comparing two measurements of the same people through ranks." }, K.esleme),
   friedman: aday("friedman", { tr: "Aynı kişilerin üç ya da daha çok ölçümünü sıralar üzerinden karşılaştırıyorsunuz.", en: "You are comparing three or more measurements of the same people through ranks." }, K.esleme),
-  mcnemar: aday("mcnemar", { tr: "Aynı kişilerin iki ölçümünde kategorik sonuç değişiyor mu bakıyorsunuz.", en: "You are checking whether a categorical outcome changes across two measurements of the same people." }, K.esleme),
+  mcnemar: aday("mcnemar", { tr: "Aynı kişilerin iki ölçümünde İKİ kategorili bir sonucun değişip değişmediğine bakıyorsunuz.", en: "You are checking whether a TWO-category outcome changes across two measurements of the same people." }, {
+    tr: "Sonuç iki kategorili olmalı ve iki ölçüm aynı satırda eşleşmeli; üç kategoride McNemar uygulanamaz.",
+    en: "The outcome must have two categories and the two measurements must be matched in one row; McNemar does not apply with three categories.",
+  }),
   chisquare: aday("chisquare", { tr: "İki kategorik değişkenin birlikte dağılımına bakıyorsunuz.", en: "You are examining the joint distribution of two categorical variables." }, K.gozeSayisi),
   reliability: aday("reliability", { tr: "Ölçeğin iç tutarlılığına bakıyorsunuz.", en: "You are examining the scale's internal consistency." }, {
     tr: "Ters kodlanmış maddeleri çevirmeden alpha düşük çıkar; madde-toplam korelasyonları çıktıda yazılı.",
@@ -271,6 +339,18 @@ const SINIR = {
     tr: "Ölçümlerin bağımsız mı tekrarlı mı olduğu belirlenmeden test seçilemez: aynı sayılarla iki ayrı test iki ayrı sonuç verir. Veri toplama biçiminize bakın — her kişi bir kez mi ölçüldü?",
     en: "No test can be chosen before it is settled whether the measurements are independent or repeated: the same numbers give two different results in the two tests. Look at how you collected the data — was each person measured once?",
   },
+  dagilimSorunlu: {
+    tr: "Çarpıklık, uç değer ya da küçük örneklem değişkeninizin ÖLÇÜM DÜZEYİNİ değiştirmez: sürekli kalır. Bunlar parametrik testin varsayımını kuşkulu kılar; bu yüzden sıra temelli karşılığı da listede. Hangisini raporlayacağınıza analiz çalışınca çıkan varsayım şeridine bakarak karar verin — dönüştürme de bir seçenektir.",
+    en: "Skewness, outliers or a small sample do not change your variable's MEASUREMENT LEVEL: it stays continuous. They cast doubt on the parametric test's assumption, which is why the rank-based counterpart is also listed. Decide which to report from the assumption strip the analysis produces — a transformation is also an option.",
+  },
+  dagilimBilinmiyor: {
+    tr: "Dağılım hakkında bilgi verilmedi; listede hem parametrik hem sıra temelli aday var. Dağılım bilgisi ölçüm düzeyini değiştirmez, yalnızca hangisinin savunulabilir olduğunu belirler.",
+    en: "No information was given about the distribution, so both the parametric and the rank-based candidate are listed. Distributional information does not change the measurement level; it only tells you which choice is defensible.",
+  },
+  kategoriBilinmiyor: {
+    tr: "Sonucun kaç kategorili olduğu bilinmiyor. Aşağıdaki aday YALNIZCA iki kategorili sonuç için geçerlidir; üç ve daha çok kategoride uygun değildir.",
+    en: "The number of outcome categories is unknown. The candidate below is valid ONLY for a two-category outcome; it is not appropriate with three or more.",
+  },
   olcumBilinmiyor: {
     tr: "Sonuç değişkeninin türü bilinmediği için hem parametrik hem parametrik olmayan adaylar listede. Dağılım testinin sonucu tek başına yöntem seçmeye yetmez; önce değişkenin ölçüm düzeyine karar verin.",
     en: "Because the outcome's type is unknown, both parametric and non-parametric candidates are listed. A distribution test's result alone is not enough to choose a method; first decide the variable's measurement level.",
@@ -295,8 +375,8 @@ const DESTEKLENMEYEN = {
     en: "Testing several outcomes in ONE analysis requires multivariate analysis of variance (MANOVA), which ArvoLab does not have yet. Testing the outcomes one by one is not the same thing: it inflates the error rate and does not show the pattern across variables. For now you can run a separate analysis per outcome and report a multiple-comparison correction.",
   },
   cochran: {
-    tr: "Aynı kişilerin ÜÇ ya da daha çok ölçümünde kategorik sonuç Cochran Q testi ister; ArvoLab'da yok. McNemar yalnızca iki ölçüm içindir — üç ölçümü ikili parçalara bölerek McNemar uygulamak hata oranını yükseltir, bu yüzden aday olarak sunulmuyor.",
-    en: "A categorical outcome across THREE or more measurements of the same people requires Cochran's Q test, which ArvoLab does not have. McNemar is for two measurements only — splitting three measurements into pairs and applying McNemar inflates the error rate, so it is not offered as a candidate.",
+    tr: "Aynı kişilerin ÜÇ ya da daha çok ölçümünde kategorik sonuç, iki kategorili sonuçta Cochran Q testini ister; ArvoLab'da yok (üçten çok kategoride ise genelleştirilmiş karma model gerekir). McNemar yalnızca iki ölçüm içindir — üç ölçümü ikili parçalara bölerek McNemar uygulamak hata oranını yükseltir, bu yüzden aday olarak sunulmuyor.",
+    en: "A categorical outcome across THREE or more measurements of the same people requires Cochran's Q test for a two-category outcome, which ArvoLab does not have (with more than two categories a generalised mixed model is needed). McNemar is for two measurements only — splitting three measurements into pairs and applying McNemar inflates the error rate, so it is not offered as a candidate.",
   },
   karmaKategorik: {
     tr: "Hem farklı gruplar hem tekrarlı ölçüm içeren desende kategorik sonuç, genelleştirilmiş karma modeller (GEE/GLMM) ister; ArvoLab'da yok. Ki-kare bu desende satırların bağımsızlığı varsayımını çiğner.",
@@ -315,8 +395,12 @@ const DESTEKLENMEYEN = {
     en: "Predicting an ordinal outcome requires ordinal logistic regression, which ArvoLab does not have. Treating an ordinal outcome as continuous and running linear regression is common but hard to defend.",
   },
   cokKategoriliYordama: {
-    tr: "İkiden çok kategorili bir sonucu yordamak çok kategorili (multinom) lojistik regresyon ister; ArvoLab'da yalnızca İKİLİ lojistik regresyon var.",
-    en: "Predicting an outcome with more than two categories requires multinomial logistic regression; ArvoLab has only BINARY logistic regression.",
+    tr: "İkiden çok kategorili bir sonucu yordamak çok kategorili (multinom) lojistik regresyon ister; ArvoLab'da yalnızca İKİLİ lojistik regresyon var. Kategorileri ikiye indirip ikili lojistik çalıştırmak bilgi atar ve hangi kategorinin ayrıştığını gizler; bu yüzden aday olarak sunulmuyor.",
+    en: "Predicting an outcome with more than two categories requires multinomial logistic regression; ArvoLab has only BINARY logistic regression. Collapsing the categories into two throws information away and hides which category separates, so it is not offered as a candidate.",
+  },
+  cokKategoriliTekrarli: {
+    tr: "Aynı kişilerin iki ölçümünde İKİDEN ÇOK kategorili sonuç, McNemar–Bowker ya da marjinal homojenlik testini ister; ArvoLab'da yok. McNemar yalnızca iki kategori içindir — kategorileri birleştirerek uygulamak, hangi kategoriler arasında geçiş olduğunu gizler.",
+    en: "A categorical outcome with MORE THAN TWO categories across two measurements of the same people requires the McNemar–Bowker or marginal homogeneity test, which ArvoLab does not have. McNemar is for two categories only — collapsing categories to apply it hides which categories the transitions occur between.",
   },
 } satisfies Record<string, Metin>;
 
@@ -349,10 +433,21 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
   }
 
   if (amac === "fark") {
-    sorular.push(SORULAR.sonucTuru, SORULAR.olcumDuzeni);
+    sorular.push(SORULAR.sonucTuru);
     const tur = yanitlar.sonucTuru;
+    /*
+      Ölçüm düzeyine göre İKİNCİ soru değişiyor: sürekli sonuçta dağılım,
+      kategorik sonuçta kategori sayısı. Herkese her soru sorulmuyor.
+    */
+    if (tur === "surekli") sorular.push(SORULAR.dagilim);
+    if (tur === "kategorik") sorular.push(SORULAR.kategoriSayisi);
+    const dagilim = yanitlar.dagilim;
+    const kategoriSayisi = yanitlar.kategoriSayisi;
+    const ikinciCevaplandi =
+      tur === "surekli" ? verildi(dagilim) : tur === "kategorik" ? verildi(kategoriSayisi) : true;
+    if (verildi(tur) && ikinciCevaplandi) sorular.push(SORULAR.olcumDuzeni);
     const duzen = yanitlar.olcumDuzeni;
-    if (verildi(tur) && verildi(duzen)) {
+    if (verildi(tur) && ikinciCevaplandi && verildi(duzen)) {
       /* Karma desende grup/ölçüm sayısı sorulmaz: karma ANOVA deseni tanımlıyor. */
       if (duzen !== "karma") sorular.push(SORULAR.grupSayisi);
       const sayi = yanitlar.grupSayisi;
@@ -375,6 +470,19 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
         }
         /* Grup sayısı bilinmiyor: iki ve çok gruplu adaylar birlikte. */
         return al("ttest", "anova");
+      };
+
+      /*
+        Sürekli sonucun sıra temelli karşılığı. Tek örneklemde karşılık
+        yok (tek örneklem Wilcoxon ArvoLab'da yok): orada boş dönüyor ve
+        sınır notu ayrıca yazılıyor.
+      */
+      const siraTemelliKarsilik = (d: string | undefined, n: string | undefined): Aday[] => {
+        if (n === "tek") return [];
+        if (d === "bagimsiz") return n === "iki" ? al("mannwhitney") : n === "ucDahaCok" ? al("kruskalwallis") : al("mannwhitney", "kruskalwallis");
+        if (d === "tekrarli") return n === "iki" ? al("wilcoxon") : n === "ucDahaCok" ? al("friedman") : al("wilcoxon", "friedman");
+        if (d === "karma") return [];
+        return n === "iki" ? al("mannwhitney", "wilcoxon") : n === "ucDahaCok" ? al("kruskalwallis", "friedman") : al("mannwhitney", "wilcoxon", "kruskalwallis", "friedman");
       };
 
       const siraliBagimsiz = (): Aday[] => {
@@ -407,6 +515,16 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
             adaylar = sayi === "iki" ? al("ttest", "pairedttest") : sayi === "ucDahaCok" ? al("anova", "tekrarlianova") : sayi === "tek" ? al("tekorneklem") : al("ttest", "pairedttest", "anova", "tekrarlianova");
             sinirlar.push(SINIR.duzenBilinmiyor);
           }
+          /*
+            DAĞILIM AYRI BİR KARAR. Çarpıklık değişkeni sıralı yapmıyor;
+            sıra temelli karşılığı parametrik adayın YANINA ekleniyor ve
+            hangisinin raporlanacağı varsayım şeridine bırakılıyor.
+          */
+          if (dagilim === "sorunlu" || bilinmiyor(dagilim)) {
+            const siraliKarsilik = siraTemelliKarsilik(duzen, sayi);
+            adaylar = [...adaylar, ...siraliKarsilik.filter((x) => !adaylar.some((a) => a.tur === x.tur))];
+            sinirlar.push(dagilim === "sorunlu" ? SINIR.dagilimSorunlu : SINIR.dagilimBilinmiyor);
+          }
         } else if (tur === "sirali") {
           if (duzen === "bagimsiz") adaylar = siraliBagimsiz();
           else if (duzen === "tekrarli") {
@@ -417,17 +535,28 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
             sinirlar.push(SINIR.duzenBilinmiyor);
           }
         } else if (tur === "kategorik") {
+          /*
+            KATEGORİ SAYISI KOŞULU AÇIKÇA DENETLENİYOR. Ki-kare r×c
+            tabloyla çalışır, kategori sayısı serbesttir. McNemar ve
+            Cochran Q ise İKİ kategorili sonuç ister; üç kategoride
+            bunları önermek sessizce yanlış analiz yaptırır.
+          */
+          const ikiKategori = kategoriSayisi === "iki";
+          const cokKategori = kategoriSayisi === "ucDahaCok";
           if (duzen === "bagimsiz") adaylar = al("chisquare");
           else if (duzen === "tekrarli") {
-            if (sayi === "iki") adaylar = al("mcnemar");
-            else if (sayi === "ucDahaCok") desteklenmeyen = DESTEKLENMEYEN.cochran;
+            if (sayi === "ucDahaCok") desteklenmeyen = DESTEKLENMEYEN.cochran;
             else if (sayi === "tek") adaylar = al("chisquare");
-            else {
+            else if (cokKategori) desteklenmeyen = DESTEKLENMEYEN.cokKategoriliTekrarli;
+            else if (sayi === "iki" || bilinmiyor(sayi)) {
               adaylar = al("mcnemar");
-              sinirlar.push(SINIR.grupBilinmiyor);
+              if (!ikiKategori) sinirlar.push(SINIR.kategoriBilinmiyor);
+              if (bilinmiyor(sayi)) sinirlar.push(SINIR.grupBilinmiyor);
             }
           } else {
-            adaylar = sayi === "ucDahaCok" ? al("chisquare") : al("chisquare", "mcnemar");
+            /* Düzen bilinmiyor: McNemar yalnızca iki kategorili sonuçta aday. */
+            adaylar = cokKategori || sayi === "ucDahaCok" ? al("chisquare") : al("chisquare", "mcnemar");
+            if (!cokKategori && sayi !== "ucDahaCok" && !ikiKategori) sinirlar.push(SINIR.kategoriBilinmiyor);
             sinirlar.push(SINIR.duzenBilinmiyor);
           }
         } else {
@@ -464,7 +593,10 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
   if (amac === "iliski") {
     sorular.push(SORULAR.sonucTuru);
     const tur = yanitlar.sonucTuru;
-    if (verildi(tur)) {
+    /* Sürekli değişkende dağılım ayrı soru: çarpıklık onu sıralı yapmaz. */
+    if (tur === "surekli") sorular.push(SORULAR.dagilim);
+    const dagilim = yanitlar.dagilim;
+    if (verildi(tur) && (tur !== "surekli" || verildi(dagilim))) {
       if (tur === "kategorik") {
         adaylar = al("chisquare");
         tamam = true;
@@ -474,6 +606,11 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
         if (verildi(kontrol)) {
           if (tur === "surekli") {
             adaylar = kontrol === "var" ? al("kismikorelasyon") : kontrol === "yok" ? al("correlation") : al("correlation", "kismikorelasyon");
+            /* Dağılım kuşkuluysa sıra temelli karşılık da aday; ölçüm düzeyi değişmez. */
+            if (dagilim === "sorunlu" || bilinmiyor(dagilim)) {
+              adaylar = [...adaylar, ADAYLAR.spearman];
+              sinirlar.push(dagilim === "sorunlu" ? SINIR.dagilimSorunlu : SINIR.dagilimBilinmiyor);
+            }
           } else if (tur === "sirali") {
             adaylar = al("spearman");
             if (kontrol === "var") {
@@ -495,17 +632,35 @@ export function analizOnerisi(yanitlar: Yanitlar): Oneri {
   if (amac === "yordama") {
     sorular.push(SORULAR.sonucTuru);
     const tur = yanitlar.sonucTuru;
+    if (tur === "kategorik") sorular.push(SORULAR.kategoriSayisi);
+    const kategoriSayisi = yanitlar.kategoriSayisi;
     if (verildi(tur)) {
-      if (tur === "surekli") adaylar = al("regression");
-      else if (tur === "kategorik") {
-        adaylar = al("lojistik");
-        sinirlar.push(DESTEKLENMEYEN.cokKategoriliYordama);
-      } else if (tur === "sirali") desteklenmeyen = DESTEKLENMEYEN.siraliYordama;
-      else {
+      if (tur === "surekli") {
+        adaylar = al("regression");
+        tamam = true;
+      } else if (tur === "kategorik") {
+        /*
+          İKİLİ SONUÇ KOŞULU AÇIKÇA DENETLENİYOR. Üç ve daha çok
+          kategoride ikili lojistik regresyon ÖNERİLMİYOR: kategorileri
+          birleştirmek bilgi atar ve hangi kategorinin ayrıştığını gizler.
+        */
+        if (kategoriSayisi === "ucDahaCok") {
+          desteklenmeyen = DESTEKLENMEYEN.cokKategoriliYordama;
+          tamam = true;
+        } else if (verildi(kategoriSayisi)) {
+          adaylar = al("lojistik");
+          if (bilinmiyor(kategoriSayisi)) sinirlar.push(SINIR.kategoriBilinmiyor);
+          tamam = true;
+        }
+      } else if (tur === "sirali") {
+        desteklenmeyen = DESTEKLENMEYEN.siraliYordama;
+        tamam = true;
+      } else {
         adaylar = al("regression", "lojistik");
         sinirlar.push(SINIR.olcumBilinmiyor);
+        sinirlar.push(SINIR.kategoriBilinmiyor);
+        tamam = true;
       }
-      tamam = adaylar.length > 0 || desteklenmeyen !== null;
     }
   }
 

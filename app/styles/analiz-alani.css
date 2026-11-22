@@ -42,7 +42,7 @@
 
 /* ---------- İki sütun ---------- */
 .analiz-alan {
-  display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  display: grid; grid-template-columns: minmax(0, var(--analiz-gezgin-genislik, 288px)) minmax(0, 1fr);
   gap: 12px; align-items: stretch; flex: 1 1 auto; min-height: 0; width: 100%;
 }
 .analiz-alan-gezgin {
@@ -50,12 +50,12 @@
   border: 1px solid var(--line); border-radius: var(--kart-r); background: var(--surface);
 }
 /*
-  Yardım açıkken sol sütun genişler. 260 px'te sorular ve aday listesi
-  üst üste biniyor, kullanıcı tek bir soruyu okumak için kaydırıyordu;
-  panel kapanınca sütun eski genişliğine döner. Durum yukarı taşınmadı:
-  :has() aynı şeyi yerleşim katmanında, state eklemeden yapıyor.
+  YARDIM ÇALIŞMA ALANINI DARALTMIYOR (22.11.2026 düzeltmesi). İlk
+  sürümde panel açılınca sol sütun 260'tan 420 px'e genişliyor, sağdaki
+  çalışma alanı aynı oranda daralıyordu: yardım isteyen kullanıcı
+  yapılandırmasını kaybediyordu. Şimdi panel gezginin içinde, sütun
+  genişliği SABİT; panel kendi içinde kayar.
 */
-.analiz-alan:has(.analiz-yardim) { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); }
 /* Sağdaki çalışma alanı kendi içinde kayar: sol gezgin ekranda kalsın. */
 .analiz-alan > .analiz-pencere-govde,
 .analiz-alan > .project-form-card { min-width: 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
@@ -282,4 +282,160 @@
   .analiz-alan:has(.analiz-gezgin[data-telefon="liste"]) > .project-form-card { display: none; }
   /* Yardım açıkken sütun genişletmesi telefonda gereksiz: zaten tam genişlik. */
   .analiz-alan:has(.analiz-yardim) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Çalışma alanı başlığı (veri yüklendikten sonra) ---------- */
+.analiz-alan-bas { display: grid; gap: 2px; margin-bottom: 12px; }
+.analiz-alan-bas h3 { margin: 0; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.2; }
+.analiz-alan-bas p { margin: 0; color: var(--muted); font-size: var(--os5-fs-govde); }
+
+/* ---------- Sayfa başlığı: kısa açıklama + açılabilir ayrıntı ---------- */
+.analiz-bas-bilgi { margin-top: 4px; }
+.analiz-bas-bilgi > summary {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  color: var(--primary-ink); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.analiz-bas-bilgi > p { margin: 6px 0 0; max-width: 72ch; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-bas-calisma { margin-top: 10px; }
+
+/* ---------- Dosya seçme alanında görünür düğme ---------- */
+.dropzone-dugme {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px;
+  padding: 8px 18px; border-radius: var(--kontrol-r);
+  background: var(--primary); color: var(--on-primary);
+  font-size: var(--os5-fs-govde); font-weight: 600;
+}
+
+/* ---------- Kompakt veri kimliği: uzun dosya adı satırı büyütmüyor ---------- */
+.analiz-veri-kimlik { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1; }
+.analiz-veri-kimlik strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analiz-veri-kimlik em { flex: none; color: var(--muted); font-style: normal; font-size: var(--os5-fs-en-kucuk); }
+
+/* ---------- Yardım: Yanıtlarım özeti ---------- */
+.analiz-yardim-ust p { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+.analiz-yardim-yanitlarim { display: grid; gap: 4px; }
+.analiz-yardim-yanitlarim h4 {
+  margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.analiz-yardim-yanitlarim ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.analiz-yardim-yanitlarim button {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 10px;
+  width: 100%; min-height: 40px; text-align: left;
+  padding: 5px 10px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+  background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+}
+.analiz-yardim-yanitlarim button:hover { border-color: var(--primary); }
+.analiz-yardim-yanitlarim small { grid-column: 1; color: var(--muted); font-size: var(--os5-fs-en-kucuk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analiz-yardim-yanitlarim b { grid-column: 1; min-width: 0; font-size: var(--os5-fs-govde); }
+.analiz-yardim-yanitlarim span {
+  grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 4px;
+  color: var(--primary-ink); font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+}
+.analiz-yardim-sayac {
+  display: block; margin-bottom: 2px; color: var(--muted);
+  font-size: var(--os5-fs-en-kucuk); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.analiz-yardim-geri {
+  justify-self: start; margin-top: 4px; padding: 4px 0; border: 0; background: none;
+  color: var(--primary-ink); font: inherit; font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+}
+/* Aday kartı: ad, gerekçe, kontrol ve "Bu analizi aç" alt alta ve tam görünür. */
+.analiz-yardim-adaylar li {
+  display: grid; gap: 3px; justify-items: start;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--kontrol-r); background: var(--surface-2);
+}
+.analiz-yardim-aday-ad { font-size: var(--os5-fs-govde); }
+.analiz-yardim-adaylar button { margin-top: 4px; min-height: 40px; }
+.analiz-yardim-sonuc[data-tur="yok"] { border-color: var(--warning); }
+
+/* ---------- Kompakt yatay adım şeridi ---------- */
+.analiz-adimlar li[data-durum="okunacak"] { border-color: var(--line); }
+.analiz-adimlar li[data-durum="okunacak"] .analiz-adim-no { background: var(--surface-sunken); color: var(--primary-ink); }
+
+@media (max-width: 760px) {
+  /* Üç büyük dikey kart yerine tek satırlık durum şeridi: ilk ekranda
+     seçili analiz ve ilk değişken alanı görünsün. */
+  .analiz-adimlar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+    margin-bottom: 10px; padding: 4px; border: 1px solid var(--line-soft); border-radius: var(--kontrol-r);
+    background: var(--surface-2);
+  }
+  .analiz-adimlar li { padding: 4px 6px; border: 0; background: none; gap: 5px; align-items: center; }
+  .analiz-adim-no { width: 18px; height: 18px; }
+  .analiz-adim-govde b { font-size: var(--os5-fs-en-kucuk); }
+  /* Açıklama tek satırda kırpılıyor; tam metin li'nin title'ında. */
+  .analiz-adim-govde small { display: none; }
+  .analiz-alan-bas { margin-bottom: 8px; }
+  .analiz-veri-kimlik { flex-wrap: wrap; gap: 2px 6px; }
+  .analiz-veri-kimlik em { flex: 1 0 100%; }
+  .analiz-bas-calisma { margin-top: 8px; }
+}
+
+/* ---------- Telefon: yardım AYRI görünüm ----------
+   Masaüstünde panel gezginin içinde, sabit genişlikte durur. Telefonda
+   ekran zaten tek sütun: yardım açıkken çalışma alanı, özet satırı ve
+   liste gizlenir ve ekranda yalnızca yardım kalır. Panelin kapatma
+   düğmesi çalışma alanına döndürür. */
+@media (max-width: 760px) {
+  .analiz-alan:has(.analiz-yardim) > .analiz-pencere-govde,
+  .analiz-alan:has(.analiz-yardim) > .project-form-card { display: none; }
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-telefon,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-yardim,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-ust,
+  .analiz-gezgin:has(.analiz-yardim) > nav,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-not,
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-bos { display: none; }
+  .analiz-gezgin:has(.analiz-yardim) > .analiz-gezgin-geri { display: none; }
+  /* Kapatma düğmesi telefonda metinli: tek "×" simgesi neye döneceğini söylemiyordu. */
+  .analiz-yardim-ust > button::after {
+    content: "Çalışma alanı";
+    margin-left: 6px; font-size: var(--os5-fs-en-kucuk); font-weight: 600;
+  }
+  html[lang="en"] .analiz-yardim-ust > button::after { content: "Workspace"; }
+  .analiz-yardim { border: 0; padding: 0; background: none; }
+}
+
+/* ---------- Telefon: ilk ekranda seçili analiz + ilk değişken alanı ---------- */
+@media (max-width: 760px) {
+  /*
+    Başlık telefonda TEK YERDE: gezgin özeti zaten "Analiz: <ad>" diyor.
+    Çalışma alanının kendi h3'ü aynı adı ikinci kez yazıp ~60 px alıyordu;
+    kısa amaç açıklaması kalıyor.
+  */
+  .analiz-alan-bas h3 { display: none; }
+  .analiz-alan-bas p { font-size: var(--os5-fs-en-kucuk); }
+
+  /* Veri şeridi: ad bir satır, sayımlar bir satır, düğmeler altta yan yana. */
+  .analiz-veri-serit { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .analiz-veri-kimlik { flex-wrap: wrap; }
+  .analiz-veri-kimlik strong { flex: 1 1 auto; }
+  .analiz-veri-eylem { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .analiz-veri-eylem button { min-height: 44px; justify-content: center; }
+
+  /* İsteğe bağlı araçlar değişken alanlarının ALTINA iner. */
+  .analiz-veri-govde { display: flex; flex-direction: column; }
+  .analiz-veri-govde > * { order: 5; }
+  .analiz-veri-govde > .analiz-veri-serit { order: 1; }
+  .analiz-veri-govde > .veri-incele { order: 2; }
+  .analiz-veri-govde > .analiz-adimlar { order: 3; }
+  .analiz-veri-govde > .project-form-grid { order: 4; }
+  .analiz-veri-govde > .project-form-actions { order: 6; }
+  .analiz-veri-govde > .alert { order: 7; }
+  .analiz-veri-govde > .results-divider { order: 8; }
+}
+
+/* ---------- Telefon: dokunma hedefleri 44 px, yer başka yerden kazanılıyor ---------- */
+@media (max-width: 760px) {
+  /* Hedefler küçültülmüyor; yer, başlık ve eylemler arasındaki
+     boşluklardan kazanılıyor. */
+  .analiz-sekme { min-height: 44px; padding: 10px 12px; }
+  .analiz-gezgin-telefon button { min-height: 44px; }
+  .analiz-gezgin { padding: 8px; gap: 6px; }
+  .analiz-bas .pencere-dugmeler { gap: 6px; }
+  .analiz-bas-bilgi { margin-top: 2px; }
+  .analiz-bas-calisma { margin-top: 6px; }
+  .analiz-merkez { gap: 8px; }
+  .analiz-alan { gap: 8px; }
 }

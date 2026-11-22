@@ -86,14 +86,32 @@ describe("eskiyen sonuç ve veri değişimi", () => {
     assert.match(analizci, /Veriyi değiştirirseniz ekrandaki sonuç ve değişken seçimleriniz silinir/);
   });
 
+  /*
+    İŞARETİN ANLAMI AYRIK (22.11.2026). ✓ hesabın bittiğini söyler.
+    "Kontroller" adımı HİÇBİR KOŞULDA ✓ almaz: ArvoLab varsayım
+    değerlerini yazar, "geçti" hükmü vermez. İlk sürümde analiz
+    çalışınca üç adım da yeşil onay alıyor ve varsayımlar geçmiş gibi
+    okunuyordu.
+  */
   test("başarı işareti denetim yapılmadan verilmiyor", () => {
     const adimlar = oku("app/dashboard/analysis/analiz-adimlari.tsx");
-    /* "tamam" yalnızca taze bir sonuç varken; varsayım denetimi hesabın içinde. */
     assert.match(adimlar, /const tazeSonuc = sonucVar && !eskidi;/);
+    /* Kontroller adımı: "okunacak", "tamam" değil. */
+    assert.match(adimlar, /durum: tazeSonuc \? "okunacak" : "bekliyor"/);
+    /* Sonuç adımı ✓ alır ve ✓'in anlamı yazılı. */
     assert.match(adimlar, /durum: tazeSonuc \? "tamam" : "bekliyor"/);
-    /* Yorumlar çıkarılıyor: gerekçe metni "uygun/geçti" sözcüklerini anlatıyor. */
-    const kod = adimlar.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
-    assert.ok(!/uygun|geçti|passed/i.test(kod), "adım şeridi 'uygun/geçti' demiyor");
+    assert.match(adimlar, /Hesap tamamlandı/);
+    assert.match(adimlar, /“geçti” hükmü vermez/);
+    assert.match(adimlar, /does not rule them “passed”/);
+    /* ✓ ikonu yalnızca "tamam" durumunda çiziliyor. */
+    assert.match(adimlar, /adim\.durum === "tamam" \? <Check/);
+  });
+
+  test("eskimiş sonuç kaydedilemiyor, kopyalanamıyor, sıraya konamıyor", () => {
+    /* Uyarıyı okumak yetmiyordu: düğme açık kaldığı sürece basılıyordu. */
+    assert.match(analizci, /onClick=\{sonucuKopyala\} disabled=\{tazelik\.eskidi\}/);
+    assert.equal(analizci.match(/disabled=\{kaydediliyor \|\| tazelik\.eskidi\}/g)?.length, 2);
+    assert.match(analizci, /Kaydetme, kopyalama ve teze ekleme, sonuç güncel seçimle hesaplanana kadar kapalı/);
   });
 });
 
@@ -194,7 +212,7 @@ describe("stil kapsamı", () => {
       for (const p of s.split(",")) {
         assert.match(
           p,
-          /\.analiz|\.veri-incele|\.gb-tek-ekran|\.dashboard-content-shell|\.results-divider|\.project-form-card/,
+          /\.analiz|\.veri-incele|\.dropzone|\.gb-tek-ekran|\.dashboard-content-shell|\.results-divider|\.project-form-card|\.project-form-grid|\.project-form-actions|\.file-info-bar|\.sutun-secimi|html\[lang/,
           `kapsam dışı seçici: ${p.trim()}`,
         );
       }
@@ -208,10 +226,24 @@ describe("stil kapsamı", () => {
   });
 
   test("sayfa başına genişlik yaması yok: genişlik ortak kaptan", () => {
-    /* @media sorguları hariç: oradaki max-width kırılım, genişlik kararı değil. */
+    /* @media sorguları ve minmax() hariç: ilki kırılım, ikincisi sütun payı. */
     const kurallar = stil.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@media[^{]*\{/g, "{");
-    const bildirimler = [...kurallar.matchAll(/max-width:\s*([^;}]+)/g)].map((m) => m[1].trim());
+    const bildirimler = [...kurallar.matchAll(/(^|[;{\s])max-width:\s*([^;}]+)/g)]
+      .map((m) => m[2].trim())
+      /* ch birimi SATIR UZUNLUĞU sınırıdır (okunabilirlik), sayfa genişliği değil. */
+      .filter((v) => !v.endsWith("ch"));
     assert.deepEqual(bildirimler, [], "genişlik ortak kaptan (.dashboard-page) gelmeli");
+  });
+
+  /*
+    YARDIM ÇALIŞMA ALANINI DARALTMIYOR. İlk sürümde panel açılınca
+    sol sütun 260'tan 420 px'e genişliyor, sağdaki çalışma alanı aynı
+    oranda daralıyordu: yardım isteyen kullanıcı yapılandırmasını
+    kaybediyordu.
+  */
+  test("yardım açıkken sütun genişliği değişmiyor", () => {
+    assert.doesNotMatch(stil, /\.analiz-alan:has\(\.analiz-yardim\)\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*4/);
+    assert.match(stil, /--analiz-gezgin-genislik/);
   });
 
   test("telefonda ayrı iç kenar çubuğu yok: tek sütun", () => {

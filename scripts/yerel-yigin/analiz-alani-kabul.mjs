@@ -123,6 +123,20 @@ const sutunlar = Object.keys(satirlar[0]);
 const CSV = [sutunlar.join(","), ...satirlar.map((r) => sutunlar.map((c) => r[c]).join(","))].join("\n");
 const VERI_YOLU = path.join(KOK, `.tmp-analiz-kabul-${ek}.csv`);
 fs.writeFileSync(VERI_YOLU, CSV, "utf8");
+/* Büyük dosya: 20 000 satır. Önizlemenin bütün dosyayı DOM'a yazmadığı ve
+   hesabın tarayıcıda makul sürede bittiği burada sınanıyor. */
+const BUYUK_YOLU = path.join(KOK, `.tmp-analiz-buyuk-${ek}.csv`);
+{
+  const satir = (i) => {
+    const grup = i % 2 ? "A" : "B";
+    const taban = i % 2 ? 60 : 70;
+    const p = (taban + ((i * 7919) % 180) / 10).toFixed(1);
+    return [`K${i}`, grup, ["9", "10", "11"][i % 3], i % 2 ? "kadin" : "erkek", (Number(p) - 5).toFixed(1), p, (Number(p) + 1).toFixed(1), 18 + (i % 10), 1 + (i % 5), 1 + ((i + 1) % 5), 1 + ((i + 2) % 5), 1 + ((i + 3) % 5), 1 + ((i + 4) % 5), i % 3 ? "gecti" : "kaldi"].join(",");
+  };
+  const parcalar = [sutunlar.join(",")];
+  for (let i = 0; i < 20000; i++) parcalar.push(satir(i));
+  fs.writeFileSync(BUYUK_YOLU, parcalar.join("\n"), "utf8");
+}
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
 fs.writeFileSync(BOZUK_YOLU, "ad;soyad\nAli\nVeli;Yilmaz;fazla\n", "utf8");
@@ -194,44 +208,84 @@ try {
   }, 7);
 
   /* ================= S7: yardım akışı ================= */
-  await esit("S7a yardım paneli açılıyor ve ilk soru amaç", async () => {
+  await esit("S7a yardım paneli açılıyor; BİR SEFERDE TEK soru", async () => {
     await sayfa.getByRole("button", { name: /Hangi analizi seçmeliyim/ }).click();
+    await sayfa.waitForSelector(".analiz-yardim");
     return await sayfa.locator(".analiz-yardim-soru legend").allInnerTexts();
   }, (v) => v.length === 1 && /ne yapmak istiyorsunuz/i.test(v[0]));
+  await esit("S7a2 başlık panelde tekrarlanmıyor (tetikleyicide zaten var)", async () => {
+    const panel = await sayfa.locator(".analiz-yardim").innerText();
+    return (panel.match(/Hangi analizi seçmeliyim/g) ?? []).length;
+  }, 0);
+  await esit("S7a3 yardım açılınca çalışma alanı DARALMIYOR", async () => {
+    const govde = await sayfa.locator(".analiz-pencere-govde").boundingBox();
+    await sayfa.getByRole("button", { name: /Hangi analizi seçmeliyim/ }).click();
+    await sayfa.waitForTimeout(250);
+    const kapali = await sayfa.locator(".analiz-pencere-govde").boundingBox();
+    await sayfa.getByRole("button", { name: /Hangi analizi seçmeliyim/ }).click();
+    await sayfa.waitForSelector(".analiz-yardim");
+    const acik = await sayfa.locator(".analiz-pencere-govde").boundingBox();
+    return Math.abs((kapali?.width ?? 0) - (acik?.width ?? 0)) <= 1 && Math.abs((govde?.width ?? 0) - (acik?.width ?? 0)) <= 1;
+  }, true);
 
+  /* Bir seferde tek soru açık; cevaplananlar "Yanıtlarım" özetinde. */
   const yardimSec = async (soru, secenek) => {
-    /* Cevaplanmış soru tek satıra iniyor: önce özet satırına basıp aç. */
-    const ozet = sayfa.locator(".analiz-yardim-ozet", { hasText: soru });
-    if (await ozet.count()) { await ozet.first().click(); await sayfa.waitForTimeout(120); }
-    const alan = sayfa.locator(".analiz-yardim-soru").filter({ hasText: soru });
-    await alan.locator(".analiz-yardim-secenek", { hasText: secenek }).first().click();
-    await sayfa.waitForTimeout(150);
+    const acik = sayfa.locator(".analiz-yardim-soru legend");
+    if (!(await acik.count()) || !new RegExp(soru).test(await acik.innerText())) {
+      const ozet = sayfa.locator(".analiz-yardim-yanitlarim button", { hasText: soru });
+      if (await ozet.count()) { await ozet.first().click(); await sayfa.waitForTimeout(150); }
+    }
+    await sayfa.locator(".analiz-yardim-soru .analiz-yardim-secenek", { hasText: secenek }).first().click();
+    await sayfa.waitForTimeout(180);
   };
   await yardimSec("ne yapmak istiyorsunuz", "Gruplar ya da ölçümler arasında fark");
-  await yardimSec("Sonuç (bağımlı) değişkeniniz", "Sürekli sayı");
+  await yardimSec("ÖLÇÜM DÜZEYİNDE", "Sürekli");
+  await yardimSec("Dağılım ve örneklem", "Dağılım normale yakın");
   await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Farklı kişilerden");
   await yardimSec("Kaç grup ya da kaç ölçüm", "İki");
-  await esit("S7b bağımsız + iki grup + sürekli → bağımsız örneklem t-testi", async () => await sayfa.locator(".analiz-yardim-adaylar li b").allInnerTexts(), (v) => v.length === 1 && /Bağımsız Örneklem t-Testi/.test(v[0]));
+  await esit("S7b bağımsız + iki grup + sürekli → bağımsız örneklem t-testi", async () => await sayfa.locator(".analiz-yardim-aday-ad").allInnerTexts(), (v) => v.length === 1 && /Bağımsız Örneklem t-Testi/.test(v[0]));
+  await esit("S7b2 aday kartında gerekçe, kontrol ve 'Bu analizi aç' birlikte", async () => {
+    const kart = sayfa.locator(".analiz-yardim-adaylar li").first();
+    const metin = await kart.innerText();
+    const dugme = await kart.getByRole("button", { name: /Bu analizi aç/ }).isVisible();
+    return `${/İki bağımsız grubun/.test(metin)} ${/Kontrol edin:/.test(metin)} ${dugme}`;
+  }, "true true true");
+  await esit("S7b3 verilen cevaplar 'Yanıtlarım' özetinde düzenlenebilir", async () => {
+    const satir = await sayfa.locator(".analiz-yardim-yanitlarim button").count();
+    const degistir = await sayfa.locator(".analiz-yardim-yanitlarim button span").first().innerText();
+    return `${satir >= 4} ${/Değiştir/.test(degistir)}`;
+  }, "true true");
   await esit("S7c tek aday bile kesin ilan edilmiyor", async () => (await sayfa.locator(".analiz-yardim-sinirlar").innerText()), (v) => /öneridir, hüküm değil/.test(v) && /danışmanınızla/.test(v));
   await cek(sayfa, "03-yardim-bagimsiz-iki-grup");
 
   await esit("S7d TEKRARLI seçilince aday eşleştirilmiş t-testine dönüyor", async () => {
     await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Aynı kişilerin tekrarlı");
     await yardimSec("Kaç grup ya da kaç ölçüm", "İki");
-    return await sayfa.locator(".analiz-yardim-adaylar li b").allInnerTexts();
+    return await sayfa.locator(".analiz-yardim-aday-ad").allInnerTexts();
   }, (v) => v.length === 1 && /Eşleştirilmiş Örneklem/.test(v[0]));
+  /* ÖLÇÜM DÜZEYİ ≠ DAĞILIM: çarpıklık parametrik adayı listeden ATMIYOR. */
+  await esit("S7d2 çarpık dağılım parametrik adayı kaldırmıyor, sıra temellisini EKLİYOR", async () => {
+    await yardimSec("Dağılım ve örneklem", "Çarpık, uç değerli");
+    await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Farklı kişilerden");
+    await yardimSec("Kaç grup ya da kaç ölçüm", "İki");
+    const adaylar = await sayfa.locator(".analiz-yardim-aday-ad").allInnerTexts();
+    const sinir = await sayfa.locator(".analiz-yardim-sinirlar").innerText();
+    return `${adaylar.join(" | ")} || ${/ÖLÇÜM DÜZEYİNİ değiştirmez/.test(sinir)}`;
+  }, (v) => /Bağımsız Örneklem t-Testi \| Mann-Whitney/.test(v) && /\|\| true$/.test(v));
 
   await esit("S7e düzen BİLİNMİYORSA iki aday ve eksik bilgi yazılı", async () => {
+    await yardimSec("Dağılım ve örneklem", "Dağılım normale yakın");
     await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Bilmiyorum");
     await yardimSec("Kaç grup ya da kaç ölçüm", "İki");
-    const adaylar = await sayfa.locator(".analiz-yardim-adaylar li b").allInnerTexts();
+    const adaylar = await sayfa.locator(".analiz-yardim-aday-ad").allInnerTexts();
     const sinir = await sayfa.locator(".analiz-yardim-sinirlar").innerText();
     return `${adaylar.join(" | ")} || ${/bağımsız mı tekrarlı mı/.test(sinir)}`;
   }, (v) => /Bağımsız Örneklem t-Testi/.test(v) && /Eşleştirilmiş Örneklem/.test(v) && /\|\| true$/.test(v));
   await cek(sayfa, "04-yardim-eksik-bilgi");
 
   await esit("S7f DESTEKLENMEYEN desen: üç tekrarlı ölçüm + kategorik → aday YOK", async () => {
-    await yardimSec("Sonuç (bağımlı) değişkeniniz", "Kategorik");
+    await yardimSec("ÖLÇÜM DÜZEYİNDE", "Kategorik");
+    await yardimSec("kaç kategorisi var", "İki");
     await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Aynı kişilerin tekrarlı");
     await yardimSec("Kaç grup ya da kaç ölçüm", "Üç ya da daha çok");
     const adayVar = await sayfa.locator(".analiz-yardim-adaylar").count();
@@ -240,8 +294,18 @@ try {
   }, "aday:0 true true");
   await cek(sayfa, "05-yardim-desteklenmeyen");
 
+  /* İKİLİ SONUÇ KOŞULU: üç kategoride McNemar ÖNERİLMİYOR. */
+  await esit("S7f2 üç kategorili tekrarlı ölçümde McNemar aday değil", async () => {
+    await yardimSec("kaç kategorisi var", "Üç ya da daha çok");
+    await yardimSec("Karşılaştırdığınız ölçümler kimlerden", "Aynı kişilerin tekrarlı");
+    await yardimSec("Kaç grup ya da kaç ölçüm", "İki");
+    const adayVar = await sayfa.locator(".analiz-yardim-adaylar").count();
+    const metin = await sayfa.locator('.analiz-yardim-sonuc[data-tur="yok"]').innerText();
+    return `aday:${adayVar} ${/McNemar–Bowker|marjinal homojenlik/.test(metin)}`;
+  }, "aday:0 true");
+
   await esit("S7g 'Bu analizi aç' kullanıcının eylemi: seçimi değiştiriyor", async () => {
-    await sayfa.getByRole("button", { name: "Baştan başla" }).click();
+    await sayfa.getByRole("button", { name: /Baştan başla|Yanıtları temizle/ }).click();
     await yardimSec("ne yapmak istiyorsunuz", "Ölçeğimin güvenilirliğine");
     await yardimSec("Ölçek için neye bakıyorsunuz", "İç tutarlılık");
     await sayfa.getByRole("button", { name: /Bu analizi aç/ }).first().click();
@@ -300,6 +364,45 @@ try {
   await esit("S2d önizleme bütün dosyayı DOM'a yazmıyor (en çok 20 satır)", async () => await sayfa.locator(".veri-incele tbody tr").count(), (v) => v <= 20);
   await sayfa.getByRole("button", { name: "İncelemeyi kapat" }).click();
 
+  /* ---- S2e: büyük veri ---- */
+  await esit("S2e 20 000 satırlık dosya okunuyor ve sayım doğru", async () => {
+    await git(sayfa, ANALIZ_YOLU);
+    const basla = Date.now();
+    await sayfa.locator('.dropzone input[type="file"]').setInputFiles(BUYUK_YOLU);
+    await sayfa.waitForSelector(".analiz-veri-serit", { timeout: 90000 });
+    const metin = await sayfa.locator(".analiz-veri-serit > span").first().innerText();
+    return `${metin.includes("20000 satır")} · ${Math.round((Date.now() - basla) / 1000)}sn`;
+  }, (v) => v.startsWith("true"));
+  await esit("S2f büyük dosyada önizleme yine en çok 20 satır çiziyor", async () => {
+    await sayfa.getByRole("button", { name: "Veriyi incele" }).click();
+    await sayfa.waitForSelector(".veri-incele");
+    const satir = await sayfa.locator(".veri-incele tbody tr").count();
+    const toplam = await sayfa.locator(".veri-incele-bas").nth(1).innerText();
+    await sayfa.getByRole("button", { name: "İncelemeyi kapat" }).click();
+    return `${satir} satır · ${/20000/.test(toplam)}`;
+  }, "20 satır · true");
+  await esit("S2g büyük veride analiz çalışıyor ve sonuç üretiyor", async () => {
+    await sayfa.locator('.analiz-gezgin-arama input').fill("Bağımsız Örneklem");
+    await sayfa.waitForTimeout(150);
+    await sayfa.locator(".analiz-gezgin-oge").first().click();
+    await sayfa.locator('.analiz-gezgin-arama input').fill("");
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    const n = sayfa.locator("label").filter({ hasText: "Sayısal değişken" }).locator("select").first();
+    await n.selectOption({ label: "son_test" });
+    const basla = Date.now();
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 60000 });
+    const sure = Math.round((Date.now() - basla) / 1000);
+    const sonuc = await sayfa.locator(".analiz-sonuc").innerText();
+    return `${/t\(/.test(sonuc)} · ${sure}sn`;
+  }, (v) => v.startsWith("true"));
+
+  /* Sonraki senaryolar küçük ve içeriği bilinen dosyayla koşsun. */
+  await git(sayfa, ANALIZ_YOLU);
+  await sayfa.locator('.dropzone input[type="file"]').setInputFiles(VERI_YOLU);
+  await sayfa.waitForSelector(".analiz-veri-serit", { timeout: 20000 });
+
   /* ================= S3: analiz aileleri ================= */
   const analizSec = async (kategori, ad) => {
     await sayfa.locator('.analiz-gezgin-arama input').fill(ad);
@@ -326,7 +429,17 @@ try {
   await esit("S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor", async () => await sayfa.locator(".analiz-sonuc-kunye").innerText(), (v) => /Hesaplanan sonuç/.test(v) && /son_test/.test(v) && /grup/.test(v));
   await esit("S3c2 künye BU analizin kullanmadığı alanı yazmıyor", async () => await sayfa.locator(".analiz-sonuc-kunye").innerText(), (v) => !/2\. değişken/.test(v) && !/yordayıcı/.test(v));
   await cek(sayfa, "08-sonuc-ttest-1440-acik");
-  await esit("S3d adım şeridi sonuç gelince tamamlanıyor", async () => await sayfa.locator(".analiz-adimlar li").evaluateAll((l) => l.map((x) => x.dataset.durum).join(",")), "tamam,tamam,tamam");
+  /*
+    İŞARETİN ANLAMI AYRIK: ✓ hesabın bittiğini söyler. "Kontroller"
+    adımı HİÇBİR KOŞULDA ✓ almaz — varsayımların geçtiği hükmünü
+    ArvoLab vermiyor, değerleri yazıyor.
+  */
+  await esit("S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)", async () =>
+    await sayfa.locator(".analiz-adimlar li").evaluateAll((l) => l.map((x) => x.dataset.durum).join(",")), "tamam,okunacak,tamam");
+  await esit("S3d2 'Kontroller' adımı geçti/uygun demiyor, okumaya çağırıyor", async () => {
+    const metin = await sayfa.locator(".analiz-adimlar li").nth(1).getAttribute("title");
+    return `${/okuyun/.test(metin ?? "")} ${/“geçti” hükmü vermez/.test(metin ?? "")} ${/uygun|geçti”? ?hük[^m]/.test("")}`;
+  }, (v) => v.startsWith("true true"));
 
   /* ---- S4: eskiyen sonuç ---- */
   await esit("S4a değişken değişince sonuç 'eskidi' diye işaretleniyor (silinmiyor)", async () => {
@@ -542,6 +655,34 @@ try {
   await ts.locator('.dropzone input[type="file"]').setInputFiles(VERI_YOLU);
   await ts.waitForSelector(".analiz-veri-serit", { timeout: 25000 });
   await cek(ts, "17-telefon-yapilandirma");
+  /*
+    390 px İLK EKRAN: kullanıcı kaydırmadan hangi analizi yapılandırdığını
+    ve en az ilk değişken alanını görmeli. Eskiden iki katlanır araç
+    (veri hazırlama, özet raporu) arada duruyor ve ilk kutu ekranın
+    altında kalıyordu.
+  */
+  await esit("S10k telefon ilk ekranda seçili analiz ve ilk değişken alanı görünüyor", async () => {
+    await ts.evaluate(() => window.scrollTo(0, 0));
+    await ts.waitForTimeout(300);
+    return await ts.evaluate(() => {
+      const gorunur = (e) => {
+        if (!e) return null;
+        const r = e.getBoundingClientRect();
+        const dock = [...document.querySelectorAll("nav")].find((n) => getComputedStyle(n).position === "fixed" && n.getBoundingClientRect().bottom >= innerHeight - 2);
+        const alt = dock ? dock.getBoundingClientRect().top : innerHeight;
+        return r.height > 0 && r.top >= 0 && r.bottom <= alt ? Math.round(r.bottom) : null;
+      };
+      const analiz = gorunur(document.querySelector(".analiz-gezgin-telefon b"));
+      /* Analizin değişken formu: .analiz-veri-govde'nin DOĞRUDAN çocuğu.
+         "Veri hazırlama" bölümünde de bir .project-form-grid var. */
+      const ilkAlan = gorunur(document.querySelector(".analiz-veri-govde > .project-form-grid label"));
+      return `analiz:${analiz !== null} alan:${ilkAlan !== null}`;
+    });
+  }, "analiz:true alan:true");
+  await esit("S10l telefon: dokunma hedefleri hâlâ 44 px (yer kazanmak için küçültülmedi)", async () => {
+    return await ts.locator(".analiz-veri-eylem button, .analiz-gezgin-telefon button, .analiz-sekme").evaluateAll((l) =>
+      l.filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.height < 40; }).length);
+  }, 0);
   await ts.getByRole("button", { name: /Hangi analizi seçmeliyim/ }).click();
   await ts.waitForSelector(".analiz-yardim");
   await cek(ts, "18-telefon-yardim");
@@ -575,6 +716,7 @@ try {
   await tarayici.close();
   fs.rmSync(VERI_YOLU, { force: true });
   fs.rmSync(BOZUK_YOLU, { force: true });
+  fs.rmSync(BUYUK_YOLU, { force: true });
 }
 
 const gecen = sonuclar.filter((s) => s.durum === "PASS").length;

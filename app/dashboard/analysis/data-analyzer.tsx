@@ -707,6 +707,8 @@ export default function DataAnalyzer({
     [result, calisanAnaliz, analysisType, guncelSecim],
   );
   const tazelikUyarisi = tazelikMetni(tazelik, dil, calisanAnaliz?.tur);
+  /* Başlık ve kısa amaç açıklaması yöntem kartlarından (lib/analiz-betik.ts): tek kaynak. */
+  const secilenYontem = useMemo(() => yontemKartlari(dil).find((x) => x.tur === analysisType), [dil, analysisType]);
 
   const handleRunAnalysis = useCallback(() => {
     if (!dataset) return;
@@ -3004,7 +3006,19 @@ export default function DataAnalyzer({
 
   const govde = (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
-      {pencere ? (
+      {/*
+        VERİ YÜKLENDİKTEN SONRA BAŞLIK SEÇİLEN ANALİZ (22.11.2026, "A"
+        tasarımı). Eskiden başlık hep "Veriniz"di ve altında dosya
+        yükleme açıklaması duruyordu; veri geldikten sonra o açıklama
+        okunacak bir şey olmaktan çıkıp ekranın üçte birini alıyor,
+        hangi analizi yapılandırdığınız hiçbir yerde yazmıyordu.
+      */}
+      {pencere && dataset && calismaAlani ? (
+        <header className="analiz-alan-bas">
+          <h3>{secilenYontem?.ad ?? t({ tr: "Analiz", en: "Analysis" })}</h3>
+          {secilenYontem?.aciklama ? <p>{secilenYontem.aciklama}</p> : null}
+        </header>
+      ) : pencere ? (
         <>
           <h3 className="pencere-kart-baslik">{t({ tr: "Veriniz", en: "Your data" })}</h3>
           <p className="muted text-sm mb-md">
@@ -3029,10 +3043,15 @@ export default function DataAnalyzer({
       {!dataset && (
         <label className="dropzone">
           <UploadCloud size={28} aria-hidden="true" />
+          {/* Görünür düğme: tıklanabilir alanın kendisi görünmediği için
+              kullanıcı nereye basacağını aramak zorunda kalıyordu. */}
+          <span className="dropzone-dugme" aria-hidden="true">
+            {loading ? t({ tr: "Okunuyor…", en: "Reading…" }) : t({ tr: "Dosya seç", en: "Choose a file" })}
+          </span>
           <span className="text-base">
             {loading
               ? t({ tr: "Okunuyor...", en: "Reading..." })
-              : t({ tr: "Dosya seçmek için tıklayın · .xlsx, .xls, .csv, .tsv, .txt", en: "Click to choose a file · .xlsx, .xls, .csv, .tsv, .txt" })}
+              : t({ tr: "Desteklenen biçimler: .xlsx, .xls, .csv, .tsv, .txt", en: "Supported formats: .xlsx, .xls, .csv, .tsv, .txt" })}
           </span>
           <input
             type="file"
@@ -3077,15 +3096,26 @@ export default function DataAnalyzer({
       )}
 
       {dataset && (
-        <div>
+        /*
+          Telefonda sıra değişiyor (app/styles/analiz-alani.css): veri
+          şeridi ve adımlardan hemen sonra DEĞİŞKEN ALANLARI geliyor,
+          isteğe bağlı araçlar (veri hazırlama, özet raporu) aşağı
+          iniyor. Eskiden iki katlanır araç arada duruyordu ve 390 px'te
+          ilk değişken kutusu ilk ekrana girmiyordu.
+        */
+        <div className="analiz-veri-govde">
           <div className="file-info-bar analiz-veri-serit mb-md">
-            <span>
+            {/* Uzun dosya adı satırı büyütmeyecek: tek satır, kırpılıyor,
+                tam adı title'da. Telefonda sayımlar kısaltılmış biçimde. */}
+            <span className="analiz-veri-kimlik" title={fileName ?? undefined}>
               <TableIcon size={14} className="inline-icon" aria-hidden="true" />
-              <strong>{fileName}</strong> —{" "}
-              {t({
-                tr: `${dataset.rows.length} satır, ${dataset.columns.length} sütun (${dataset.numericColumns.length} sayısal, ${dataset.categoricalColumns.length} kategorik)`,
-                en: `${dataset.rows.length} rows, ${dataset.columns.length} columns (${dataset.numericColumns.length} numeric, ${dataset.categoricalColumns.length} categorical)`,
-              })}
+              <strong>{fileName}</strong>
+              <em>
+                {t({
+                  tr: `${dataset.rows.length} satır · ${dataset.columns.length} sütun (${dataset.numericColumns.length} sayısal, ${dataset.categoricalColumns.length} kategorik)`,
+                  en: `${dataset.rows.length} rows · ${dataset.columns.length} columns (${dataset.numericColumns.length} numeric, ${dataset.categoricalColumns.length} categorical)`,
+                })}
+              </em>
             </span>
             <span className="analiz-veri-eylem">
               <button
@@ -3643,17 +3673,33 @@ export default function DataAnalyzer({
               <div ref={sonucKutusu} className="analiz-sonuc">{result}</div>
               {sonucGrafigi}
               <div className="cluster mt-sm">
-                <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala}>
+                {/*
+                  ESKİMİŞ SONUÇ DIŞARI ÇIKAMAZ (22.11.2026). Kopyalama,
+                  kaydetme ve teze ekleme sırası, ekrandaki seçime
+                  UYMAYAN bir sonuç için kapalı: kaydedilen kayıt başlığı
+                  yeni seçimi, sayıları eski seçimi taşır ve öğrenci
+                  editörde o kaydı güncel sanarak tezine ekler. Uyarıyı
+                  okumak yetmiyordu — düğme açık kaldığı sürece basılıyor.
+                */}
+                <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala} disabled={tazelik.eskidi}>
                   {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   {kopyalandi ? t({ tr: "Kopyalandı", en: "Copied" }) : t({ tr: "Sonucu kopyala", en: "Copy result" })}
                 </button>
+                {tazelik.eskidi ? (
+                  <span className="hint" role="status">
+                    {t({
+                      tr: "Kaydetme, kopyalama ve teze ekleme, sonuç güncel seçimle hesaplanana kadar kapalı.",
+                      en: "Saving, copying and queueing are disabled until the result is computed with the current selection.",
+                    })}
+                  </span>
+                ) : null}
                 {pencere && calisanAnaliz && !kaydedildi ? (
                   <>
                     <button
                       type="button"
                       className="projects-primary-button button-compact"
                       onClick={() => sonucuKaydet(true)}
-                      disabled={kaydediliyor}
+                      disabled={kaydediliyor || tazelik.eskidi}
                     >
                       <ListPlus size={14} aria-hidden="true" />
                       {kaydediliyor ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Teze ekleme sırasına koy", en: "Queue for thesis" })}
@@ -3679,7 +3725,7 @@ export default function DataAnalyzer({
                       type="button"
                       className="projects-filter-button button-compact"
                       onClick={() => sonucuKaydet(false)}
-                      disabled={kaydediliyor}
+                      disabled={kaydediliyor || tazelik.eskidi}
                     >
                       <Save size={14} aria-hidden="true" />
                       {kaydediliyor ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Sonucu kaydet", en: "Save result" })}

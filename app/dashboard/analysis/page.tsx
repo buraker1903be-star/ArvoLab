@@ -66,18 +66,38 @@ export default async function AnalysisPage({
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
-      <section className="projects-header">
+      <section className="projects-header analiz-bas">
         <div>
           <p className="sayfa-ustbaslik">{t({ tr: "Analiz", en: "Analysis" })}</p>
           <h1>{t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}</h1>
-          <p>
-            {calisma
-              ? t({
-                  tr: `“${calisma.title}” çalışmasının analizleri. Testleri ArvoLab hesaplar; asistan sonucu okur, sayı üretmez.`,
-                  en: `Analyses for “${calisma.title}”. ArvoLab computes the tests; the assistant reads the result and never produces numbers.`,
-                })
-              : t({ tr: "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar.", en: "Upload your data and choose an analysis; ArvoLab computes the tests." })}
-          </p>
+          {/*
+            ÜST AÇIKLAMA KISA (22.11.2026). Telefonda iki satırlık
+            açıklama + çalışma seçici + sekmeler, çalışma alanını ilk
+            ekrandan atıyordu. Ayrıntı (asistanın ne yapıp ne yapmadığı)
+            açılabilir bilgi alanında duruyor: kaybolmuyor, yer kaplamıyor.
+          */}
+          <p>{t({ tr: "Testleri ArvoLab hesaplar.", en: "ArvoLab computes the tests." })}</p>
+          <details className="analiz-bas-bilgi">
+            <summary>{t({ tr: "Bu sayfa nasıl çalışır?", en: "How does this page work?" })}</summary>
+            <p>
+              {calisma
+                ? t({
+                    tr: `Analizler “${calisma.title}” çalışmasına bağlı tutulur: sayılar o çalışmanın kılavuzundaki biçimle yazılır ve editörde tezinize eklenir. Hesap tarayıcınızda yapılır, veri dosyanız sunucuya gitmez. Asistan sonucu okur; sayı üretmez ve hesabı değiştirmez.`,
+                    en: `Analyses are kept with “${calisma.title}”: numbers are written in that project's guideline style and added to your thesis in the editor. The computation runs in your browser and your data file never reaches the server. The assistant reads the result; it does not produce numbers and does not change the computation.`,
+                  })
+                : t({
+                    tr: "Verinizi yükleyin, analizi seçin. Hesap tarayıcınızda yapılır, veri dosyanız sunucuya gitmez. Asistan sonucu okur; sayı üretmez.",
+                    en: "Upload your data and choose an analysis. The computation runs in your browser and your data file never reaches the server. The assistant reads the result; it does not produce numbers.",
+                  })}
+            </p>
+          </details>
+          {/* Çalışma seçimi başlığın altında: hangi çalışmaya kaydedileceği
+              eylemlerin değil, başlığın bağlamıdır. */}
+          {calisma ? (
+            <div className="analiz-bas-calisma">
+              <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/analysis" />
+            </div>
+          ) : null}
           {etikUyarisi && calisma ? (
             <p className="alert" data-tone={etikUyarisi.ton} role={etikUyarisi.ton === "danger" ? "alert" : "status"}>
               {t(etikUyarisi.metin)}{" "}
@@ -157,7 +177,6 @@ export default async function AnalysisPage({
               secilenCalisma={calisma?.id ?? ""}
             />
           </PanelDrawer>
-          {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/analysis" /> : null}
         </div>
       </section>
 

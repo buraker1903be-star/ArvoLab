@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pencil, RotateCcw, X } from "lucide-react";
 import { ANALIZ_ETIKETLERI_METIN, type AnalizTuru } from "@/lib/analiz-turleri";
 import { BILMIYORUM, analizOnerisi, type Yanitlar } from "@/lib/analiz-onerisi";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
@@ -14,6 +14,16 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
   çiziyor: panel hesap yapmaz, veriye dokunmaz, ücretli bir çağrı
   yapmaz, kullanıcının seçili analizini kendiliğinden değiştirmez.
   "Bu analizi aç" kullanıcının düğmesidir.
+
+  BİR SEFERDE TEK SORU (22.11.2026 düzeltmesi). İlk sürümde bütün
+  sorular alt alta duruyordu; panel ekranı aşıyor ve aday listesi
+  katlanmanın altında kalıyordu. Şimdi yalnızca güncel soru açık;
+  verilen cevaplar üstteki "Yanıtlarım" özetinde, tek dokunuşla
+  düzenlenebilir duruyor.
+
+  Panel SABİT GENİŞLİKTE ve çalışma alanını daraltmıyor: ilk sürümde
+  açılınca sol sütun 260'tan 420 px'e genişliyor, sağdaki çalışma alanı
+  buna karşılık daralıyordu. Telefonda ayrı bir görünüm (CSS).
 */
 export default function AnalizYardimi({
   id,
@@ -27,18 +37,15 @@ export default function AnalizYardimi({
   const t = useCeviri();
   const dil = useDil();
   const [yanitlar, setYanitlar] = useState<Yanitlar>({});
-  /* Kullanıcının geri dönüp açtığı soru; yoksa ilk cevapsız soru açıktır. */
+  /* Kullanıcının özetten geri dönüp açtığı soru; yoksa ilk cevapsız soru açıktır. */
   const [acikSoru, setAcikSoru] = useState<keyof Yanitlar | null>(null);
   const oneri = analizOnerisi(yanitlar);
-  /*
-    CEVAPLANAN SORU TEK SATIRA İNER. Bütün sorular açık dururken panel
-    ekranı aşıyor ve aday listesi katlanmanın altında kalıyordu; kullanıcı
-    cevabını görmek için kaydırmak zorundaydı. Cevap satırına basınca
-    soru yeniden açılır.
-  */
   const ilkCevapsiz = oneri.sorular.find((soru) => yanitlar[soru.anahtar] === undefined)?.anahtar ?? null;
+  const guncelSoru = oneri.sorular.find((soru) => soru.anahtar === (acikSoru ?? ilkCevapsiz)) ?? null;
+  const cevaplananlar = oneri.sorular.filter((soru) => yanitlar[soru.anahtar] !== undefined && soru.anahtar !== guncelSoru?.anahtar);
+  const bitti = guncelSoru === null;
 
-  const cevapla = (anahtar: keyof Yanitlar, deger: string) =>
+  const cevapla = (anahtar: keyof Yanitlar, deger: string) => {
     setYanitlar((eski) => {
       /*
         Bir soru değişince SONRAKİ cevaplar düşer: amaç "fark"tan
@@ -52,58 +59,74 @@ export default function AnalizYardimi({
       if (yer >= 0) for (const sonraki of sira.slice(yer + 1)) delete yeni[sonraki];
       return yeni;
     });
+    /* Cevap verilince bu soru kapanır, sıradaki açılır. */
+    setAcikSoru(null);
+  };
 
   return (
     <div className="analiz-yardim" id={id} role="group" aria-label={t({ tr: "Hangi analizi seçmeliyim?", en: "Which analysis should I choose?" })}>
+      {/*
+        Başlık tetikleyicide zaten yazılı; panelde aynı cümleyi
+        tekrarlamak iki satırı üst üste okutuyordu. Burada ne YAPTIĞI
+        yazılı, adı değil.
+      */}
       <div className="analiz-yardim-ust">
-        <div>
-          <b>{t({ tr: "Hangi analizi seçmeliyim?", en: "Which analysis should I choose?" })}</b>
-          <small>
-            {t({
-              tr: "Birkaç soru; cevaplar yalnızca bu panelde kalır, veriniz okunmaz ve hiçbir analiz çalıştırılmaz.",
-              en: "A few questions; the answers stay in this panel, your data is not read and no analysis is run.",
-            })}
-          </small>
-        </div>
+        <p>
+          {t({
+            tr: "Birkaç soru; cevaplar yalnızca bu panelde kalır, veriniz okunmaz ve hiçbir analiz çalıştırılmaz.",
+            en: "A few questions; the answers stay in this panel, your data is not read and no analysis is run.",
+          })}
+        </p>
         <button type="button" className="projects-filter-button button-compact" onClick={kapat} aria-label={t({ tr: "Yardımı kapat", en: "Close help" })}>
           <X size={14} aria-hidden="true" />
         </button>
       </div>
 
-      {oneri.sorular.map((soru) => {
-        const cevap = yanitlar[soru.anahtar];
-        const acik = acikSoru === soru.anahtar || (acikSoru === null && soru.anahtar === ilkCevapsiz);
-        if (cevap !== undefined && !acik) {
-          const secilen = soru.secenekler.find((x) => x.anahtar === cevap);
-          return (
-            <button
-              key={soru.anahtar}
-              type="button"
-              className="analiz-yardim-ozet"
-              onClick={() => setAcikSoru(soru.anahtar)}
-            >
-              <small>{t(soru.baslik)}</small>
-              <b>{secilen ? t(secilen.etiket) : cevap}</b>
-              <span>{t({ tr: "Değiştir", en: "Change" })}</span>
-            </button>
-          );
-        }
-        return (
-        <fieldset key={soru.anahtar} className="analiz-yardim-soru">
-          <legend>{t(soru.baslik)}</legend>
-          {soru.secenekler.map((secenek) => {
-            const secili = yanitlar[soru.anahtar] === secenek.anahtar;
+      {/* YANITLARIM: verilen cevaplar kompakt ve düzenlenebilir. */}
+      {cevaplananlar.length > 0 ? (
+        <section className="analiz-yardim-yanitlarim" aria-label={t({ tr: "Yanıtlarım", en: "My answers" })}>
+          <h4>{t({ tr: "Yanıtlarım", en: "My answers" })}</h4>
+          <ul>
+            {cevaplananlar.map((soru) => {
+              const secilen = soru.secenekler.find((x) => x.anahtar === yanitlar[soru.anahtar]);
+              return (
+                <li key={soru.anahtar}>
+                  <button type="button" onClick={() => setAcikSoru(soru.anahtar)}>
+                    <small>{t(soru.baslik)}</small>
+                    <b>{secilen ? t(secilen.etiket) : yanitlar[soru.anahtar]}</b>
+                    <span>
+                      <Pencil size={12} aria-hidden="true" />
+                      {t({ tr: "Değiştir", en: "Change" })}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* TEK GÜNCEL SORU. */}
+      {guncelSoru ? (
+        <fieldset className="analiz-yardim-soru">
+          <legend>
+            <span className="analiz-yardim-sayac">
+              {t({
+                tr: `Soru ${cevaplananlar.length + 1}`,
+                en: `Question ${cevaplananlar.length + 1}`,
+              })}
+            </span>
+            {t(guncelSoru.baslik)}
+          </legend>
+          {guncelSoru.secenekler.map((secenek) => {
+            const secili = yanitlar[guncelSoru.anahtar] === secenek.anahtar;
             return (
               <label key={secenek.anahtar} className="analiz-yardim-secenek" data-secili={secili ? "1" : undefined}>
                 <input
                   type="radio"
-                  name={`${id}-${soru.anahtar}`}
+                  name={`${id}-${guncelSoru.anahtar}`}
                   checked={secili}
-                  onChange={() => {
-                    cevapla(soru.anahtar, secenek.anahtar);
-                    /* Cevap verilince bu soru kapanır, sıradaki açılır. */
-                    setAcikSoru(null);
-                  }}
+                  onChange={() => cevapla(guncelSoru.anahtar, secenek.anahtar)}
                 />
                 <span>
                   <b>{t(secenek.etiket)}</b>
@@ -112,7 +135,7 @@ export default function AnalizYardimi({
               </label>
             );
           })}
-          {yanitlar[soru.anahtar] === BILMIYORUM ? (
+          {yanitlar[guncelSoru.anahtar] === BILMIYORUM ? (
             <p className="analiz-yardim-bilmiyorum">
               {t({
                 tr: "Bu bilgi olmadan aday listesi daralmıyor; aşağıda neyin eksik olduğu yazılı.",
@@ -120,9 +143,14 @@ export default function AnalizYardimi({
               })}
             </p>
           ) : null}
+          {acikSoru ? (
+            <button type="button" className="analiz-yardim-geri" onClick={() => setAcikSoru(null)}>
+              <ArrowLeft size={13} aria-hidden="true" />
+              {t({ tr: "Sonuca dön", en: "Back to the result" })}
+            </button>
+          ) : null}
         </fieldset>
-        );
-      })}
+      ) : null}
 
       {oneri.desteklenmeyen ? (
         /*
@@ -130,7 +158,7 @@ export default function AnalizYardimi({
           (üç ölçüme McNemar, MANOVA yerine ayrı ANOVA'lar) öğrenciyi
           savunamayacağı bir analize götürür.
         */
-        <div className="analiz-yardim-sonuc" role="status">
+        <div className="analiz-yardim-sonuc" role="status" data-tur="yok">
           <b>{t({ tr: "Bu desen için ArvoLab'da uygun bir test yok", en: "ArvoLab has no appropriate test for this design" })}</b>
           <p>{t(oneri.desteklenmeyen)}</p>
         </div>
@@ -146,14 +174,12 @@ export default function AnalizYardimi({
           <ul className="analiz-yardim-adaylar">
             {oneri.adaylar.map((aday) => (
               <li key={aday.tur}>
-                <div>
-                  <b>{ANALIZ_ETIKETLERI_METIN[aday.tur][dil]}</b>
-                  <small>{t(aday.gerekce)}</small>
-                  <small className="analiz-yardim-kontrol">
-                    <i>{t({ tr: "Kontrol edin:", en: "Check:" })}</i> {t(aday.kontrol)}
-                  </small>
-                </div>
-                <button type="button" className="projects-filter-button button-compact" onClick={() => analiziAc(aday.tur)}>
+                <b className="analiz-yardim-aday-ad">{ANALIZ_ETIKETLERI_METIN[aday.tur][dil]}</b>
+                <small className="analiz-yardim-gerekce">{t(aday.gerekce)}</small>
+                <small className="analiz-yardim-kontrol">
+                  <i>{t({ tr: "Kontrol edin:", en: "Check:" })}</i> {t(aday.kontrol)}
+                </small>
+                <button type="button" className="projects-primary-button button-compact" onClick={() => analiziAc(aday.tur)}>
                   {t({ tr: "Bu analizi aç", en: "Open this analysis" })}
                   <ArrowRight size={13} aria-hidden="true" />
                 </button>
@@ -172,9 +198,13 @@ export default function AnalizYardimi({
       ) : null}
 
       {Object.keys(yanitlar).length > 0 ? (
-        <button type="button" className="projects-filter-button button-compact" onClick={() => { setYanitlar({}); setAcikSoru(null); }}>
+        <button
+          type="button"
+          className="projects-filter-button button-compact"
+          onClick={() => { setYanitlar({}); setAcikSoru(null); }}
+        >
           <RotateCcw size={13} aria-hidden="true" />
-          {t({ tr: "Baştan başla", en: "Start over" })}
+          {bitti ? t({ tr: "Baştan başla", en: "Start over" }) : t({ tr: "Yanıtları temizle", en: "Clear answers" })}
         </button>
       ) : null}
     </div>
