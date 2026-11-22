@@ -332,7 +332,20 @@ export default async function CalismaListesi({
                   </aside>
                 ) : null}
 
-                <CalismaKartMenusu projectId={oneCikan.id} baslik={oneCikan.title} kelime={oneCikanYazim?.words ?? null} />
+                {/*
+                  "⋯": paylaş ve indir, teslim paketi ve Çalışmayı sil.
+                  silebilir SUNUCUDA, RLS'in kuralıyla aynı hesaplanıyor
+                  (sahibi ya da Yönetici/Sistem Yöneticisi/Kurucu) ve
+                  ayrıntılar panelindekiyle aynı değer; `?sec=` ile başka
+                  bir çalışma öne çıktığında menü de onun id'si ve adıyla
+                  çiziliyor.
+                */}
+                <CalismaKartMenusu
+                  projectId={oneCikan.id}
+                  baslik={oneCikan.title}
+                  kelime={oneCikanYazim?.words ?? null}
+                  silebilir={profile?.id === oneCikan.owner_id || canDeleteAnyProject}
+                />
               </article>
 
               {digerleri.length ? (

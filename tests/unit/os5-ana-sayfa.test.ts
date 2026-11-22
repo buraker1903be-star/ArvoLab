@@ -46,9 +46,39 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
       assert.doesNotMatch(kod, new RegExp(yok), yok);
     }
   });
-  test("ayrıntılara giden yol açık: çalışma özeti bağlantısı ve son kaynaklarda kütüphane", () => {
-    assert.match(ogrenci, /href=\{calismaAdresi\(resume\.id\)\}/);
+  /*
+    ANA SAYFA YENİLENDİ (22.11.2026, onaylı mockup): devam kartı iki
+    bölümlü (solda kimlik ve eylemler, sağda kaydedilmiş belgenin
+    önizlemesi), altında tam genişlikte "Son kaynaklar". Sayfanın
+    sonundaki "Teslim durumu, takvim, kılavuz ve kontroller çalışma
+    özetinde" cümlesi kalktı: aynı yere devam kartındaki "Çalışma
+    ayrıntıları" bağlantısı götürüyor.
+  */
+  test("ayrıntılara giden yol açık: mevcut ayrıntılar paneli ve son kaynaklarda kütüphane", () => {
+    /* Panelin İKİNCİ bir uygulaması yok: bağlantı Çalışmalarım'daki paneli açık getiriyor. */
+    assert.match(ogrenci, /href=\{calismaAdresi\(resume\.id, \{ ayrinti: true \}\)\}/);
+    assert.doesNotMatch(yorumsuz(ogrenci), /<CalismaDurumKarti/);
     assert.match(ogrenci, /\/dashboard\/literature\?calisma=/);
+    /* Sayfanın sonundaki ikinci açıklama kalktı. */
+    assert.doesNotMatch(yorumsuz(ogrenci), /pw-not/);
+  });
+
+  test("devam kartı iki bölümlü; önizleme KAYDEDİLMİŞ içerikten, içerik yoksa hiç çizilmez", () => {
+    const kod = yorumsuz(ogrenci);
+    assert.match(kod, /data-onizleme=\{onizlemeDolu\(onizleme\) \? "var" : "yok"\}/);
+    assert.match(kod, /\{onizlemeDolu\(onizleme\) \? \(/);
+    /* Önizleme Çalışmalarım'la AYNI saf yardımcıdan; editör başlatılmıyor. */
+    assert.match(sayfa, /import \{ belgeOnizlemesi, onizlemeDolu \} from "@\/lib\/calisma-onizleme";/);
+    assert.match(sayfa, /const onizleme = belgeOnizlemesi\(resumeManuscript\?\.content\);/);
+    /* İçerik için AYRI bir sorgu açılmadı: zaten okunan müsvedde satırı kullanılıyor. */
+    assert.equal(sayfa.match(/\.from\("project_manuscripts"\)/g)?.length, 1);
+  });
+
+  test("ortak kart menüsü ana sayfada da: aynı bileşen, silme yetkisi sunucuda", () => {
+    assert.match(yorumsuz(ogrenci), /<CalismaKartMenusu[\s\S]*?silebilir=\{silebilir\}/);
+    /* Yetki istemci görünürlüğünden değil, sunucudaki rol ve sahiplik kuralından. */
+    assert.match(sayfa, /const silebilir =\s*\n?\s*resume\?\.owner_id === user\.id \|\|/);
+    assert.match(sayfa, /profile\?\.role === "academic_manager"/);
   });
   test("son kaynaklar okunamazsa 'kaynak yok' çizilmez, uyarı çıkar", () => {
     assert.match(ogrenci, /\{sonKaynakHatasi \? \(/);
@@ -77,7 +107,7 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
   */
   test("Paylaş ve indir Çalışmalarım'dan erişilebilir (sadeleştirmede '⋯' menüsüne taşındı)", () => {
     const liste = oku("app/dashboard/editor/calisma-listesi.tsx");
-    assert.match(liste, /<CalismaKartMenusu /);
+    assert.match(liste, /<CalismaKartMenusu\b/);
     const menu = oku("app/dashboard/editor/calisma-kart-menusu.tsx");
     /* Menü girişi ve panel başlığı aynı metni taşır. */
     assert.match(menu, /triggerLabel=\{t\(\{ tr: "Paylaş ve indir", en: "Share and download" \}\)\}/);
@@ -86,6 +116,29 @@ describe("sade ana sayfa: yalnızca devam ve son kaynaklar", () => {
     assert.match(menu, /<DanismanaGonder /);
     assert.match(menu, /<TeslimPaketi /);
   });
+
+  /*
+    ÇALIŞMAYI SİL ANA "⋯" MENÜSÜNDE (22.11.2026). Eskiden yalnızca
+    "Çalışma ayrıntıları" panelinin en altındaki ikinci bir "⋯"
+    menüsündeydi: üç tıklama derinde. Aynı bileşen, aynı onay penceresi,
+    aynı sunucu eylemi; panel kipinde ikinci kopya çizilmiyor.
+  */
+  test("Çalışmayı sil öne çıkan kartın ana menüsünde, ayırıcıdan sonra", () => {
+    const menu = oku("app/dashboard/editor/calisma-kart-menusu.tsx");
+    assert.match(menu, /<hr className="kart-menu-ayirici" \/>\s*\n\s*<DeleteProjectButton /);
+    /* Menünün adı artık menünün tamamını anlatıyor. */
+    assert.match(menu, /aria-label=\{t\(\{ tr: `\$\{baslik\}: diğer işlemler`/);
+    /* Yetki sunucuda, çağıranda hesaplanıyor; menü kendi kuralını yazmıyor. */
+    assert.match(menu, /silebilir \? \(/);
+    assert.doesNotMatch(yorumsuz(menu), /role === "(system_admin|founder|academic_manager)"/);
+    const liste = oku("app/dashboard/editor/calisma-listesi.tsx");
+    assert.match(liste, /silebilir=\{profile\?\.id === oneCikan\.owner_id \|\| canDeleteAnyProject\}/);
+  });
+
+  test("ayrıntılar panelinde silme girişi tekrar edilmiyor; panel dışı kullanım bozulmuyor", () => {
+    const kart = oku("app/dashboard/editor/calisma-durum-karti.tsx");
+    assert.match(kart, /\{silebilir && !panelIcinde \? <DeleteProjectButton /);
+  });
 });
 
 describe("veri modeli ve sorgular", () => {
@@ -93,8 +146,14 @@ describe("veri modeli ve sorgular", () => {
     const tablolar = new Set([...sayfa.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1]));
     const izinli = ["project_manuscripts", "literature_sources", "citation_checks", "consultancy_requests", "app_support_requests", "profiles", "manuscript_comments", "document_uploads", "tablo"];
     for (const t of tablolar) assert.ok(izinli.includes(t), `beklenmeyen tablo: ${t}`);
+    /*
+      yazim_ritmi 22.11.2026'da kalktı: selamlamanın alt satırı sabit bir
+      cümle oldu ("Araştırmanıza kaldığınız yerden devam edin") ve ritmi
+      gösteren tek yer oydu. Okunup gösterilmeyen veri her açılışta
+      boşuna maliyet.
+    */
     const rpc = new Set([...sayfa.matchAll(/\.rpc\("([a-z_]+)"/g)].map((m) => m[1]));
-    assert.deepEqual([...rpc].sort(), ["calisma_hareketlerim", "yazim_ritmi"]);
+    assert.deepEqual([...rpc].sort(), ["calisma_hareketlerim"]);
   });
   test("sunucu eylemi çağrısı eklenmedi", () => {
     assert.doesNotMatch(sayfa, /from "@\/app\/actions\/(?!projects|profile|geri-bildirim)/);

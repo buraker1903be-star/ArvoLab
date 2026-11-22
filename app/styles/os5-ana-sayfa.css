@@ -171,7 +171,14 @@
      Boşluk: başlık→ilk bölüm 32 · bölüm→bölüm 40 · bölüm başlığı→içerik 12
      Hiza:  kartın ve satırların simge sütunu 40 px, sol iç boşluk 20 px
    ============================================================ */
-.os5-ana { --pw-sutun: 760px; --pw-ic: 20px; --pw-simge: 40px; }
+/*
+  GENİŞLİK (22.11.2026). Eskiden bölümler --pw-sutun: 760px ile
+  sınırlıydı ama kapsayıcı (.os5-ana) 1248 px'te ORTALANIYORDU: 1440 px'lik
+  bir ekranda içerik soldaki 760 px'e sıkışıyor, sağda yarım ekran boş
+  kalıyordu. Artık bölümler kapsayıcıyı dolduruyor; okunabilir azami
+  genişliği kapsayıcının kendisi veriyor (--os5-icerik-azami).
+*/
+.os5-ana { --pw-sutun: 100%; --pw-ic: 24px; --pw-simge: 40px; }
 .os5-ana > .gb-selam { width: 100%; max-width: var(--pw-sutun); }
 .os5-ana > .gb-selam p { max-width: none; }
 .os5-ana .pw-bolum { display: grid; gap: 12px; width: 100%; max-width: var(--pw-sutun); margin: 12px 0 0; }
@@ -179,56 +186,87 @@
 .os5-ana .pw-bolum-bas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
 .os5-ana .pw-bolum-bas h2 { margin: 0; color: var(--ink); font-family: var(--os5-font-govde); font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -.005em; }
 .os5-ana .pw-bolum-baglanti {
-  display: inline-flex; align-items: center; min-height: var(--os5-kontrol-h-sik); padding: 0 4px;
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--os5-kontrol-h-sik); padding: 0 4px;
   border-radius: var(--os5-kontrol-r); color: var(--ink-soft); font-size: var(--os5-fs-govde); font-weight: 500; text-decoration: none;
 }
 .os5-ana .pw-bolum-baglanti:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; }
 .os5-ana .pw-bolum-baglanti:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
 .os5-ana .pw-bolum-alt { justify-self: start; margin-left: calc(var(--pw-ic) - 4px); }
 
+/* ---------- Devam kartı: solda kimlik ve eylemler, sağda önizleme ---------- */
 .os5-ana .pw-devam {
-  display: flex; align-items: center; gap: 14px; min-width: 0;
-  padding: 16px var(--pw-ic); border: 1px solid var(--line); border-radius: var(--os5-r-kart);
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); align-items: start; gap: 28px;
+  padding: 22px var(--pw-ic); border: 1px solid var(--line); border-radius: var(--os5-r-kart);
   background: var(--os5-yuzey-kart);
 }
+/* Önizleme yoksa ayıraç da yok: kart dengeli tek bölüm olur. */
+.os5-ana .pw-devam[data-onizleme="yok"] { grid-template-columns: minmax(0, 1fr); }
+.os5-ana .pw-devam-sol { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
 .os5-ana .pw-devam-simge {
-  display: grid; flex: none; place-items: center; width: var(--pw-simge); height: var(--pw-simge);
+  display: grid; flex: none; place-items: center; width: var(--pw-simge); height: var(--pw-simge); margin-top: 2px;
   border: 1px solid var(--line); border-radius: var(--os5-kontrol-r); color: var(--ink-soft);
 }
-.os5-ana .pw-devam-metin { display: grid; flex: 1; gap: 2px; min-width: 0; }
-.os5-ana .pw-devam-metin h3 { margin: 0; overflow: hidden; font-size: 16px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
-.os5-ana .pw-devam-metin h3 a { color: var(--ink); text-decoration: none; border-radius: var(--os5-kontrol-r); }
-.os5-ana .pw-devam-metin h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.os5-ana .pw-devam-metin h3 a:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
-.os5-ana .pw-devam-metin p { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.4; }
-.os5-ana .pw-devam > :last-child { flex: none; }
+.os5-ana .pw-devam-metin { display: grid; flex: 1; gap: 6px; min-width: 0; }
+.os5-ana .pw-devam-ust { margin: 0; color: var(--muted); font-family: var(--os5-font-govde); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; line-height: 1.4; text-transform: uppercase; }
+.os5-ana .pw-devam-tur {
+  justify-self: start; padding: 3px 10px; border-radius: var(--os5-r-rozet);
+  background: var(--surface-sunken); color: var(--ink-soft); font-size: var(--os5-fs-meta); font-weight: 600;
+}
+/* Uzun ad taşmaz: iki satıra sarar, kelime içinde de kırılır. */
+.os5-ana .pw-devam-metin h3 { margin: 0; overflow: hidden; color: var(--ink); font-size: 21px; font-weight: 600; line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.os5-ana .pw-devam-olcu { margin: 0; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.4; }
+.os5-ana .pw-devam-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 8px; }
+/* "Çalışma ayrıntıları": düğme değil, altı çizili ikincil bağlantı (mockup). */
+.os5-ana .pw-devam-ayrinti {
+  display: inline-flex; align-items: center; min-height: var(--os5-kontrol-h-sik);
+  color: var(--ink-soft); font-size: var(--os5-fs-govde); text-decoration: underline;
+  text-underline-offset: 4px; text-decoration-color: var(--line); border-radius: var(--os5-kontrol-r);
+}
+.os5-ana .pw-devam-ayrinti:hover { color: var(--ink); text-decoration-color: currentColor; }
+.os5-ana .pw-devam-ayrinti:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
 
-/* Satırlar kartın içiyle hizalı: aynı sol boşluk, aynı 40 px simge sütunu. */
+/* Önizleme: kaydedilmiş belgeden; süs değil, gerçek metin. */
+.os5-ana .pw-devam-onizleme { min-width: 0; padding-left: 28px; border-left: 1px solid var(--line); color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.6; }
+/* Sağ üstteki "⋯" ile çakışmasın: yalnızca ilk satırda yer bırakılır. */
+.os5-ana .pw-devam-onizleme b { display: block; margin-bottom: 8px; padding-right: 44px; overflow: hidden; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.os5-ana .pw-devam-onizleme p { margin: 0 0 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
+.os5-ana .pw-devam-onizleme p:nth-of-type(n + 3) { display: none; }
+
+/* Satırlar kartın içiyle hizalı: aynı sol boşluk, aynı simge sütunu. */
 .os5-ana .pw-liste { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .os5-ana .pw-liste > li { border-bottom: 1px solid var(--line); }
 .os5-ana .pw-satir {
-  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px var(--pw-ic);
+  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 10px var(--pw-ic);
   color: inherit; text-decoration: none; border-radius: var(--os5-kontrol-r);
 }
 .os5-ana .pw-satir:hover { background: var(--surface-2); }
 .os5-ana .pw-satir:focus-visible { outline: none; box-shadow: inset var(--os5-odak-halka); }
 .os5-ana .pw-satir-simge { flex: none; width: var(--pw-simge); color: var(--muted); }
-.os5-ana .pw-satir-metin { display: grid; gap: 2px; min-width: 0; }
-.os5-ana .pw-satir-metin b { overflow: hidden; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.os5-ana .pw-satir-metin { display: grid; flex: 1; gap: 2px; min-width: 0; }
+/* Uzun kaynak başlığı en çok İKİ satır; üçüncüsü kırpılır (mockup). */
+.os5-ana .pw-satir-metin b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
 .os5-ana .pw-satir-metin small { overflow: hidden; color: var(--muted); font-size: var(--os5-fs-meta); line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.os5-ana .pw-satir-ok { flex: none; color: var(--muted); }
 
 .os5-ana .pw-bos { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px var(--pw-ic); border: 1px dashed var(--line); border-radius: var(--os5-r-kart); color: var(--muted); font-size: var(--os5-fs-govde); }
 .os5-ana .pw-bos p { flex: 1 1 280px; margin: 0; }
-.os5-ana .pw-not { width: 100%; max-width: var(--pw-sutun); margin: 20px 0 0; color: var(--muted); font-size: var(--os5-fs-meta); }
-.os5-ana .pw-not a { color: var(--ink-soft); text-underline-offset: 3px; }
 
-/* Telefon: kart alt alta; birincil düğme tam genişlik (başparmak hedefi). */
+/* ---------- Tablet: önizleme kartın altına iner (hâlâ görünür) ---------- */
+@media (max-width: 1023px) {
+  .os5-ana .pw-devam { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .os5-ana .pw-devam-onizleme { padding-left: 0; padding-top: 18px; border-left: 0; border-top: 1px solid var(--line); }
+  .os5-ana .pw-devam-onizleme b { padding-right: 0; }
+}
+
+/* Telefon: tek sütun, önizleme gizli, birincil düğme tam genişlik (başparmak hedefi). */
 @media (max-width: 760px) {
   .os5-ana { --pw-ic: 14px; --pw-simge: 32px; }
-  .os5-ana .pw-devam { flex-wrap: wrap; }
-  .os5-ana .pw-devam-metin h3 { white-space: normal; }
-  .os5-ana .pw-devam > :last-child { flex: 1 1 100%; justify-content: center; }
-  .os5-ana .pw-satir-metin b { white-space: normal; }
+  .os5-ana .pw-devam { padding-top: 18px; }
+  .os5-ana .pw-devam-metin h3 { font-size: 19px; }
+  .os5-ana .pw-devam-onizleme { display: none; }
+  .os5-ana .pw-devam-eylem { gap: 10px; }
+  .os5-ana .pw-devam-eylem > :first-child { flex: 1 1 100%; justify-content: center; }
+  .os5-ana .pw-satir-metin small { white-space: normal; }
 }
 
 /* Yeni kullanıcı (ikinci tur): kısa başlık, tek açıklama, tek düğme; rehber isteğe bağlı. */
