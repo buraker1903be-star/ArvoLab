@@ -1455,3 +1455,88 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .kaynaklar-sayfasi .kaynak-suzgec .cluster::-webkit-scrollbar { display: none; }
   .kaynaklar-sayfasi .kaynak-suzgec .cluster > * { flex: none; }
 }
+
+/* ───────── Çalışmalarım (22.11.2026 sadeleştirmesi) ─────────
+   Taslağın oranları: geniş üst başlık bloğu, tek öne çıkan kart, altında
+   kompakt liste. Renk yok, token var; koyu tema aynı değişkenlerden
+   geliyor (tokens.css) — ayrı bir koyu blok yazılmadı ki iki tema
+   birbirinden ayrı düşmesin. */
+.calismalarim { display: grid; gap: 20px; align-content: start; }
+.calismalarim-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.calismalarim-bas-metin { display: grid; gap: 4px; min-width: 0; }
+.calismalarim-ustbaslik { margin: 0; color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.calismalarim-bas h1 { margin: 0; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.12; letter-spacing: -.02em; }
+.calismalarim-aciklama { margin: 0; color: var(--ink-soft); font-size: var(--fs-body); }
+.calismalarim-yeni { flex: none; align-self: center; }
+
+.calismalarim-bolum-bas { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.calismalarim-bolum-bas h2 { margin: 0; font-size: var(--fs-lg); letter-spacing: -.01em; }
+.calismalarim-bolum-bas span { color: var(--muted); font-size: var(--fs-sm); }
+
+/* Öne çıkan kart: solda metin ve eylemler, sağda belge önizlemesi. */
+.calismalarim-one-cikan {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 28px;
+  padding: 26px 28px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface);
+}
+.calismalarim-one-cikan .one-cikan-govde { display: grid; gap: 10px; align-content: start; min-width: 0; padding-right: 28px; }
+.one-cikan-tur {
+  justify-self: start; padding: 3px 10px; border-radius: 999px; background: var(--surface-sunken);
+  color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600;
+}
+.calismalarim-one-cikan h3 { margin: 2px 0 0; font-size: clamp(20px, 2.2vw, 27px); line-height: 1.2; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.one-cikan-olcu { margin: 0; color: var(--muted); font-size: var(--fs-body); }
+.one-cikan-olcu b { color: var(--ink); font-weight: 700; }
+.one-cikan-ayrac { display: inline-block; width: 1px; height: 12px; margin: 0 12px -1px; background: var(--line); }
+.one-cikan-eylem { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
+.one-cikan-eylem .projects-primary-button { gap: 8px; }
+/* "Çalışma ayrıntıları": düğme değil, altı çizili bağlantı (taslak). */
+.calismalarim-ayrinti {
+  border: 0; background: none; padding: 0; color: var(--ink); font: inherit; font-size: var(--fs-body);
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line); cursor: pointer;
+}
+.calismalarim-ayrinti:hover { text-decoration-color: currentColor; }
+.calismalarim-ayrinti:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: var(--r-sm); }
+
+/* Belge önizlemesi: kâğıt görünümlü küçük kutu, GERÇEK metinle. */
+/* Üst boşluk "⋯" için: menü düğmesi kartın sağ üstünde, önizleme kutusunun üstüne binmemeli. */
+.one-cikan-onizleme { display: flex; align-items: stretch; border-left: 1px solid var(--line-soft); padding: 24px 0 0 28px; }
+.onizleme-kagit {
+  flex: 1; overflow: hidden; padding: 16px 18px; border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  background: var(--surface-raised); color: var(--muted); font-size: 12px; line-height: 1.55;
+}
+.onizleme-kagit b { display: block; margin-bottom: 8px; color: var(--ink); font-size: var(--fs-sm); }
+.onizleme-kagit p { margin: 0 0 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.onizleme-kagit p:last-child { margin-bottom: 0; }
+
+/* "⋯" kartın sağ üstünde; menü AŞAĞI açılıyor (ortak kart menüsü yukarı açılır). */
+.calismalarim-menu { position: absolute; top: 16px; right: 16px; }
+.calismalarim-menu > .kart-menu-liste { top: calc(100% + 6px); bottom: auto; }
+.calismalarim-menu-oge { justify-content: flex-start; }
+
+/* Kompakt liste: tek satır, ince ayraç. */
+.calismalarim-liste { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.calismalarim-liste > li + li { border-top: 1px solid var(--line-soft); }
+.calismalarim-satir { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; color: inherit; text-decoration: none; }
+.calismalarim-satir:hover { background: var(--surface-2); }
+.calismalarim-satir:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.calismalarim-satir-govde { display: grid; gap: 2px; min-width: 0; }
+.calismalarim-satir-govde b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calismalarim-satir-govde small { color: var(--muted); font-size: var(--fs-sm); }
+.calismalarim-diger { display: grid; gap: 12px; }
+
+/* Ayrıntı panelinde kart çerçevesiz: panel zaten bir yüzey. */
+.calisma-durum-panel { border: 0; box-shadow: none; padding: 0; background: transparent; }
+
+@media (max-width: 860px) {
+  /* Telefonda tek sütun; önizleme gizlenir (taslakta da ikincil). */
+  .calismalarim-one-cikan { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 20px 18px; }
+  .calismalarim-one-cikan .one-cikan-govde { padding-right: 36px; }
+  .one-cikan-onizleme { display: none; }
+  .calismalarim-bas { gap: 12px; }
+  .calismalarim-yeni { align-self: flex-start; }
+  .one-cikan-eylem { gap: 14px; }
+  .one-cikan-eylem .projects-primary-button { flex: 1 1 auto; justify-content: center; }
+}
+.calismalarim-tamamlanan > summary { padding: 10px 4px; color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; }
+.calismalarim-tamamlanan > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
+.calismalarim-tamamlanan[open] > summary { margin-bottom: 6px; }
