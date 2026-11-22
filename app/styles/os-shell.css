@@ -327,6 +327,16 @@
   overflow-y: auto; overscroll-behavior: contain;
 }
 .os-daha-liste .os-gezinme-oge { min-height: 48px; }
+.os-daha-komut {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 var(--s-2);
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
+}
+.os-daha-komut kbd { margin-left: auto; }
+/* Dokunmatik ekranda klavye kısayolu bir şey ifade etmiyor. */
+@media (pointer: coarse) { .os-daha-komut kbd, .os-kullanici-komut kbd { display: none; } }
+.os-daha-komut:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (hover: hover) and (pointer: fine) { .os-daha-komut:hover { background: var(--surface); } }
 .os-daha-ipucu { flex: none; margin: 0; padding: var(--s-3) var(--s-5); border-top: 1px solid var(--line-soft); background: var(--surface-2); color: var(--muted); font-size: var(--fs-micro); }
 @media (max-width: 760px) {
   /* Telefonda alt sayfa: ekranın altından açılır, başparmağın ulaştığı yerde. */
@@ -363,33 +373,15 @@
 
 /* Yazdırmada gezinme basılmaz: sabit konumlu olduğu için HER sayfada çıkardı. */
 @media print {
-  .os-gezinme, .os-daha, .os-palette, .os-search { display: none !important; }
+  .os-gezinme, .os-daha, .os-palette { display: none !important; }
 }
 
-/* ---------- Ctrl+K: ara veya komut çalıştır ---------- */
-.os-search {
-  flex: 1 1 280px; max-width: 480px; margin-inline: auto;
-  display: flex; align-items: center; gap: 12px;
-  height: 40px; padding: 0 12px;
-  /* Kontrol köşesi 4 px (premium çalışma alanı): girişteki alanlarla aynı aile. */
-  border: 1px solid var(--line); border-radius: var(--os5-kontrol-r);
-  background: var(--surface-2); color: var(--muted);
-  font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer;
-  transition: border-color .18s var(--ease-spring), background-color .18s var(--ease-spring);
-}
-.os-search:hover { border-color: color-mix(in srgb, var(--primary-ink) 40%, var(--line)); background: var(--surface); }
-.os-search-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Kısayol rozeti: komut paleti girişleri menülerde (üst çubuktaki arama kutusu kaldırıldı). */
 .os-root kbd {
   padding: 1px 6px; border: 1px solid var(--line); border-radius: var(--r-xs);
   background: var(--surface); color: var(--ink-soft);
   font-family: var(--font-mono); font-size: var(--fs-micro);
 }
-/* Telefonda yazı yerine yalnızca büyüteç: üst çubukta yer yok. */
-@media (max-width: 760px) {
-  .os-search { flex: none; width: 40px; margin-inline: 0; justify-content: center; }
-  .os-search-text, .os-search kbd { display: none; }
-}
-
 .os-palette {
   margin: 12vh auto auto; padding: 0; overflow: hidden;
   width: min(640px, calc(100vw - 32px));
