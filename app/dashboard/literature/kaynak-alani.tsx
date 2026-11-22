@@ -13,6 +13,7 @@ import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
 import YatayAyirici from "../_components/yatay-ayirici";
+import { ayrilmaKorumasiKur } from "@/lib/ayrilma-koruma";
 import KaynakPaneli, { kaynakBaglantisi } from "./kaynak-paneli";
 
 /*
@@ -73,8 +74,6 @@ export default function KaynakAlani({
   projectId,
   pdfler,
   ilkSecim,
-  bagsizSayisi,
-  bagsizAdresi,
   kapsamBagsiz,
 }: {
   kaynaklar: LiteratureSource[];
@@ -82,8 +81,7 @@ export default function KaynakAlani({
   projectId: string | null;
   pdfler: KaynakPdfi[] | null;
   ilkSecim: string | null;
-  bagsizSayisi: number;
-  bagsizAdresi: string;
+  /** Bağsız kaynaklar kapsamı: boş liste mesajı buna göre değişir. */
   kapsamBagsiz: boolean;
 }) {
   const t = useCeviri();
@@ -107,7 +105,10 @@ export default function KaynakAlani({
   */
   const [notTaslagi, setNotTaslagi] = useState<{ kaynakId: string; metin: string } | null>(null);
   const [bekleyenGecis, setBekleyenGecis] = useState<
-    { tur: "sec"; kaynak: LiteratureSource; dugme: HTMLButtonElement | null; sekme?: "pdf" | "kunye" | "notlar" } | { tur: "kapat" } | null
+    | { tur: "sec"; kaynak: LiteratureSource; dugme: HTMLButtonElement | null; sekme?: "pdf" | "kunye" | "notlar" }
+    | { tur: "kapat" }
+    | { tur: "ayril"; karar: (devam: boolean) => void }
+    | null
   >(null);
   const [notKaydediliyor, setNotKaydediliyor] = useState(false);
   const [, basla] = useTransition();
@@ -256,7 +257,7 @@ export default function KaynakAlani({
     [seciliId],
   );
 
-  /* Sayfadan ayrılmak (çalışma değiştirmek, sekmeyi kapatmak): tarayıcı uyarısı. */
+  /* Sekmeyi kapatmak ya da tam sayfa gezinme: tarayıcının kendi uyarısı. */
   useEffect(() => {
     if (!notTaslagi) return;
     const uyar = (olay: BeforeUnloadEvent) => olay.preventDefault();
@@ -264,8 +265,28 @@ export default function KaynakAlani({
     return () => window.removeEventListener("beforeunload", uyar);
   }, [notTaslagi]);
 
+  /*
+    UYGULAMA İÇİ gezinme (çalışma seçicisi): aynı soru sorulur. Koruma
+    yalnızca kaydedilmemiş not VARKEN kuruluyor; yoksa seçici eskisi gibi
+    doğrudan gidiyor.
+  */
+  useEffect(() => {
+    if (!notTaslagi) return;
+    return ayrilmaKorumasiKur(
+      () =>
+        new Promise<boolean>((coz) => {
+          setBekleyenGecis({ tur: "ayril", karar: coz });
+        }),
+    );
+  }, [notTaslagi]);
+
   const gecisiUygula = (gecis: NonNullable<typeof bekleyenGecis>) => {
     setNotTaslagi(null);
+    if (gecis.tur === "ayril") {
+      /* Karar gezinmeyi başlatan bileşene dönüyor (çalışma seçicisi). */
+      gecis.karar(true);
+      return;
+    }
     if (gecis.tur === "kapat") {
       setSeciliId(null);
       return;
@@ -478,15 +499,13 @@ export default function KaynakAlani({
           )}
         </div>
 
-        {/* Çalışmaya bağlı olmayan kaynaklara görünür erişim. */}
-        {kapsamBagsiz || bagsizSayisi ? (
-          <Link href={bagsizAdresi} className="kaynak-liste-alt" scroll={false}>
-            {kapsamBagsiz
-              ? t({ tr: "Çalışmanın kaynaklarına dön", en: "Back to the work's sources" })
-              : t({ tr: `Çalışmaya bağlı olmayanlar · ${bagsizSayisi}`, en: `Not linked to a work · ${bagsizSayisi}` })}
-            <ChevronRight size={15} aria-hidden="true" />
-          </Link>
-        ) : null}
+        {/*
+          Çalışmaya bağlı olmayan kaynakların bağlantısı SAYFADA
+          (page.tsx), bu bileşende değil: seçili çalışmada hiç kaynak
+          yokken bu bileşen çizilmiyor ve bağlantı da onunla birlikte
+          kayboluyordu — tam da kullanıcının bağımsız kaynaklarına
+          bakması gereken durumda.
+        */}
       </section>
 
       {secili && !genis ? (
@@ -538,7 +557,16 @@ export default function KaynakAlani({
               >
                 {t({ tr: "Kaydetmeden devam et", en: "Continue without saving" })}
               </button>
-              <button type="button" className="link-button" disabled={notKaydediliyor} onClick={() => setBekleyenGecis(null)}>
+              <button
+                type="button"
+                className="link-button"
+                disabled={notKaydediliyor}
+                onClick={() => {
+                  /* Gezinme isteğini başlatan bileşene "durdu" denir. */
+                  if (bekleyenGecis.tur === "ayril") bekleyenGecis.karar(false);
+                  setBekleyenGecis(null);
+                }}
+              >
                 {t({ tr: "Vazgeç", en: "Cancel" })}
               </button>
             </div>

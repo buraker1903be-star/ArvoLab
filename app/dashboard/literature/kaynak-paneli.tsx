@@ -149,9 +149,26 @@ export default function KaynakPaneli({
     }
     setYukleniyor(true);
     try {
-      const yol = yuklemeYolu(projectId, dosya.name);
-      const { error } = await createClient().storage.from("project-files").upload(yol, dosya, { contentType: "application/pdf", upsert: false });
+      /*
+        Depo yolu kalıbı: <çalışma>/kaynak-pdf/y-<KULLANICI>-<rastgele>.pdf
+        (lib/kaynak-pdf-yolu.ts). İkinci parça YÜKLEYENİN kimliği; sunucu
+        onu oturumla karşılaştırıyor, böylece başkasının yüklediği dosya
+        "benim yüklemem" diye kayda bağlanamıyor. İlk sürümde buraya
+        yanlışlıkla dosya ADI veriliyordu: yardımcı "Geçersiz kimlik."
+        fırlatıyor, hata da yakalanmadığı için kullanıcıya hiçbir şey
+        söylenmeden yükleme sessizce düşüyordu.
+      */
+      const sb = createClient();
+      /* Yerel oturum yeter: kimliği sunucu yeniden doğruluyor. */
+      const { data: oturum } = await sb.auth.getSession();
+      if (!oturum.session) {
+        showToast("error", t({ tr: "Oturumunuz kapanmış; yeniden giriş yapın.", en: "Your session has ended; please sign in again." }));
+        return;
+      }
+      const yol = yuklemeYolu(projectId, oturum.session.user.id);
+      const { error } = await sb.storage.from("project-files").upload(yol, dosya, { contentType: "application/pdf", upsert: false });
       if (error) {
+        console.error("[kaynak-paneli] PDF yüklenemedi:", error.message);
         showToast("error", t({ tr: "PDF yüklenemedi; tekrar deneyin.", en: "Couldn't upload the PDF; please try again." }));
         return;
       }
@@ -161,9 +178,21 @@ export default function KaynakPaneli({
         return;
       }
       /* Yüklenen dosya hemen BU kaynağa bağlanır: panel tek bir kayda bakıyor. */
-      await pdfKaynaginiBagla({ projectId, pdfId: sonuc.satir.id, kaynakId: kaynak.id }).catch(() => undefined);
+      const bag = await pdfKaynaginiBagla({ projectId, pdfId: sonuc.satir.id, kaynakId: kaynak.id }).catch(() => ({
+        hata: t({ tr: "PDF kaynağa bağlanamadı.", en: "The PDF couldn't be linked to the source." }),
+      }));
+      if ("hata" in bag) {
+        /* Dosya yüklendi ama bağ kurulamadı: durumu olduğu gibi söyle, "bağlandı" deme. */
+        showToast("error", bag.hata);
+        onDegisti();
+        return;
+      }
       showToast("success", t({ tr: "PDF bu kaynağa bağlandı.", en: "The PDF is now linked to this source." }));
       onDegisti();
+    } catch (hata) {
+      /* Yakalanmamış hata bırakılmıyor: kullanıcı neden olmadığını görmeli. */
+      console.error("[kaynak-paneli] PDF yükleme hatası:", hata);
+      showToast("error", t({ tr: "PDF yüklenemedi; tekrar deneyin.", en: "Couldn't upload the PDF; please try again." }));
     } finally {
       setYukleniyor(false);
     }

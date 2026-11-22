@@ -1,6 +1,6 @@
 import DoiEkleKutusu from "./doi-ekle-kutusu";
 import Link from "next/link";
-import { BookMarked, Download, FileUp, Link2, Plus, Sparkles } from "lucide-react";
+import { BookMarked, ChevronRight, Download, FileUp, Link2, Plus, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { goruntuleyiciKaynaklari } from "@/app/actions/kaynak-pdf";
 import { kimlikMi } from "@/lib/kaynak-durumu";
@@ -399,8 +399,6 @@ export default async function KaynaklarPage({
                 projectId={kapsamBagsiz ? null : calisma.id}
                 pdfler={pdfler}
                 ilkSecim={odakKaynak && kaynaklar.some((k) => k.id === odakKaynak.id) ? odakKaynak.id : null}
-                bagsizSayisi={bagsiz}
-                bagsizAdresi={kapsamAdresi(!kapsamBagsiz)}
                 kapsamBagsiz={kapsamBagsiz}
               />
             ) : (
@@ -417,13 +415,30 @@ export default async function KaynaklarPage({
                         en: "No sources yet. Use \"Add source\" to paste a DOI, import your Zotero/Mendeley file or search the OpenAlex and Crossref indexes. Mark what you've read and cited here.",
                       })}
                 </p>
-                {kapsamBagsiz ? (
-                  <Link href={kapsamAdresi(false)} className="projects-filter-button button-compact">
-                    {t({ tr: "Çalışmanın kaynaklarına dön", en: "Back to the work's sources" })}
-                  </Link>
-                ) : null}
               </div>
             )}
+
+            {/*
+              ÇALIŞMAYA BAĞLI OLMAYAN KAYNAKLAR her durumda erişilebilir:
+              bağlantı listeden ayrı, SAYFADA duruyor. Liste bileşeninin
+              içindeyken, seçili çalışmanın hiç kaynağı olmadığında (yani
+              tam da bağımsız kaynaklara bakılacak durumda) bileşenle
+              birlikte kayboluyordu.
+            */}
+            {kapsamBagsiz ? (
+              <Link href={kapsamAdresi(false)} className="kaynak-liste-alt" scroll={false}>
+                {t({ tr: "Çalışmanın kaynaklarına dön", en: "Back to the work's sources" })}
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
+            ) : bagsiz ? (
+              <Link href={kapsamAdresi(true)} className="kaynak-liste-alt" scroll={false}>
+                {t({
+                  tr: `Çalışmaya bağlı olmayanlar · ${bagsiz}`,
+                  en: `Not linked to a work · ${bagsiz}`,
+                })}
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
+            ) : null}
           </section>
           )}
         </>

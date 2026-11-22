@@ -52,10 +52,21 @@ describe("sayfa üst alanı", () => {
     assert.match(sayfa, /triggerLabel=\{t\(\{ tr: "Dışa aktar"[\s\S]{0,200}?triggerClassName="link-button"/);
   });
 
-  test("çalışmaya bağlı olmayan kaynaklara açılacak bir yol var", () => {
+  /*
+    Bağlantı SAYFADA, liste bileşeninde değil (22.11.2026): seçili
+    çalışmada hiç kaynak yokken liste çizilmiyor ve bağlantı da onunla
+    birlikte kayboluyordu — tam da bağımsız kaynaklara bakılacak durumda.
+  */
+  test("çalışmaya bağlı olmayan kaynaklara açılacak yol, boş listede de duruyor", () => {
     assert.match(sayfa, /const kapsamBagsiz = kapsam === "bagsiz";/);
-    assert.match(sayfa, /kapsamAdresi\(!kapsamBagsiz\)/);
-    assert.match(alan, /tr: `Çalışmaya bağlı olmayanlar · \$\{bagsizSayisi\}`/);
+    assert.match(sayfa, /tr: `Çalışmaya bağlı olmayanlar · \$\{bagsiz\}`/);
+    assert.match(sayfa, /kapsamAdresi\(true\)/);
+    assert.match(sayfa, /tr: "Çalışmanın kaynaklarına dön"/);
+    /* Bağlantı KaynakAlani'nın İÇİNDE değil: liste boşken de çizilmeli. */
+    assert.doesNotMatch(yorumsuz(alan), /kaynak-liste-alt/);
+    /* Boş liste bloğundan SONRA, section içinde. */
+    const bosSonrasi = sayfa.slice(sayfa.indexOf("ÇALIŞMAYA BAĞLI OLMAYAN KAYNAKLAR"), sayfa.indexOf("</section>", sayfa.indexOf("ÇALIŞMAYA BAĞLI OLMAYAN KAYNAKLAR")));
+    assert.match(bosSonrasi, /className="kaynak-liste-alt"/);
   });
 
   test("veri okunamadığında BOŞ KÜTÜPHANE mesajı gösterilmiyor", () => {
@@ -174,8 +185,33 @@ describe("not kaybı", () => {
     assert.match(alan, /role="alertdialog"/);
   });
 
-  test("sayfadan ayrılmak (çalışma değiştirmek) tarayıcı uyarısı veriyor", () => {
+  test("sekmeyi kapatmak tarayıcı uyarısı veriyor; çalışma değiştirmek uygulama içinde soruyor", () => {
     assert.match(alan, /window\.addEventListener\("beforeunload", uyar\)/);
+    /* Uygulama içi gezinme: ortak ayrılma koruması (lib/ayrilma-koruma.ts). */
+    assert.match(alan, /ayrilmaKorumasiKur\(/);
+    const secici = oku("app/dashboard/_components/calisma-secici.tsx");
+    assert.match(secici, /void ayrilabilirMi\(\)\.then\(\(devam\) => \{/);
+    /* İptalde seçici görünen değerini gerçekten seçili çalışmaya döndürüyor. */
+    assert.match(secici, /else setSurum\(\(n\) => n \+ 1\);/);
+    assert.match(secici, /<Secici\s*\n\s*key=\{surum\}/);
+    /* Koruma yoksa davranış değişmiyor: öteki sayfalar etkilenmiyor. */
+    const koruma = oku("lib/ayrilma-koruma.ts");
+    assert.match(koruma, /return mevcut \? mevcut\(\) : true;/);
+  });
+
+  /*
+    PDF yükleme yolu: <çalışma>/kaynak-pdf/y-<KULLANICI>-<rastgele>.pdf
+    (lib/kaynak-pdf-yolu.ts). İkinci parça yükleyenin kimliği; ilk sürümde
+    buraya dosya ADI veriliyordu ve yardımcı "Geçersiz kimlik." fırlatıyor,
+    hata yakalanmadığı için yükleme sessizce düşüyordu.
+  */
+  test("PDF yükleme oturum kullanıcısının kimliğini kullanıyor; hatalar gösteriliyor", () => {
+    assert.match(panel, /const \{ data: oturum \} = await sb\.auth\.getSession\(\);/);
+    assert.match(panel, /yuklemeYolu\(projectId, oturum\.session\.user\.id\)/);
+    assert.doesNotMatch(panel, /yuklemeYolu\(projectId, dosya\.name\)/);
+    assert.match(panel, /tr: "Oturumunuz kapanmış; yeniden giriş yapın\."/);
+    /* Yakalanmamış hata bırakılmıyor. */
+    assert.match(panel, /\} catch \(hata\) \{[\s\S]{0,260}?showToast\("error"/);
   });
 
   test("başarısız kayıtta metin korunuyor; geçiş de yapılmıyor", () => {
