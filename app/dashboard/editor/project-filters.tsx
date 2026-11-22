@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Form from "next/form";
 import Link from "next/link";
-import { Search } from "lucide-react";
-import { filtreAdresi, type ProjectFilters as Filters } from "@/lib/project-filters";
+import { Search, SlidersHorizontal } from "lucide-react";
+import { DEFAULT_PROJECT_FILTERS, filtreAdresi, type ProjectFilters as Filters } from "@/lib/project-filters";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import Secici from "@/app/dashboard/_components/secici";
 import type { Tone } from "@/lib/status-tone";
@@ -38,6 +39,18 @@ export default function ProjectFilters({
   */
   const adres = (degisiklik: Partial<Filters>) => filtreAdresi({ ...filters, ...degisiklik }, taban);
 
+  /*
+    TELEFONDA "FİLTRELER" (22.11.2026). Durum ve sıralama seçicileri dar
+    ekranda arama kutusunun altına iki tam satır olarak iniyordu; öğrenci
+    "Yazmaya devam et"i görmek için üç ekran kaydırıyordu. İkisi artık
+    varsayılan KAPALI bir açılır düğmenin içinde. Masaüstü düzeni
+    değişmedi: orada düğme gizli, seçiciler her zaman açık (CSS).
+    Durum JS'te tutuluyor ki düğme aria-expanded taşısın; <details> ile
+    masaüstünü "her zaman açık" yapmak tarayıcıya göre değişiyor.
+  */
+  const [filtreAcik, setFiltreAcik] = useState(false);
+  const secili = filters.status !== "tumu" || filters.sort !== DEFAULT_PROJECT_FILTERS.sort;
+
   return (
     <Form action={taban} className="project-filters" role="search" aria-label={t({ tr: "Çalışmaları filtrele", en: "Filter works" })}>
       <label className="project-filter-search">
@@ -47,49 +60,63 @@ export default function ProjectFilters({
       </label>
       {/* Durum seçenekleri üç grupta: teslim tarihine göre süzgeçler ile
           çalışmanın aşaması ayrı şeyler, eskiden tek düz listedeydi. */}
-      <Secici
-        name="durum"
-        deger={filters.status}
-        otomatikGonder
-        etiket={t({ tr: "Durum", en: "Status" })}
-        onEk={t({ tr: "Durum", en: "Status" })}
-        gruplar={[
-          {
-            secenekler: [
-              { deger: "tumu", etiket: t({ tr: "Tüm durumlar", en: "All statuses" }) },
-              { deger: "aktif", etiket: t({ tr: "Aktif (teslim edilmemiş)", en: "Active (not submitted)" }), ton: "accent" },
-            ],
-          },
-          {
-            baslik: t({ tr: "Teslim", en: "Due date" }),
-            secenekler: [
-              { deger: "gecikmis", etiket: t({ tr: "Teslimi geçmiş", en: "Overdue" }), ton: "danger" },
-              { deger: "yaklasan", etiket: t({ tr: "7 gün içinde teslim", en: "Due within 7 days" }), ton: "warning" },
-            ],
-          },
-          {
-            baslik: t({ tr: "Aşama", en: "Stage" }),
-            secenekler: statuses.map((status) => ({ deger: status.value, etiket: status.label, ton: status.tone })),
-          },
-        ]}
-      />
-      <Secici
-        name="sirala"
-        deger={filters.sort}
-        otomatikGonder
-        etiket={t({ tr: "Sıralama", en: "Sort" })}
-        onEk={t({ tr: "Sırala", en: "Sort" })}
-        gruplar={[
-          {
-            secenekler: [
-              { deger: "yeni", etiket: t({ tr: "Son eklenen", en: "Recently added" }) },
-              { deger: "duzenleme", etiket: t({ tr: "Son düzenlenen", en: "Recently edited" }) },
-              { deger: "teslim", etiket: t({ tr: "Teslim tarihi yakın", en: "Due soonest" }) },
-              { deger: "baslik", etiket: t({ tr: "Başlığa göre (A–Z)", en: "By title (A–Z)" }) },
-            ],
-          },
-        ]}
-      />
+      {/* Telefonda açılır düğme; masaüstünde gizli (CSS). */}
+      <button
+        type="button"
+        className="projects-filter-button project-filter-ac"
+        aria-expanded={filtreAcik}
+        aria-controls="calisma-filtre-govde"
+        onClick={() => setFiltreAcik((a) => !a)}
+      >
+        <SlidersHorizontal size={15} aria-hidden="true" />
+        {t({ tr: "Filtreler", en: "Filters" })}
+        {secili ? <span className="project-filter-nokta" aria-hidden="true" /> : null}
+      </button>
+      <div id="calisma-filtre-govde" className="project-filter-govde" data-acik={filtreAcik ? "" : undefined}>
+        <Secici
+          name="durum"
+          deger={filters.status}
+          otomatikGonder
+          etiket={t({ tr: "Durum", en: "Status" })}
+          onEk={t({ tr: "Durum", en: "Status" })}
+          gruplar={[
+            {
+              secenekler: [
+                { deger: "tumu", etiket: t({ tr: "Tüm durumlar", en: "All statuses" }) },
+                { deger: "aktif", etiket: t({ tr: "Aktif (teslim edilmemiş)", en: "Active (not submitted)" }), ton: "accent" },
+              ],
+            },
+            {
+              baslik: t({ tr: "Teslim", en: "Due date" }),
+              secenekler: [
+                { deger: "gecikmis", etiket: t({ tr: "Teslimi geçmiş", en: "Overdue" }), ton: "danger" },
+                { deger: "yaklasan", etiket: t({ tr: "7 gün içinde teslim", en: "Due within 7 days" }), ton: "warning" },
+              ],
+            },
+            {
+              baslik: t({ tr: "Aşama", en: "Stage" }),
+              secenekler: statuses.map((status) => ({ deger: status.value, etiket: status.label, ton: status.tone })),
+            },
+          ]}
+        />
+        <Secici
+          name="sirala"
+          deger={filters.sort}
+          otomatikGonder
+          etiket={t({ tr: "Sıralama", en: "Sort" })}
+          onEk={t({ tr: "Sırala", en: "Sort" })}
+          gruplar={[
+            {
+              secenekler: [
+                { deger: "yeni", etiket: t({ tr: "Son eklenen", en: "Recently added" }) },
+                { deger: "duzenleme", etiket: t({ tr: "Son düzenlenen", en: "Recently edited" }) },
+                { deger: "teslim", etiket: t({ tr: "Teslim tarihi yakın", en: "Due soonest" }) },
+                { deger: "baslik", etiket: t({ tr: "Başlığa göre (A–Z)", en: "By title (A–Z)" }) },
+              ],
+            },
+          ]}
+        />
+      </div>
       {filters.approval !== "tumu" ? <input type="hidden" name="onay" value={filters.approval} /> : null}
       {filters.comments !== "tumu" ? <input type="hidden" name="yorum" value={filters.comments} /> : null}
       {filters.approval === "bekliyor" ? (

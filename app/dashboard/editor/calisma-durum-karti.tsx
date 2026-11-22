@@ -67,6 +67,7 @@ export default async function CalismaDurumKarti({
   silebilir,
   kilavuzAc,
   takvimAc = false,
+  panelIcinde = false,
 }: {
   projectId: string;
   kelime: number | null;
@@ -78,6 +79,14 @@ export default async function CalismaDurumKarti({
   kilavuzAc: boolean;
   /** Ana sayfadaki "Takvim" bağlantısından gelindiyse takvim penceresi açık gelir. */
   takvimAc?: boolean;
+  /*
+    "Çalışma ayrıntıları" panelinde çiziliyor (22.11.2026). Kartın kendi
+    başlığındaki "Yazmaya devam et" ve teslim paketi, paneli açan kartta
+    zaten var; panelde ikinci kez çizilmesi aynı düğmenin iki kopyası
+    olurdu. Yalnızca BU İKİSİ gizlenir — ölçümler, eksikler, kılavuz,
+    birim pencereleri ve "⋯" (düzenle/kapak, belge yükle, sil) yerinde.
+  */
+  panelIcinde?: boolean;
 }) {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -149,7 +158,7 @@ export default async function CalismaDurumKarti({
   });
 
   return (
-    <article className="gb-kart gb-sutun calisma-durum" aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
+    <article className={`gb-kart gb-sutun calisma-durum${panelIcinde ? " calisma-durum-panel" : ""}`} aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
       <header className="calisma-durum-bas">
         <div>
           <span className="calisma-durum-ust">
@@ -160,14 +169,16 @@ export default async function CalismaDurumKarti({
           </span>
           <h2>{calisma.title}</h2>
         </div>
-        <div className="calisma-durum-eylemler">
-          {/* Bitince tek tık: tez Word + kaynak PDF'leri + rapor (teslim-paketi.tsx). */}
-          {kelime ? <TeslimPaketi projectId={calisma.id} /> : null}
-          <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
-            <PenLine size={15} aria-hidden="true" />
-            {kelime ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
-          </Link>
-        </div>
+        {panelIcinde ? null : (
+          <div className="calisma-durum-eylemler">
+            {/* Bitince tek tık: tez Word + kaynak PDF'leri + rapor (teslim-paketi.tsx). */}
+            {kelime ? <TeslimPaketi projectId={calisma.id} /> : null}
+            <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
+              <PenLine size={15} aria-hidden="true" />
+              {kelime ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
+            </Link>
+          </div>
+        )}
       </header>
 
       <dl className="tez-olcumler calisma-olcumler">
