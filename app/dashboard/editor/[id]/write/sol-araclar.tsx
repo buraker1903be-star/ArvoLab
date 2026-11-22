@@ -242,7 +242,7 @@ export function SolKaynaklar({
   );
 }
 
-export function SolArama({ projectId, projeAdi, gorunur }: { projectId: string; projeAdi: string; gorunur: boolean }) {
+export function SolArama({ projectId, projeAdi, gorunur, onPdfOku }: { projectId: string; projeAdi: string; gorunur: boolean; onPdfOku?: (pdfId: string) => void }) {
   const [sorgu, setSorgu] = useOturumDurumu<string>(`arvolab.sol.${projectId}.arama.sorgu`, "");
   const { kapRef, kaydir } = useKaydirmaKonumu(`arvolab.sol.${projectId}.arama.konum`, gorunur);
   return (
@@ -254,6 +254,7 @@ export function SolArama({ projectId, projeAdi, gorunur }: { projectId: string; 
         onSorguDegis={setSorgu}
         gomulu
         durumAnahtari={`arvolab.sol.${projectId}.arama`}
+        onPdfOku={onPdfOku}
       />
     </div>
   );
