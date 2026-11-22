@@ -68,6 +68,7 @@ export default async function AnalysisPage({
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       <section className="projects-header">
         <div>
+          <p className="sayfa-ustbaslik">{t({ tr: "Analiz", en: "Analysis" })}</p>
           <h1>{t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}</h1>
           <p>
             {calisma
@@ -126,17 +127,25 @@ export default async function AnalysisPage({
               </ul>
             </PanelDrawer>
           ) : null}
-          {/* SPSS'te yapılmış analizin çıktısını biçimlendirme ve kod kitabı
-              denetimi: ayrı iş, sayfayı uzatmasın diye pencerede. */}
+          {/* Başka programda yapılmış analizin çıktısını biçimlendirme ve kod
+              kitabı denetimi: ayrı iş, sayfayı uzatmasın diye pencerede.
+
+              ADI "SPSS / Diğer program çıktısı" (22.11.2026): kullanıcı
+              aracı SPSS adıyla arıyor. Ama başlık ve açıklama ArvoLab'ın
+              SPSS'i ÇALIŞTIRDIĞI ya da .sav dosyası okuduğu izlenimini
+              vermemeli: araç yalnızca ÇIKTIDAN YAPIŞTIRILAN DEĞERLERİ
+              biçimlendiriyor. Veri yükleme ayrı bir yol ve orada da
+              desteklenen biçimler .xlsx, .xls, .csv, .tsv, .txt —
+              .sav hiç okunmuyor (data-analyzer.tsx dosya girdisi). */}
           <PanelDrawer
-            triggerLabel={t({ tr: "Hazır çıktıyı biçimlendir", en: "Format existing output" })}
+            triggerLabel={t({ tr: "SPSS / Diğer program çıktısı", en: "SPSS / other program output" })}
             triggerIcon={<FileText size={15} aria-hidden="true" />}
             triggerClassName="projects-filter-button button-compact"
             kicker={t({ tr: "Analiz", en: "Analysis" })}
-            title={t({ tr: "SPSS çıktısını biçimlendirin", en: "Format SPSS output" })}
+            title={t({ tr: "Başka programda yapılmış analizin çıktısını biçimlendirin", en: "Format output from an analysis run in another program" })}
             description={t({
-              tr: "Analizi başka programda yaptıysanız çıktıdaki değerleri yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir.",
-              en: "If you ran the analysis in another program, paste the values from its output; they are converted to the reporting style required by your project's guideline.",
+              tr: "Analizi SPSS, JASP, jamovi, R ya da Excel'de yaptıysanız çıktıdaki DEĞERLERİ buraya yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir. ArvoLab bu araçta hesap yapmaz ve SPSS'i çalıştırmaz; .sav gibi program dosyaları okunmaz. Hesaplamayı ArvoLab'a yaptırmak isterseniz Çalışma alanı sekmesinden .xlsx, .xls, .csv, .tsv ya da .txt verinizi yükleyin.",
+              en: "If you ran the analysis in SPSS, JASP, jamovi, R or Excel, paste the VALUES from its output here; they are converted to the reporting style required by your project's guideline. ArvoLab does not compute anything in this tool and does not run SPSS; program files such as .sav are not read. To have ArvoLab do the computation, upload your .xlsx, .xls, .csv, .tsv or .txt data from the Workspace tab.",
             })}
             boy="genis"
             basaridaKapan={false}

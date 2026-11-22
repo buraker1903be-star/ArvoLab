@@ -77,6 +77,47 @@ describe("içerik kabı tek yerde", () => {
     assert.deepEqual(bulunan, []);
   });
 
+  /*
+    SAYFA ÜSTBAŞLIĞI (kicker). Kaynaklar ve Analiz Merkezi aynı
+    bildirimi kullanıyor (.sayfa-ustbaslik, components.css): iki kopya
+    durursa biri değişir, öteki kalır ve başlıklar sayfa geçişinde
+    ayrışır — genişlikte yaşanan hatanın aynısı.
+
+    Panelde üstbaşlığın BAŞKA biçimleri de var ve bunlar bu paketin
+    kapsamı dışında kaldı: .dashboard-kicker (editör bölümleri),
+    .calismalarim-ustbaslik, .login-kicker. Aşağıdaki liste o mevcut
+    durumu sabitliyor — niyeti onaylamak değil, LİSTENİN BÜYÜMESİNİ
+    engellemek. Yeni bir sayfa kendi üstbaşlık kuralını yazarsa burası
+    düşer ve .sayfa-ustbaslik'i kullanması gerektiği anlaşılır.
+  */
+  test("sayfa üstbaşlığı ortak bildirimden geliyor", () => {
+    const ortak = yorumsuz(oku(`${STIL_KLASORU}/components.css`));
+    assert.match(ortak, /\.sayfa-ustbaslik \{[^}]*text-transform: uppercase/);
+    /* İki sayfa da ortak sınıfı kullanıyor, kendi kuralını değil. */
+    for (const sayfa of ["app/dashboard/literature/page.tsx", "app/dashboard/analysis/page.tsx"]) {
+      assert.match(oku(sayfa), /className="sayfa-ustbaslik"/, sayfa);
+    }
+  });
+
+  test("üstbaşlık kurallarının listesi büyümüyor", () => {
+    const bilinen = [
+      "auth.css: .login-kicker",
+      "components.css: .dashboard-kicker",
+      "components.css: .sayfa-ustbaslik",
+      "genel-bakis.css: .calismalarim-ustbaslik",
+    ];
+    const bulunan: string[] = [];
+    for (const dosya of stiller) {
+      const css = yorumsuz(oku(`${STIL_KLASORU}/${dosya}`));
+      for (const m of css.matchAll(/([^{}@]+)\{/g)) {
+        const secici = m[1].trim();
+        /* Yalnızca KURALIN KENDİSİ; bağlama göre düzeltmeler (iç içe seçiciler) sayılmaz. */
+        if (/^\.[a-z-]*(ustbaslik|kicker)$/.test(secici)) bulunan.push(`${dosya}: ${secici}`);
+      }
+    }
+    assert.deepEqual(bulunan.sort(), bilinen);
+  });
+
   test("yan boşluklar da tek yerde: .dashboard-main-content padding'i", () => {
     const kabuk = yorumsuz(oku(`${STIL_KLASORU}/shell.css`));
     assert.match(kabuk, /\.dashboard-main-content \{ flex: 1; padding: 26px 32px 48px; \}/);

@@ -1,0 +1,340 @@
+{
+  "tarih": "2026-11-22T19:27:00.847Z",
+  "head": "ff532bd7f2ed73d5789409a0b48a67fb12db4792",
+  "buildId": "QWhjraXsRNEGkBjv8zETy",
+  "uygulama": "http://localhost:3133",
+  "gecen": 66,
+  "dusen": 0,
+  "sonuclar": [
+    {
+      "ad": "S1a gezgin çiziliyor (7 kategori)",
+      "durum": "PASS",
+      "not": "7"
+    },
+    {
+      "ad": "S1b veri yüklenmeden katalog gezilebilir uyarısı",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S1c veri yoksa 'Analizi Çalıştır' hiç çizilmiyor",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S1d kategori açılıp analiz seçilebiliyor (hesap başlamadan)",
+      "durum": "PASS",
+      "not": "Bağımsız Örneklem t-Testi"
+    },
+    {
+      "ad": "S1e dosya seçme alanı ve desteklenen uzantılar yazılı",
+      "durum": "PASS",
+      "not": "Dosya seçmek için tıklayın · .xlsx, .xls, .csv, .tsv, .txt"
+    },
+    {
+      "ad": "S1f kapalı kategorinin analizleri GÖRÜNMÜYOR",
+      "durum": "PASS",
+      "not": "2 kategori · 4 analiz"
+    },
+    {
+      "ad": "S1g kategori başlığına basınca açılıyor/kapanıyor",
+      "durum": "PASS",
+      "not": "9 → 4"
+    },
+    {
+      "ad": "S1h çalışma alanı kipinde ikinci bir katalog listesi yok",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S9a kısaltmayla arama: 'AFA' → Açımlayıcı Faktör Analizi",
+      "durum": "PASS",
+      "not": "Açımlayıcı Faktör Analizi"
+    },
+    {
+      "ad": "S9b 'U testi' → Mann-Whitney U",
+      "durum": "PASS",
+      "not": "Mann-Whitney U Testi"
+    },
+    {
+      "ad": "S9c 'rm anova' → Tekrarlı Ölçümler ANOVA",
+      "durum": "PASS",
+      "not": "Tekrarlı Ölçümler ANOVA"
+    },
+    {
+      "ad": "S9d desteklenmeyen yöntem aranınca 'sonuç yok' durumu",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S9e 'Aramayı temizle' listeyi geri getiriyor",
+      "durum": "PASS",
+      "not": "7"
+    },
+    {
+      "ad": "S7a yardım paneli açılıyor ve ilk soru amaç",
+      "durum": "PASS",
+      "not": "Veriyle ne yapmak istiyorsunuz?"
+    },
+    {
+      "ad": "S7b bağımsız + iki grup + sürekli → bağımsız örneklem t-testi",
+      "durum": "PASS",
+      "not": "Bağımsız Örneklem t-Testi"
+    },
+    {
+      "ad": "S7c tek aday bile kesin ilan edilmiyor",
+      "durum": "PASS",
+      "not": "Bu liste bir öneridir, hüküm değil: araştırma düzeninizi (örnekleme, atama, ölçüm sırası) ArvoLab görmüyor. So"
+    },
+    {
+      "ad": "S7d TEKRARLI seçilince aday eşleştirilmiş t-testine dönüyor",
+      "durum": "PASS",
+      "not": "Eşleştirilmiş Örneklem t-Testi"
+    },
+    {
+      "ad": "S7e düzen BİLİNMİYORSA iki aday ve eksik bilgi yazılı",
+      "durum": "PASS",
+      "not": "Bağımsız Örneklem t-Testi | Eşleştirilmiş Örneklem t-Testi || true"
+    },
+    {
+      "ad": "S7f DESTEKLENMEYEN desen: üç tekrarlı ölçüm + kategorik → aday YOK",
+      "durum": "PASS",
+      "not": "aday:0 true true"
+    },
+    {
+      "ad": "S7g 'Bu analizi aç' kullanıcının eylemi: seçimi değiştiriyor",
+      "durum": "PASS",
+      "not": "Güvenilirlik Analizi (Cronbach Alpha)"
+    },
+    {
+      "ad": "S7h yardım paneli analizi açınca kapanıyor",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S8a sayfa/sekme/yardım açmak analiz kaydetmedi",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S8b 'Kaydedilen analizler' sekmesi açılıyor ve kayıt yapmıyor",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S8c ham veri olmadan hesabın sürdürülemeyeceği yazılı",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S6a sayısal sütunu olmayan/eksik sütunlu dosya sessizce sonuç olmuyor",
+      "durum": "PASS",
+      "not": "sonuc:0 uyari:1 satırda başlıktan fazla alan var; fazla alanlar alınmadı. Ayırıcıyı ve tırnakl"
+    },
+    {
+      "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
+      "durum": "PASS",
+      "not": ".tmp-analiz-kabul-2188d9.csv — 40 satır, 14 sütun (10 sayısal, 4 kategorik)"
+    },
+    {
+      "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
+      "durum": "PASS",
+      "not": "sirada,bekliyor,bekliyor || true false"
+    },
+    {
+      "ad": "S2c 'Veriyi incele' sütun türlerini ve eksikleri gösteriyor",
+      "durum": "PASS",
+      "not": "14 sütun · 20 satır · true · true"
+    },
+    {
+      "ad": "S2d önizleme bütün dosyayı DOM'a yazmıyor (en çok 20 satır)",
+      "durum": "PASS",
+      "not": "20"
+    },
+    {
+      "ad": "S3a bağımsız örneklem t-testi: t, p, Cohen d ve %95 GA",
+      "durum": "PASS",
+      "not": "A: N=20, Ort=69.40, SS=5.88\nB: N=20, Ort=78.02, SS=5.00\n\nt(38) = -4.99, p < .001 — istatistiksel olarak anlaml"
+    },
+    {
+      "ad": "S3b varsayım şeridi sonuçla birlikte çiziliyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
+      "durum": "PASS",
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-2188d9.csv\nsayısal "
+    },
+    {
+      "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
+      "durum": "PASS",
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-2188d9.csv\nsayısal "
+    },
+    {
+      "ad": "S3d adım şeridi sonuç gelince tamamlanıyor",
+      "durum": "PASS",
+      "not": "tamam,tamam,tamam"
+    },
+    {
+      "ad": "S4a değişken değişince sonuç 'eskidi' diye işaretleniyor (silinmiyor)",
+      "durum": "PASS",
+      "not": "sonuc:1 isaret:1 true"
+    },
+    {
+      "ad": "S4b uyarı, formdaki etiketle aynı alan adını söylüyor",
+      "durum": "PASS",
+      "not": "Seçiminiz değişti (sayısal değişken); aşağıdaki sonuç önceki seçimle hesaplandı. Analizi yeniden çalıştırın."
+    },
+    {
+      "ad": "S4c yeniden çalıştırınca uyarı kalkıyor",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S4d analiz türü değişince sonuç ekrandan kalkıyor",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S3e tek yönlü ANOVA (3 grup): F, p ve η²",
+      "durum": "PASS",
+      "not": "Grup\tN\tOrtalama\n9\t14\t73.41\n10\t13\t72.53\n11\t13\t75.20\n\nF(2, 37) = 0.49, p = .618 — istatistiksel olarak anlamlı d"
+    },
+    {
+      "ad": "S6b iki gruplu değişkenle ANOVA reddediliyor, t-testi söyleniyor",
+      "durum": "PASS",
+      "not": "sonuc:0 Tek yönlü ANOVA en az 3 grup gerektirir (2 grup için t-testini kullanın). Seçili değişkend"
+    },
+    {
+      "ad": "S3f Pearson korelasyonu: r, p, n",
+      "durum": "PASS",
+      "not": "r(38) = 0.45, p = .003 — istatistiksel olarak anlamlı"
+    },
+    {
+      "ad": "S3g Mann-Whitney U: U, z, p",
+      "durum": "PASS",
+      "not": "A: N=20, sıra ort.=13.50\nB: N=20, sıra ort.=27.50\n\nU = 60.00, z = -3.79, p < .001 — istatistiksel olarak anlam"
+    },
+    {
+      "ad": "S3h güvenilirlik: madde seçimi → α",
+      "durum": "PASS",
+      "not": "Cronbach's α = 0.230 (5 madde, N = 40) — güvenilirlik düzeyi: düşük\n\nMadde\tDüzeltilmiş madde-toplam r\tMadde si"
+    },
+    {
+      "ad": "S5a kaydedilmemiş sonuç varken 'Veriyi değiştir' onay istiyor",
+      "durum": "PASS",
+      "not": "true veri:1"
+    },
+    {
+      "ad": "S5b onay verilince veri ve sonuç temizleniyor",
+      "durum": "PASS",
+      "not": "1 0"
+    },
+    {
+      "ad": "S8d analiz çalıştırmak tek başına kaydetmedi",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
+      "durum": "PASS",
+      "not": "9688f152-19ef-4bb8-8fce-8c64689918cb"
+    },
+    {
+      "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S8g öteki çalışmada bu kayıt GÖRÜNMÜYOR",
+      "durum": "PASS",
+      "not": "false"
+    },
+    {
+      "ad": "S10a-1440 yatay kaydırma yok",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10b-1440 gezgin ve çalışma alanı birlikte görünüyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10a-1280 yatay kaydırma yok",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10b-1280 gezgin ve çalışma alanı birlikte görünüyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10a-768 yatay kaydırma yok",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10b-768 gezgin ve çalışma alanı birlikte görünüyor",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10c klavyeyle gezginde analiz seçilebiliyor",
+      "durum": "PASS",
+      "not": "1"
+    },
+    {
+      "ad": "S10d odak görünür (focus-visible halkası)",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10e koyu tema: yazı/zemin karşıtlığı kuruluyor",
+      "durum": "PASS",
+      "not": "rgb(15, 22, 38) / rgb(236, 233, 226)"
+    },
+    {
+      "ad": "S10f telefon: yatay kaydırma yok",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10g telefon: gezgin tek satırlık özete iniyor, çalışma alanı hemen altında",
+      "durum": "PASS",
+      "not": "true"
+    },
+    {
+      "ad": "S10g2 telefon: 'Değiştir' listeyi açıyor, çalışma alanı gizleniyor",
+      "durum": "PASS",
+      "not": "kategori:7 dropzone:0 geri:1"
+    },
+    {
+      "ad": "S10g3 telefon: analiz seçilince çalışma alanına dönülüyor",
+      "durum": "PASS",
+      "not": "Tek Örneklem t-Testi · dropzone:1"
+    },
+    {
+      "ad": "S10g4 telefon: 'Çalışma alanına dön' seçimi değiştirmeden geri getiriyor",
+      "durum": "PASS",
+      "not": "Tek Örneklem t-Testi · dropzone:1"
+    },
+    {
+      "ad": "S10h telefon: iç kenar çubuğu yok (gezgin kendi içinde kaymıyor)",
+      "durum": "PASS",
+      "not": "visible"
+    },
+    {
+      "ad": "S10i telefon: dokunma hedefleri 44 px",
+      "durum": "PASS",
+      "not": "0"
+    },
+    {
+      "ad": "S10j telefon: alt gezinme içeriğin üzerine gelmiyor",
+      "durum": "PASS",
+      "not": "ortusme yok"
+    }
+  ]
+}

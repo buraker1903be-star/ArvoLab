@@ -17,7 +17,6 @@
 /* ---------- Sayfa üst alanı ---------- */
 .kaynaklar-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; }
 .kaynaklar-bas-metin { display: grid; gap: 4px; justify-items: start; min-width: 0; }
-.kaynaklar-ustbaslik { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .kaynaklar-bas h1 { margin: 0; font-size: clamp(26px, 2.4vw, 32px); line-height: 1.15; letter-spacing: -.02em; }
 .kaynaklar-aciklama { margin: 0; color: var(--muted); font-size: var(--os5-fs-govde); }
 .kaynaklar-bas .kaynaklar-secici { margin-top: 8px; }
