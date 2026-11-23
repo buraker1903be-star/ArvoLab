@@ -1562,3 +1562,20 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .project-filter-govde[data-acik] { display: flex; flex-wrap: wrap; gap: 8px; }
   .project-filter-count { margin-left: auto; }
 }
+
+/* ---------- Kaynakça: son denetim özeti ve geçmiş (23.11.2026) ----------
+   Kategori listesi İÇERİĞİ KADAR yer kaplar. Tek ekran kuralında
+   `.gb-tek-ekran .gb-liste { flex: 1 1 auto }` ilk listeyi büyütüyor,
+   "Önceki denetimler" kartın dibine itiliyor ve ortada ~170 px boş alan
+   kalıyordu (ölçüldü). Büyümesi gereken, uzayabilen geçmiş listesidir. */
+.kaynakca-ozet-satiri { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
+.kaynakca-kapsam { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+/* Uzun kategori adı ve "neden ölçülmedi" notu telefonda SARSIN:
+   ortak satır kuralı iki satırda kırpıp üç nokta koyuyor. */
+.kaynakca-kategoriler .gb-satir-govde b { display: block; overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+.kaynakca-kategoriler .gb-satir-govde small { overflow: visible; white-space: normal; text-overflow: clip; }
+.kaynakca-gecmis .gb-satir { text-decoration: none; }
+@media (min-width: 901px) and (min-height: 640px) {
+  .gb-tek-ekran .kaynakca-kategoriler { flex: none; overflow: visible; }
+  .gb-tek-ekran .kaynakca-gecmis { flex: 0 1 auto; }
+}

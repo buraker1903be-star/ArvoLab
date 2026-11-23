@@ -412,13 +412,30 @@ export async function getMyCitationChecks(): Promise<ListeSonucu<CitationCheckSa
  * Okunamazsa ya da kayıt yoksa null: pencere "henüz denetim yok" der,
  * yeniden çalıştırmak her zaman mümkün.
  */
+/**
+ * Geçmişteki BELİRLİ bir denetimin tam sonucu. "Önceki denetimler"
+ * listesindeki satır kendi sonucunu açıyor; eskiden yalnızca sonuncusu
+ * okunabiliyordu ve geçmiş satırları tıklanamıyordu.
+ *
+ * Okuma RLS'e tabi: başkasının denetimi zaten gelmez. Çalışma kimliği
+ * de aranıyor ki bir çalışmanın ekranında başka çalışmanın kaydı
+ * açılmasın.
+ */
+export async function kaynakcaDenetimi(denetimId: string, projectId: string) {
+  return denetimOku({ id: denetimId, projectId });
+}
+
 export async function sonKaynakcaDenetimi(projectId: string) {
+  return denetimOku({ projectId });
+}
+
+async function denetimOku({ id, projectId }: { id?: string; projectId: string }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const sorgu = supabase
     .from("citation_checks")
     .select("parsed_references, in_text_citations, cross_check, compliance_score, created_at, academic_projects(citation_style)")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
+    .eq("project_id", projectId);
+  const { data, error } = await (id ? sorgu.eq("id", id) : sorgu.order("created_at", { ascending: false }))
     .limit(1)
     .maybeSingle();
   if (error) {
