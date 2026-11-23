@@ -276,4 +276,26 @@
   .ust-dil > summary, .ust-dil-menu button { min-height: var(--os5-kontrol-h-dokunma); height: auto; }
 }
 /* Telefonda üst çubukta yer dar: dil hesap menüsünde ve Ayarlar'da zaten var. */
-@media (max-width: 760px) { .ust-dil { display: none; } }
+/* Dil seçici telefonda da görünüyor (23.11.2026): hesap menüsündeki
+   ikinci seçici kalktığı için gizlemek, telefonda dili değiştirmenin
+   tek yolunu Ayarlar sayfasına indirirdi. */
+
+/* ---------- Hesap menüsündeki "Kullanım" satırı (23.11.2026) ----------
+   Kalan hak menüden görünüyor; aynı menünün içinde açılıp kapanıyor. */
+.os-kullanici-kullanim { border-radius: var(--kontrol-r); }
+.os-kullanici-kullanim > summary {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px;
+  color: var(--ink); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; list-style: none;
+}
+.os-kullanici-kullanim > summary::-webkit-details-marker { display: none; }
+.os-kullanici-kullanim > summary:hover { background: var(--surface-2); }
+.os-kullanici-kullanim > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os-kullanici-kullanim-ad { flex: 1; }
+.os-kullanici-kullanim-ozet { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; white-space: nowrap; }
+.os-kullanici-hak { display: grid; gap: 8px; margin: 0; padding: 2px 10px 10px 38px; list-style: none; }
+.os-kullanici-hak li { display: grid; gap: 1px; }
+.os-kullanici-hak-ad { color: var(--muted); font-size: var(--fs-micro); }
+.os-kullanici-hak-deger { color: var(--ink); font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
+.os-kullanici-hak-deger[data-durum="tukendi"] { color: var(--warning); }
+.os-kullanici-hak-deger[data-durum="bilinmiyor"] { color: var(--muted); font-weight: 500; }
+.os-kullanici-hak small { color: var(--muted); font-size: var(--fs-micro); }

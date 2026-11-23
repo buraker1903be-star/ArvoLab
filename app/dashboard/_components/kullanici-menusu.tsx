@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { ChevronsUpDown, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronsUpDown, Gauge, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { OsSimge } from "./os-simge";
 import type { OsIkon } from "@/lib/os/uygulamalar";
-import { ceviri } from "@/lib/dil-sunucu";
-import { INGILIZCE_YAYINDA } from "@/lib/dil";
-import DilSecici from "@/app/_components/dil-secici";
+import { ceviri, tarihler } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
+import { kisaOzet, type HakDurumu, type KullanimHakki } from "@/lib/kullanim-ozeti";
 import { KomutPaletiAcOgesi } from "./os-komut-paleti";
 
 /*
@@ -31,6 +31,28 @@ import { KomutPaletiAcOgesi } from "./os-komut-paleti";
   çubuğunun "Diğer" grubundaydı.
 */
 
+/* Hakların adı ve değeri: sayı uydurulmuyor, üç özel durum ayrı yazılıyor. */
+const HAK_ADI: Record<KullanimHakki["anahtar"], Metin> = {
+  asistanKredisi: { tr: "Asistan kredisi", en: "Assistant credits" },
+  denemeHakki: { tr: "Deneme hakkı", en: "Trial uses" },
+};
+const sayi = (x: number) => new Intl.NumberFormat("tr-TR").format(x);
+const HAK_DEGERI: Record<HakDurumu, (h: KullanimHakki) => Metin> = {
+  sayili: (h) => ({
+    tr: h.toplam ? `${sayi(h.kalan ?? 0)} / ${sayi(h.toplam)} kaldı` : `${sayi(h.kalan ?? 0)} kaldı`,
+    en: h.toplam ? `${h.kalan ?? 0} of ${h.toplam} left` : `${h.kalan ?? 0} left`,
+  }),
+  tukendi: () => ({ tr: "Tükendi", en: "Used up" }),
+  sinirsiz: () => ({ tr: "Sınırsız", en: "Unlimited" }),
+  bilinmiyor: () => ({ tr: "Bilgi alınamadı", en: "Not available" }),
+};
+const HAK_OZETI: Record<HakDurumu, (h: KullanimHakki) => Metin> = {
+  sayili: (h) => ({ tr: `${sayi(h.kalan ?? 0)} kaldı`, en: `${h.kalan ?? 0} left` }),
+  tukendi: () => ({ tr: "Tükendi", en: "Used up" }),
+  sinirsiz: () => ({ tr: "Sınırsız", en: "Unlimited" }),
+  bilinmiyor: () => ({ tr: "Bilgi yok", en: "No data" }),
+};
+
 /** Menüde bir bağlantı: merkezi listeden, layout'ta rolle süzülmüş olarak gelir. */
 export type MenuBaglantisi = { key: string; label: string; href: string; ikon: OsIkon };
 export default async function KullaniciMenusu({
@@ -40,7 +62,7 @@ export default async function KullaniciMenusu({
   cikis,
   yerlesim = "ust",
   hesapBaglantilari = [],
-  personelAraclari = [],
+  kullanim = [],
 }: {
   yerlesim?: "ust" | "kenar";
   ad: string;
@@ -48,14 +70,12 @@ export default async function KullaniciMenusu({
   basHarf: string;
   cikis: () => Promise<void>;
   hesapBaglantilari?: MenuBaglantisi[];
-  /*
-    Rolüne açık personel araçları; öğrencide boş gelir ve bölüm hiç
-    çizilmez. Bu bir GÖRÜNÜRLÜK kararıdır, güvenlik denetimi değil: her
-    sayfa erişimi kendi sunucu kapısında ve RLS'te denetler.
-  */
-  personelAraclari?: MenuBaglantisi[];
+  /** Kalan haklar (lib/kullanim-haklarim.ts); boşsa satır çizilmez. */
+  kullanim?: KullanimHakki[];
 }) {
   const t = await ceviri();
+  const { tarih } = await tarihler();
+  const ozet = kisaOzet(kullanim);
   return (
     <details className={yerlesim === "kenar" ? "os-kullanici os-kullanici--kenar" : "os-kullanici os-kullanici--ust"}>
       <summary aria-label={`${t({ tr: "Hesap", en: "Account" })}: ${ad}`}>
@@ -83,8 +103,41 @@ export default async function KullaniciMenusu({
           ve iç ekibin kurum seçicisi 20.11.2026'da kalktı: herkesin ana
           deneyimi aynı (lib/kisisel-calismalar.ts), operasyon ArvoOS'ta.
         */}
-        {/* Çeviri bitene kadar yalnızca iç ekipte (lib/dil.ts, INGILIZCE_YAYINDA). */}
-        {INGILIZCE_YAYINDA ? <DilSecici /> : null}
+        {/*
+          DİL SEÇİCİ MENÜDEN KALKTI (23.11.2026): dil, sağ üstteki kendi
+          düğmesinde. İki yerde iki ayrı seçici olması "hangisi geçerli"
+          sorusunu doğuruyordu. Telefonda da üst çubuktaki seçici
+          görünüyor (app/styles/shell.css).
+        */}
+        {/*
+          KULLANIM (23.11.2026): kalan hak menüden görünüyor; eskiden
+          yalnızca Abonelik ve Kredi sayfasına gidince öğreniliyordu.
+          Aynı menünün içinde açılıp kapanıyor (iç içe details): sayfa
+          değişmiyor, menü kapanmıyor. Sayılar Abonelik ve Kredi
+          ekranıyla AYNI kaynaklardan (lib/kullanim-haklarim.ts).
+        */}
+        {kullanim.length ? (
+          <details className="os-kullanici-kullanim">
+            <summary>
+              <Gauge size={16} aria-hidden="true" />
+              <span className="os-kullanici-kullanim-ad">{t({ tr: "Kullanım", en: "Usage" })}</span>
+              {ozet ? <span className="os-kullanici-kullanim-ozet">{t(HAK_OZETI[ozet.durum](ozet))}</span> : null}
+            </summary>
+            <ul className="os-kullanici-hak">
+              {kullanim.map((h) => (
+                <li key={h.anahtar}>
+                  <span className="os-kullanici-hak-ad">{t(HAK_ADI[h.anahtar])}</span>
+                  <span className="os-kullanici-hak-deger" data-durum={h.durum}>
+                    {t(HAK_DEGERI[h.durum](h))}
+                  </span>
+                  {h.yenilenme ? (
+                    <small>{t({ tr: `${tarih(h.yenilenme)} tarihinde yenilenir`, en: `Renews on ${tarih(h.yenilenme)}` })}</small>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>
           {hesapBaglantilari.map((b) => (
             <Link key={b.key} href={b.href}>
@@ -100,30 +153,12 @@ export default async function KullaniciMenusu({
           {/* Üst çubuktaki arama kutusu kalktı (20.11.2026); palete buradan ve Ctrl+K ile ulaşılır. */}
           <KomutPaletiAcOgesi className="os-kullanici-komut" />
         </nav>
-        {personelAraclari.length ? (
-          /*
-            Başlık görünür ama ekran okuyucuya nav'ın adı olarak okunur
-            (aria-label): menü iki yerleşimde çizildiği için id ile
-            bağlamak sayfada aynı id'yi iki kez üretirdi.
-          */
-          /*
-            "Teknik araçlar": yalnızca asistan kayıtları (teknik iç ekip).
-            20.11.2026'ya kadar başlığı önce "Yönetim", sonra "Ekip
-            araçları"ydı; kurum ekranı, doçentlik puanı ve Ekip Yönetimi
-            de buradaydı, üçü de kalktı (üyelik ve rol ArvoOS'ta).
-          */
-          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Teknik araçlar", en: "Technical tools" })}>
-            <small className="os-kullanici-bolum" aria-hidden="true">
-              {t({ tr: "Teknik araçlar", en: "Technical tools" })}
-            </small>
-            {personelAraclari.map((b) => (
-              <Link key={b.key} href={b.href}>
-                <OsSimge ad={b.ikon} boyut={16} />
-                {b.label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
+        {/*
+          "Teknik araçlar" (Asistan Kayıtları) 23.11.2026'da menüden
+          kalktı: hesap menüsü kişinin KENDİ hesabı için. Sayfa
+          başlatıcıda ve Ctrl+K'da duruyor, erişim kuralı değişmedi
+          (lib/os/uygulamalar.ts, sayfanın kendi kapısı ve RLS).
+        */}
         <form action={cikis} className="os-kullanici-cikis">
           <button type="submit">
             <LogOut size={16} aria-hidden="true" />

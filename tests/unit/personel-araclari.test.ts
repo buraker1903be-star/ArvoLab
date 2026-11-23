@@ -20,7 +20,6 @@ const kabuk = oku("app/styles/os-shell.css");
 describe("hesap menüsü merkezi listeden", () => {
   test("layout, menüye gezinmeyle AYNI rolle süzülmüş listeden seçici sonuçlarını verir", () => {
     assert.match(layout, /hesapBaglantilari: hesapUygulamalari\(uygulamalar\)\.map\(menuBaglantisi\)/);
-    assert.match(layout, /personelAraclari: personelAraclari\(uygulamalar\)\.map\(menuBaglantisi\)/);
     assert.match(layout, /<OsGezinme uygulamalar=\{uygulamalar\}/);
     // Menüye roller ve yollar gitmez, yalnızca bağlantı alanları.
     assert.match(layout, /const menuBaglantisi = \(\{ key, label, href, ikon \}: OsUygulama\) => \(\{ key, label, href, ikon \}\)/);
@@ -32,13 +31,18 @@ describe("hesap menüsü merkezi listeden", () => {
     assert.ok(menu.includes('href="/dashboard/expert-requests"'), "Destek bağlantısı");
   });
 
-  test("Teknik araçlar bölümü yalnızca liste doluysa çizilir; başlık iki dilli, nav'ın adı", () => {
-    assert.match(menu, /\{personelAraclari\.length \? \(/);
-    // 20.11.2026: Görünüm seçimi, kurum seçici, Yönetim ve doçentlik kalktı; bölümde iç ekibin iki aracı kaldı.
-    assert.match(menu, /aria-label=\{t\(\{ tr: "Teknik araçlar", en: "Technical tools" \}\)\}/);
+  /*
+    23.11.2026: "Teknik araçlar" (Asistan Kayıtları) ve menüdeki dil
+    seçici kalktı. Hesap menüsü kişinin KENDİ hesabı için: kalan hak,
+    Ayarlar, Abonelik ve Kredi, Destek, komut paleti, çıkış. Asistan
+    Kayıtları başlatıcıda ve Ctrl+K'da duruyor.
+  */
+  test("menüde teknik araçlar bölümü ve ikinci dil seçici yok", () => {
+    assert.doesNotMatch(menu, /personelAraclari/);
+    assert.doesNotMatch(menu, /Teknik araçlar/);
+    assert.doesNotMatch(menu, /<DilSecici/);
     assert.doesNotMatch(menu, /kurumSec|KurumSeridi|"Yönetim"/);
     assert.doesNotMatch(menu, /gorunumSec|GORUNUMLER/);
-    assert.match(menu, /personelAraclari\.map\(/);
     // Menü iki yerleşimde çiziliyor: id ile bağlamak aynı id'yi iki kez üretirdi.
     assert.doesNotMatch(menu, /aria-labelledby/);
   });
@@ -46,15 +50,14 @@ describe("hesap menüsü merkezi listeden", () => {
 
 describe("sade kenar çubuğu", () => {
   /*
-    17.11.2026 (onaylı premium tasarım): Ayarlar kenar çubuğunun altına
-    geri geldi ve açık adlı "Araçlar" / "Yardım" grupları eklendi. Eski
-    "Diğer" grubu (her şeyin karıştığı tek kutu) dönmüyor: o adlar hâlâ
-    yasak. Ayarlar aynı zamanda hesap menüsünde de durur.
+    17.11.2026'da Ayarlar kenar çubuğunun altına gelmişti; 23.11.2026'da
+    oradan KALKTI: hesap ayarları hesap menüsünde (ve başlatıcıda).
+    Eski "Diğer" grubu (her şeyin karıştığı tek kutu) hâlâ dönmüyor.
   */
-  test("eski Diğer grubu yok; ana liste anaUygulamalar'dan; Ayarlar altta", () => {
+  test("eski Diğer grubu yok; ana liste anaUygulamalar'dan; Ayarlar gezinmede değil", () => {
     assert.doesNotMatch(gezinme, /os-gezinme-diger|digerAcik|DIGER_GRUBU_ANAHTARI|gezinmeGruplari/);
     assert.match(gezinme, /const ana = anaUygulamalar\(uygulamalar\);/);
-    assert.match(gezinme, /oge\(ayarlar\)/);
+    assert.doesNotMatch(gezinme, /oge\(ayarlar\)/);
   });
 
   test("Daha fazla ve kalıcı dar/açık tercihi yerinde", () => {

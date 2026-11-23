@@ -8,12 +8,13 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
 import { ceviri } from "@/lib/dil-sunucu";
-import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
+import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import { UstDilSecici } from "@/app/_components/dil-secici";
+import { kullanimHaklarim } from "@/lib/kullanim-haklarim";
 import { INGILIZCE_YAYINDA } from "@/lib/dil";
 import HeaderTitle from "./_components/header-title";
 import Toaster from "./_components/toaster";
@@ -70,6 +71,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     yazma ürünü; operasyon ArvoOS'ta.
   */
   const uygulamalar = gorunenUygulamalar(labUygulamalari(t), profile?.role);
+  /*
+    Hesap menüsündeki "Kullanım" satırı: kalan haklar Abonelik ve Kredi
+    ekranıyla AYNI kaynaklardan okunuyor (lib/kullanim-haklarim.ts).
+    Okuma düşerse menü satırı "Bilgi alınamadı" der; panel açılmaya
+    devam eder.
+  */
+  const kullanim = profile ? await kullanimHaklarim(access, profile.id).catch(() => []) : [];
   // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
   const hesapMenusu = {
     ad: userName,
@@ -83,7 +91,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       sayfa kendi sunucu kapısını uygular.
     */
     hesapBaglantilari: hesapUygulamalari(uygulamalar).map(menuBaglantisi),
-    personelAraclari: personelAraclari(uygulamalar).map(menuBaglantisi),
+    kullanim,
   };
 
   return (
