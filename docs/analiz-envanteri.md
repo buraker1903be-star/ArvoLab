@@ -229,8 +229,8 @@ analiz bulunmadı**: 25 adın 25'i gerçekten hesaplanıyor.
 
 ## Düzeltilen kusurlar (23.11.2026)
 
-Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan üç
-kusur. Üçü de hesabın kendisinde değil, **hesaplanamayan durumun
+Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan dört
+kusur. Dördü de hesabın kendisinde değil, **hesaplanamayan durumun
 bildirilmesinde**:
 
 1. **Hesaplanamayan çift "anlamlı değil" diye görünüyordu.** Farkların
@@ -256,7 +256,23 @@ bildirilmesinde**:
    denetlenip geçmiş gibi görünüyordu. Sonuç artık
    `kuresellikDenetlendi` taşıyor; denetlenemediğinde arayüz hüküm
    vermiyor ve temkinli taraf olan Greenhouse-Geisser düzeltmeli p'yi
-   raporluyor. (Aynı alan karma ANOVA sonucunda da var.)
+   raporluyor.
+
+4. **Karma ANOVA'da da aynı kusur vardı** ve aynı pakette kapatıldı.
+   Sonuç sunumu, Mauchly hesaplanamadığında "küresellik sağlanıyor"
+   diyor ve DÜZELTMESİZ p raporluyordu; grup içi basit etkiler
+   (her grupta zaman) de kendi Mauchly'sini aynı şekilde yorumluyordu.
+   İkisi de artık `kuresellikDenetlendi` alanına bakıyor ve
+   denetlenemediğinde Greenhouse-Geisser uygulanıp bu yazılıyor.
+
+   **Düzeltmenin kendisi de hesaplanamayabiliyor:** Mauchly determinant
+   istediği için tekil matriste düşer, GG epsilon ise bir iz oranı
+   olduğundan çoğu tekil desende hâlâ hesaplanır. İki ölçüm birebir
+   aynı olduğunda GG de düşüyor; o durumda düzeltilmiş p üretilmiyor ve
+   **sonlu olmayan p'den anlamlı/anlamsız hükmü çıkarılmıyor**. Hüküm
+   artık üç değerli bir yardımcıdan geçiyor (`pHukmu`,
+   `lib/apa-format.ts`): "hesaplanamadi" durumu TÜRDE zorunlu olduğu
+   için çağıran yer onu atlayamıyor.
 
 Sonuç tablosunun başlığı çoklu karşılaştırma düzeltmesinin adını açıkça
 yazıyor: "İkili karşılaştırmalar (eşleştirilmiş t, **Bonferroni

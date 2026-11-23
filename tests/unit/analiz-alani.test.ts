@@ -176,6 +176,36 @@ describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
     assert.match(analizci, /const onerilen = kuresellikBelirsiz \? "gg"/);
   });
 
+  test("KARMA ANOVA: küresellik kararı kuresellikDenetlendi'ye bağlı", () => {
+    assert.match(analizci, /const kuresellikBozuk = olcumler\.length > 2 && r\.kuresellikDenetlendi && isSignificant\(r\.mauchlyP\);/);
+    assert.match(analizci, /const kuresellikBelirsiz = olcumler\.length > 2 && !r\.kuresellikDenetlendi;/);
+    /* Denetlenemediyse temkinli taraf: Greenhouse-Geisser. */
+    assert.match(analizci, /const duzeltme = kuresellikBelirsiz \? "gg"/);
+    assert.match(analizci, /\{r\.kuresellikDenetlendi \? \(\s*<>/);
+  });
+
+  test("KARMA ANOVA: GG düzeltmesi de üretilemezse açıkça bildiriliyor", () => {
+    assert.match(analizci, /const epsGecerli = Number\.isFinite\(hamEps\) && hamEps > 0;/);
+    assert.match(analizci, /const duzeltmeUygulanamadi = duzeltme !== null && !epsGecerli;/);
+    assert.match(analizci, /Greenhouse-Geisser düzeltmesi de üretilemedi/);
+    assert.match(analizci, /could not be produced either/);
+  });
+
+  test("sonlu olmayan p'den anlamlı/anlamsız hükmü üretilmiyor", () => {
+    /* Üç değerli hüküm (lib/apa-format.ts pHukmu) ikili koşulla yazılamaz. */
+    assert.match(analizci, /const etkilesimHukmu = pHukmu\(raporP\(r\.etkilesim\)\);/);
+    assert.match(analizci, /p hesaplanamadı; etkileşim hakkında hüküm verilemez/);
+    /* Basit etkiler de aynı hükümden geçiyor. */
+    assert.equal(analizci.match(/const hukum = pHukmu\(b\.p\);/g)?.length, 2);
+    assert.match(analizci, /p hesaplanamadı; hüküm verilemez/);
+  });
+
+  test("grup içi zaman etkisinde küresellik ayrı denetleniyor", () => {
+    assert.match(analizci, /const ggKullan = cokOlcum && \(!ta\.kuresellikDenetlendi \|\| isSignificant\(ta\.mauchlyP\)\);/);
+    assert.match(analizci, /p: Number\.isFinite\(pp\) \? Math\.min\(1, pp \* groupLevels\.length\) : NaN,/);
+    assert.match(analizci, /bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı/);
+  });
+
   test("ikili karşılaştırmalar yalnızca ANOVA anlamlıyken çiziliyor", () => {
     assert.match(analizci, /const ikili = sig \? tekrarliIkiliKarsilastirmalar\(/);
   });

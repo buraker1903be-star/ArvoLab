@@ -10,7 +10,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { formatNumber, formatP, hesaplanabilir, HESAPLANAMADI, isSignificant } from "@/lib/apa-format";
+import { HESAPLANAMADI, formatNumber, formatP, hesaplanabilir, isSignificant, pHukmu } from "@/lib/apa-format";
 
 describe("APA p değeri", () => {
   test("eşik altı ve üstü APA biçiminde", () => {
@@ -102,5 +102,31 @@ describe("biçim kılavuzdan geliyor", () => {
   test("hesaplanamayan değer biçimden ETKİLENMİYOR", () => {
     assert.equal(formatP(NaN, turk), HESAPLANAMADI);
     assert.equal(formatNumber(Infinity, 2, turk), HESAPLANAMADI);
+  });
+});
+
+/*
+  ÜÇ DEĞERLİ HÜKÜM (23.11.2026). Hesaplanamayan p'den "anlamlı değil"
+  hükmü üretmek, veri hakkında yanlış bir iddiadır; üçüncü durum türde
+  zorunlu.
+*/
+describe("pHukmu", () => {
+  test("hesaplanmış p: eşiğe göre anlamlı / anlamsız", () => {
+    assert.equal(pHukmu(0.004), "anlamli");
+    assert.equal(pHukmu(0.0499), "anlamli");
+    assert.equal(pHukmu(0.05), "anlamsiz");
+    assert.equal(pHukmu(0.9), "anlamsiz");
+  });
+
+  test("hesaplanamayan p 'anlamsız' sayılmaz", () => {
+    assert.equal(pHukmu(NaN), "hesaplanamadi");
+    assert.equal(pHukmu(Infinity), "hesaplanamadi");
+    assert.equal(pHukmu(-Infinity), "hesaplanamadi");
+  });
+
+  test("isSignificant ile tutarlı: yalnızca 'anlamli' true", () => {
+    for (const p of [0.004, 0.05, 0.9, NaN, Infinity]) {
+      assert.equal(isSignificant(p), pHukmu(p) === "anlamli", String(p));
+    }
   });
 });

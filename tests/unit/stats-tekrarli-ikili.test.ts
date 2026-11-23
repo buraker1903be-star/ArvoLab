@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
+import { karmaAnova, tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
 
 /*
   TEKRARLI ÖLÇÜMLER SONRASI İKİLİ KARŞILAŞTIRMALAR — BAĞIMSIZ DOĞRULAMA
@@ -178,6 +178,78 @@ describe("sınır durumları sessizce yanıltmıyor", () => {
     ]);
     assert.ok(Number.isFinite(r.mauchlyP));
     assert.equal(r.kuresellikDenetlendi, true);
+  });
+
+  /*
+    KARMA DESENDE DE AYNI KURAL. Her grubun ölçümleri ortak bir
+    kovaryans matrisine katkı veriyor; biri ötekinin sabit kaydırılmışı
+    olunca matris tekil ve Mauchly tanımsız oluyor.
+  */
+  test("KARMA ANOVA: tekil kovaryansta küresellik denetlenemedi diye işaretlenir", () => {
+    const g1 = [10, 12, 11, 14, 13, 15];
+    const g2 = [9, 11, 10, 13, 12, 14];
+    /* Üçüncü ölçüm, birincinin tam 3 puan kaydırılmışı: tekil matris. */
+    const r = karmaAnova(
+      [
+        [g1, g1.map((x) => x + 2), g1.map((x) => x + 3)],
+        [g2, g2.map((x) => x + 2), g2.map((x) => x + 3)],
+      ],
+      ["deney", "kontrol"],
+    );
+    assert.ok(typeof r === "object", "hesap yapılabilmeli");
+    assert.ok(!Number.isFinite(r.mauchlyP), "bu desende Mauchly p tanımsız olmalı");
+    assert.equal(r.kuresellikDenetlendi, false, "denetlenemediği AÇIKÇA bildirilmeli");
+  });
+
+  test("KARMA ANOVA: normal desende küresellik denetlendi olarak işaretlenir", () => {
+    const r = karmaAnova(
+      [
+        [
+          [10, 12, 11, 14, 13, 15, 9, 12],
+          [12, 15, 13, 16, 15, 18, 11, 14],
+          [15, 18, 17, 19, 19, 21, 13, 18],
+        ],
+        [
+          [9, 11, 10, 13, 12, 14, 8, 11],
+          [10, 12, 12, 14, 13, 16, 10, 12],
+          [11, 14, 13, 15, 15, 17, 11, 14],
+        ],
+      ],
+      ["deney", "kontrol"],
+    );
+    assert.ok(typeof r === "object");
+    assert.ok(Number.isFinite(r.mauchlyP), "normal desende Mauchly hesaplanmalı");
+    assert.equal(r.kuresellikDenetlendi, true);
+    /* Etkiler de hesaplanabilir kalmalı: düzeltme kararı bunları bozmuyor. */
+    assert.ok(Number.isFinite(r.olcum.f) && Number.isFinite(r.etkilesim.f));
+    assert.ok(Number.isFinite(r.olcum.ggP) && Number.isFinite(r.etkilesim.ggP));
+  });
+
+  /*
+    GG DE HESAPLANAMAYABİLİR. Mauchly determinant ister ve tekil
+    matriste düşer; GG epsilon iz oranı olduğu için çoğu tekil desende
+    hâlâ hesaplanır. İki ölçüm BİREBİR aynı olunca GG de düşüyor —
+    ama F'ler sonlu kaldığı için hesap reddedilmiyor ve arayüz
+    "düzeltilmiş p üretilemedi" durumuna giriyor.
+  */
+  test("KARMA ANOVA: iki ölçüm birebir aynıysa GG epsilon da üretilemiyor", () => {
+    const deney = [10, 12, 11, 14, 13, 15, 9, 12];
+    const kontrol = [9, 11, 10, 13, 12, 14, 8, 11];
+    const r = karmaAnova(
+      [
+        [deney, deney.slice(), deney.map((x) => x + 2)],
+        [kontrol, kontrol.slice(), kontrol.map((x) => x + 2)],
+      ],
+      ["deney", "kontrol"],
+    );
+    assert.ok(typeof r === "object");
+    assert.equal(r.kuresellikDenetlendi, false);
+    assert.ok(!Number.isFinite(r.ggEpsilon), "GG epsilon da tanımsız olmalı");
+    /* F'ler sonlu: hesap reddedilmiyor, arayüz düzeltme dalına giriyor. */
+    assert.ok([r.grup.f, r.olcum.f, r.etkilesim.f].every(Number.isFinite), "F değerleri sonlu kalmalı");
+    /* Düzeltilmiş p üretilemiyor: bundan hüküm çıkarılmamalı. */
+    assert.ok(!Number.isFinite(r.olcum.ggP));
+    assert.ok(!Number.isFinite(r.etkilesim.ggP));
   });
 
   test("ETİKET EKSİKSE çağrı reddedilir", () => {

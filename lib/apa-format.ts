@@ -49,6 +49,25 @@ export function isSignificant(p: number): boolean {
 }
 
 /*
+  ÜÇ DEĞERLİ HÜKÜM (23.11.2026).
+
+  `isSignificant` iki değerlidir ve hesaplanamayan p'yi "anlamlı değil"
+  tarafına koyar. Çağıran yerler bunu `? "anlamlı" : "anlamlı değil"`
+  diye yazınca, hiç hesaplanmamış bir test ekranda "anlamlı değil"
+  oluyordu — veri hakkında yanlış bir iddia (yukarıdaki açıklama).
+
+  Üçüncü durumu TÜRDE zorunlu kılmak, çağıranın onu atlamasını
+  engelliyor: `pHukmu` "hesaplanamadi" da döndürebiliyor ve ikili bir
+  koşulla yazılamıyor.
+*/
+export type PHukmu = "anlamli" | "anlamsiz" | "hesaplanamadi";
+
+export function pHukmu(p: number): PHukmu {
+  if (!Number.isFinite(p)) return "hesaplanamadi";
+  return p < 0.05 ? "anlamli" : "anlamsiz";
+}
+
+/*
   `sinirliDeger` ±1 ile sınırlı değerler içindir (r, β, η²): baştaki
   sıfır kuralı yalnızca onlara uygulanır. "0.5 kg" gibi bir ölçümden
   sıfırı atmak yanlış olurdu.
