@@ -8,6 +8,7 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import { kilavuzuKaydet, kilavuzuTara, type TaramaSonucu } from "@/app/actions/calisma-kilavuzu";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { dogrulamaMesaji, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
+import { stilAdiMetni } from "@/lib/atif/stiller";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 /*
@@ -224,13 +225,40 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           ) : null}
 
           {/*
-            ÇELİŞKİ: iki sistem birden geçiyorsa karar öğrencinin ve soru
-            YALNIZCA bu noktada soruluyor — bütün formu yeniden
-            doldurtmak yerine iki cümle gösterilip biri seçtiriliyor.
+            ÇELİŞKİ: kılavuz BİRDEN ÇOK sistem söylüyor ve hangisinin
+            geçerli olduğu PROGRAMA bağlı. Üç şey ayrı ayrı yazılıyor:
+            çalışmanın şu anki stili, kılavuzun hangi program için neyi
+            önerdiği ve her birinin kılavuzdaki cümlesi. Seçim yapılmadan
+            kutudaki değer DEĞİŞMİYOR — "Kurallarımı uygula" o zaman
+            çalışmanın kendi stilini yeniden yazar, yani stil değişmez.
+
+            Eskiden burada "Kılavuz bir kaynakça sistemi belirtmiyor"
+            yazıyor ve bir varsayılan seçili geliyordu: kılavuz açıkça iki
+            sistem söylerken yanlış bir cümle ve öğrencinin hiç seçmediği
+            bir stil.
           */}
           {sonuc?.stilAdaylari?.length ? (
             <div className="kilavuz-celiski">
-              <strong>{t({ tr: "Kılavuzda birden çok sistem geçiyor; hangisi sizin için geçerli?", en: "The guideline mentions more than one style; which one applies to you?" })}</strong>
+              {sonuc.calismaStili ? (
+                <p className="kilavuz-celiski-mevcut">
+                  {t({
+                    tr: `Çalışmanız şu anda ${t(stilAdiMetni(sonuc.calismaStili))} kullanıyor.`,
+                    en: `Your work currently uses ${t(stilAdiMetni(sonuc.calismaStili))}.`,
+                  })}
+                </p>
+              ) : null}
+              <strong>
+                {t({
+                  tr: `Kılavuz ${sonuc.stilAdaylari.map((a) => `${a.dayanak?.kapsam ?? t({ tr: "bir bölüm", en: "one section" })} için ${a.etiket}`).join(", ")} öneriyor.`,
+                  en: `The guideline recommends ${sonuc.stilAdaylari.map((a) => `${a.etiket} for ${a.dayanak?.kapsam ?? "one section"}`).join(", ")}.`,
+                })}
+              </strong>
+              <p className="muted text-sm">
+                {t({
+                  tr: "Programınıza uygun stili seçebilir ya da mevcut stilinizle devam edebilirsiniz; seçmezseniz çalışmanızın stili değişmez.",
+                  en: "You can pick the style that matches your programme or carry on with your current one; if you don't pick, your work's style stays as it is.",
+                })}
+              </p>
               <ul>
                 {sonuc.stilAdaylari.map((aday) => (
                   <li key={aday.sistem}>
@@ -242,7 +270,9 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
                         setForm({ ...form, atifStili: aday.sistem });
                       }}
                     >
-                      {aday.etiket}
+                      {aday.dayanak?.kapsam
+                        ? t({ tr: `${aday.dayanak.kapsam}: ${aday.etiket}`, en: `${aday.dayanak.kapsam}: ${aday.etiket}` })
+                        : aday.etiket}
                     </button>
                     {aday.dayanak ? (
                       <small>
@@ -258,6 +288,20 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
                 ))}
               </ul>
             </div>
+          ) : null}
+
+          {/*
+            İLK GÖNDERİMDE SERBEST BİÇİM: kılavuz bir stil adı geçirse de
+            ilk gönderimde biçim serbestse, o adı zorunluymuş gibi
+            göstermek yanlış alarmdır.
+          */}
+          {sonuc?.serbestBicim ? (
+            <small className="kilavuz-serbest">
+              {t({
+                tr: "Kılavuzunuz ilk gönderimde serbest biçime izin veriyor; aşağıdaki stil zorunlu değil, denetim için kullanılır. Kabulden sonra istenen stile geçebilirsiniz.",
+                en: "Your guideline allows a free format for the first submission; the style below isn't mandatory, it's used for checking. You can switch to the required style after acceptance.",
+              })}
+            </small>
           ) : null}
 
           {stilUyarisi ? (

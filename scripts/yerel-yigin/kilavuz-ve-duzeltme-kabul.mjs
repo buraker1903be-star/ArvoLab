@@ -96,6 +96,10 @@ const P_KILAVUZSUZ = proje("Kilavuzsuz baslayan calisma");
 const P_KILAVUZ = proje("Kilavuzu sonradan uygulanan calisma");
 const P_CELISKI = proje("Celiskili kilavuzlu calisma");
 const P_DUZELTME = proje("Hazir duzeltme calismasi");
+const P_CELISKI2 = proje("Celiskili kilavuz - secim yapilan calisma");
+const P_SERBEST = proje("Ilk gonderimde serbest bicim calismasi");
+/* Çalışmanın stili Vancouver; denetim tek seferlik APA 7 ile yapıldı. */
+const P_EKLE = proje("Kaynakcaya ekleme calismasi", "vancouver");
 
 /* ---------- Kılavuz PDF'leri (ASCII) ---------- */
 const kilavuzPdf = (satirlar) => sentetikPdf([satirlar]);
@@ -128,6 +132,20 @@ const CELISKILI_KILAVUZ = kilavuzPdf([
   "3. SAGLIK BILIMLERI PROGRAMLARI",
   "Saglik bilimleri programlarinda Vancouver sistemi kullanilir.",
   "Vancouver sisteminde kaynaklar numaralanir.",
+]);
+
+const SERBEST_KILAVUZ = kilavuzPdf([
+  "ORNEK DERGI",
+  "YAZAR REHBERI",
+  "",
+  "1. GONDERIM",
+  "Makaleler ilk gonderimde serbest bicimde hazirlanabilir; bicim kabul",
+  "sonrasinda istenir.",
+  "",
+  "2. KAYNAK GOSTERME",
+  "Kabul edilen makalelerde kaynak gosterimi APA sistemine gore duzenlenir.",
+  "APA sisteminde yazar ve yil metin icinde verilir.",
+  "APA kurallarina uygun bir kaynakca eklenir.",
 ]);
 
 /* ---------- Hazır düzeltme için: kaynaklar, müsvedde, denetim ---------- */
@@ -163,6 +181,34 @@ const AYRISTIRILAN = [
 ];
 psql(`insert into public.citation_checks (project_id, project_title, raw_reference_list, parsed_references, in_text_citations, cross_check, compliance_score, citation_style, created_by)
   values (${q(P_DUZELTME)}, 'Hazir duzeltme', ${q(`${BOZUK_A}\n${BOZUK_B}`)}, ${q(JSON.stringify(AYRISTIRILAN))}::jsonb, '[]'::jsonb, '{}'::jsonb, 60, 'apa7', ${q(KULLANICI)})`);
+
+/* ---------- "Kaynakçaya ekle" için: iki kaynak, biri kaynakçada yok ---------- */
+const EKLE_VAR = "Yilmaz, A. (2020). Ogrenme stilleri. Egitim Dergisi, 12(3), 45-60.";
+psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, container_title, volume, issue, pages, source_type, status)
+  values (${q(KULLANICI)}, ${q(P_EKLE)}, 'Ogrenme stilleri', 'Yilmaz, A.', 2020, 'Egitim Dergisi', '12', '3', '45-60', 'article', 'used')`);
+psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, container_title, volume, issue, pages, source_type, status)
+  values (${q(KULLANICI)}, ${q(P_EKLE)}, 'Motivasyonun sinif ici rolu', 'Demir, B.', 2019, 'Psikoloji Dergisi', '8', '1', '10-25', 'article', 'used')`);
+const EKLE_MUSVEDDE_JSON = {
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Giris" }] },
+    { type: "paragraph", content: [{ type: "text", text: "Ogrenme stilleri (Yilmaz, 2020) ve motivasyon (Demir, 2019) birlikte ele alinir." }] },
+    { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Kaynakça" }] },
+    { type: "paragraph", content: [{ type: "text", text: EKLE_VAR }] },
+  ],
+};
+const EKLE_MUSVEDDE = ["Giris", "Ogrenme stilleri (Yilmaz, 2020) ve motivasyon (Demir, 2019) birlikte ele alinir.", "", "Kaynakça", EKLE_VAR].join("\n");
+psql(`insert into public.project_manuscripts (project_id, content, plain_text, word_count, updated_by)
+      values (${q(P_EKLE)}, ${q(JSON.stringify(EKLE_MUSVEDDE_JSON))}::jsonb, ${q(EKLE_MUSVEDDE)}, ${EKLE_MUSVEDDE.split(/\s+/).length}, ${q(KULLANICI)})`);
+/* Denetim TEK SEFERLİK APA 7 ile yapılmış; çalışmanın stili Vancouver. */
+psql(`insert into public.citation_checks (project_id, project_title, raw_reference_list, parsed_references, in_text_citations, cross_check, compliance_score, citation_style, created_by)
+  values (${q(P_EKLE)}, 'Ekleme', ${q(EKLE_VAR)},
+    ${q(JSON.stringify([{ raw: EKLE_VAR, authors: ["Yilmaz, A."], year: "2020", title: null, issues: [] }]))}::jsonb,
+    ${q(JSON.stringify([
+      { raw: "(Yilmaz, 2020)", authorKey: "yilmaz", year: "2020", position: 0, kind: "parenthetical" },
+      { raw: "(Demir, 2019)", authorKey: "demir", year: "2019", position: 1, kind: "parenthetical" },
+    ]))}::jsonb,
+    '{}'::jsonb, 80, 'apa7', ${q(KULLANICI)})`);
 
 const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
 const oturum = async (g = 1440, y = 900, dil = "tr") => {
@@ -281,30 +327,86 @@ await dene("G2", "Kılavuzdan çıkan stil dayanağıyla gösteriliyor ve çalı
   } finally { await ctx.close(); }
 });
 
-await dene("G3", "Çelişkili kılavuzda iki aday kanıtıyla soruluyor, seçim kullanıcının", async () => {
+await dene("G3", "Çelişkili kılavuz: iki aday kapsamıyla soruluyor, çelişkili mesaj yok", async () => {
   const { ctx, s } = await oturum();
   try {
     const pencere = await kilavuzPenceresi(s, P_CELISKI);
     await kilavuzTara(s, pencere, CELISKILI_KILAVUZ, `celiski-${ek}.pdf`);
     const celiski = pencere.locator(".kilavuz-celiski");
-    dogru(await celiski.count(), "çelişki sorusu gösterilmedi");
+    dogru(await celiski.count(), "çelişki bloğu gösterilmedi");
     const metin = await celiski.first().innerText();
+    const tumPencere = await pencere.innerText();
     if (GORSEL) await s.screenshot({ path: `${GORSEL}/G3-celiski.png`, fullPage: true });
-    dogru(/APA/.test(metin) && /Vancouver/.test(metin), `iki aday yok: ${metin.slice(0, 250)}`);
-    dogru(/APA sistemine gore yapilir/i.test(metin), `APA'nın cümlesi yok: ${metin.slice(0, 300)}`);
-    dogru(/Vancouver sistemi kullanilir/i.test(metin), `Vancouver'ın cümlesi yok: ${metin.slice(0, 300)}`);
-    /* Kullanıcı Vancouver'ı seçiyor: kutu da ona dönmeli. */
-    await celiski.locator("button", { hasText: /^Vancouver$/ }).click();
+
+    /* ÇELİŞKİLİ MESAJ KALKTI: kılavuz sistemi belirtiyor, programa göre. */
+    dogru(!/bir kaynakça sistemi belirtmiyor|bir sistem adı vermiyor/.test(tumPencere),
+      `çelişkili mesaj hâlâ var: ${tumPencere.slice(0, 400)}`);
+
+    /* ÇALIŞMANIN STİLİ AYRI YAZILI. */
+    dogru(/Çalışmanız şu anda APA 7 kullanıyor/.test(metin), `çalışmanın stili yazılı değil: ${metin.slice(0, 200)}`);
+
+    /* HER ADAY KAPSAMI VE DAYANAĞIYLA. */
+    /* Kapsam EKSİZ yazılıyor: "… programları için APA 7" okunabilir olsun. */
+    dogru(/Sosyal bilimler programları için APA 7/i.test(metin), `APA'nın kapsamı yok: ${metin.slice(0, 400)}`);
+    dogru(/Saglik bilimleri programları için Vancouver/i.test(metin), `Vancouver'ın kapsamı yok: ${metin.slice(0, 400)}`);
+    dogru(!/bir bölüm için/.test(metin), `kapsam okunamamış, yer tutucu kalmış: ${metin.slice(0, 400)}`);
+    dogru(/APA sistemine gore yapilir/i.test(metin), `APA'nın cümlesi yok: ${metin.slice(0, 400)}`);
+    dogru(/Vancouver sistemi kullanilir/i.test(metin), `Vancouver'ın cümlesi yok: ${metin.slice(0, 400)}`);
+
+    /* SEÇİM YAPILMADAN kutuda ÇALIŞMANIN stili duruyor. */
+    const stilKutusu = pencere.locator("label", { hasText: /Kaynakça sistemi/ }).locator("select");
+    dogru((await stilKutusu.inputValue()) === "apa7", `seçim yokken kutuda tahmin var: ${await stilKutusu.inputValue()}`);
+
+    /* SEÇİM YAPMADAN uygula: çalışmanın stili DEĞİŞMEMELİ. */
+    await bolumEkle(pencere);
+    await pencere.locator("button", { hasText: /Kurallarımı uygula/ }).click();
+    /* Kaydın gerçekten yazıldığını bekle: kılavuz satırı oluşuyor. */
+    let kaydedildi = false;
+    for (let i = 0; i < 60; i += 1) {
+      if (Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(P_CELISKI)}`)) > 0) { kaydedildi = true; break; }
+      await s.waitForTimeout(500);
+    }
+    dogru(kaydedildi, "kılavuz kaydedilmedi; stil ölçümü anlamsız olurdu");
+    const secimsiz = psql(`select citation_style from public.academic_projects where id = ${q(P_CELISKI)}`);
+    dogru(secimsiz === "apa7", `seçim yapılmadan stil değişti: ${secimsiz}`);
+    return { ayrinti: `çelişkili mesaj yok; iki aday kapsamıyla soruldu; seçimsiz uygulamada stil ${secimsiz} kaldı` };
+  } finally { await ctx.close(); }
+});
+
+await dene("G3b", "Çelişkide kullanıcının seçimi kaydediliyor", async () => {
+  const { ctx, s } = await oturum();
+  try {
+    const pencere = await kilavuzPenceresi(s, P_CELISKI2);
+    await kilavuzTara(s, pencere, CELISKILI_KILAVUZ, `celiski2-${ek}.pdf`);
+    const celiski = pencere.locator(".kilavuz-celiski");
+    await celiski.locator("button").filter({ hasText: /Vancouver/ }).first().click();
     const stilKutusu = pencere.locator("label", { hasText: /Kaynakça sistemi/ }).locator("select");
     dogru((await stilKutusu.inputValue()) === "vancouver", `seçim kutuya geçmedi: ${await stilKutusu.inputValue()}`);
     await bolumEkle(pencere);
     await pencere.locator("button", { hasText: /Kurallarımı uygula/ }).click();
     for (let i = 0; i < 60; i += 1) {
-      if (psql(`select citation_style from public.academic_projects where id = ${q(P_CELISKI)}`) === "vancouver") break;
+      if (psql(`select citation_style from public.academic_projects where id = ${q(P_CELISKI2)}`) === "vancouver") break;
       await s.waitForTimeout(500);
     }
-    dogru(psql(`select citation_style from public.academic_projects where id = ${q(P_CELISKI)}`) === "vancouver", "seçim kaydedilmedi");
-    return { ayrinti: `iki aday kanıtıyla soruldu; kullanıcının seçimi (Vancouver) kaydedildi` };
+    dogru(psql(`select citation_style from public.academic_projects where id = ${q(P_CELISKI2)}`) === "vancouver", "seçim kaydedilmedi");
+    return { ayrinti: "kapsamına göre seçilen stil (Vancouver) çalışmaya yazıldı" };
+  } finally { await ctx.close(); }
+});
+
+await dene("G3c", "İlk gönderimde serbest biçimde zorunluluk uyarısı üretilmiyor", async () => {
+  const { ctx, s } = await oturum();
+  try {
+    const pencere = await kilavuzPenceresi(s, P_SERBEST);
+    await kilavuzTara(s, pencere, SERBEST_KILAVUZ, `serbest-${ek}.pdf`);
+    const metin = await pencere.innerText();
+    if (GORSEL) await s.screenshot({ path: `${GORSEL}/G3c-serbest-bicim.png`, fullPage: true });
+    dogru(/ilk gönderimde serbest biçime izin veriyor/.test(metin), `serbest biçim notu yok: ${metin.slice(0, 400)}`);
+    dogru(/zorunlu değil/.test(metin), `stilin zorunlu olmadığı yazılmıyor: ${metin.slice(0, 400)}`);
+    /* Kılavuz APA diyor ama bu bir ZORUNLULUK olarak sunulmuyor. */
+    dogru(!/uymuyor|zorunludur|istiyor/.test(metin), `zorunluluk dili kaldı: ${metin.slice(0, 400)}`);
+    const kayitli = psql(`select citation_style from public.academic_projects where id = ${q(P_SERBEST)}`);
+    dogru(kayitli === "apa7", `tarama çalışmanın stilini değiştirdi: ${kayitli}`);
+    return { ayrinti: "serbest biçim notu var, zorunluluk dili yok, çalışma stili değişmedi" };
   } finally { await ctx.close(); }
 });
 
@@ -341,6 +443,57 @@ await dene("G4", "Hazır düzeltmeler: önizleme, tek tıkla uygulama ve geri al
     dogru(geri.includes(BOZUK_A) && geri.includes(BOZUK_B), `geri alma iki künyeyi birden kaldırmadı: ${geri.slice(0, 300)}`);
     dogru(!geri.includes("Yilmaz, A. (2020)."), "geri almadan sonra yeni künye duruyor");
     return { ayrinti: "2 düzeltme önizlendi, uygulandı ve TEK geri alma ile ikisi birden kalktı" };
+  } finally { await ctx.close(); }
+});
+
+await dene("G5", "Kaynakçaya ekle: çalışmanın stiliyle, ikinci kez eklenmeden", async () => {
+  const { ctx, s } = await oturum();
+  try {
+    await s.goto(`${UYG}/dashboard/editor/${P_EKLE}/write?sol=kaynakca`, { waitUntil: "domcontentloaded" });
+    await s.waitForLoadState("networkidle").catch(() => {});
+    const panel = s.locator(".kaynakca-duzeltme");
+    await panel.waitFor({ state: "visible", timeout: 30000 });
+    const belgeMetni = async () => (await s.locator(".ProseMirror").first().innerText()).replace(/\s+/g, " ");
+    await panel.locator("button", { hasText: /Hazır düzeltmeleri göster/ }).click();
+    const ekleKutusu = panel.locator('[data-tur="eklenecek"]');
+    await ekleKutusu.waitFor({ state: "visible", timeout: 30000 });
+    const ekleMetni = await ekleKutusu.innerText();
+    if (GORSEL) await s.screenshot({ path: `${GORSEL}/G5-kaynakcaya-ekle.png`, fullPage: true });
+    dogru(/Motivasyonun sinif ici rolu/.test(ekleMetni), `eksik kaynak listelenmedi: ${ekleMetni.slice(0, 300)}`);
+    dogru(!/Ogrenme stilleri/.test(ekleMetni), `kaynakçada duran kaynak da listelendi: ${ekleMetni.slice(0, 300)}`);
+    /*
+      Denetim APA 7 ile yapıldı, çalışmanın stili Vancouver: düğme
+      ÇALIŞMANIN stilini yazmalı (numaralı künye).
+    */
+    dogru(/Kaynakçaya ekle \(Vancouver\)/.test(ekleMetni), `düğme çalışmanın stilini söylemiyor: ${ekleMetni.slice(0, 300)}`);
+
+    const once = await belgeMetni();
+    await ekleKutusu.locator("button", { hasText: /Kaynakçaya ekle/ }).click();
+    await s.waitForTimeout(1000);
+    const sonra = await belgeMetni();
+    dogru(sonra !== once, "künye belgeye yazılmadı");
+    dogru(/Demir B\.?,? ?/.test(sonra) || /Motivasyonun sinif ici rolu/.test(sonra), `eklenen künye bulunamadı: ${sonra.slice(0, 400)}`);
+    /* Vancouver künyesi sıra numarasıyla başlar; APA ise "(2019)." yazardı. */
+    dogru(/2\. Demir B/.test(sonra), `künye çalışmanın stilinde değil: ${sonra.slice(0, 400)}`);
+    dogru(!/Demir, B\. \(2019\)/.test(sonra), `künye denetimin stiliyle (APA) yazıldı: ${sonra.slice(0, 400)}`);
+
+    /* İKİNCİ KEZ EKLENMİYOR. */
+    const sayiOnce = (sonra.match(/Motivasyonun sinif ici rolu/g) ?? []).length;
+    await panel.locator("button", { hasText: /Düzeltmeleri yenile/ }).click();
+    await s.waitForTimeout(1500);
+    const ikinci = panel.locator('[data-tur="eklenecek"]');
+    if (await ikinci.count()) {
+      await ikinci.locator("button", { hasText: /Kaynakçaya ekle/ }).click();
+      await s.waitForTimeout(1000);
+    }
+    const son = await belgeMetni();
+    const sayiSonra = (son.match(/Motivasyonun sinif ici rolu/g) ?? []).length;
+    dogru(sayiSonra === sayiOnce, `künye ikinci kez eklendi: ${sayiOnce} → ${sayiSonra}`);
+
+    /* Tek seferlik denetim stili ÇALIŞMANIN ayarını değiştirmedi. */
+    const kayitli = psql(`select citation_style from public.academic_projects where id = ${q(P_EKLE)}`);
+    dogru(kayitli === "vancouver", `çalışmanın stili değişti: ${kayitli}`);
+    return { ayrinti: `Vancouver künyesi eklendi, ikinci denemede yinelenmedi (${sayiOnce}); çalışma stili ${kayitli}` };
   } finally { await ctx.close(); }
 });
 

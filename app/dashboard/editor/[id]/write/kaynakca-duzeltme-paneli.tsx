@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Wand2, Undo2 } from "lucide-react";
 import { hazirKaynakcaDuzeltmeleri } from "@/app/actions/kaynakca-duzeltme";
-import { duzeltmeOzetCumlesi, type DuzeltmeOzeti } from "@/lib/atif/hazir-duzeltme";
+import { duzeltmeOzetCumlesi, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
 import { stilAdiMetni } from "@/lib/atif/stiller";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -28,12 +28,19 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 
 export default function KaynakcaDuzeltmePaneli({
   projectId,
+  ornekAtif,
   onUygula,
+  onKaynakEkle,
   onGeriAl,
 }: {
   projectId: string;
+  /* Kılavuzun örnek atfı (lib/atif/tyk.ts); özel kural doğrulanamadığında
+     öğrenciye GÖSTERİLİYOR — kural adına karar verilmiyor. */
+  ornekAtif?: string | null;
   /** Seçilen düzeltmeleri belgeye yazar; uygulanan satır sayısını döner. */
   onUygula: (duzeltmeler: { anahtar: string; parcalar: { text: string; italic?: boolean }[] }[]) => number;
+  /** Eksik künyeleri ÇALIŞMANIN stilinde Kaynakça'ya yazar; eklenen sayısını döner. */
+  onKaynakEkle: (kaynaklar: KutuphaneKaynagi[]) => number;
   onGeriAl: () => void;
 }) {
   const t = useCeviri();
@@ -43,6 +50,8 @@ export default function KaynakcaDuzeltmePaneli({
   const [denetimYok, setDenetimYok] = useState(false);
   const [secili, setSecili] = useState<Set<string>>(new Set());
   const [uygulandi, setUygulandi] = useState<number | null>(null);
+  const [eklenecekler, setEklenecekler] = useState<KutuphaneKaynagi[]>([]);
+  const [calismaStili, setCalismaStili] = useState("");
 
   const getir = async () => {
     setYukleniyor(true);
@@ -55,8 +64,11 @@ export default function KaynakcaDuzeltmePaneli({
       }
       setOzet(cevap.ozet);
       setStil(cevap.stil);
+      setCalismaStili(cevap.calismaStili);
+      setEklenecekler(cevap.eklenecekler);
       setDenetimYok(Boolean(cevap.denetimYok));
-      setSecili(new Set(cevap.ozet.duzeltmeler.map((d) => d.anahtar)));
+      /* Özel kuralı doğrulanamayan künye varsayılan olarak SEÇİLİ DEĞİL. */
+      setSecili(new Set(cevap.ozet.duzeltmeler.filter((d) => !d.ozelKural).map((d) => d.anahtar)));
     } catch {
       showToast("error", t({ tr: "Düzeltmeler hazırlanamadı; tekrar deneyin.", en: "The fixes couldn't be prepared; please try again." }));
     } finally {
@@ -135,6 +147,15 @@ export default function KaynakcaDuzeltmePaneli({
                     <p className="kaynakca-duzeltme-eski">{d.ham}</p>
                     <p className="kaynakca-duzeltme-yeni">{d.yeni}</p>
                     {d.sebepler.length ? <small className="muted">{d.sebepler.join(" · ")}</small> : null}
+                    {d.ozelKural ? (
+                      <small className="tone-text" data-tone="warning">
+                        {t({
+                          tr: "İnternet kaynağı: kılavuzunuzun bu kaynak türü için özel bir kuralı olabilir ve ArvoLab onu kılavuzdan okumuyor. Aşağıdaki düzeltme stilin genel kuralına göre; uygulamadan önce kılavuzunuzdaki örnekle karşılaştırın.",
+                          en: "Website source: your guideline may have its own rule for this source type and ArvoLab does not read it from the guideline. The fix below follows the style's general rule; compare it with the example in your guideline before applying.",
+                        })}
+                        {ornekAtif ? t({ tr: ` Kılavuzunuzdaki örnek: “${ornekAtif}”`, en: ` Example from your guideline: “${ornekAtif}”` }) : ""}
+                      </small>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -150,6 +171,51 @@ export default function KaynakcaDuzeltmePaneli({
                 ) : null}
               </div>
             </>
+          ) : null}
+
+          {/*
+            KAYNAKÇAYA EKLE: metinde anılan ama kaynakçada olmayan
+            kaynaklar. Künye ÇALIŞMANIN kayıtlı stiliyle yazılıyor —
+            denetim tek seferlik başka bir stille yapılmış olabilir ve
+            belgeye giren biçim ondan etkilenmemeli. Yol editördeki atıf
+            eklemeyle aynı (kaynakcaGirdisiIslemi): aynı kaynak ikinci
+            kez eklenmiyor.
+          */}
+          {eklenecekler.length ? (
+            <div className="kaynakca-duzeltme-eksik" data-tur="eklenecek">
+              <strong>
+                {t({
+                  tr: `Metinde anılan ${eklenecekler.length} kaynak kaynakçada yok`,
+                  en: `${eklenecekler.length} source${eklenecekler.length === 1 ? "" : "s"} cited in the text ${eklenecekler.length === 1 ? "is" : "are"} missing from the reference list`,
+                })}
+              </strong>
+              <ul className="kaynakca-duzeltme-liste">
+                {eklenecekler.map((k) => (
+                  <li key={k.id}>
+                    <p className="kaynakca-duzeltme-yeni">{[k.authors, k.year, k.title].filter(Boolean).join(" · ")}</p>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                onClick={() => {
+                  const sayi = onKaynakEkle(eklenecekler);
+                  setUygulandi(sayi);
+                  showToast(sayi ? "success" : "error", sayi
+                    ? t({
+                        tr: `${sayi} künye ${t(stilAdiMetni(calismaStili))} biçiminde kaynakçaya eklendi. İstemezseniz "Geri al" ya da Ctrl+Z.`,
+                        en: `${sayi} ${sayi === 1 ? "reference" : "references"} added to the list in ${t(stilAdiMetni(calismaStili))}. Use “Undo” or Ctrl+Z if you don't want it.`,
+                      })
+                    : t({ tr: "Bu kaynaklar kaynakçada zaten var; yeniden eklenmedi.", en: "These sources are already in the reference list; nothing was added again." }));
+                }}
+              >
+                {t({
+                  tr: `Kaynakçaya ekle (${t(stilAdiMetni(calismaStili))})`,
+                  en: `Add to the reference list (${t(stilAdiMetni(calismaStili))})`,
+                })}
+              </button>
+            </div>
           ) : null}
 
           {ozet.eksikler.length ? (

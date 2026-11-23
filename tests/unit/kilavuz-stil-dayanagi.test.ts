@@ -61,6 +61,42 @@ describe("stilDayanagi", () => {
   });
 });
 
+describe("kuralın kapsamı (hangi program)", () => {
+  test("cümlenin başındaki program ifadesi kapsam oluyor; ek düşüyor", () => {
+    const metin = "2. KAYNAK GÖSTERME\nSağlık bilimleri programlarında Vancouver sistemi kullanılır.";
+    /* Ekli hâli cümleye konunca "…programlarında için" diye okunuyordu. */
+    assert.equal(stilDayanagi(metin, "vancouver")?.kapsam, "Sağlık bilimleri programları");
+  });
+
+  /* Taranmış kılavuzlarda OCR Türkçe harfleri aşındırıyor; kapsam yine okunmalı. */
+  test("aksanı aşınmış metinde de kapsam okunuyor", () => {
+    const metin = "2. KAYNAK GOSTERME\nSaglik bilimleri programlarinda Vancouver sistemi kullanilir.";
+    assert.equal(stilDayanagi(metin, "vancouver")?.kapsam, "Saglik bilimleri programları");
+  });
+
+  test("aksansız bölüm başlığı da kapsam sayılıyor", () => {
+    const metin = "3. SAGLIK BILIMLERI PROGRAMLARI\nKaynak gosterimi Vancouver sistemine gore yapilir.";
+    assert.equal(stilDayanagi(metin, "vancouver")?.kapsam, "SAGLIK BILIMLERI PROGRAMLARI");
+  });
+
+  test("cümlede kapsam yoksa bölüm başlığına düşülüyor (başlık program diyorsa)", () => {
+    const metin = "3. SAĞLIK BİLİMLERİ PROGRAMLARI\nKaynak gösterimi Vancouver sistemine göre yapılır.";
+    assert.equal(stilDayanagi(metin, "vancouver")?.kapsam, "SAĞLIK BİLİMLERİ PROGRAMLARI");
+  });
+
+  test("kapsam yoksa null; uydurulmuyor", () => {
+    const metin = "2. KAYNAK GÖSTERME\nKaynak gösterimi APA 7 sistemine göre yapılır.";
+    const d = stilDayanagi(metin, "apa7");
+    assert.equal(d?.bolum, "KAYNAK GÖSTERME");
+    assert.equal(d?.kapsam, null);
+  });
+
+  test("İngilizce kapsam", () => {
+    const metin = "2. REFERENCING\nFor social sciences programmes the APA style is used.";
+    assert.equal(stilDayanagi(metin, "apa7")?.kapsam, "social sciences programmes");
+  });
+});
+
 describe("çelişkili kuralda adaylar dayanağıyla geliyor", () => {
   test("iki sistem birden geçiyorsa ikisinin de cümlesi veriliyor", () => {
     const celiskili = [

@@ -449,6 +449,28 @@ export function kaynakcaDuzeltmeIslemi(tr: Transaction, duzeltmeler: KaynakcaDuz
   return uygulanan;
 }
 
+/**
+ * Denetimde eksik çıkan kaynakların künyelerini Kaynakça'ya yazar.
+ *
+ * Atıf eklerken kullanılan AYNI yol (kaynakcaGirdisiIslemi): biçim
+ * çalışmanın stilinde, numara stillerinde sıra numarası kaynakçadan,
+ * ve zaten duran kaynak YENİDEN EKLENMEZ (atifSirasi existingIndex).
+ * İkinci bir kopya yazmak, kaynakçayı sessizce bozar ve öğrenci bunu
+ * ancak teslimde fark ederdi.
+ *
+ * Hepsi tek işlemde: tek geri alma adımı.
+ */
+export function kaynaklariKaynakcayaEkle(editor: Editor, kaynaklar: CitableSource[], style: CitationStyle, secenek: { dil?: Dil; erisimTarihi?: string | null } = {}): number {
+  if (!kaynaklar.length) return 0;
+  const tr = editor.state.tr;
+  let eklenen = 0;
+  for (const kaynak of kaynaklar) {
+    if (kaynakcaGirdisiIslemi(tr, kaynak, style, { dil: secenek.dil, erisimTarihi: secenek.erisimTarihi })) eklenen += 1;
+  }
+  if (eklenen) editor.view.dispatch(tr);
+  return eklenen;
+}
+
 /** Editördeki kısayol: tek işlem, tek geri alma adımı. */
 export function kaynakcaDuzeltmeleriniUygula(editor: Editor, duzeltmeler: KaynakcaDuzeltmesi[]): number {
   const tr = editor.state.tr;

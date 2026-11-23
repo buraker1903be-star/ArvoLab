@@ -210,6 +210,7 @@ import {
   applyHangingIndent,
   clearManualTextFormat,
   kaynakcaDuzeltmeleriniUygula,
+  kaynaklariKaynakcayaEkle,
   type OutlineHeading,
 } from "./editor-navigation";
 import KaynakcaDuzeltmePaneli from "./kaynakca-duzeltme-paneli";
@@ -3131,8 +3132,24 @@ export default function ManuscriptEditor({
                     {kaynakcaBasligi ? (
                       <KaynakcaDuzeltmePaneli
                         projectId={projectId}
+                        ornekAtif={ornekAtif}
                         onUygula={(duzeltmeler) => (editor ? kaynakcaDuzeltmeleriniUygula(editor, duzeltmeler) : 0)}
-                        onGeriAl={() => editor?.chain().focus().undo().run()}
+                        /*
+                          Künye ÇALIŞMANIN stiliyle yazılıyor (`style`),
+                          denetimin tek seferlik stiliyle değil: belgeye
+                          giren biçim denetim seçiminden etkilenmemeli.
+                        */
+                        onKaynakEkle={(kaynaklar) =>
+                          editor
+                            ? kaynaklariKaynakcayaEkle(editor, kaynaklar as unknown as Parameters<typeof kaynaklariKaynakcayaEkle>[1], style, {
+                                dil: belgeDili,
+                                erisimTarihi: new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date()),
+                              })
+                            : 0
+                        }
+                        onGeriAl={() => {
+                          editor?.chain().focus().undo().run();
+                        }}
                       />
                     ) : null}
                     {kaynakcaBasligi ? (

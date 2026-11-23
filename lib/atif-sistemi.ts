@@ -132,6 +132,38 @@ export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | nul
   yanlış sistem hiç sistem olmamasından kötü (dosya başındaki not). Kılavuzun
   ne dediği söylenir, seçim öğrencide kalır.
 */
+/*
+  İLK GÖNDERİMDE SERBEST BİÇİM (23.11.2026).
+
+  Dergi yazar rehberlerinin ve bazı enstitü kılavuzlarının yaygın kuralı:
+  ilk gönderimde biçim serbest, kabul sonrası derginin stiline çevriliyor
+  ("format-free submission"). Bu kılavuzlarda metin bir stil ADI da
+  geçirir (kabul sonrası için) ve çıkarım onu "zorunlu stil" sanıyordu:
+  öğrenci daha ilk taslağında, aslında serbest olan bir şey için
+  "çalışmanız kılavuza uymuyor" uyarısı alıyordu. Yanlış alarm,
+  kaçırılan kuraldan sinsidir — kullanıcı bir süre sonra bütün
+  uyarıları görmezden gelmeyi öğrenir.
+
+  Ölçüt dar tutuldu: hem SERBESTLİĞİ hem İLK GÖNDERİMİ söyleyen bir
+  cümle aranıyor. Yalnızca "serbest" geçen bir cümle (ör. "serbest
+  kürsü") kuralı değiştirmemeli.
+*/
+const SERBEST = /(serbest\s*bi[çc]im|bi[çc]im(?:i)?\s+serbest|format[-\s]?free|herhangi\s+bir\s+(?:atıf|kaynak\s*g[öo]sterme|referans)\s+(?:sistemi|bi[çc]imi)|any\s+(?:citation|reference)\s+(?:style|format))/iu;
+const ILK_GONDERIM = /(ilk\s+(?:g[öo]nderim|teslim|ba[şs]vuru|sunum)|initial\s+submission|first\s+submission|at\s+submission|submission\s+stage)/iu;
+
+/**
+ * Kılavuz İLK GÖNDERİMDE serbest biçime izin veriyor mu.
+ *
+ * İki işaret de AYNI cümlede aranıyor: "Tezler ilk gönderimde serbest
+ * biçimde hazırlanabilir." evet; "Biçim serbesttir." ile başka bir
+ * yerdeki "ilk gönderim" cümlesi hayır.
+ */
+export function ilkGonderimdeSerbestMi(metin: string): boolean {
+  return (metin || "")
+    .split(/[.!?\n]+/)
+    .some((cumle) => SERBEST.test(cumle) && ILK_GONDERIM.test(cumle));
+}
+
 export type AtifYontemleri = { dipnot: boolean; metinIci: boolean };
 
 export function atifYontemleri(metin: string): AtifYontemleri {

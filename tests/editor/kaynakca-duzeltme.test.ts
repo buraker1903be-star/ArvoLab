@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { describe } from "node:test";
 import { EditorState } from "@tiptap/pm/state";
 import { history, undo } from "@tiptap/pm/history";
-import { kaynakcaDuzeltmeIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
+import { kaynakcaDuzeltmeIslemi, kaynakcaGirdisiIslemi } from "@/app/dashboard/editor/[id]/write/editor-navigation";
 import { kunyeAnahtari } from "@/lib/kaynak-pdf";
 import { belge, baslik, paragraf } from "./ortam";
 
@@ -97,5 +97,54 @@ describe("hazır düzeltmelerin uygulanması", () => {
     const tr = s.tr;
     assert.equal(kaynakcaDuzeltmeIslemi(tr, []), 0);
     assert.equal(metin(s.apply(tr)), metin(s));
+  });
+});
+
+/*
+  DENETİMDEN "KAYNAKÇAYA EKLE". Editördeki wrapper
+  (kaynaklariKaynakcayaEkle) her kaynak için kaynakcaGirdisiIslemi'ni
+  AYNI işlemde çağırıyor; sözleşmesi burada sabitleniyor: künye
+  çalışmanın stilinde yazılıyor, aynı kaynak ikinci kez eklenmiyor ve
+  hepsi tek geri alma adımı.
+*/
+describe("eksik künyelerin kaynakçaya eklenmesi", () => {
+  const A = { title: "Learning styles and achievement", authors: "Yılmaz, A.", year: "2020", source_type: "article", container_title: "Journal of Synthetic Studies", volume: "12", issue: "3", pages: "45-60", doi_or_url: null } as never;
+  const B = { title: "The role of motivation", authors: "Demir, B.", year: "2019", source_type: "article", container_title: "Synthetic Psychology", volume: "8", issue: "1", pages: "10-25", doi_or_url: null } as never;
+  const bos = () => EditorState.create({ doc: belge(baslik(1, "Giriş"), paragraf("Gövde."), baslik(1, "Kaynakça")), plugins: [history()] });
+
+  test("iki kaynak tek işlemde ekleniyor ve tek geri almayla kalkıyor", () => {
+    const s = bos();
+    const tr = s.tr;
+    assert.equal(kaynakcaGirdisiIslemi(tr, A, "apa7"), true);
+    assert.equal(kaynakcaGirdisiIslemi(tr, B, "apa7"), true);
+    const yeni = s.apply(tr);
+    assert.match(metin(yeni), /Yılmaz, A\. \(2020\)\./);
+    assert.match(metin(yeni), /Demir, B\. \(2019\)\./);
+    let geri = yeni;
+    undo(yeni, (t) => { geri = yeni.apply(t); });
+    assert.doesNotMatch(metin(geri), /Yılmaz, A\. \(2020\)\./);
+    assert.doesNotMatch(metin(geri), /Demir, B\. \(2019\)\./);
+  });
+
+  test("aynı kaynak ikinci kez eklenmiyor", () => {
+    let s = bos();
+    for (let i = 0; i < 2; i += 1) {
+      const tr = s.tr;
+      kaynakcaGirdisiIslemi(tr, A, "apa7");
+      s = s.apply(tr);
+    }
+    assert.equal(metin(s).split("Learning styles and achievement").length - 1, 1, metin(s));
+  });
+
+  test("künye ÇALIŞMANIN stiline göre yazılıyor (denetimin stili değil)", () => {
+    const yaz = (stil: Parameters<typeof kaynakcaGirdisiIslemi>[2]) => {
+      const s = bos();
+      const tr = s.tr;
+      kaynakcaGirdisiIslemi(tr, A, stil);
+      return metin(s.apply(tr)).split("Kaynakça\n")[1] ?? "";
+    };
+    assert.match(yaz("apa7"), /^Yılmaz, A\. \(2020\)\./);
+    assert.match(yaz("vancouver"), /^1\. /);
+    assert.notEqual(yaz("apa7"), yaz("vancouver"));
   });
 });

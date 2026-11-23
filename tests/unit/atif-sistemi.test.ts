@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
+import { atifGecisleri, atifSistemiSec, ilkGonderimdeSerbestMi } from "@/lib/atif-sistemi";
 
 /** Kılavuz metni: adın kaç kez geçtiği belirleyici olduğu için tekrarlı. */
 const govde = (ad: string, kez: number) =>
@@ -111,4 +111,31 @@ describe("İngilizce uyarı (28.10.2026)", () => {
     assert.deepEqual(en?.uyarilar, ["The name Chicago also appears 1 time in the text; it may be an example or a comparison."]);
     assert.match(atifSistemiSec(metin)!.uyarilar[0], /^Metinde Chicago adı da 1 kez geçiyor/);
   });
+});
+
+/*
+  İLK GÖNDERİMDE SERBEST BİÇİM (23.11.2026). Dergi rehberlerinin yaygın
+  kuralı: ilk gönderimde biçim serbest, kabul sonrası derginin stiline
+  çevriliyor. Bu kılavuzlar bir stil adı da geçirir ve ürün onu "zorunlu"
+  sanıyordu: öğrenci daha ilk taslağında, aslında serbest olan bir şey
+  için uyarı alıyordu.
+*/
+describe("ilkGonderimdeSerbestMi", () => {
+  test("aynı cümlede serbestlik ve ilk gönderim varsa evet", () => {
+    assert.equal(ilkGonderimdeSerbestMi("Tezler ilk gönderimde serbest biçimde hazırlanabilir."), true);
+    assert.equal(ilkGonderimdeSerbestMi("Manuscripts may be prepared in any citation style at initial submission."), true);
+    assert.equal(ilkGonderimdeSerbestMi("We operate format-free submission for the first submission."), true);
+  });
+
+  test("yalnızca biri geçiyorsa hayır", () => {
+    assert.equal(ilkGonderimdeSerbestMi("Biçim serbesttir."), false);
+    assert.equal(ilkGonderimdeSerbestMi("İlk gönderimde iki nüsha teslim edilir."), false);
+  });
+
+  /* İki işaret AYRI cümlelerdeyse kural kurulmuş sayılmaz. */
+  test("işaretler ayrı cümlelerdeyse hayır", () => {
+    assert.equal(ilkGonderimdeSerbestMi("Biçim serbesttir. İlk gönderim enstitüye yapılır."), false);
+  });
+
+  test("boş metin", () => assert.equal(ilkGonderimdeSerbestMi(""), false));
 });

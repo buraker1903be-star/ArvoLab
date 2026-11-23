@@ -2039,6 +2039,9 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .kilavuz-celiski ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .kilavuz-celiski li { display: grid; gap: 2px; justify-items: start; font-size: var(--fs-sm); }
 .kilavuz-celiski q { color: var(--ink); font-style: italic; }
+.kilavuz-celiski-mevcut { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 650; }
+/* İlk gönderimde serbest biçim notu: uyarı değil bilgi, bu yüzden nötr. */
+.kilavuz-serbest { display: block; margin-top: 4px; color: var(--ink-soft); }
 .kilavuz-etiketler .chip { display: inline-flex; align-items: center; gap: 4px; }
 .kilavuz-etiketler .chip button {
   display: inline-flex; padding: 0; border: 0; background: none;

@@ -2,7 +2,7 @@
 
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import { hazirDuzeltmeler, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
+import { eksikKaynakcaGirdileri, hazirDuzeltmeler, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
 import { YEREL } from "@/lib/dil";
 import { belgeDili } from "@/lib/belge-dili";
 
@@ -26,8 +26,17 @@ export type DuzeltmeSonucu =
   | { hata: string }
   | {
       ozet: DuzeltmeOzeti;
-      /** Düzeltmelerin hangi stile göre yazıldığı — denetimin stili. */
+      /** Düzeltmelerin hangi stile göre yazıldığı — DENETİMİN stili. */
       stil: string;
+      /*
+        ÇALIŞMANIN kayıtlı stili. Düzeltmelerinkinden ayrı tutuluyor:
+        tek seferlik bir denetim stili seçilmiş olabilir ve kaynakçaya
+        YENİ eklenen künye her zaman çalışmanın stiliyle yazılır
+        (editördeki atıf eklemeyle aynı kural).
+      */
+      calismaStili: string;
+      /* Metinde anılan ama kaynakçada olmayan kaynaklar: "Kaynakçaya ekle". */
+      eklenecekler: KutuphaneKaynagi[];
       /** Denetim hiç yapılmadıysa liste değil, bu bayrak. */
       denetimYok?: boolean;
     };
@@ -51,7 +60,7 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
 
   const { data: denetim, error: denetimHatasi } = await ctx.supabase
     .from("citation_checks")
-    .select("parsed_references, citation_style")
+    .select("parsed_references, in_text_citations, citation_style")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -60,7 +69,15 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
     console.error("[kaynakça-düzeltme] denetim okunamadı:", denetimHatasi.message);
     return { hata: t({ tr: "Son denetim okunamadı; tekrar deneyin.", en: "The last check couldn't be read; please try again." }) };
   }
-  if (!denetim) return { ozet: { duzeltmeler: [], eksikler: [], eslesmeyen: [] }, stil: "", denetimYok: true };
+  if (!denetim) {
+    return {
+      ozet: { duzeltmeler: [], eksikler: [], eslesmeyen: [] },
+      stil: "",
+      calismaStili: (calisma.citation_style as string) ?? "apa7",
+      eklenecekler: [],
+      denetimYok: true,
+    };
+  }
 
   const { data: kaynaklar, error: kaynakHatasi } = await ctx.supabase
     .from("literature_sources")
@@ -93,5 +110,15 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
     dil: kunyeDili,
     erisimTarihi: bugun,
   });
-  return { ozet, stil };
+  const kutuphane = (kaynaklar ?? []) as unknown as KutuphaneKaynagi[];
+  return {
+    ozet,
+    stil,
+    calismaStili: (calisma.citation_style as string) ?? "apa7",
+    eklenecekler: eksikKaynakcaGirdileri({
+      atiflar: (denetim.in_text_citations ?? []) as { raw: string; authorKey?: string | null; year?: string | null }[],
+      kunyeler: (denetim.parsed_references ?? []) as { raw: string }[],
+      kaynaklar: kutuphane,
+    }),
+  };
 }

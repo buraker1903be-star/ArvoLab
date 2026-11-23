@@ -49,6 +49,16 @@ export type HazirDuzeltme = {
   kaynakId: string;
   /** Denetimin bu künye için yazdığı sorunlar; önizlemede "neden" olarak. */
   sebepler: string[];
+  /*
+    KILAVUZUN ÖZEL KURALI DOĞRULANAMIYOR. İnternet kaynaklarında
+    kılavuzlar çoğu zaman kendi kuralını koyuyor (erişim tarihinin
+    yazımı, URL'nin biçimi, "Erişim adresi:" öneki) ve ArvoLab bu
+    kuralı kılavuzdan okumuyor. Düzeltme yine üretiliyor — öğrenci
+    ötekileri uygulamaktan alıkonmamalı — ama işaretli geliyor ve
+    varsayılan olarak SEÇİLİ DEĞİL: doğrulanmamış bir kuralı sessizce
+    uygulamak, öğrencinin doğru yazdığı künyeyi bozabilirdi.
+  */
+  ozelKural: boolean;
 };
 
 export type EksikBilgili = {
@@ -136,11 +146,61 @@ export function hazirDuzeltmeler({
       yeni,
       parcalar,
       kaynakId: kaynak.id,
+      ozelKural: kaynak.source_type === "website",
       sebepler: (kunye.issues ?? []).map((s) => s.message).filter(Boolean),
     });
   });
 
   return { duzeltmeler, eksikler, eslesmeyen };
+}
+
+/*
+  KAYNAKÇADA OLMAYAN AMA METİNDE ANILAN KAYNAKLAR.
+
+  Denetimin "kaynakçada karşılığı olmayan atıf" bulgusunun öteki yüzü:
+  atıf metinde var, künye kaynakçada yok. Künyeyi öğrenciye elle
+  yazdırmanın anlamı yok — kaynak zaten kütüphanesinde ve editör onu
+  çalışmanın stilinde yazabiliyor (kaynakcaGirdisiIslemi, atıf eklerken
+  kullanılan AYNI yol).
+
+  Eşleşme ölçütü dar: atfın yazar anahtarı kaydın ilk yazarının
+  soyadıyla, yılı da kaydın yılıyla tutmalı. Gevşetmek, metindeki bir
+  adı yanlış kaynağa bağlayıp kaynakçaya hiç anılmamış bir eser yazmak
+  olurdu.
+*/
+export type MetindekiAtif = { raw: string; authorKey?: string | null; year?: string | null };
+
+const soyad = (yazar: string) => {
+  const temiz = yazar.trim();
+  const parca = temiz.includes(",") ? temiz.split(",")[0] : temiz.split(/\s+/).at(-1) ?? temiz;
+  return sade(parca);
+};
+
+export function eksikKaynakcaGirdileri({
+  atiflar,
+  kunyeler,
+  kaynaklar,
+}: {
+  atiflar: MetindekiAtif[];
+  kunyeler: DenetlenenKunye[];
+  kaynaklar: KutuphaneKaynagi[];
+}): KutuphaneKaynagi[] {
+  if (!atiflar.length) return [];
+  const kunyeSadeleri = kunyeler.map((k) => sade(k.raw));
+  return kaynaklar.filter((kaynak) => {
+    /* Kaynakçada zaten varsa eklenecek bir şey yok. */
+    if (kunyeSadeleri.some((ham) => eslesirMi(ham, kaynak))) return false;
+    const ilkYazar = (kaynak.authors ?? "").split(/\s*(?:;|,\s*&|&| ve )\s*/)[0] ?? "";
+    const anahtar = soyad(ilkYazar);
+    if (anahtar.length < 2) return false;
+    const yil = String(kaynak.year ?? "").trim();
+    return atiflar.some((atif) => {
+      const atifAnahtari = sade(String(atif.authorKey ?? "")) || sade(atif.raw);
+      if (!atifAnahtari.includes(anahtar)) return false;
+      /* Yıl ikisinde de varsa tutmalı; atıfta yoksa (MLA, numara) yazar yeter. */
+      return !yil || !atif.year ? true : String(atif.year).trim() === yil;
+    });
+  });
 }
 
 /** Öğrenciye gösterilen özet cümlesi; sıfırken çağıran hiç göstermez. */

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test, describe } from "node:test";
-import { duzeltmeOzetCumlesi, hazirDuzeltmeler, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
+import { duzeltmeOzetCumlesi, eksikKaynakcaGirdileri, hazirDuzeltmeler, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
 
 /*
   Hazır düzeltmenin tek kuralı: KÜNYE UYDURULMAZ. Bu dosya üç şeyi
@@ -147,12 +147,77 @@ describe("eksik bilgi tamamlanmıyor, söyleniyor", () => {
 describe("özet cümlesi", () => {
   test("sayıyı ve eksikleri iki dilde yazıyor", () => {
     const cumle = duzeltmeOzetCumlesi({
-      duzeltmeler: [{ anahtar: "a", ham: "x", yeni: "y", parcalar: [{ text: "y" }], kaynakId: "k", sebepler: [] }],
+      duzeltmeler: [{ anahtar: "a", ham: "x", yeni: "y", parcalar: [{ text: "y" }], kaynakId: "k", sebepler: [], ozelKural: false }],
       eksikler: [{ anahtar: "b", ham: "z", kaynakId: "k2", alanlar: ["cilt"] }],
       eslesmeyen: [],
     });
     assert.match(cumle.tr, /1 kaynakça düzeltmesi hazır\./);
     assert.match(cumle.tr, /1 kaynakta künye bilgisi eksik/);
     assert.match(cumle.en, /1 reference fix ready\./);
+  });
+});
+
+describe("kaynakçada olmayan ama metinde anılan kaynaklar", () => {
+  const atif = (raw: string, authorKey: string, year: string | null) => ({ raw, authorKey, year });
+
+  test("metinde anılan, kaynakçada olmayan kaynak listeleniyor", () => {
+    const eksik = eksikKaynakcaGirdileri({
+      atiflar: [atif("(Demir, 2019)", "demir", "2019")],
+      kunyeler: [{ raw: "Yilmaz, A. (2020). Öğrenme stilleri ve akademik başarı. Eğitim Dergisi." }],
+      kaynaklar: [OGRENME, MOTIVASYON],
+    });
+    assert.deepEqual(eksik.map((k) => k.id), ["k2"]);
+  });
+
+  test("kaynakçada zaten duran kaynak listelenmiyor", () => {
+    const eksik = eksikKaynakcaGirdileri({
+      atiflar: [atif("(Yılmaz, 2020)", "yılmaz", "2020")],
+      kunyeler: [{ raw: "Yilmaz, A. (2020). Öğrenme stilleri ve akademik başarı. Eğitim Dergisi, 12(3), 45-60." }],
+      kaynaklar: [OGRENME],
+    });
+    assert.deepEqual(eksik, []);
+  });
+
+  test("yılı tutmayan atıf kaynağı getirmiyor", () => {
+    const eksik = eksikKaynakcaGirdileri({
+      atiflar: [atif("(Demir, 2001)", "demir", "2001")],
+      kunyeler: [],
+      kaynaklar: [MOTIVASYON],
+    });
+    assert.deepEqual(eksik, []);
+  });
+
+  test("metinde hiç atıf yoksa liste boş", () => {
+    assert.deepEqual(eksikKaynakcaGirdileri({ atiflar: [], kunyeler: [], kaynaklar: [OGRENME] }), []);
+  });
+
+  /* Numara ve MLA stillerinde atıfta yıl yok; yazar eşleşmesi yeterli. */
+  test("atıfta yıl yoksa yazar eşleşmesi yetiyor", () => {
+    const eksik = eksikKaynakcaGirdileri({
+      atiflar: [atif("(Demir 45)", "demir", null)],
+      kunyeler: [],
+      kaynaklar: [MOTIVASYON],
+    });
+    assert.deepEqual(eksik.map((k) => k.id), ["k2"]);
+  });
+});
+
+describe("kılavuzun özel kuralı doğrulanamayan künye işaretleniyor", () => {
+  test("internet kaynağı ozelKural taşıyor, makale taşımıyor", () => {
+    const site = kaynak({ id: "k9", title: "Istatistik yillik verileri sayfasi", source_type: "website", container_title: null, volume: null, issue: null, pages: null });
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [
+        { raw: "TUIK 2020 Istatistik yillik verileri sayfasi" },
+        { raw: "Yilmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" },
+      ],
+      kaynaklar: [site, OGRENME],
+      stil: "apa7",
+    });
+    const site_ = ozet.duzeltmeler.find((d) => d.kaynakId === "k9");
+    const makale = ozet.duzeltmeler.find((d) => d.kaynakId === "k1");
+    assert.equal(site_?.ozelKural, true, "internet kaynağı işaretlenmeli");
+    assert.equal(makale?.ozelKural, false, "makale işaretlenmemeli");
+    /* İşaret düzeltmeyi ENGELLEMİYOR: öğrenci yine uygulayabilmeli. */
+    assert.ok(site_?.yeni && site_.yeni.length > 10);
   });
 });
