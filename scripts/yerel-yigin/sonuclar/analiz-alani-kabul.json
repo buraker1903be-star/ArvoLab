@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-23T07:56:57.145Z",
-  "head": "8e057377154de9cebcaa5d1ec7512dee27885dce",
-  "buildId": "slMlCK434fhBm5CR23x-f",
-  "uygulama": "http://localhost:3136",
-  "gecen": 136,
+  "tarih": "2026-11-23T09:35:15.527Z",
+  "head": "36faf85efee5e0fcfe28d7023e7f9484124b11bf",
+  "buildId": "C1QO4VMd7C9IQfybS1jkE",
+  "uygulama": "http://localhost:3137",
+  "gecen": 178,
   "dusen": 0,
   "sonuclar": [
     {
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-d9073b.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-5da435.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d9073b.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-5da435.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d9073b.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-5da435.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "d0e7e3cd-2bde-49bb-94ad-1d1577f89492"
+      "not": "eb767011-e263-4d56-b497-3d0e83bfd1fa"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-d9073b.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-5da435.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-d9073b.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-5da435.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-d9073b.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-5da435.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -590,6 +590,216 @@
       "ad": "S17f-en şablondan gelen veride α ve ω referansla aynı",
       "durum": "PASS",
       "not": "alfa:true omega:true N:true"
+    },
+    {
+      "ad": "S18a-tr-masaüstü bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla",
+      "durum": "PASS",
+      "not": "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true"
+    },
+    {
+      "ad": "S18b-tr-masaüstü \"Hangi bilgiler gerekli?\" kartı üç kavramı ve gerekçelendirmeyi anlatıyor",
+      "durum": "PASS",
+      "not": "kavramlar:true"
+    },
+    {
+      "ad": "S18c-tr-masaüstü \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
+      "durum": "PASS",
+      "not": "etki:0.5 uyari:true gerekce:true"
+    },
+    {
+      "ad": "S18d-tr-masaüstü bağımsız t: N, grup başına ve ulaşılan güç referansla aynı",
+      "durum": "PASS",
+      "not": "n:128 grup:64 + 64 guc:0,801 refN:128"
+    },
+    {
+      "ad": "S18e-tr-masaüstü bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
+      "durum": "PASS",
+      "not": "baslik:true deger:true altinda:true"
+    },
+    {
+      "ad": "S18f-tr-masaüstü kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
+      "durum": "PASS",
+      "not": "analiz:128 baslangic:160"
+    },
+    {
+      "ad": "S18g-tr-masaüstü eşleştirilmiş testte birim KATILIMCI",
+      "durum": "PASS",
+      "not": "katilimci:true n:52 refN:52"
+    },
+    {
+      "ad": "S18h-tr-masaüstü ANOVA: N grup sayısına bölünüyor, yön seçeneği YOK",
+      "durum": "PASS",
+      "not": "n:true bolunuyor:true grup:53 + 53 + 53 yonYok:true"
+    },
+    {
+      "ad": "S18i-tr-masaüstü geçersiz giriş sebebiyle bildiriliyor",
+      "durum": "PASS",
+      "not": "sifir:true negatif:true alfa:true"
+    },
+    {
+      "ad": "S18j-tr-masaüstü yöntem metni varsayımlarla birlikte üretiliyor",
+      "durum": "PASS",
+      "not": "metin:true kopyala:1"
+    },
+    {
+      "ad": "S18a-tr-telefon bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla",
+      "durum": "PASS",
+      "not": "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true"
+    },
+    {
+      "ad": "S18b-tr-telefon \"Hangi bilgiler gerekli?\" kartı üç kavramı ve gerekçelendirmeyi anlatıyor",
+      "durum": "PASS",
+      "not": "kavramlar:true"
+    },
+    {
+      "ad": "S18c-tr-telefon \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
+      "durum": "PASS",
+      "not": "etki:0.5 uyari:true gerekce:true"
+    },
+    {
+      "ad": "S18d-tr-telefon bağımsız t: N, grup başına ve ulaşılan güç referansla aynı",
+      "durum": "PASS",
+      "not": "n:128 grup:64 + 64 guc:0,801 refN:128"
+    },
+    {
+      "ad": "S18e-tr-telefon bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
+      "durum": "PASS",
+      "not": "baslik:true deger:true altinda:true"
+    },
+    {
+      "ad": "S18f-tr-telefon kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
+      "durum": "PASS",
+      "not": "analiz:128 baslangic:160"
+    },
+    {
+      "ad": "S18g-tr-telefon eşleştirilmiş testte birim KATILIMCI",
+      "durum": "PASS",
+      "not": "katilimci:true n:52 refN:52"
+    },
+    {
+      "ad": "S18h-tr-telefon ANOVA: N grup sayısına bölünüyor, yön seçeneği YOK",
+      "durum": "PASS",
+      "not": "n:true bolunuyor:true grup:53 + 53 + 53 yonYok:true"
+    },
+    {
+      "ad": "S18i-tr-telefon geçersiz giriş sebebiyle bildiriliyor",
+      "durum": "PASS",
+      "not": "sifir:true negatif:true alfa:true"
+    },
+    {
+      "ad": "S18j-tr-telefon yöntem metni varsayımlarla birlikte üretiliyor",
+      "durum": "PASS",
+      "not": "metin:true kopyala:1"
+    },
+    {
+      "ad": "S18k-tr telefonda dokunma hedefleri 44 px ve yatay taşma yok",
+      "durum": "PASS",
+      "not": "kucuk:0 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S18a-en-masaüstü bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla",
+      "durum": "PASS",
+      "not": "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true"
+    },
+    {
+      "ad": "S18b-en-masaüstü \"Hangi bilgiler gerekli?\" kartı üç kavramı ve gerekçelendirmeyi anlatıyor",
+      "durum": "PASS",
+      "not": "kavramlar:true"
+    },
+    {
+      "ad": "S18c-en-masaüstü \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
+      "durum": "PASS",
+      "not": "etki:0.5 uyari:true gerekce:true"
+    },
+    {
+      "ad": "S18d-en-masaüstü bağımsız t: N, grup başına ve ulaşılan güç referansla aynı",
+      "durum": "PASS",
+      "not": "n:128 grup:64 + 64 guc:0.801 refN:128"
+    },
+    {
+      "ad": "S18e-en-masaüstü bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
+      "durum": "PASS",
+      "not": "baslik:true deger:true altinda:true"
+    },
+    {
+      "ad": "S18f-en-masaüstü kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
+      "durum": "PASS",
+      "not": "analiz:128 baslangic:160"
+    },
+    {
+      "ad": "S18g-en-masaüstü eşleştirilmiş testte birim KATILIMCI",
+      "durum": "PASS",
+      "not": "katilimci:true n:52 refN:52"
+    },
+    {
+      "ad": "S18h-en-masaüstü ANOVA: N grup sayısına bölünüyor, yön seçeneği YOK",
+      "durum": "PASS",
+      "not": "n:true bolunuyor:true grup:53 + 53 + 53 yonYok:true"
+    },
+    {
+      "ad": "S18i-en-masaüstü geçersiz giriş sebebiyle bildiriliyor",
+      "durum": "PASS",
+      "not": "sifir:true negatif:true alfa:true"
+    },
+    {
+      "ad": "S18j-en-masaüstü yöntem metni varsayımlarla birlikte üretiliyor",
+      "durum": "PASS",
+      "not": "metin:true kopyala:1"
+    },
+    {
+      "ad": "S18a-en-telefon bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla",
+      "durum": "PASS",
+      "not": "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true"
+    },
+    {
+      "ad": "S18b-en-telefon \"Hangi bilgiler gerekli?\" kartı üç kavramı ve gerekçelendirmeyi anlatıyor",
+      "durum": "PASS",
+      "not": "kavramlar:true"
+    },
+    {
+      "ad": "S18c-en-telefon \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
+      "durum": "PASS",
+      "not": "etki:0.5 uyari:true gerekce:true"
+    },
+    {
+      "ad": "S18d-en-telefon bağımsız t: N, grup başına ve ulaşılan güç referansla aynı",
+      "durum": "PASS",
+      "not": "n:128 grup:64 + 64 guc:0.801 refN:128"
+    },
+    {
+      "ad": "S18e-en-telefon bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
+      "durum": "PASS",
+      "not": "baslik:true deger:true altinda:true"
+    },
+    {
+      "ad": "S18f-en-telefon kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
+      "durum": "PASS",
+      "not": "analiz:128 baslangic:160"
+    },
+    {
+      "ad": "S18g-en-telefon eşleştirilmiş testte birim KATILIMCI",
+      "durum": "PASS",
+      "not": "katilimci:true n:52 refN:52"
+    },
+    {
+      "ad": "S18h-en-telefon ANOVA: N grup sayısına bölünüyor, yön seçeneği YOK",
+      "durum": "PASS",
+      "not": "n:true bolunuyor:true grup:53 + 53 + 53 yonYok:true"
+    },
+    {
+      "ad": "S18i-en-telefon geçersiz giriş sebebiyle bildiriliyor",
+      "durum": "PASS",
+      "not": "sifir:true negatif:true alfa:true"
+    },
+    {
+      "ad": "S18j-en-telefon yöntem metni varsayımlarla birlikte üretiliyor",
+      "durum": "PASS",
+      "not": "metin:true kopyala:1"
+    },
+    {
+      "ad": "S18k-en telefonda dokunma hedefleri 44 px ve yatay taşma yok",
+      "durum": "PASS",
+      "not": "kucuk:0 yatayTasmaYok:true"
     },
     {
       "ad": "S10a-1440 yatay kaydırma yok",

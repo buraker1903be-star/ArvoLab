@@ -457,9 +457,23 @@ describe("gezgin ve yardım", () => {
 
 describe("sekmeler ve kayıt", () => {
   test("sekme açmak hiçbir şey kaydetmiyor", () => {
-    assert.match(secici, /const \[sekme, setSekme\] = useState<"alan" \| "kayitli">\("alan"\);/);
+    /* Üçüncü sekme "guc" 23.11.2026'da eklendi: veri dosyası istemeyen güç çözümlemesi. */
+    assert.match(secici, /const \[sekme, setSekme\] = useState<"alan" \| "guc" \| "kayitli">\("alan"\);/);
     /* Sekme düğmesi yalnızca görünümü değiştiriyor. */
     assert.match(secici, /onClick=\{\(\) => setSekme\(s\.anahtar\)\}/);
+  });
+
+  /*
+    GÜÇ BÖLÜMÜ AYRI AKIŞ. Örneklem kararı veri TOPLANMADAN önce
+    verilir; dosya yükleme akışının içine konsaydı kullanıcıdan
+    olmayan bir dosya istenmiş olurdu.
+  */
+  test("güç ve örneklem ayrı sekmede, veri dosyası istemiyor", () => {
+    assert.match(secici, /tr: "Güç ve örneklem", en: "Power and sample size"/);
+    assert.match(secici, /hidden=\{sekme !== "guc"\}/);
+    assert.match(secici, /<GucPaneli \/>/);
+    const panel = oku("app/dashboard/analysis/guc-paneli.tsx");
+    assert.doesNotMatch(panel, /dropzone|handleFile|dataset/);
   });
 
   test("kayıtlı analizler doğru çalışmanın analizleri", () => {
