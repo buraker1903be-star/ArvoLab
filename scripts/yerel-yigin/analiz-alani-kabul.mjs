@@ -148,7 +148,7 @@ const BUYUK_YOLU = path.join(KOK, `.tmp-analiz-buyuk-${ek}.csv`);
 */
 const S11 = {};
 /* Omega'nın bağımsız referansı (lavaan + semTools); S16 bunu kullanıyor. */
-const OMEGA_REF = { setler: [] };
+const OMEGA_REF = { setler: [], veri: {} };
 {
   const yaz = (ad, basliklar, satirUret) => {
     const satirlar = [basliklar.join(",")];
@@ -298,6 +298,7 @@ const OMEGA_REF = { setler: [] };
   {
     const ref = JSON.parse(fs.readFileSync(path.join(KOK, "tests/fixtures/omega-referans.json"), "utf8"));
     OMEGA_REF.setler = ref.setler;
+    OMEGA_REF.veri = ref.veri;
     for (const set of ref.setler) {
       const sutunlar = ref.veri[set.ad];
       const n = sutunlar[0].length;
@@ -1257,13 +1258,10 @@ try {
         govde: document.querySelector(".analiz-sonuc").innerText,
       };
     });
-  const guvenilirlikCalistir = async (setAdi, maddeler) => {
-    /* İlk çağrıda henüz veri yok: "Veriyi değiştir" düğmesi de yok. */
-    if (await sayfa.getByRole("button", { name: /^(Veriyi değiştir|Change data)$/ }).count()) await veriyiDegistir();
-    await yukle(S11[`omega_${setAdi}`]);
+  const maddeSecVeCalistir = async (maddeler) => {
     const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
     const kutular = alan.locator('.sutun-secimi-liste input[type="checkbox"]');
-    const etiketler = await alan.locator(".sutun-secimi-liste label span").allInnerTexts();
+    const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
     for (const kutu of await kutular.all()) if (await kutu.isChecked()) await kutu.uncheck();
     for (const ad of maddeler) {
       const i = etiketler.indexOf(ad);
@@ -1275,6 +1273,12 @@ try {
     await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
     await sayfa.waitForTimeout(250);
     return await katsayiTablosu();
+  };
+  const guvenilirlikCalistir = async (setAdi, maddeler) => {
+    /* İlk çağrıda henüz veri yok: "Veriyi değiştir" düğmesi de yok. */
+    if (await sayfa.getByRole("button", { name: /^(Veriyi değiştir|Change data)$/ }).count()) await veriyiDegistir();
+    await yukle(S11[`omega_${setAdi}`]);
+    return await maddeSecVeCalistir(maddeler);
   };
   const dilSec = async (ad) => {
     await sayfa.locator("details.ust-dil > summary").click();
@@ -1380,6 +1384,111 @@ try {
   }, "sayiYok:true sebep:true");
   await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
   await cek(sayfa, "28-guvenilirlik-en");
+  await dilSec("Türkçe");
+
+  /* ================= S17: "Bu analiz için hangi veriler gerekli?" kartı =================
+     Öğrenciler ölçek güvenilirliği için sık sık TEK bir toplam puan
+     sütunu yüklüyor; α ve ω madde düzeyinde yanıt ister. Kart dosya
+     SEÇİLMEDEN önce görünmeli. Burada indirilen şablon gerçekten
+     doldurulup GERÇEK yükleme akışından geçiriliyor ve çıkan α/ω
+     lavaan referansıyla karşılaştırılıyor. */
+  const SABLON = {
+    tr: { ad: "Güvenilirlik", basliklar: ["Katılımcı", "Madde 1", "Madde 2", "Madde 3"], ornek: "Örnek tabloyu gör", indir: "Boş şablonu indir" },
+    en: { ad: "Reliability", basliklar: ["Participant", "Item 1", "Item 2", "Item 3"], ornek: "See an example table", indir: "Download the blank template" },
+  };
+  const kartMetni = async () => {
+    const k = sayfa.locator(".analiz-veri-karti");
+    return (await k.count()) ? await k.innerText() : null;
+  };
+
+  for (const dil of ["tr", "en"]) {
+    const S = SABLON[dil];
+    if (dil === "en") await dilSec("English");
+    await git(sayfa, ANALIZ_YOLU);
+    await analizSec("betimsel", S.ad);
+
+    await esit(`S17a-${dil} kart dosya YÜKLENMEDEN görünüyor ve dört cümleyi yazıyor`, async () => {
+      const m = await kartMetni();
+      if (m === null) return "kart yok";
+      const cumleler = dil === "tr"
+        ? ["Her satır bir katılımcı, her sütun bir anket maddesi.", "Hücrelere verilen yanıtları yazın.", "Yalnızca toplam puan yeterli değildir.", "Katılımcı sütunu isteğe bağlıdır ve analize seçilmez."]
+        : ["Each row is one participant, each column is one questionnaire item.", "Write the given answers in the cells.", "A total score on its own is not enough.", "A participant column is optional and is not selected for the analysis."];
+      /* Dosya seçme alanı hâlâ ekranda: kart onun yerine geçmiyor, onu açıklıyor. */
+      const dropzone = await sayfa.locator(".dropzone").count();
+      return `cumleler:${cumleler.every((c) => m.includes(c))} dropzone:${dropzone}`;
+    }, "cumleler:true dropzone:1");
+
+    await esit(`S17b-${dil} en az madde sayıları yazılı, ω garanti edilmiyor`, async () => {
+      const m = (await kartMetni()) ?? "";
+      return dil === "tr"
+        ? `enAz:${/en az 2 madde, McDonald ω için en az 3 madde/.test(m)} garantiDegil:${/GARANTİ ETMEZ/.test(m)}`
+        : `enAz:${/at least 2 items and McDonald's ω at least 3/.test(m)} garantiDegil:${/does NOT guarantee/.test(m)}`;
+    }, "enAz:true garantiDegil:true");
+
+    await esit(`S17c-${dil} örnek tablo başlıkları ve kurgusal satırlar`, async () => {
+      await sayfa.getByRole("button", { name: S.ornek }).click();
+      await sayfa.waitForTimeout(250);
+      const tablo = sayfa.locator('.analiz-veri-karti [role="region"] table');
+      const basliklar = await tablo.locator("thead th").allInnerTexts();
+      const satir = await tablo.locator("tbody tr").count();
+      return `basliklar:${basliklar.map((x) => x.trim()).join("|")} satir:${satir >= 3}`;
+    }, `basliklar:${SABLON[dil].basliklar.join("|")} satir:true`);
+    /* Kartın kendisi: örnek tablo açıkken, dosya henüz seçilmeden. */
+    await sayfa.locator(".analiz-veri-karti").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `29-veri-karti-${dil}`);
+
+    await esit(`S17d-${dil} boş şablonda YALNIZCA sütun başlıkları var`, async () => {
+      const [indirme] = await Promise.all([
+        sayfa.waitForEvent("download", { timeout: 20000 }),
+        sayfa.getByRole("button", { name: S.indir }).click(),
+      ]);
+      const yol = path.join(KOK, `.tmp-s17-${dil}-${ek}.csv`);
+      await indirme.saveAs(yol);
+      S11[`sablon_${dil}`] = yol;
+      const icerik = fs.readFileSync(yol, "utf8");
+      const satirlar = icerik.split("\n").filter((x) => x.trim() !== "");
+      return `ad:${/\.csv$/.test(indirme.suggestedFilename())} satir:${satirlar.length} baslik:${satirlar[0]}`;
+    }, `ad:true satir:1 baslik:${SABLON[dil].basliklar.join(",")}`);
+
+    /* İndirilen şablon DOLDURULUP gerçek yükleme akışından geçiyor. */
+    await esit(`S17e-${dil} doldurulan şablon yükleniyor, madde sütunları seçilebiliyor`, async () => {
+      const r = omegaSeti("sablon");
+      const sutunlar = OMEGA_REF.veri.sablon;
+      const sablon = fs.readFileSync(S11[`sablon_${dil}`], "utf8").trim();
+      const satirlar = [sablon];
+      for (let i = 0; i < sutunlar[0].length; i += 1) {
+        satirlar.push([`${dil === "en" ? "P" : "K"}${i + 1}`, ...sutunlar.map((c) => c[i])].join(","));
+      }
+      const dolu = path.join(KOK, `.tmp-s17-dolu-${dil}-${ek}.csv`);
+      fs.writeFileSync(dolu, `${satirlar.join("\n")}\n`, "utf8");
+      S11[`sablonDolu_${dil}`] = dolu;
+      await yukle(dolu);
+      /* Veri gelince kart kayboluyor: sorusu yanıtlanmış oluyor. */
+      const kartKalkti = (await sayfa.locator(".analiz-veri-karti").count()) === 0;
+      const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
+      const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
+      /* Katılımcı sütunu metin: madde listesine düşmüyor. */
+      return [
+        `kartKalkti:${kartKalkti}`,
+        `maddeler:${S.basliklar.slice(1).every((b) => etiketler.includes(b))}`,
+        `katilimciYok:${!etiketler.includes(S.basliklar[0])}`,
+        `satir:${r.n}`,
+      ].join(" ");
+    }, (v) => v === `kartKalkti:true maddeler:true katilimciYok:true satir:60`);
+
+    await esit(`S17f-${dil} şablondan gelen veride α ve ω referansla aynı`, async () => {
+      const r = omegaSeti("sablon");
+      const k = await maddeSecVeCalistir(S.basliklar.slice(1));
+      if (!k) return "katsayı tablosu yok";
+      return [
+        `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+        `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+        `N:${new RegExp(`N = ${r.n}`).test(k.govde)}`,
+      ].join(" ");
+    }, "alfa:true omega:true N:true");
+    await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `30-sablondan-sonuc-${dil}`);
+  }
   await dilSec("Türkçe");
 
   /* ================= S10: ölçüler, tema, klavye ================= */

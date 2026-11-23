@@ -30,6 +30,7 @@ import {
 } from "@/lib/stats-tests-core";
 import { formatP, HESAPLANAMADI, hesaplanabilir, isSignificant, formatNumber, pHukmu } from "@/lib/apa-format";
 import { mcdonaldOmega, OMEGA_ENGEL_METNI } from "@/lib/stats-omega";
+import { bosSablonCsv, ornekSatirlar, sablonBasliklari, sablonDosyaAdi } from "@/lib/analiz-veri-sablonu";
 import { ANALIZ_ETIKETLERI_METIN, ANALIZ_GRUPLARI, ANALIZ_TURLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
@@ -208,6 +209,16 @@ export default function DataAnalyzer({
   /* İki yönlü ANOVAnun ikinci faktörü. */
   const [groupVar2, setGroupVar2] = useState("");
   const [reliabilityItems, setReliabilityItems] = useState<string[]>([]);
+  /* "Bu analiz için hangi veriler gerekli?" kartındaki örnek tablo. */
+  const [ornekTabloAcik, setOrnekTabloAcik] = useState(false);
+  const sablonuIndir = useCallback(() => {
+    const url = URL.createObjectURL(new Blob([bosSablonCsv(dil)], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = sablonDosyaAdi(dil);
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [dil]);
   /* Regresyonun yordayıcıları; bağımlı değişken varA. */
   const [yordayicilar, setYordayicilar] = useState<string[]>([]);
   /* Friedman'ın tekrarlı ölçümleri (sütunlar, seçim sırasıyla). */
@@ -3401,6 +3412,71 @@ export default function DataAnalyzer({
           />
         </label>
       )}
+
+      {/*
+        "BU ANALİZ İÇİN HANGİ VERİLER GEREKLİ?" (23.11.2026, güvenilirlik).
+        Öğrenciler ölçek güvenilirliği için sık sık TEK bir toplam puan
+        sütunu yüklüyor; α ve ω madde düzeyinde yanıt ister ve o dosyayla
+        hiçbir şey hesaplanamıyor. Kart dosya SEÇİLMEDEN önce görünüyor:
+        yanlış dosya yüklenip hata alınmadan, doğru biçim anlatılıyor.
+        Örnek tablo ve boş şablon aynı yerde; şablon indirilip
+        doldurulduğunda doğrudan bu akışa yükleniyor.
+      */}
+      {!dataset && !loading && analysisType === "reliability" ? (
+        <section className="analiz-veri-karti" aria-label={t({ tr: "Bu analiz için hangi veriler gerekli?", en: "What data does this analysis need?" })}>
+          <h4>{t({ tr: "Bu analiz için hangi veriler gerekli?", en: "What data does this analysis need?" })}</h4>
+          <ul>
+            <li>{t({ tr: "Her satır bir katılımcı, her sütun bir anket maddesi.", en: "Each row is one participant, each column is one questionnaire item." })}</li>
+            <li>{t({ tr: "Hücrelere verilen yanıtları yazın.", en: "Write the given answers in the cells." })}</li>
+            <li>{t({ tr: "Yalnızca toplam puan yeterli değildir.", en: "A total score on its own is not enough." })}</li>
+            <li>{t({ tr: "Katılımcı sütunu isteğe bağlıdır ve analize seçilmez.", en: "A participant column is optional and is not selected for the analysis." })}</li>
+          </ul>
+          <p className="muted text-sm">
+            {t({
+              tr: "Cronbach α için en az 2 madde, McDonald ω için en az 3 madde gerekir. Üç madde seçmek ω'nın hesaplanacağını GARANTİ ETMEZ: model kestirilemezse ya da geçersiz hata varyansı çıkarsa ω yerine sebebi yazılır.",
+              en: "Cronbach's α needs at least 2 items and McDonald's ω at least 3. Selecting three items does NOT guarantee that ω can be computed: if the model cannot be estimated or an invalid error variance appears, the reason is shown instead of ω.",
+            })}
+          </p>
+          <div className="cluster">
+            <button type="button" className="projects-filter-button button-compact" aria-expanded={ornekTabloAcik} onClick={() => setOrnekTabloAcik((a) => !a)}>
+              {t({ tr: "Örnek tabloyu gör", en: "See an example table" })}
+            </button>
+            <button type="button" className="projects-filter-button button-compact" onClick={sablonuIndir}>
+              {t({ tr: "Boş şablonu indir", en: "Download the blank template" })}
+            </button>
+          </div>
+          {ornekTabloAcik ? (
+            <div className="table-scroll mt-sm" role="region" aria-label={t({ tr: "Örnek tablo", en: "Example table" })} tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    {sablonBasliklari(dil).map((b) => (
+                      <th key={b}>{b}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ornekSatirlar(dil).map((satir) => (
+                    <tr key={satir[0]}>
+                      {satir.map((h, i) => (
+                        <td key={i}>{h}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {ornekTabloAcik ? (
+            <p className="muted text-sm">
+              {t({
+                tr: "Sayılar kurgusaldır; örnek yalnızca biçimi gösterir. Boş şablonda yalnızca sütun başlıkları bulunur.",
+                en: "The numbers are fictional; the example only shows the layout. The blank template contains the column headers only.",
+              })}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Dosya yüklenmeden önce neler yapılabildiği (04.11.2026; lib/analiz-turleri.ts ANALIZ_GRUPLARI).
           Çalışma alanı kipinde çizilmiyor: aynı 25 analiz solda gezginde zaten duruyor ve

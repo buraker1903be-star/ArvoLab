@@ -299,6 +299,49 @@ describe("güvenilirlik: α ve ω", () => {
   });
 });
 
+describe("güvenilirlik: gerekli veri kartı", () => {
+  /*
+    Kart dosya SEÇİLMEDEN önce görünür. Öğrenciler ölçek güvenilirliği
+    için sık sık tek bir toplam puan sütunu yüklüyor; o dosyayla hiçbir
+    şey hesaplanamıyor ve hata ancak yüklemeden sonra görülüyordu.
+  */
+  test("kart yalnızca güvenilirlikte ve veri yüklenmeden görünüyor", () => {
+    assert.match(analizci, /\{!dataset && !loading && analysisType === "reliability" \? \(/);
+    assert.match(analizci, /className="analiz-veri-karti"/);
+    assert.match(stil, /\.analiz-veri-karti \{/);
+  });
+
+  test("dört cümle iki dilde ve sade", () => {
+    for (const [tr, en] of [
+      ["Her satır bir katılımcı, her sütun bir anket maddesi.", "Each row is one participant, each column is one questionnaire item."],
+      ["Hücrelere verilen yanıtları yazın.", "Write the given answers in the cells."],
+      ["Yalnızca toplam puan yeterli değildir.", "A total score on its own is not enough."],
+      ["Katılımcı sütunu isteğe bağlıdır ve analize seçilmez.", "A participant column is optional and is not selected for the analysis."],
+    ]) {
+      assert.ok(analizci.includes(tr), tr);
+      assert.ok(analizci.includes(en), en);
+    }
+  });
+
+  /* Üç madde ω'yı GARANTİ ETMEZ: model kestirilemeyebilir. */
+  test("en az madde sayıları yazılı, ω garanti edilmiyor", () => {
+    assert.match(analizci, /Cronbach α için en az 2 madde, McDonald ω için en az 3 madde gerekir/);
+    assert.match(analizci, /GARANTİ ETMEZ/);
+    assert.match(analizci, /at least 2 items and McDonald's ω at least 3/);
+    assert.match(analizci, /does NOT guarantee that ω can be computed/);
+  });
+
+  test("örnek tablo ve boş şablon aynı kartta", () => {
+    assert.match(analizci, /tr: "Örnek tabloyu gör", en: "See an example table"/);
+    assert.match(analizci, /tr: "Boş şablonu indir", en: "Download the blank template"/);
+    assert.match(analizci, /onClick=\{sablonuIndir\}/);
+    assert.match(analizci, /bosSablonCsv\(dil\)/);
+    /* Örnek tablo başlıkları şablonla AYNI kaynaktan. */
+    assert.match(analizci, /sablonBasliklari\(dil\)\.map/);
+    assert.match(analizci, /ornekSatirlar\(dil\)\.map/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);

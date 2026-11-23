@@ -66,6 +66,14 @@ veri$ikiMadde <- tek_faktor(150, lambda = c(.8, .75), theta_sd = c(.6, .6))
   veri$eksikVeri <- d
 }
 
+# 7) ŞABLON: karttan indirilen boş şablonun doldurulmuş hâli — üç madde,
+#    5'li Likert benzeri tam sayılar. Tarayıcı kabulü bu satırları şablona
+#    yazıp yüklüyor; ekrandaki α ve ω burada hesaplananla karşılaştırılıyor.
+{
+  d <- tek_faktor(60, lambda = c(.9, .8, .85), theta_sd = c(.5, .6, .55), taban = 3)
+  veri$sablon <- round(pmin(pmax(d, 1), 5))
+}
+
 alfa_degeri <- function(X) {
   k <- ncol(X)
   S <- cov(X)
