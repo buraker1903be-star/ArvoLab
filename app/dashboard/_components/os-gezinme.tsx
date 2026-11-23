@@ -123,7 +123,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const ana = anaUygulamalar(uygulamalar);
   const araclar = aracUygulamalari(uygulamalar);
   const yardim = yardimUygulamalari(uygulamalar);
-  const ayarlar = uygulamalar.find((u) => u.key === "ayarlar");
   const cubukta = new Set<string>(ALT_CUBUK);
 
   /*
@@ -387,7 +386,12 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
             </div>
 
             <div className="os-gezinme-alt-bolge">
-              {ayarlar ? <ul className="os-gezinme-liste os-gezinme-ayar">{oge(ayarlar)}</ul> : null}
+              {/*
+                AYARLAR SOL GEZİNMEDEN KALKTI (23.11.2026): hesap
+                ayarları, hesap menüsünde (altta, adın yanında) ve
+                başlatıcıda. Gezinme çalışma akışının sayfalarına
+                ayrıldı; erişim kuralı değişmedi.
+              */}
               {grup("yardim", t({ tr: "Yardım", en: "Help" }), <LifeBuoy size={20} aria-hidden="true" />, yardim)}
             </div>
           </>

@@ -1,0 +1,90 @@
+{
+  "tarih": "2026-11-23T16:33:49.508Z",
+  "head": "8845355a64a5017ee2f8e4ac9c3eb4fb2472aba8",
+  "buildId": "d_8nOlfgK6WPWXIFzAmW0",
+  "uygulama": "http://localhost:3141",
+  "gecen": 16,
+  "dusen": 0,
+  "sonuclar": [
+    {
+      "ad": "H1a sol gezinmede Ayarlar yok, hesap menüsünde var",
+      "durum": "PASS",
+      "not": "gezinme:0 menu:1"
+    },
+    {
+      "ad": "H1b menüde dil seçici yok; dil sağ üstte ve çalışıyor",
+      "durum": "PASS",
+      "not": "menuDil:0 ustDil:1 degisti:true geri:true"
+    },
+    {
+      "ad": "H1c Kullanım satırı Ayarlar'ın üstünde, aynı menüde açılıp kapanıyor",
+      "durum": "PASS",
+      "not": "ustte:true basta:false acildi:true kapandi:false menuAcik:true"
+    },
+    {
+      "ad": "H1d kalan hak Abonelik ve Kredi ekranıyla tutarlı",
+      "durum": "PASS",
+      "not": "menu:1000 ekran:1000 ayni:true"
+    },
+    {
+      "ad": "H1e menü ekran dışına taşmıyor",
+      "durum": "PASS",
+      "not": "icinde:true kutu:413-832/900"
+    },
+    {
+      "ad": "H1f klavye: menü, Kullanım ve Ayarlar klavyeyle kullanılabiliyor",
+      "durum": "PASS",
+      "not": "menu:true odak:true kullanim:true ayarOdak:true"
+    },
+    {
+      "ad": "H1g 'Abonelik ve Kredi' bağlantısı menüde ve çalışıyor",
+      "durum": "PASS",
+      "not": "baglanti:1 adres:true"
+    },
+    {
+      "ad": "H2-tukendi hak durumu ayrı gösteriliyor",
+      "durum": "PASS",
+      "not": "durum:tukendi deger:Tükendi sifirYazmiyor:true"
+    },
+    {
+      "ad": "H2-sinirsiz hak durumu ayrı gösteriliyor",
+      "durum": "PASS",
+      "not": "durum:sinirsiz deger:Sınırsız sifirYazmiyor:true"
+    },
+    {
+      "ad": "H2-sinirsiz menüde 'Asistan Kayıtları' yok",
+      "durum": "PASS",
+      "not": "menude:false"
+    },
+    {
+      "ad": "H2-bilinmiyor hak durumu ayrı gösteriliyor",
+      "durum": "PASS",
+      "not": "durum:bilinmiyor deger:Bilgi alınamadı sifirYazmiyor:true"
+    },
+    {
+      "ad": "H3a-390-light-tr telefonda menü dokunmayla açılıyor, Kullanım ve Ayarlar erişilebilir",
+      "durum": "PASS",
+      "not": "kullanimAcik:true hak:true ayar:true icinde:true"
+    },
+    {
+      "ad": "H3b-390-light-tr telefonda dil seçici üst çubukta ve dokunulabilir",
+      "durum": "PASS",
+      "not": "gorunur:true yukseklik:44 secenek:2"
+    },
+    {
+      "ad": "H3a-390-dark-en telefonda menü dokunmayla açılıyor, Kullanım ve Ayarlar erişilebilir",
+      "durum": "PASS",
+      "not": "kullanimAcik:true hak:true ayar:true icinde:true"
+    },
+    {
+      "ad": "H3b-390-dark-en telefonda dil seçici üst çubukta ve dokunulabilir",
+      "durum": "PASS",
+      "not": "gorunur:true yukseklik:44 secenek:2"
+    },
+    {
+      "ad": "H3c masaüstü koyu temada menü okunur ve taşmıyor",
+      "durum": "PASS",
+      "not": "icinde:true karsitlik:12.3"
+    }
+  ]
+}
