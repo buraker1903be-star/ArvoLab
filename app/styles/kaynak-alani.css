@@ -122,11 +122,45 @@
 .kaynak-satir-uyari::before { content: "⚠ "; }
 .kaynak-satir-uyari .link-button { gap: 2px; color: inherit; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
-.kaynak-satir-menu { position: absolute; top: 6px; right: 8px; margin-left: 0; }
-.kaynak-satir-menu > summary { width: 32px; height: 32px; border-color: transparent; background: transparent; }
-.kaynak-satiri:hover .kaynak-satir-menu > summary,
-.kaynak-satir-menu[open] > summary,
-.kaynak-satir-menu > summary:focus-visible { border-color: var(--line); background: var(--surface); }
+/* ---------- Satırın "⋯" menüsü ----------
+   Menü 23.11.2026'ya kadar <details> idi ve ortak .kart-menu-liste
+   kuralından YUKARI açılma davranışını (bottom: 100% + 6px) alıyordu.
+   Liste kabı kaydırılabilir (.kaynak-liste-kap, overflow-y: auto) ve
+   mutlak konumlu pencereyi kırpıyordu: ilk satırda menünün tamamı,
+   uzun listenin son satırında alt kenarı — yani "Kaynağı sil" —
+   görünmüyordu. Pencere artık tarayıcının ÜST KATMANINDA (popover) ve
+   ekrana göre konumlu; konumu useAcilirKonum veriyor (lib/acilir-konum.ts):
+   yer varsa düğmenin ALTINA, yoksa üstüne. Düğme de <summary> değil,
+   gerçek bir <button>: görünümü ortak .kart-menu > summary ile aynı
+   kalsın diye burada yeniden kuruluyor. Değişiklik yalnızca bu menüde;
+   ortak .kart-menu / .kart-menu-liste kuralına dokunulmadı. */
+.kaynak-satir-menu {
+  position: absolute; top: 6px; right: 8px;
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border: 1px solid transparent; border-radius: 11px; background: transparent;
+  color: var(--ink-soft); cursor: pointer;
+}
+.kaynak-satiri:hover .kaynak-satir-menu,
+.kaynak-satir-menu[data-acik],
+.kaynak-satir-menu:focus-visible { border-color: var(--line); background: var(--surface); }
+.kaynak-satir-menu[data-acik] { border-color: var(--primary-ink); color: var(--primary-ink); }
+.kaynak-satir-menu:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+
+/* Ortak listenin GÖRÜNÜMÜ korunuyor, yalnızca konumu değişiyor. */
+.kart-menu-liste.kaynak-satir-menu-liste {
+  position: fixed;
+  inset: auto;
+  top: var(--acilir-y, 0);
+  left: var(--acilir-x, 0);
+  z-index: var(--z-toast);
+  max-width: min(280px, calc(100vw - 16px));
+  max-height: min(70vh, 420px);
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kart-menu-liste.kaynak-satir-menu-liste[hidden]:not(:popover-open) { display: none; }
+.kart-menu-liste.kaynak-satir-menu-liste:popover-open { display: flex; }
 
 .kaynak-liste-bos { margin: 0; padding: 28px 16px; color: var(--muted); font-size: var(--os5-fs-govde); text-align: center; }
 .kaynak-liste-alt {

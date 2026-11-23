@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpDown, BookOpen, ChevronRight, ExternalLink, FileText, MoreHorizontal, Paperclip, SlidersHorizontal, Trash2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
 import YatayAyirici from "../_components/yatay-ayirici";
+import { useAcilirKonum } from "../_components/acilir-konum";
 import { ayrilmaKorumasiKur } from "@/lib/ayrilma-koruma";
 import KaynakPaneli, { kaynakBaglantisi } from "./kaynak-paneli";
 
@@ -68,6 +69,88 @@ const SIRALAMA_ADI: Record<Sirala, Metin> = {
 export const LISTE_EN_AZ = 360;
 export const PANEL_EN_AZ = 420;
 const PANEL_VARSAYILAN = 560;
+
+/*
+  SATIRIN "⋯" MENÜSÜ (23.11.2026).
+
+  Menü <details> idi ve ortak `.kart-menu-liste` kuralından YUKARI
+  açılma davranışını (bottom: 100% + 6px) alıyordu. Liste kabı
+  kaydırılabilir (`.kaynak-liste-kap`, overflow-y: auto) ve mutlak
+  konumlu pencereyi KIRPIYORDU: ilk satırda menünün tamamı, uzun
+  listenin son satırında alt kenarı — yani "Kaynağı sil" —
+  görünmüyordu. Pencere artık tarayıcının ÜST KATMANINDA (popover) ve
+  konumu `useAcilirKonum` veriyor: yer varsa düğmenin ALTINA, yoksa
+  üstüne, her durumda ekranın içinde.
+
+  Her satırın menüsü AYRI bir bileşen; ortak bir "açık olan satır"
+  state'i tutulmuyor. Sebebi teknik: ref'ler koşullu bağlansaydı menü
+  kapanırken ref düğmeden/pencereden commit sırasında ÇÖZÜLÜR ve
+  `hidePopover()` hiç çağrılamazdı — pencere üst katmanda asılı
+  kalırdı. Aynı anda yalnızca biri açık kalıyor, çünkü başka bir
+  satıra basmak bu menünün "dışarı tıklama" kuralını tetikliyor.
+
+  Rol: açılır panel (disclosure), menü DEĞİL — içindeki öğelerin
+  menuitem rolü ve ok tuşlarıyla gezinme yok (arac-menusu.tsx ile aynı
+  gerekçe).
+*/
+function SatirMenusu({ etiket, kimlik, children }: { etiket: string; kimlik: string; children: ReactNode }) {
+  const [acik, setAcik] = useState(false);
+  const dugme = useRef<HTMLButtonElement>(null);
+  const pencere = useRef<HTMLDivElement>(null);
+  useAcilirKonum(acik, dugme, pencere);
+
+  useEffect(() => {
+    if (!acik) return;
+    const disari = (olay: PointerEvent) => {
+      const hedef = olay.target as Node | null;
+      if (hedef && (pencere.current?.contains(hedef) || dugme.current?.contains(hedef))) return;
+      setAcik(false);
+    };
+    const tus = (olay: KeyboardEvent) => {
+      if (olay.key !== "Escape") return;
+      setAcik(false);
+      dugme.current?.focus();
+    };
+    document.addEventListener("pointerdown", disari);
+    document.addEventListener("keydown", tus);
+    return () => {
+      document.removeEventListener("pointerdown", disari);
+      document.removeEventListener("keydown", tus);
+    };
+  }, [acik]);
+
+  return (
+    <>
+      <button
+        ref={dugme}
+        type="button"
+        className="kaynak-satir-menu"
+        data-acik={acik || undefined}
+        aria-expanded={acik}
+        aria-controls={kimlik}
+        aria-label={etiket}
+        onClick={() => setAcik((a) => !a)}
+      >
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </button>
+      <div
+        ref={pencere}
+        id={kimlik}
+        className="kart-menu-liste kaynak-satir-menu-liste"
+        role="group"
+        aria-label={etiket}
+        popover="manual"
+        hidden={!acik}
+        onClick={(olay) => {
+          /* Bir öğeye basınca menü kapanır; tıklama öğenin kendi işini yaptıktan sonra. */
+          if ((olay.target as Element).closest("a, button")) setAcik(false);
+        }}
+      >
+        {children}
+      </div>
+    </>
+  );
+}
 
 export default function KaynakAlani({
   kaynaklar,
@@ -452,38 +535,40 @@ export default function KaynakAlani({
                       ) : null}
                     </div>
 
-                    {/* Diğer işlemler satırın ⋯ menüsünde (mockup). */}
-                    <details className="kart-menu kaynak-satir-menu">
-                      <summary aria-label={t({ tr: `${baslik}: diğer işlemler`, en: `${baslik}: more actions` })}>
-                        <MoreHorizontal size={16} aria-hidden="true" />
-                      </summary>
-                      <div className="kart-menu-liste">
-                        {ileri ? (
-                          <button type="button" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, ileri.durum)}>
-                            {t(ileri.etiket)}
-                          </button>
-                        ) : null}
-                        {geri ? (
-                          <button type="button" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, geri)}>
-                            {t({ tr: `“${t(ETIKET[geri].ad)}” durumuna geri al`, en: `Move back to “${t(ETIKET[geri].ad)}”` })}
-                          </button>
-                        ) : null}
-                        {pdf && projectId ? (
-                          <Link href={editorPdfAdresi(projectId, pdf.id)}>
-                            <BookOpen size={15} aria-hidden="true" /> {t({ tr: "Editörde aç", en: "Open in the editor" })}
-                          </Link>
-                        ) : null}
-                        {adres ? (
-                          <a href={adres} target="_blank" rel="noreferrer noopener">
-                            <ExternalLink size={15} aria-hidden="true" /> {t({ tr: "Yayını aç", en: "Open publication" })}
-                          </a>
-                        ) : null}
-                        <hr className="kart-menu-ayirici" />
-                        <button type="button" className="button-danger" disabled={bekleyen === k.id} onClick={() => sil(k)}>
-                          <Trash2 size={15} aria-hidden="true" /> {t({ tr: "Kaynağı sil", en: "Delete source" })}
+                    {/*
+                      Diğer işlemler satırın ⋯ menüsünde (mockup). Pencere
+                      tarayıcının üst katmanında (popover): liste kabı
+                      kaydırılabilir ve onu kırpıyordu.
+                    */}
+                    <SatirMenusu
+                      kimlik={`kaynak-menu-${k.id}`}
+                      etiket={t({ tr: `${baslik}: diğer işlemler`, en: `${baslik}: more actions` })}
+                    >
+                      {ileri ? (
+                        <button type="button" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, ileri.durum)}>
+                          {t(ileri.etiket)}
                         </button>
-                      </div>
-                    </details>
+                      ) : null}
+                      {geri ? (
+                        <button type="button" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, geri)}>
+                          {t({ tr: `“${t(ETIKET[geri].ad)}” durumuna geri al`, en: `Move back to “${t(ETIKET[geri].ad)}”` })}
+                        </button>
+                      ) : null}
+                      {pdf && projectId ? (
+                        <Link href={editorPdfAdresi(projectId, pdf.id)}>
+                          <BookOpen size={15} aria-hidden="true" /> {t({ tr: "Editörde aç", en: "Open in the editor" })}
+                        </Link>
+                      ) : null}
+                      {adres ? (
+                        <a href={adres} target="_blank" rel="noreferrer noopener">
+                          <ExternalLink size={15} aria-hidden="true" /> {t({ tr: "Yayını aç", en: "Open publication" })}
+                        </a>
+                      ) : null}
+                      <hr className="kart-menu-ayirici" />
+                      <button type="button" className="button-danger" disabled={bekleyen === k.id} onClick={() => sil(k)}>
+                        <Trash2 size={15} aria-hidden="true" /> {t({ tr: "Kaynağı sil", en: "Delete source" })}
+                      </button>
+                    </SatirMenusu>
                   </li>
                 );
               })}

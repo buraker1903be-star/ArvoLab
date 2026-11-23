@@ -116,10 +116,55 @@ describe("liste", () => {
   });
 
   test("diğer işlemler satırın ⋯ menüsünde; eksik künye uyarısı satır içi", () => {
-    assert.match(alan, /className="kart-menu kaynak-satir-menu"/);
+    assert.match(alan, /className="kaynak-satir-menu"/);
     assert.match(alan, /className="kaynak-satir-uyari"/);
     /* Düzeltme akışı aynı panelde (künye sekmesi), ayrı bir ekran değil. */
     assert.match(alan, /sec\(k,[\s\S]{0,120}?"kunye"\)/);
+  });
+
+  /*
+    SATIR MENÜSÜ KIRPILMIYOR (23.11.2026). Menü <details> idi ve ortak
+    .kart-menu-liste kuralından yukarı açılma davranışını alıyordu;
+    kaydırılabilir liste kabı (.kaynak-liste-kap, overflow-y: auto) onu
+    kırpıyor, "Kaynağı sil" tıklanamıyordu. Pencere artık tarayıcının
+    üst katmanında ve konumu useAcilirKonum'dan geliyor: yer varsa
+    altta, yoksa üstte. Gerçek ölçüm: scripts/yerel-yigin/kaynak-menu-kabul.mjs.
+  */
+  test("satır menüsü üst katmanda açılıyor, ortak yukarı açılma kuralını almıyor", () => {
+    const css = oku("app/styles/kaynak-alani.css");
+    /* Pencere ekrana göre konumlu; konum değişkenleri acilir-konum.ts'ten. */
+    assert.match(css, /\.kart-menu-liste\.kaynak-satir-menu-liste \{[^}]*position: fixed;/);
+    assert.match(css, /\.kart-menu-liste\.kaynak-satir-menu-liste \{[^}]*top: var\(--acilir-y, 0\);/);
+    assert.match(css, /\.kart-menu-liste\.kaynak-satir-menu-liste \{[^}]*inset: auto;/);
+    assert.match(alan, /popover="manual"/);
+    assert.match(alan, /useAcilirKonum\(acik, dugme, pencere\)/);
+    /* Satır menüsü artık <details> değil: açık/kapalı React state'inde.
+       Araç çubuğunun süzgeç/sıralama menüleri (.kaynak-arac-menu)
+       kapsam dışı, onlar <details> kalıyor. */
+    assert.doesNotMatch(alan, /<details[^>]*kaynak-satir-menu/);
+    assert.match(alan, /<button\s[\s\S]{0,240}?className="kaynak-satir-menu"/);
+    assert.match(alan, /aria-expanded=\{acik\}/);
+    /*
+      Her satırın menüsü AYRI bileşen. Ortak bir "açık satır" state'iyle
+      ref'ler koşullu bağlansaydı, menü kapanırken ref commit sırasında
+      çözülür ve hidePopover() hiç çağrılamazdı: pencere üst katmanda
+      asılı kalırdı.
+    */
+    assert.match(alan, /function SatirMenusu\(\{ etiket, kimlik, children \}/);
+    assert.match(alan, /<SatirMenusu/);
+  });
+
+  test("ortak kart menüsü kuralına dokunulmadı", () => {
+    const ortak = oku("app/styles/components.css");
+    /* Çalışma kartının menüsü yukarı açılmaya devam ediyor. */
+    assert.match(ortak, /\.kart-menu-liste \{[^}]*bottom: calc\(100% \+ 6px\);/);
+    assert.match(ortak, /\.kart-menu-liste \{[^}]*position: absolute;/);
+  });
+
+  test("silme akışı korunuyor: onay sorusu ve sunucu eylemi aynı", () => {
+    assert.match(alan, /window\.confirm\(t\(\{ tr: `"\$\{k\.title\}" kaynağını silmek istediğinize emin misiniz\?/);
+    assert.match(alan, /await deleteLiteratureSource\(k\.id\)/);
+    assert.match(alan, /tr: "Kaynağı sil", en: "Delete source"/);
   });
 });
 
