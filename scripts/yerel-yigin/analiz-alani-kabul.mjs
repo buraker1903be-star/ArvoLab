@@ -268,6 +268,24 @@ const S11 = {};
     fs.writeFileSync(p, satirlar.join("\n"), "utf8");
     S11.kismiTekil = p;
   }
+  /*
+    S15: SONUÇ TABLOLARININ GENİŞLİĞİ. On iki ölçüm, hücre ortalamaları
+    tablosunu masaüstünde de taşıracak kadar geniş yapıyor; yatay
+    kaydırmanın gerçekten çalıştığı ancak taşan bir tabloda sınanabilir.
+    Taşma olmazsa senaryo sessizce geçerdi.
+  */
+  {
+    const olcumler = Array.from({ length: 12 }, (_, j) => `olcum${String(j + 1).padStart(2, "0")}`);
+    const satirlar = [["katilimci", "grup", ...olcumler].join(",")];
+    for (let i = 0; i < 16; i += 1) {
+      const grup = i % 2 === 0 ? "deney" : "kontrol";
+      const degerler = olcumler.map((_, j) => 40 + ((i * 7 + j * 3) % 25) + (grup === "deney" ? j : 0));
+      satirlar.push([`K${i + 1}`, grup, ...degerler].join(","));
+    }
+    const p = path.join(KOK, `.tmp-s15genis-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.karmaGenis = p;
+  }
 }
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
@@ -1127,6 +1145,68 @@ try {
     const metin = await karmaCalistir();
     return `${/İki ölçümde küresellik tanım gereği sağlanır/.test(metin)} · ${/Etkileşim \(ölçüm/.test(metin)}`;
   }, "true · true");
+
+  /* ================= S15: sonuç tablolarının aralığı ve yatay kaydırması =================
+     Karma ANOVA sonucunda iki tablo alt alta çiziliyor. Kenarlıkları
+     yapışıkken tek bir tablo gibi okunuyordu; aralık boşluk
+     ölçeğinden (16 px) ve TABLONUN DEĞİL dış kapsayıcının üstünde.
+     Aynı ekranda yatay kaydırmanın bozulmadığı da sınanıyor. */
+  await veriyiDegistir();
+  await yukle(S11.karmaGenis);
+  {
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: "Ölçümler" });
+    await alan.getByRole("button", { name: /Tümünü seç/ }).click();
+    await sayfa.waitForTimeout(200);
+    await karmaCalistir();
+  }
+  /* İki dış kapsayıcı arasındaki dikey boşluk (px). */
+  const tabloAraligi = async () =>
+    await sayfa.evaluate(() => {
+      const k = [...document.querySelectorAll(".analiz-sonuc .table-scroll")];
+      if (k.length < 2) return "iki tablo yok";
+      const a = k[0].getBoundingClientRect();
+      const b = k[1].getBoundingClientRect();
+      return Math.round(b.top - a.bottom);
+    });
+  /* Taşan kapsayıcı gerçekten kaydırılabiliyor mu: scrollLeft yazılıp geri okunuyor. */
+  const yatayKaydirma = async () =>
+    await sayfa.evaluate(() => {
+      const k = [...document.querySelectorAll(".analiz-sonuc .table-scroll")];
+      const sonuc = k.slice(0, 2).map((el) => {
+        const tasiyor = el.scrollWidth > el.clientWidth + 1;
+        if (!tasiyor) return "tasmiyor";
+        el.scrollLeft = 0;
+        el.scrollLeft = 120;
+        const kaydi = el.scrollLeft > 0;
+        el.scrollLeft = 0;
+        return kaydi ? "kaydi" : "KAYMADI";
+      });
+      const sayfaTasmasi = document.documentElement.scrollWidth > window.innerWidth + 1;
+      return `${sonuc.join("+")} · sayfaTasmasi:${sayfaTasmasi}`;
+    });
+
+  for (const [ad, genislik, yukseklik] of [["masaüstü", 1440, 900], ["telefon", 390, 844]]) {
+    await sayfa.setViewportSize({ width: genislik, height: yukseklik });
+    await sayfa.waitForTimeout(350);
+    await esit(`S15a-${ad} iki tablo arasındaki aralık 16 px`, tabloAraligi, 16);
+    /*
+      Hücre ortalamaları tablosu 14 sütunla her iki ölçüde de taşıyor:
+      orada kaydırma ZORUNLU. ANOVA tablosu 5 sütun, taşmayabilir;
+      taşıyorsa kayması, taşmıyorsa olduğu gibi durması beklenir —
+      "KAYMADI" ikisinde de kabul edilmez.
+    */
+    await esit(`S15b-${ad} taşan tablolar yatay kaydırılıyor, sayfa taşmıyor`, yatayKaydirma, (v) => {
+      const [kutular, sayfaBilgisi] = v.split(" · ");
+      const [ilk, ikinci] = kutular.split("+");
+      return ilk === "kaydi" && ikinci !== "KAYMADI" && sayfaBilgisi === "sayfaTasmasi:false";
+    });
+    await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `25-sonuc-tablolari-${genislik}`);
+  }
+  await sayfa.setViewportSize({ width: 1440, height: 900 });
+  await sayfa.waitForTimeout(250);
 
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);
