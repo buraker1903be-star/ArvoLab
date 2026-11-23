@@ -7,12 +7,13 @@ import { belgeMetniOku, detectDocType, splitBodyAndReferences } from "@/lib/docu
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { BOS_METIN_MESAJI_METIN, KISMI_METIN_UYARISI_METIN, metinDurumu } from "@/lib/belge-kontrol";
 import { checkGuidelineCompliance, type GuidelineComplianceResult } from "@/lib/guideline-check";
-import {
-  parseReferenceList,
-  extractInTextCitations,
-  crossCheck,
-  computeComplianceScore,
-} from "@/lib/apa7";
+import { extractInTextCitations, crossCheck, computeComplianceScore } from "@/lib/apa7";
+import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
+import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir, KATALOG_STILLERI } from "@/lib/atif/stiller";
+import { cslMi } from "@/lib/atif/csl-kimlik";
+import { dipnotAtiflari, metindekiDipnotlar } from "@/lib/atif/dipnot";
+import { denetimKapsami, type KapsamSatiri } from "@/lib/atif/denetim-kapsami";
+import { olasiStiller, type OlasiStilSonucu } from "@/lib/atif/olasi-stil";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
@@ -30,6 +31,18 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 /* Okunabilir metin yok (taranmış PDF); çözümleme hatasından ayrı mesaj alır. */
 class BosMetin extends Error {}
+
+/*
+  İstemciden gelen stil kimliği KATALOGDAN doğrulanıyor. Doğrulanmazsa
+  yok sayılıyor (null): uydurma bir değer stilTanimi'nde sessizce APA'ya
+  düşer ve kullanıcı Vancouver denetlediğini sanırdı.
+*/
+const stilKimligiCoz = (deger: string | null | undefined): string | null => {
+  const temiz = (deger ?? "").trim();
+  if (!temiz) return null;
+  if (cslMi(temiz)) return temiz;
+  return (KATALOG_STILLERI as string[]).includes(temiz) ? temiz : null;
+};
 
 /* Sayfa (documents/page.tsx) aynı metni tanıyıp okuyanın diline çeviriyor; iki yerde aynı yazım. */
 const CIKARMA_HATASI_METIN: Metin = {
@@ -76,6 +89,13 @@ type BelgeParametreleri = {
   fileSize: number;
   projectId: string | null;
   projectTitle: string | null;
+  /*
+    DENETİM STİLİ (23.11.2026). Yalnızca BU çözümlemeye uygulanır;
+    çalışmanın ayarını değiştirmez. Verilmezse çalışmanın kayıtlı stili,
+    o da yoksa katalog varsayılanı. İstemciden geliyor: katalogda
+    bulunmayan bir değer yok sayılıyor (stilKimligiCoz).
+  */
+  citationStyle?: string | null;
 };
 
 export async function analyzeUploadedDocument(params: BelgeParametreleri): Promise<UploadResult> {
@@ -211,6 +231,8 @@ async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yen
     let kilavuz: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null = null;
     /* "Kılavuz yok" ile "okunamadı" ayrı: sayfa ikincisinde "kılavuz ekleyin" demesin. */
     let kilavuzOkunamadi = false;
+    /* Çalışmanın kayıtlı stili: denetim stilinin varsayılanı. */
+    let calismaStili: string | null = null;
     if (params.projectId) {
       const { data: project, error: projeHatasi } = await supabase
         .from("academic_projects")
@@ -219,6 +241,7 @@ async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yen
         .maybeSingle();
       if (projeHatasi) console.error("[belge] çalışmanın kılavuzu okunamadı:", projeHatasi.message);
 
+      calismaStili = project?.citation_style ?? null;
       const okuma = project ? await calismaKilavuzuOku(supabase, params.projectId, project.guideline_id) : null;
       kilavuzOkunamadi = Boolean(projeHatasi) || Boolean(okuma?.okunamadi);
       const uygulanan = okuma?.kilavuz ?? null;
@@ -248,10 +271,32 @@ async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yen
       metinKismi: metin.durum === "kismi",
     };
 
+    /*
+      KAYNAKÇA ARTIK SEÇİLEN STİLE GÖRE OKUNUYOR (23.11.2026).
+
+      Eskiden bu akış stili HİÇ geçirmiyordu: parseReferenceList ve
+      extractInTextCitations APA varsayımıyla çalışıyordu. Sonucu şuydu:
+      Vancouver ya da IEEE yazan öğrencinin numarayla başlayan künyeleri
+      "yıl parantezde bulunamadı" hatası alıyor, numaralı atıfları hiç
+      okunmadığı için kaynakçasının TAMAMI "metinde atfı yok" diye
+      listeleniyordu — kusursuz bir kaynakça için onlarca uydurma bulgu.
+      Dipnotlu stillerde ise atıflar sayfa altındaydı ve hiç görülmüyordu.
+      Motor Atıf Kontrolü ile aynı (lib/atif/kunye.ts); fark stilde.
+    */
+    const stil = stilTanimi(stilKimligiCoz(params.citationStyle) ?? calismaStili);
+    const govdeVar = Boolean(split.bodyText.trim());
     if (referenceText.trim().length > 0) {
-      const references = parseReferenceList(referenceText, dil);
-      const citations = extractInTextCitations(split.bodyText);
-      const cross = crossCheck(citations, references);
+      const references = kunyeleriAyristir(kunyeleriBol(referenceText), stil.id, dil);
+      const citations = !govdeVar
+        ? []
+        : stil.tur === "dipnot"
+          ? dipnotAtiflari(metindekiDipnotlar(split.bodyText))
+          : extractInTextCitations(split.bodyText, { style: atifCikarmaStili(stil) });
+      /* Numara stilinde atıf künyeyle SIRAYLA eşleşir; adla çapraz
+         kontrol orada her kaynağı "atıfsız" gösterirdi. */
+      const cross = govdeVar && adlaEslesir(stil)
+        ? crossCheck(citations, references, { yilaBak: yilaBakilir(stil) })
+        : { citationsWithoutReference: [], referencesWithoutCitation: [] };
       const score = computeComplianceScore(references, cross);
       analysis = {
         references,
@@ -259,6 +304,11 @@ async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yen
         crossCheck: cross,
         complianceScore: score,
         referenceSectionFound: true,
+        denetlenenStil: stil.id,
+        kapsam: denetimKapsami(stil, { metinVar: govdeVar }),
+        /* Belgenin BİÇİMİNİN işaret ettiği stil(ler): yalnızca öneri,
+           çalışmanın ayarını da bu denetimin stilini de değiştirmez. */
+        olasiStil: olasiStiller({ kunyeler: references.map((k) => k.raw), govde: split.bodyText }),
         ...ortak,
       };
     } else {
@@ -268,6 +318,8 @@ async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yen
         crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
         complianceScore: null,
         referenceSectionFound: false,
+        denetlenenStil: stil.id,
+        kapsam: denetimKapsami(stil, { metinVar: govdeVar }),
         ...ortak,
       };
     }
@@ -336,6 +388,10 @@ export interface DocumentUploadRecord {
     /* 28.10.2026 (İngilizce) sonrası kayıtlarda; uyarının dilden bağımsız işareti. */
     metinKismi?: boolean;
     kilavuzOkunamadi?: boolean;
+    /* 23.11.2026 öncesi kayıtlarda yok: stil BİLİNMİYOR, APA sayılmaz. */
+    denetlenenStil?: string | null;
+    kapsam?: KapsamSatiri[] | null;
+    olasiStil?: OlasiStilSonucu | null;
   } | null;
   created_at: string;
 }

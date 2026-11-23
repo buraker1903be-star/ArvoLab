@@ -18,6 +18,8 @@ import { BOS_METIN_MESAJI_METIN, KISMI_METIN_UYARISI_METIN, sayfaDenetimi, surum
 import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import DocumentUploadForm from "./document-upload-form";
+import DenetlenenStil from "@/app/dashboard/citations/denetlenen-stil";
+import { stilAdiMetni } from "@/lib/atif/stiller";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
@@ -201,6 +203,17 @@ export default async function DocumentsPage({
               </>
             ) : null}
 
+            {/*
+              DENETLENEN STİL VE KAPSAM (23.11.2026). Puanın hemen üstünde:
+              eskiden bu akış kaynakçayı her zaman APA sanıyordu ve puan
+              hangi stile göre verildiğini söylemiyordu. Eski kayıtlarda
+              stil yok — "APA" varsayılmıyor, bilinmediği yazılıyor.
+            */}
+            <DenetlenenStil
+              stil={a.denetlenenStil ? { id: a.denetlenenStil, ad: stilAdiMetni(a.denetlenenStil).tr, adEn: stilAdiMetni(a.denetlenenStil).en } : null}
+              kapsam={a.kapsam ?? null}
+              olasiStil={a.olasiStil ?? null}
+            />
             {a.referenceSectionFound ? (
               <div className="kaynakca-puan" data-tone={puanTonu(a.complianceScore)}>
                 <b>{a.complianceScore ?? "—"}</b>

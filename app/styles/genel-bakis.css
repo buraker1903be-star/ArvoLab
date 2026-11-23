@@ -410,6 +410,23 @@
 /* Açık sorunların dökümü ve kapsam notu (20.11.2026; "uyum /100" yerine). */
 .kaynakca-acik-sorunlar { flex: 1 1 100%; display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: var(--fs-sm); }
 .kaynakca-kapsam-notu { color: var(--ink-soft); }
+/*
+  DENETLENEN STİL VE KAPSAM (23.11.2026). Puan şeridinin içinde tam
+  genişlikte: "kaç açık sorun" sayısının neyi kapsadığı aynı bakışta
+  okunsun. Uygulanamayan kontroller uyarı tonunda, uygulananların dökümü
+  katlanır — sorun yokken liste yer kaplamasın.
+*/
+.denetlenen-stil { flex: 1 1 100%; display: grid; gap: 8px; }
+.denetlenen-stil-satir { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); }
+.denetlenen-stil-satir b { color: var(--ink); font-weight: 650; }
+.denetlenen-stil-liste { display: grid; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.denetlenen-stil-liste > li { display: grid; gap: 2px; }
+.denetlenen-stil-liste small { color: var(--ink-soft); }
+.denetlenen-stil-tum > summary { color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; }
+.denetlenen-stil-tum > summary:hover { color: var(--ink); }
+.denetlenen-stil-oneri { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
+.denetlenen-stil-oneri > strong { font-size: var(--fs-sm); }
+.denetlenen-stil-oneri .denetlenen-stil-liste > li { gap: 4px; justify-items: start; }
 .kaynakca-skor-sayilar { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 8px; margin: 0; }
 .kaynakca-skor-sayilar > div { display: grid; flex: 1 1 96px; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface); }
 .kaynakca-skor-sayilar dt { color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }

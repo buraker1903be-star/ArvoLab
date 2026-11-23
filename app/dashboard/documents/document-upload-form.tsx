@@ -7,11 +7,14 @@ import { UploadCloud } from "lucide-react";
 import { analyzeUploadedDocument } from "@/app/actions/document-upload";
 import { createClient } from "@/lib/supabase/client";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 
 interface Project {
   id: string;
   title: string;
   university: string | null;
+  /* Çalışmanın kayıtlı stili: denetim stilinin VARSAYILANI (seçimle değişir). */
+  citation_style?: string | null;
 }
 
 interface GuidelineComplianceView {
@@ -59,6 +62,17 @@ export default function DocumentUploadForm({
   const router = useRouter();
   const t = useCeviri();
   const [projectId, setProjectId] = useState(secilenCalisma);
+  /*
+    DENETİM STİLİ (23.11.2026). Eskiden bu akış stili HİÇ geçirmiyordu:
+    sunucu kaynakçayı her zaman APA olarak ayrıştırıyordu
+    (app/actions/document-upload.ts, parseReferenceList). Vancouver,
+    IEEE ya da Chicago yazmış biri doğru künyelerinin tamamı için biçim
+    hatası, atıflarının tamamı için "kaynakçada karşılığı yok" alıyordu.
+    Varsayılan çalışmanın kayıtlı stili; kullanıcı değiştirirse seçim
+    YALNIZCA bu denetime geçer, çalışmanın ayarı değişmez.
+  */
+  const calismaStili = (p: string) => projects.find((x) => x.id === p)?.citation_style ?? "";
+  const [citationStyle, setCitationStyle] = useState(() => calismaStili(secilenCalisma) || "apa7");
   const [projectTitle, setProjectTitle] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,6 +136,7 @@ export default function DocumentUploadForm({
         fileSize: file.size,
         projectId: projectId || null,
         projectTitle: selectedProject ? selectedProject.title : projectTitle || null,
+        citationStyle,
       });
 
       if (res.error) {
@@ -176,7 +191,16 @@ export default function DocumentUploadForm({
         {gomulu ? null : projects.length > 0 ? (
           <label>
             <span>{t({ tr: "Bağlı çalışma (opsiyonel)", en: "Linked work (optional)" })}</span>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <select
+              value={projectId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                /* Stil çalışmanın kaydında var; iki kez sormak ikisinin
+                   ayrışmasına davetiye (Atıf Kontrolü'nde de böyle). */
+                const stil = calismaStili(e.target.value);
+                if (stil) setCitationStyle(stil);
+              }}
+            >
               <option value="">{t({ tr: "Seçili çalışma yok", en: "No work selected" })}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -196,6 +220,22 @@ export default function DocumentUploadForm({
             />
           </label>
         )}
+
+        {/*
+          DENETİM STİLİ: Atıf Kontrolü ile AYNI katalog ve AYNI seçici
+          (StilSecici) — yerleşik stiller ve CSL deposundaki dergi
+          stilleri. Eskiden bu akışta seçenek hiç yoktu.
+        */}
+        <label>
+          <span>{t({ tr: "Denetim stili", en: "Check style" })}</span>
+          <StilSecici value={citationStyle} onChange={setCitationStyle} />
+          <small className="muted">
+            {t({
+              tr: "Varsayılan çalışmanızın stili. Değiştirirseniz yalnızca bu denetimde geçerli olur; çalışmanızın ayarı değişmez.",
+              en: "Defaults to your work's style. If you change it, it applies to this check only; your work's setting stays as it is.",
+            })}
+          </small>
+        </label>
 
         <label className="project-form-full">
           <span>{t({ tr: "Dosya (.docx veya .pdf, en fazla 20 MB)", en: "File (.docx or .pdf, up to 20 MB)" })}</span>

@@ -21,9 +21,18 @@
 */
 
 import { cslCoz, cslGorunenAd, cslMi, ustSimge, type CslKodu } from "./csl-kimlik";
+import type { Metin } from "@/lib/dil";
 
 /** Veritabanının kabul ettiği değerler (thesis_projects.citation_style). */
-export type StilKimligi = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
+export type StilKimligi =
+  | "apa7"
+  | "harvard"
+  | "chicago"
+  | "chicago-notlar"
+  | "ieee"
+  | "vancouver"
+  | "mla"
+  | "dipnot";
 /** Yerleşik stil ya da CSL deposundan bir stil (lib/atif/csl-kimlik.ts). */
 export type StilDegeri = StilKimligi | `csl:${string}`;
 
@@ -54,7 +63,15 @@ export type YazarBicimi = {
 
 export type StilTanimi = {
   id: StilDegeri;
+  /** Türkçe ad; sunucu kayıtları, bildirim ve asistan bağlamı bunu yazar. */
   ad: string;
+  /*
+    Ekranda görünen adın İngilizcesi. Stil adlarının çoğu özel ad
+    ("APA 7", "IEEE") ve iki dilde aynı; verilmezse `ad` kullanılır.
+    Yalnızca çevirisi olanlarda yazılı — "Chicago (Notlar–Kaynakça)"
+    İngiliz arayüzde "Chicago (Notes–Bibliography)" olmalı.
+  */
+  adEn?: string;
   tur: AtifTuru;
   /**
    * Künyede yılın yeri. Ayrıştırıcı yılı buradan bulur:
@@ -151,7 +168,16 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
   },
   chicago: {
     id: "chicago",
-    ad: "Chicago",
+    /*
+      ADI ARTIK TÜRÜNÜ SÖYLÜYOR (23.11.2026). Katalogda tek "Chicago"
+      vardı ve o yazar–tarih sürümüydü; Chicago'yu dipnotlu
+      (Notlar–Kaynakça) yazan öğrenci de aynı seçeneği seçiyor ve
+      dipnottaki atıfları hiç okunmadığı için kaynakçasındaki her künye
+      "metinde atfı yok" çıkıyordu. İki tür ayrı stil: seçimde hangisi
+      olduğu adında yazılı.
+    */
+    ad: "Chicago (Yazar–Tarih)",
+    adEn: "Chicago (Author–Date)",
     tur: "yazar-tarih",
     yilYeri: "yazardan-sonra",
     /*
@@ -168,6 +194,37 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       kayıtlarda öyle yazılmış künyeler var. Denetim yine iş görüyor —
       ters yazılmamış ilk yazarı, küçük harfle başlayanı yakalıyor.
     */
+    yazarBicimi: {
+      desen: yada(TERS_TAM_AD, APA_YAZAR),
+      ornek: "Soyad, Ad",
+      sonrakiDesen: yada(DUZ_TAM_AD, DUZ_BAS_HARF),
+      sonrakiOrnek: "Ad Soyad",
+      ornekEn: "Surname, First name",
+      sonrakiOrnekEn: "First name Surname",
+    },
+    kaynakcaSirasi: "alfabetik",
+    listeIsaretiSerbest: false,
+  },
+  /*
+    CHICAGO — NOTLAR VE KAYNAKÇA (23.11.2026). Chicago'nun iki yöntemi
+    var ve biri ötekinin yerine geçmez: yazar–tarih metin içinde
+    ("Yılmaz 2020, 45"), Notlar–Kaynakça ise DİPNOTTA ("Ahmet Yılmaz,
+    Kitap (İstanbul: Yayınevi, 2020), 45."). Tarih, hukuk ve ilahiyat
+    tezlerinin çoğu ikincisini kullanıyor.
+
+    Neden "Dipnot (klasik)" yetmiyordu: o stil Türk kılavuzlarının genel
+    dipnot yöntemi; Chicago'nun kaynakçasında ad AÇIK yazılır ve ilkten
+    sonraki yazarlar düz gelir. İkisini aynı stil saymak, Chicago'yu
+    doğru yazan öğrenciye hata basmak ya da hiç denetlememek demekti.
+    Atıf dipnotta olduğu için `tur: "dipnot"` (lib/atif/dipnot.ts okur),
+    künye kuralları Chicago'nun kendisi.
+  */
+  "chicago-notlar": {
+    id: "chicago-notlar",
+    ad: "Chicago (Notlar–Kaynakça)",
+    adEn: "Chicago (Notes–Bibliography)",
+    tur: "dipnot",
+    yilYeri: "sonda",
     yazarBicimi: {
       desen: yada(TERS_TAM_AD, APA_YAZAR),
       ornek: "Soyad, Ad",
@@ -330,6 +387,11 @@ export function stilTanimi(deger: string | null | undefined): StilTanimi {
 
 export const stilAdi = (deger: string | null | undefined) => stilTanimi(deger).ad;
 
+const stilEtiketi = (stil: StilTanimi): Metin => ({ tr: stil.ad, en: stil.adEn ?? stil.ad });
+
+/** Ekranda yazılacak ad, iki dilde. CSL stillerinde ad iki dilde aynıdır. */
+export const stilAdiMetni = (deger: string | null | undefined): Metin => stilEtiketi(stilTanimi(deger));
+
 /**
  * Metin içi atıf çıkarıcısının (lib/apa7.ts) anladığı stil adı.
  *
@@ -365,10 +427,20 @@ export const yilaBakilir = (stil: StilTanimi) => stil.tur === "yazar-tarih";
   görünecekti. Sunucudaki doğrulama listesi de (app/actions/projects.ts)
   buradan okunuyor.
 */
-export const STIL_SECENEKLERI: { deger: StilKimligi; etiket: string }[] = (
+/**
+ * KATALOĞUN KENDİSİ: seçicilerin gösterdiği liste. Etiket `Metin`
+ * taşıyor (AGENTS.md "Arayüz dili"), çağıran `t(...)` ile seçiyor;
+ * eskiden düz Türkçe metindi ve İngiliz arayüzde "Dipnot (klasik)"
+ * yazıyordu.
+ */
+export const STIL_SECENEKLERI: { deger: StilKimligi; etiket: Metin }[] = (
   Object.keys(STILLER) as StilKimligi[]
-).map((id) => ({ deger: id, etiket: STILLER[id].ad }));
+).map((id) => ({ deger: id, etiket: stilEtiketi(STILLER[id]) }));
 
+/** Türkçe etiketler: bildirim gövdesi, asistan bağlamı, sunucu doğrulaması. */
 export const STIL_ETIKETLERI: Record<string, string> = Object.fromEntries(
-  STIL_SECENEKLERI.map((secenek) => [secenek.deger, secenek.etiket]),
+  (Object.keys(STILLER) as StilKimligi[]).map((id) => [id, STILLER[id].ad]),
 );
+
+/** Katalogdaki stil kimlikleri; sunucu doğrulaması ve testler buradan okur. */
+export const KATALOG_STILLERI: StilKimligi[] = Object.keys(STILLER) as StilKimligi[];

@@ -44,7 +44,16 @@ export function kaynakMetniniCoz<T extends CitableSource>(source: T): T {
   };
 }
 
-export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
+export type CitationStyle =
+  | "apa7"
+  | "harvard"
+  | "chicago"
+  /* Chicago'nun Notlar–Kaynakça yöntemi: atıf dipnotta, künye yılı sonda. */
+  | "chicago-notlar"
+  | "ieee"
+  | "vancouver"
+  | "mla"
+  | "dipnot";
 
 export const NUMERIC_STYLES: CitationStyle[] = ["ieee", "vancouver"];
 
@@ -139,7 +148,10 @@ export function stilYazarlari(authors: string | null, style: CitationStyle, dil:
       const ara = kalan.slice(0, -1);
       return `${[ilk, ...ara].join(", ")}${ara.length ? seriVirgul : ""} ${ve} ${kalan[kalan.length - 1]}`;
     }
-    case "chicago": {
+    case "chicago":
+    /* Chicago'nun iki yöntemi KAYNAKÇADA aynı yazar biçimini kullanır;
+       fark künyenin geri kalanında (yılın yeri). */
+    case "chicago-notlar": {
       // İlk yazar ters (Yılmaz, A.), ötekiler düz (B. C. Demir), sonuncudan önce "and".
       const duz = (x: (typeof p)[number]) => (x.parca ? `${x.parca.basHarfler.map((h) => `${h}.`).join(" ")} ${x.parca.soyad}` : x.ham);
       const ilk = p[0].ham;
@@ -287,6 +299,70 @@ export function dipnotNotu(
 }
 
 /*
+  CHICAGO DİPNOTU (23.11.2026; "chicago-notlar").
+
+  Klasik Türk dipnotundan (dipnotNotu) noktalaması ayrı ve bu fark
+  Chicago'nun kendi kuralı:
+    ilk atıf  "Ahmet Yılmaz, Osmanlı'da Vergi Düzeni (İstanbul: Tarih
+               Yayınları, 2020), 45."
+              "Burak Demir, “Cumhuriyet Dönemi Eğitimi,” Tarih Dergisi 12,
+               no. 3 (2019): 50."
+    sonraki   "Yılmaz, Vergi Düzeni, 45."
+  Yani kitapta basım bilgisi PARANTEZ içinde, makalede yıl parantezde ve
+  sayfa iki noktadan sonra. İkisini aynı sayıp klasik dipnotu yazmak,
+  Chicago'yu doğru yazan öğrenciye yanlış biçim göstermek olurdu.
+  Basım yeri kayıtta yoksa yazılmaz; sayfa yalnızca öğrencinin yazdığı.
+*/
+export function chicagoNotu(
+  source: CitableSource,
+  secenek: AtifSecenegi & { kisa?: boolean } = {},
+  dil: Dil = "tr",
+): string {
+  source = kaynakMetniniCoz(source);
+  const en = dil === "en";
+  const sayfa = (secenek.sayfa ?? "").trim().replace(/^s{1,2}\.\s*|^pp?\.\s*/i, "");
+  const yazarlar = splitAuthors(source.authors);
+  const ve = en ? "and" : "ve";
+  const digerleri = en ? "et al." : "ve diğerleri";
+  const baslik = source.title.trim().replace(/\.$/, "");
+  const container = field(source.container_title);
+
+  if (secenek.kisa) {
+    const adlar = yazarlar.map(surname);
+    const etiket =
+      adlar.length === 0 ? "" : adlar.length === 1 ? adlar[0] : adlar.length === 2 ? `${adlar[0]} ${ve} ${adlar[1]}` : `${adlar[0]} ${digerleri}`;
+    /* Kısa biçimde başlık KISALTILIR: ilk dört sözcük (Chicago'nun kendi örneği). */
+    const kisaBaslik = baslik.split(/\s+/).slice(0, 4).join(" ");
+    return `${[etiket, kisaBaslik].filter(Boolean).join(", ")}${sayfa ? `, ${sayfa}` : ""}.`;
+  }
+
+  const yazar =
+    yazarlar.length === 0
+      ? ""
+      : yazarlar.length === 1
+        ? duzAd(yazarlar[0])
+        : yazarlar.length === 2
+          ? `${duzAd(yazarlar[0])} ${ve} ${duzAd(yazarlar[1])}`
+          : `${duzAd(yazarlar[0])} ${digerleri}`;
+  const yil = yearText(source, dil);
+  const yer = field(source.publication_place);
+  const yayinevi = field(source.publisher);
+  const basim = yayinevi ? (yer ? `${yer}: ${yayinevi}` : yayinevi) : null;
+
+  if (container) {
+    /* Makale/bölüm: dergi adı, cilt, (yıl): sayfa. */
+    const parcalar = [`${yazar ? `${yazar}, ` : ""}“${baslik},” ${container}`];
+    if (field(source.volume)) parcalar.push(` ${field(source.volume)}`);
+    if (field(source.issue)) parcalar.push(`, ${en ? "no." : "sy."} ${field(source.issue)}`);
+    parcalar.push(` (${yil.replace(/\.$/, "")})`);
+    if (sayfa) parcalar.push(`: ${sayfa}`);
+    return `${parcalar.join("")}.`;
+  }
+  const basimBilgisi = [basim, yil.replace(/\.$/, "")].filter(Boolean).join(", ");
+  return `${yazar ? `${yazar}, ` : ""}${baslik}${basimBilgisi ? ` (${basimBilgisi})` : ""}${sayfa ? `, ${sayfa}` : ""}.`;
+}
+
+/*
   METİN İÇİ ATIF — "HEPSİ OLSUN, GEREKSİZİ SİLİNSİN" (26.10.2026, kurum
   sahibinin geri bildirimi: "bazı danışmanlar atıfları virgülüne kadar
   önemsiyor; yıl hepsinde olması daha sağlıklı, eklemektense çıkarmak
@@ -323,6 +399,8 @@ export function formatInTextCitation(
     case "dipnot":
       // Atıf metne değil dipnota yazılır (editor-navigation.ts); burada ilk atfın tam biçimi.
       return dipnotNotu(source, { sayfa: secenek.sayfa }, dil);
+    case "chicago-notlar":
+      return chicagoNotu(source, { sayfa: secenek.sayfa }, dil);
     default: {
       const apaEtiketi = dil === "en" ? yazarEtiketi(source, dil, "&") : etiket;
       return `(${apaEtiketi}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
@@ -471,8 +549,14 @@ export function formatReferenceParts(
     case "chicago": {
       const yazarlar = stilYazarlari(authors, "chicago", dil);
       push(`${yazarlar ? `${yazarlar.replace(/\.$/, "")}. ` : ""}${yilYazisi()}. `);
-      if (italic && !container) push(title, true);
-      else push(`"${title}."`);
+      if (italic && !container) {
+        push(title, true);
+        /* Başlıktan sonraki NOKTA düşüyordu: "… Vergi Düzeni İstanbul:
+           Tarih Yayınları." Kitap künyelerinde başlık ile basım bilgisi
+           tek cümle gibi birleşiyordu; makalede sorun yoktu çünkü nokta
+           tırnağın içinde yazılı. */
+        push(".");
+      } else push(`"${title}."`);
       if (container) {
         push(isChapter ? " In " : " ");
         push(container, true);
@@ -482,6 +566,36 @@ export function formatReferenceParts(
         push(".");
       }
       if (yerYayinevi && (isChapter || !container)) push(` ${yerYayinevi}.`);
+      if (url) push(` ${url}`);
+      break;
+    }
+    case "chicago-notlar": {
+      /*
+        Chicago Notlar–Kaynakça KAYNAKÇASI: yıl SONDA, yazar–tarih
+        sürümünde ise yazardan hemen sonra.
+          kitap   Yılmaz, Ahmet. *Osmanlı'da Vergi Düzeni*. İstanbul: Tarih Yayınları, 2020.
+          makale  Yılmaz, Ahmet. “Metinlerarasılık.” *Edebiyat Dergisi* 12, sy. 3 (2020): 45-60.
+        İki sürümü aynı saymak, ikisinden birini yazan öğrenciye yanlış
+        kaynakça üretmek demekti; otomatik kaynakça da (atıf eklenince)
+        bu dalı kullanıyor.
+      */
+      const yazarlar = stilYazarlari(authors, "chicago-notlar", dil);
+      if (yazarlar) push(`${yazarlar.replace(/\.$/, "")}. `);
+      if (container) {
+        push(`“${title}.” `);
+        push(container, true);
+        if (volume) push(` ${volume}`);
+        if (issue) push(`, ${en ? "no." : "sy."} ${issue}`);
+        push(` (${yilYazisi().replace(/\.$/, "")})`);
+        if (pages) push(`: ${pages}`);
+        push(".");
+      } else {
+        push(title, italic);
+        push(".");
+        if (yerYayinevi) push(` ${yerYayinevi},`);
+        push(` ${yilYazisi()}`);
+        if (!yilYazisi().endsWith(".")) push(".");
+      }
       if (url) push(` ${url}`);
       break;
     }

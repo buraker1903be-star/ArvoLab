@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type Ref } from "react";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import { STIL_SECENEKLERI, stilTanimi } from "@/lib/atif/stiller";
 import { cslCoz, cslGorunenAd } from "@/lib/atif/csl-kimlik";
 import { cslStilAra, cslStilBilgisi } from "@/app/actions/csl";
 import type { CslSecenegi } from "@/lib/atif/csl-dizin";
@@ -18,6 +18,18 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 */
 
 const ARA = "__csl_ara__";
+/*
+  Atıfın türü seçeneğin yanında yazıyor (23.11.2026): "Chicago
+  (Yazar–Tarih)" ile "Chicago (Notlar–Kaynakça)" arasındaki fark ad
+  dışında bir de buradan okunuyor, ve numara stillerinde kaynakçanın
+  neden alfabetik olmadığı seçim anında anlaşılıyor.
+*/
+const TUR_ETIKETI = {
+  "yazar-tarih": { tr: "yazar–tarih", en: "author–date" },
+  "yazar-sayfa": { tr: "yazar–sayfa", en: "author–page" },
+  numara: { tr: "numaralı", en: "numbered" },
+  dipnot: { tr: "dipnot", en: "footnote" },
+} as const;
 const KOD_ETIKETI = {
   a: { tr: "yazar–tarih", en: "author–date" },
   k: { tr: "numaralı [1]", en: "numbered [1]" },
@@ -118,7 +130,7 @@ export default function StilSecici({
         {bosEtiket !== undefined ? <option value="">{bosEtiket}</option> : null}
         {STIL_SECENEKLERI.map((secenek) => (
           <option key={secenek.deger} value={secenek.deger}>
-            {secenek.etiket}
+            {`${t(secenek.etiket)} — ${t(TUR_ETIKETI[stilTanimi(secenek.deger).tur])}`}
           </option>
         ))}
         {csl ? <option value={deger}>{cslAdi}</option> : null}
