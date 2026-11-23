@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-23T09:35:15.527Z",
-  "head": "36faf85efee5e0fcfe28d7023e7f9484124b11bf",
-  "buildId": "C1QO4VMd7C9IQfybS1jkE",
-  "uygulama": "http://localhost:3137",
-  "gecen": 178,
+  "tarih": "2026-11-23T10:25:40.225Z",
+  "head": "fb3e6657bd924d07a3b12146c4386d0d08ed5d95",
+  "buildId": "7FLqVT36XCVKZPavP40Pr",
+  "uygulama": "http://localhost:3141",
+  "gecen": 226,
   "dusen": 0,
   "sonuclar": [
     {
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-5da435.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-9454a1.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-5da435.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9454a1.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-5da435.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9454a1.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "eb767011-e263-4d56-b497-3d0e83bfd1fa"
+      "not": "777f5307-acc2-449d-9016-131dcc41fd5e"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-5da435.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-9454a1.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-5da435.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-9454a1.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-5da435.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-9454a1.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -602,6 +602,11 @@
       "not": "kavramlar:true"
     },
     {
+      "ad": "S18b2-tr-masaüstü kart yönteme özgü girdileri anlatıyor",
+      "durum": "PASS",
+      "not": "bagimsizOran:true bagimsizYon:true kayip:true anovaGrup:true anovaOranYok:true regYordayici:true"
+    },
+    {
       "ad": "S18c-tr-masaüstü \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
       "durum": "PASS",
       "not": "etki:0.5 uyari:true gerekce:true"
@@ -650,6 +655,11 @@
       "ad": "S18b-tr-telefon \"Hangi bilgiler gerekli?\" kartı üç kavramı ve gerekçelendirmeyi anlatıyor",
       "durum": "PASS",
       "not": "kavramlar:true"
+    },
+    {
+      "ad": "S18b2-tr-telefon kart yönteme özgü girdileri anlatıyor",
+      "durum": "PASS",
+      "not": "bagimsizOran:true bagimsizYon:true kayip:true anovaGrup:true anovaOranYok:true regYordayici:true"
     },
     {
       "ad": "S18c-tr-telefon \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
@@ -707,6 +717,11 @@
       "not": "kavramlar:true"
     },
     {
+      "ad": "S18b2-en-masaüstü kart yönteme özgü girdileri anlatıyor",
+      "durum": "PASS",
+      "not": "bagimsizOran:true bagimsizYon:true kayip:true anovaGrup:true anovaOranYok:true regYordayici:true"
+    },
+    {
       "ad": "S18c-en-masaüstü \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
       "durum": "PASS",
       "not": "etki:0.5 uyari:true gerekce:true"
@@ -757,6 +772,11 @@
       "not": "kavramlar:true"
     },
     {
+      "ad": "S18b2-en-telefon kart yönteme özgü girdileri anlatıyor",
+      "durum": "PASS",
+      "not": "bagimsizOran:true bagimsizYon:true kayip:true anovaGrup:true anovaOranYok:true regYordayici:true"
+    },
+    {
       "ad": "S18c-en-telefon \"Örneği doldur\" alanları dolduruyor ve ÖRNEK olduğunu yazıyor",
       "durum": "PASS",
       "not": "etki:0.5 uyari:true gerekce:true"
@@ -800,6 +820,226 @@
       "ad": "S18k-en telefonda dokunma hedefleri 44 px ve yatay taşma yok",
       "durum": "PASS",
       "not": "kucuk:0 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S19a-tr-masaüstü rehber dosya YÜKLENMEDEN görünüyor ve analize özgü",
+      "durum": "PASS",
+      "not": "baslik:true ttestHata:true eslestirilmisHata:true degisti:true"
+    },
+    {
+      "ad": "S19b-tr-masaüstü örnek tablo başlıkları ve kaydırma",
+      "durum": "PASS",
+      "not": "basliklar:Katılımcı|Ön test|Son test kaydirma:true sayfaTasmasi:false"
+    },
+    {
+      "ad": "S19c-tr-masaüstü klavyeyle örnek tablo açılıp kapanıyor",
+      "durum": "PASS",
+      "not": "odak:true kapandi:true acildi:true"
+    },
+    {
+      "ad": "S19d-tr-masaüstü-ttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-masaüstü-ttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "grup:true sayisal:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-tr-masaüstü-pairedttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-masaüstü-pairedttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "once:true sonra:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-tr-masaüstü-chisquare şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-masaüstü-chisquare seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "birinci:true ikinci:true"
+    },
+    {
+      "ad": "S19d-tr-masaüstü-reliability şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-masaüstü-reliability seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "maddeler:true katilimciYok:true"
+    },
+    {
+      "ad": "S19a-tr-telefon rehber dosya YÜKLENMEDEN görünüyor ve analize özgü",
+      "durum": "PASS",
+      "not": "baslik:true ttestHata:true eslestirilmisHata:true degisti:true"
+    },
+    {
+      "ad": "S19b-tr-telefon örnek tablo başlıkları ve kaydırma",
+      "durum": "PASS",
+      "not": "basliklar:Katılımcı|Ön test|Son test kaydirma:true sayfaTasmasi:false"
+    },
+    {
+      "ad": "S19c-tr-telefon klavyeyle örnek tablo açılıp kapanıyor",
+      "durum": "PASS",
+      "not": "odak:true kapandi:true acildi:true"
+    },
+    {
+      "ad": "S19d-tr-telefon-ttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-telefon-ttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "grup:true sayisal:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-tr-telefon-pairedttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-telefon-pairedttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "once:true sonra:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-tr-telefon-chisquare şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-telefon-chisquare seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "birinci:true ikinci:true"
+    },
+    {
+      "ad": "S19d-tr-telefon-reliability şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-tr-telefon-reliability seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "maddeler:true katilimciYok:true"
+    },
+    {
+      "ad": "S19a-en-masaüstü rehber dosya YÜKLENMEDEN görünüyor ve analize özgü",
+      "durum": "PASS",
+      "not": "baslik:true ttestHata:true eslestirilmisHata:true degisti:true"
+    },
+    {
+      "ad": "S19b-en-masaüstü örnek tablo başlıkları ve kaydırma",
+      "durum": "PASS",
+      "not": "basliklar:Participant|Pre-test|Post-test kaydirma:true sayfaTasmasi:false"
+    },
+    {
+      "ad": "S19c-en-masaüstü klavyeyle örnek tablo açılıp kapanıyor",
+      "durum": "PASS",
+      "not": "odak:true kapandi:true acildi:true"
+    },
+    {
+      "ad": "S19d-en-masaüstü-ttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-masaüstü-ttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "grup:true sayisal:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-en-masaüstü-pairedttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-masaüstü-pairedttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "once:true sonra:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-en-masaüstü-chisquare şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-masaüstü-chisquare seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "birinci:true ikinci:true"
+    },
+    {
+      "ad": "S19d-en-masaüstü-reliability şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-masaüstü-reliability seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "maddeler:true katilimciYok:true"
+    },
+    {
+      "ad": "S19a-en-telefon rehber dosya YÜKLENMEDEN görünüyor ve analize özgü",
+      "durum": "PASS",
+      "not": "baslik:true ttestHata:true eslestirilmisHata:true degisti:true"
+    },
+    {
+      "ad": "S19b-en-telefon örnek tablo başlıkları ve kaydırma",
+      "durum": "PASS",
+      "not": "basliklar:Participant|Pre-test|Post-test kaydirma:true sayfaTasmasi:false"
+    },
+    {
+      "ad": "S19c-en-telefon klavyeyle örnek tablo açılıp kapanıyor",
+      "durum": "PASS",
+      "not": "odak:true kapandi:true acildi:true"
+    },
+    {
+      "ad": "S19d-en-telefon-ttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-telefon-ttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "grup:true sayisal:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-en-telefon-pairedttest şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-telefon-pairedttest seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "once:true sonra:true katilimciYok:true"
+    },
+    {
+      "ad": "S19d-en-telefon-chisquare şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-telefon-chisquare seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "birinci:true ikinci:true"
+    },
+    {
+      "ad": "S19d-en-telefon-reliability şablon indiriliyor, dolduruluyor, yükleniyor",
+      "durum": "PASS",
+      "not": "baslik:true katli:true acikKartYok:true"
+    },
+    {
+      "ad": "S19e-en-telefon-reliability seçilebilir sütunlar doğru",
+      "durum": "PASS",
+      "not": "maddeler:true katilimciYok:true"
     },
     {
       "ad": "S10a-1440 yatay kaydırma yok",

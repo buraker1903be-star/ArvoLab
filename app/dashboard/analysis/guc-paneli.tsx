@@ -136,6 +136,51 @@ export default function GucPaneli() {
               en: "— your chance of DETECTING the difference if it is really there. Commonly .80: if the effect is real you find it in four attempts out of five.",
             })}
           </li>
+          {/* Yönteme özgü girdiler de burada anlatılır: dosya yüklenmediği
+              için kullanıcının tek yol göstericisi bu kart. */}
+          {tanim.yonSecilir ? (
+            <li>
+              <b>{t({ tr: "Test yönü", en: "Test direction" })}</b>{" "}
+              {t({
+                tr: "— farkın HANGİ yönde olacağını kuramla önceden söylüyorsanız tek yönlü, bilmiyorsanız çift yönlü. Tek yönlü test daha küçük örneklemle yeter ama ters yöndeki farkı göremez.",
+                en: "— one-tailed if theory tells you in advance WHICH way the difference will go, two-tailed if you do not know. A one-tailed test needs a smaller sample but cannot detect a difference in the other direction.",
+              })}
+            </li>
+          ) : null}
+          {yontem === "tekYonluAnova" ? (
+            <li>
+              <b>{t({ tr: "Grup sayısı", en: "Number of groups" })}</b>{" "}
+              {t({
+                tr: "— karşılaştıracağınız grupların sayısı (ör. üç öğretim yöntemi). Toplam örneklem gruplara EŞİT bölünür; bu yüzden sonuç grup sayısının katı olur.",
+                en: "— how many groups you will compare (e.g. three teaching methods). The total sample is split EQUALLY between them, so the result is a multiple of the group count.",
+              })}
+            </li>
+          ) : null}
+          {yontem === "regresyon" ? (
+            <li>
+              <b>{t({ tr: "Yordayıcı sayısı", en: "Number of predictors" })}</b>{" "}
+              {t({
+                tr: "— modele girecek bağımsız değişkenlerin sayısı. Kategorik bir değişken için açtığınız her kukla sütun AYRI bir yordayıcıdır.",
+                en: "— how many independent variables enter the model. Each dummy column you create for a categorical variable counts as a SEPARATE predictor.",
+              })}
+            </li>
+          ) : null}
+          {yontem === "bagimsizT" ? (
+            <li>
+              <b>{t({ tr: "Dağılım oranı", en: "Allocation ratio" })}</b>{" "}
+              {t({
+                tr: "— ikinci grubun birinciye oranı. Eşit gruplar için 1 yazın; 2 yazarsanız ikinci grup birincinin iki katı olur. Eşit olmayan dağılım aynı güç için daha büyük toplam örneklem ister.",
+                en: "— the size of the second group relative to the first. Enter 1 for equal groups; 2 makes the second group twice the first. An unequal split needs a larger total sample for the same power.",
+              })}
+            </li>
+          ) : null}
+          <li>
+            <b>{t({ tr: "Beklenen kayıp oranı", en: "Expected dropout rate" })}</b>{" "}
+            {t({
+              tr: "— isteğe bağlı: çalışma boyunca kaybetmeyi beklediğiniz katılımcı payı (0,10 = %10). Girerseniz analize gereken sayının yanında BAŞLANGIÇTA toplamanız gereken sayı da yazılır.",
+              en: "— optional: the share of participants you expect to lose during the study (0.10 = 10%). Enter it and the result also states how many you need to recruit AT THE START, alongside the number the analysis needs.",
+            })}
+          </li>
         </ul>
         <p className="muted text-sm">
           {t({

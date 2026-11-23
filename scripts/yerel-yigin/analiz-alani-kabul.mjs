@@ -1465,8 +1465,12 @@ try {
       fs.writeFileSync(dolu, `${satirlar.join("\n")}\n`, "utf8");
       S11[`sablonDolu_${dil}`] = dolu;
       await yukle(dolu);
-      /* Veri gelince kart kayboluyor: sorusu yanıtlanmış oluyor. */
-      const kartKalkti = (await sayfa.locator("#analiz-panel-alan .analiz-veri-karti").count()) === 0;
+      /* Veri gelince AÇIK kart kalkıyor, rehber "Veri gereksinimlerini
+         gör" özetine katlanıyor (23.11.2026): ilk ekran kalabalıklaşmasın
+         ama gereksinimler erişilebilir kalsın. */
+      const kartKalkti =
+        (await sayfa.locator("#analiz-panel-alan section.analiz-veri-karti").count()) === 0 &&
+        (await sayfa.locator("#analiz-panel-alan details.analiz-veri-karti-katli").count()) === 1;
       const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
       const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
       /* Katılımcı sütunu metin: madde listesine düşmüyor. */
@@ -1549,6 +1553,7 @@ try {
       bagimsiz: dil === "tr" ? "İki ayrı grubun puanlarını karşılaştıracağım" : "I will compare the scores of two separate groups",
       esl: dil === "tr" ? "Aynı kişileri önce ve sonra ölçeceğim" : "I will measure the same people before and after",
       anova: dil === "tr" ? "Üç ya da daha çok grubun" : "I will compare the means of three or more groups",
+      regresyon: dil === "tr" ? "Birkaç değişkenle bir sonucu yordayacağım" : "I will predict an outcome from several variables",
     };
 
     await esit(`S18a-${dil}-${olcu} bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla`, async () => {
@@ -1566,6 +1571,28 @@ try {
         : ["Effect size", "false alarm", "DETECTING", "PREVIOUS RESEARCH", "PILOT", "SMALLEST DIFFERENCE"];
       return `kavramlar:${anahtarlar.every((a) => m.includes(a))}`;
     }, "kavramlar:true");
+
+    /* Dosya yüklenmediği için yönteme özgü form girdilerinin tek
+       açıklaması bu kart: yöntem değişince kart da değişiyor. */
+    await esit(`S18b2-${dil}-${olcu} kart yönteme özgü girdileri anlatıyor`, async () => {
+      const bagimsizM = (await kartMetniGuc()) ?? "";
+      await gucYontemSec(sorular.anova);
+      const anovaM = (await kartMetniGuc()) ?? "";
+      await gucYontemSec(sorular.regresyon);
+      const regM = (await kartMetniGuc()) ?? "";
+      await gucYontemSec(sorular.bagimsiz);
+      const A = dil === "tr"
+        ? { oran: "Dağılım oranı", yon: "Test yönü", kayip: "Beklenen kayıp oranı", grup: "Grup sayısı", yordayici: "Yordayıcı sayısı" }
+        : { oran: "Allocation ratio", yon: "Test direction", kayip: "Expected dropout rate", grup: "Number of groups", yordayici: "Number of predictors" };
+      return [
+        `bagimsizOran:${bagimsizM.includes(A.oran)}`,
+        `bagimsizYon:${bagimsizM.includes(A.yon)}`,
+        `kayip:${bagimsizM.includes(A.kayip)}`,
+        `anovaGrup:${anovaM.includes(A.grup)}`,
+        `anovaOranYok:${!anovaM.includes(A.oran)}`,
+        `regYordayici:${regM.includes(A.yordayici)}`,
+      ].join(" ");
+    }, (v) => !/false/.test(v));
 
     await esit(`S18c-${dil}-${olcu} "Örneği doldur" alanları dolduruyor ve ÖRNEK olduğunu yazıyor`, async () => {
       await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
@@ -1667,6 +1694,159 @@ try {
     }
     await sayfa.locator(".analiz-guc-sonuc").scrollIntoViewIfNeeded().catch(() => {});
     await cek(sayfa, `31-guc-${dil}-${telefon ? 390 : 1440}`);
+  }
+  await sayfa.setViewportSize({ width: 1440, height: 900 });
+  await dilSec("Türkçe");
+
+  /* ================= S19: her analizde veri hazırlama rehberi =================
+     Kart dosya SEÇİLMEDEN önce görünüyor, analiz değişince içeriği de
+     değişiyor, veri gelince "Veri gereksinimlerini gör" özetine
+     katlanıyor. İndirilen boş şablon gerçek yükleme akışından
+     geçiriliyor ve seçilebilir sütunlar denetleniyor. */
+  const REHBER = {
+    tr: {
+      ttest: { ad: "Bağımsız Örneklem t-Testi", basliklar: ["Katılımcı", "Grup", "Puan"], hata: /İKİ AYRI SÜTUNA yazmayın/ },
+      pairedttest: { ad: "Eşleştirilmiş Örneklem t-Testi", basliklar: ["Katılımcı", "Ön test", "Son test"], hata: /ALT ALTA tek sütuna yazmayın/ },
+      chisquare: { ad: "Ki-Kare Bağımsızlık Testi", basliklar: ["Katılımcı", "Cinsiyet", "Tercih"], hata: /HAZIR ÇAPRAZ TABLO/ },
+      reliability: { ad: "Güvenilirlik Analizi", basliklar: ["Katılımcı", "Madde 1", "Madde 2", "Madde 3"], hata: /toplam puan yeterli değildir/ },
+      kartBaslik: "Bu analiz için hangi veriler gerekli?",
+      ornek: "Örnek tabloyu gör", indir: "Boş şablonu indir", katli: "Veri gereksinimlerini gör",
+    },
+    en: {
+      ttest: { ad: "Independent Samples t-Test", basliklar: ["Participant", "Group", "Score"], hata: /TWO SEPARATE COLUMNS/ },
+      pairedttest: { ad: "Paired Samples t-Test", basliklar: ["Participant", "Pre-test", "Post-test"], hata: /stack the before and after/ },
+      chisquare: { ad: "Chi-Square Test of Independence", basliklar: ["Participant", "Gender", "Preference"], hata: /READY-MADE CROSS-TABLE/ },
+      reliability: { ad: "Reliability Analysis", basliklar: ["Participant", "Item 1", "Item 2", "Item 3"], hata: /total score on its own is not enough/ },
+      kartBaslik: "What data does this analysis need?",
+      ornek: "See an example table", indir: "Download the blank template", katli: "See the data requirements",
+    },
+  };
+  /* Şablonu dolduran değerler: analizin kabul ettiği türde. */
+  const REHBER_SATIR = {
+    ttest: (i) => [`K${i + 1}`, i % 2 ? "kontrol" : "deney", String(60 + ((i * 7) % 25))],
+    pairedttest: (i) => [`K${i + 1}`, String(60 + ((i * 5) % 20)), String(66 + ((i * 7) % 20))],
+    chisquare: (i) => [`K${i + 1}`, i % 2 ? "erkek" : "kadın", i % 3 ? "evet" : "hayır"],
+    reliability: (i) => [`K${i + 1}`, String(1 + (i % 5)), String(1 + ((i + 1) % 5)), String(1 + ((i + 2) % 5))],
+  };
+  const rehberKarti = async () => {
+    const k = sayfa.locator("#analiz-panel-alan .analiz-veri-karti");
+    return (await k.count()) ? await k.first().innerText() : null;
+  };
+  /* Analiz MASAÜSTÜ ölçüsünde seçiliyor: telefonda gezgin özet
+     kipinde ve arama alanı gizli (analiz-alani.css). Telefonda seçim
+     YOLU S10g2/S10g3'te ayrıca sınanıyor; burada sınanan şey kartın
+     390 px'te çizilişi, kaydırması ve şablon akışı. */
+  const rehberAnalizSec = async (ad, telefonda) => {
+    if (telefonda) await sayfa.setViewportSize({ width: 1440, height: 900 });
+    await analizSec("rehber", ad);
+    if (telefonda) await sayfa.setViewportSize({ width: 390, height: 844 });
+    await sayfa.waitForTimeout(200);
+  };
+
+  for (const [dil, olcu] of [["tr", "masaüstü"], ["tr", "telefon"], ["en", "masaüstü"], ["en", "telefon"]]) {
+    const telefon = olcu === "telefon";
+    const R = REHBER[dil];
+    await sayfa.setViewportSize({ width: 1440, height: 900 });
+    await sayfa.waitForTimeout(200);
+    await dilSec(dil === "en" ? "English" : "Türkçe");
+    await sayfa.setViewportSize(telefon ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    await git(sayfa, ANALIZ_YOLU);
+
+    await esit(`S19a-${dil}-${olcu} rehber dosya YÜKLENMEDEN görünüyor ve analize özgü`, async () => {
+      await rehberAnalizSec(R.ttest.ad, telefon);
+      const t1 = (await rehberKarti()) ?? "";
+      await rehberAnalizSec(R.pairedttest.ad, telefon);
+      const t2 = (await rehberKarti()) ?? "";
+      return [
+        `baslik:${t1.includes(R.kartBaslik)}`,
+        `ttestHata:${R.ttest.hata.test(t1)}`,
+        `eslestirilmisHata:${R.pairedttest.hata.test(t2)}`,
+        `degisti:${t1 !== t2}`,
+      ].join(" ");
+    }, "baslik:true ttestHata:true eslestirilmisHata:true degisti:true");
+
+    await esit(`S19b-${dil}-${olcu} örnek tablo başlıkları ve kaydırma`, async () => {
+      await sayfa.getByRole("button", { name: R.ornek }).click();
+      await sayfa.waitForTimeout(250);
+      const tablo = sayfa.locator('#analiz-panel-alan .analiz-veri-karti [role="region"]');
+      const basliklar = (await tablo.locator("thead th").allInnerTexts()).map((x) => x.trim());
+      const kaydirma = await tablo.evaluate((el) => {
+        const tasiyor = el.scrollWidth > el.clientWidth + 1;
+        if (!tasiyor) return "tasmiyor";
+        el.scrollLeft = 80;
+        const k = el.scrollLeft > 0;
+        el.scrollLeft = 0;
+        return k ? "kaydi" : "KAYMADI";
+      });
+      const sayfaTasmasi = await sayfa.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      return `basliklar:${basliklar.join("|")} kaydirma:${kaydirma !== "KAYMADI"} sayfaTasmasi:${sayfaTasmasi}`;
+    }, `basliklar:${REHBER[dil].pairedttest.basliklar.join("|")} kaydirma:true sayfaTasmasi:false`);
+
+    await esit(`S19c-${dil}-${olcu} klavyeyle örnek tablo açılıp kapanıyor`, async () => {
+      const dugme = sayfa.getByRole("button", { name: R.ornek });
+      await dugme.focus();
+      const odakli = await sayfa.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
+      await sayfa.keyboard.press("Enter");
+      await sayfa.waitForTimeout(250);
+      const kapandi = (await sayfa.locator('#analiz-panel-alan .analiz-veri-karti [role="region"]').count()) === 0;
+      await sayfa.keyboard.press("Enter");
+      await sayfa.waitForTimeout(250);
+      const acildi = (await sayfa.locator('#analiz-panel-alan .analiz-veri-karti [role="region"]').count()) === 1;
+      return `odak:${odakli.includes(R.ornek)} kapandi:${kapandi} acildi:${acildi}`;
+    }, "odak:true kapandi:true acildi:true");
+
+    /* Dört analizde: şablonu indir → doldur → gerçek akışla yükle → sütunları denetle. */
+    for (const tur of ["ttest", "pairedttest", "chisquare", "reliability"]) {
+      await esit(`S19d-${dil}-${olcu}-${tur} şablon indiriliyor, dolduruluyor, yükleniyor`, async () => {
+        await git(sayfa, ANALIZ_YOLU);
+        await rehberAnalizSec(R[tur].ad, telefon);
+        const [indirme] = await Promise.all([
+          sayfa.waitForEvent("download", { timeout: 20000 }),
+          sayfa.getByRole("button", { name: R.indir }).click(),
+        ]);
+        const yol = path.join(KOK, `.tmp-s19-${tur}-${dil}-${ek}.csv`);
+        await indirme.saveAs(yol);
+        S11[`rehber_${tur}_${dil}`] = yol;
+        const sablon = fs.readFileSync(yol, "utf8").trim();
+        const satirlar = [sablon];
+        for (let i = 0; i < 24; i += 1) satirlar.push(REHBER_SATIR[tur](i).join(","));
+        const dolu = path.join(KOK, `.tmp-s19-dolu-${tur}-${dil}-${ek}.csv`);
+        fs.writeFileSync(dolu, `${satirlar.join("\n")}\n`, "utf8");
+        S11[`rehberDolu_${tur}_${dil}`] = dolu;
+        await yukle(dolu);
+        const katli = (await sayfa.locator(`#analiz-panel-alan .analiz-veri-karti-katli`).count()) === 1;
+        const acikKart = await sayfa.locator("#analiz-panel-alan section.analiz-veri-karti").count();
+        return `baslik:${sablon === R[tur].basliklar.join(",")} katli:${katli} acikKartYok:${acikKart === 0}`;
+      }, `baslik:true katli:true acikKartYok:true`);
+
+      await esit(`S19e-${dil}-${olcu}-${tur} seçilebilir sütunlar doğru`, async () => {
+        const secenekler = async (etiket) =>
+          (await sayfa.locator("label").filter({ hasText: etiket }).first().locator("select option").allInnerTexts()).map((x) => x.trim());
+        const katilimci = R[tur].basliklar[0];
+        if (tur === "reliability") {
+          const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
+          const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
+          return `maddeler:${R[tur].basliklar.slice(1).every((b) => etiketler.includes(b))} katilimciYok:${!etiketler.includes(katilimci)}`;
+        }
+        if (tur === "ttest") {
+          const grup = await secenekler(dil === "tr" ? "Grup değişkeni" : "Grouping variable");
+          const sayisal = await secenekler(dil === "tr" ? "Sayısal değişken" : "Numeric variable");
+          return `grup:${grup.includes(R[tur].basliklar[1])} sayisal:${sayisal.includes(R[tur].basliklar[2])} katilimciYok:${!sayisal.includes(katilimci)}`;
+        }
+        if (tur === "pairedttest") {
+          const once = await secenekler(dil === "tr" ? "Önceki ölçüm" : "Earlier measurement");
+          const sonra = await secenekler(dil === "tr" ? "Sonraki ölçüm" : "Later measurement");
+          return `once:${once.includes(R[tur].basliklar[1])} sonra:${sonra.includes(R[tur].basliklar[2])} katilimciYok:${!once.includes(katilimci)}`;
+        }
+        const birinci = await secenekler(dil === "tr" ? "Grup değişkeni" : "Grouping variable");
+        const ikinci = await secenekler(dil === "tr" ? "İkinci kategorik" : "Second categorical");
+        /* Etiket sütunu burada ELENMİYOR: uygulama her kategorik sütunu
+           listeliyor, rehber de bu yüzden "analize seçmeyin" diyor. */
+        return `birinci:${birinci.includes(R[tur].basliklar[1])} ikinci:${ikinci.includes(R[tur].basliklar[2])}`;
+      }, (v) => !/false/.test(v));
+    }
+    await sayfa.locator("#analiz-panel-alan .analiz-veri-karti").first().scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `32-rehber-${dil}-${telefon ? 390 : 1440}`);
   }
   await sayfa.setViewportSize({ width: 1440, height: 900 });
   await dilSec("Türkçe");

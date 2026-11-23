@@ -504,3 +504,27 @@
   border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2);
 }
 .analiz-guc-metin > p { margin: 0; color: var(--ink-soft); font-size: var(--os5-fs-govde); line-height: 1.55; }
+
+/* Veri rehberi, veri geldikten sonra katlanmış duruyor: ilk ekran
+   kalabalıklaşmasın ama rehber erişilebilir kalsın. */
+.analiz-veri-karti-katli { padding: 0; }
+.analiz-veri-karti-katli > summary {
+  min-height: 44px; padding: var(--s-2) var(--s-4); display: flex; align-items: center;
+  color: var(--primary-ink); font-size: var(--os5-fs-govde); font-weight: 600; cursor: pointer;
+}
+.analiz-veri-karti-katli > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.analiz-veri-karti-ic { display: grid; gap: var(--s-2); padding: 0 var(--s-4) var(--s-3); }
+
+/* Rehberin "sık yapılan hata" notu: kalıcı açıklama olduğu için canlı
+   durum uyarılarının (.alert[data-tone="warning"]) seçicisine girmiyor,
+   görünümü onunla aynı aileden kalıyor. */
+.analiz-veri-karti-hata {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--warning) 22%, transparent);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  color: color-mix(in srgb, var(--warning) 85%, var(--ink));
+  font-size: var(--os5-fs-govde);
+  line-height: var(--lh-metin);
+}

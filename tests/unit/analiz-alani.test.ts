@@ -299,46 +299,81 @@ describe("güvenilirlik: α ve ω", () => {
   });
 });
 
-describe("güvenilirlik: gerekli veri kartı", () => {
+describe("gerekli veri kartı: güvenilirlikten bütün analizlere", () => {
   /*
     Kart dosya SEÇİLMEDEN önce görünür. Öğrenciler ölçek güvenilirliği
     için sık sık tek bir toplam puan sütunu yüklüyor; o dosyayla hiçbir
     şey hesaplanamıyor ve hata ancak yüklemeden sonra görülüyordu.
+    23.11.2026'da kart güvenilirliğe özel bir blok olmaktan çıkıp
+    AYRI bir bileşene (veri-rehberi-karti.tsx) ve tek bir içerik
+    kaynağına (lib/analiz-veri-rehberi.ts) taşındı; bütün analizlerde
+    çiziliyor. Metin sınavları o kaynağa bakar.
   */
-  test("kart yalnızca güvenilirlikte ve veri yüklenmeden görünüyor", () => {
-    assert.match(analizci, /\{!dataset && !loading && analysisType === "reliability" \? \(/);
-    assert.match(analizci, /className="analiz-veri-karti"/);
+  const kart = oku("app/dashboard/analysis/veri-rehberi-karti.tsx");
+  const rehber = oku("lib/analiz-veri-rehberi.ts");
+
+  test("kart her analizde, veri yüklenmeden önce açık çiziliyor", () => {
+    assert.match(analizci, /\{!dataset && !loading \? <VeriRehberiKarti tur=\{analysisType\}/);
+    assert.match(kart, /className="analiz-veri-karti"/);
     assert.match(stil, /\.analiz-veri-karti \{/);
   });
 
-  test("dört cümle iki dilde ve sade", () => {
+  /* Veri geldikten sonra ilk ekran kalabalıklaşmasın: özet içinde. */
+  test("veri yüklendikten sonra 'Veri gereksinimlerini gör' özetinde kalıyor", () => {
+    assert.match(analizci, /\{dataset \? <VeriRehberiKarti tur=\{analysisType\} secenek=\{rehberSecenekleri\} katlanir/);
+    assert.match(kart, /tr: "Veri gereksinimlerini gör", en: "See the data requirements"/);
+    assert.match(stil, /\.analiz-veri-karti-katli > summary \{/);
+  });
+
+  test("güvenilirliğin dört cümlesi iki dilde ve sade", () => {
     for (const [tr, en] of [
       ["Her satır bir katılımcı, her sütun bir anket maddesi.", "Each row is one participant, each column is one questionnaire item."],
       ["Hücrelere verilen yanıtları yazın.", "Write the given answers in the cells."],
       ["Yalnızca toplam puan yeterli değildir.", "A total score on its own is not enough."],
       ["Katılımcı sütunu isteğe bağlıdır ve analize seçilmez.", "A participant column is optional and is not selected for the analysis."],
     ]) {
-      assert.ok(analizci.includes(tr), tr);
-      assert.ok(analizci.includes(en), en);
+      assert.ok(rehber.includes(tr), tr);
+      assert.ok(rehber.includes(en), en);
     }
   });
 
   /* Üç madde ω'yı GARANTİ ETMEZ: model kestirilemeyebilir. */
   test("en az madde sayıları yazılı, ω garanti edilmiyor", () => {
-    assert.match(analizci, /Cronbach α için en az 2 madde, McDonald ω için en az 3 madde gerekir/);
-    assert.match(analizci, /GARANTİ ETMEZ/);
-    assert.match(analizci, /at least 2 items and McDonald's ω at least 3/);
-    assert.match(analizci, /does NOT guarantee that ω can be computed/);
+    assert.match(rehber, /Cronbach α için en az 2 madde, McDonald ω için en az 3 madde gerekir/);
+    assert.match(rehber, /GARANTİ ETMEZ/);
+    assert.match(rehber, /at least 2 items and McDonald's ω at least 3/);
+    assert.match(rehber, /does NOT guarantee that ω can be computed/);
   });
 
-  test("örnek tablo ve boş şablon aynı kartta", () => {
-    assert.match(analizci, /tr: "Örnek tabloyu gör", en: "See an example table"/);
-    assert.match(analizci, /tr: "Boş şablonu indir", en: "Download the blank template"/);
-    assert.match(analizci, /onClick=\{sablonuIndir\}/);
-    assert.match(analizci, /bosSablonCsv\(dil\)/);
-    /* Örnek tablo başlıkları şablonla AYNI kaynaktan. */
-    assert.match(analizci, /sablonBasliklari\(dil\)\.map/);
-    assert.match(analizci, /ornekSatirlar\(dil\)\.map/);
+  test("örnek tablo ve boş şablon aynı kartta, aynı tanımdan", () => {
+    assert.match(kart, /tr: "Örnek tabloyu gör", en: "See an example table"/);
+    assert.match(kart, /tr: "Boş şablonu indir", en: "Download the blank template"/);
+    assert.match(kart, /onClick=\{sablonuIndir\}/);
+    assert.match(kart, /rehberSablonCsv\(rehber, dil\)/);
+    /* Başlıklar ve örnek satırlar TEK kaynaktan: ayrışamazlar. */
+    assert.match(kart, /rehberBasliklari\(rehber, dil\)/);
+    assert.match(kart, /rehberOrnekSatirlari\(rehber, dil\)/);
+  });
+
+  /* Kartın "sık yapılan hata" notu KALICI bir açıklama: canlı durum
+     uyarılarıyla aynı seçiciye girmemeli. Eskiden `.alert[data-tone="warning"]`
+     kullanıyordu; veri yüklendikten sonra kart formun üstünde durduğu için
+     "sonuç eskidi" uyarısını arayan her okuyucu (test de kullanıcı da)
+     önce bu kalıcı notu buluyordu. */
+  test("yaygın hata notu canlı uyarı seçicisine girmiyor", () => {
+    assert.doesNotMatch(kart, /className="alert[^"]*" data-tone="warning"/);
+    assert.match(kart, /className="analiz-veri-karti-hata mt-sm" role="note"/);
+    assert.match(stil, /\.analiz-veri-karti-hata \{/);
+  });
+
+  /* Dosya istemeyen Güç ve Örneklem'de rehber yok; yönteme özgü form
+     girdileri "Hangi bilgiler gerekli?" kartında anlatılıyor. */
+  test("güç panelinin kartı yönteme özgü girdileri anlatıyor", () => {
+    const guc = oku("app/dashboard/analysis/guc-paneli.tsx");
+    assert.match(guc, /tr: "Dağılım oranı", en: "Allocation ratio"/);
+    assert.match(guc, /yontem === "tekYonluAnova" \? \(\s*<li>/);
+    assert.match(guc, /yontem === "regresyon" \? \(\s*<li>/);
+    assert.match(guc, /tr: "Beklenen kayıp oranı", en: "Expected dropout rate"/);
   });
 });
 
