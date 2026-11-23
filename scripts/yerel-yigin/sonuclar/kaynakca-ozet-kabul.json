@@ -1,135 +1,200 @@
 {
-  "tarih": "2026-11-23T12:49:51.015Z",
-  "head": "1587ce4bab5cb20d9d07731c59c14c6d6742269c",
-  "buildId": "uRfvj7pLQJvkqoW-Sz-tS",
+  "tarih": "2026-11-23T15:08:22.643Z",
+  "head": "e99a1b85594365b699936fd8797fc7e83ea46713",
+  "buildId": "uzXTp4JVKTjNYD-qhqr2H",
   "uygulama": "http://localhost:3141",
-  "gecen": 25,
+  "gecen": 38,
   "dusen": 0,
   "sonuclar": [
     {
-      "ad": "K1a toplam ile kategoriler aynı denetimi gösteriyor (biçim satırları var)",
+      "ad": "K1a şerit: tek kategorili bulguda türün kendisi, kapsam ve ana eylem",
       "durum": "PASS",
-      "not": "toplam:2 bicimHata:1 bicimUyari:1 kategoriToplami:2"
+      "not": "ana:2 biçim uyarısı meta:true eylem:Sonuçları aç dagilimYok:true"
     },
     {
-      "ad": "K1b açık sorunun hangi kategoride olduğu özette yazılı",
+      "ad": "K1b bulgu satırı künyeyi ve GERÇEK uyarıyı birlikte gösteriyor",
       "durum": "PASS",
-      "not": "ozet:true"
+      "not": "satir:2 kunye:true uyari:true ton:warning etiket:true ok:true"
     },
     {
-      "ad": "K1c ölçülmeyen kategori 'Yok' değil 'Denetlenmedi'",
+      "ad": "K1c Tüm kontroller KAPALI başlıyor, sayısı denetimin kategori listesinden",
       "durum": "PASS",
-      "not": "denetlenmedi:4 sebepli:true yok:0"
+      "not": "baslik:Tüm kontroller (6) acik:false"
     },
     {
-      "ad": "K1d son denetimin tarihi, saati ve künye sayısı aynı kartta",
+      "ad": "K1d açılınca bütün kategoriler gerçek durumlarıyla görünüyor",
       "durum": "PASS",
-      "not": "ustBilgi:true toplamMetni:true"
+      "not": "satir:6 uyari:2 yok:Yok denetlenmedi:Denetlenmedi"
     },
     {
-      "ad": "K1e aynı gün iki denetim saatleriyle ayrışıyor ve satır kendi sonucunu açıyor",
+      "ad": "K1e geçmiş ayrı kartta ve SON denetim orada tekrar edilmiyor",
       "durum": "PASS",
-      "not": "sayi:1 saatli:true hedef:true"
+      "not": "ikiSutun:true sayi:1 saatli:true sonDenetimYok:true"
     },
     {
-      "ad": "K1f geçmiş satırına KLAVYEYLE ulaşılıyor ve o denetimin sonucu açılıyor",
+      "ad": "K1f bulgu satırındaki ok GERÇEKTEN ayrıntıyı açıyor",
       "durum": "PASS",
-      "not": "odak:a adres:true pencereAcik:true secilen:true"
+      "not": "denetimli:true pencere:true kunye:true"
     },
     {
-      "ad": "K1g yerleşim: liste ile geçmiş arasında büyük boşluk ve yatay taşma yok",
+      "ad": "K1g klavye: ana eylem, Tüm kontroller ve geçmiş satırı kullanılabilir",
       "durum": "PASS",
-      "not": "bosluk:10 yatayTasma:0"
+      "not": "eylem:true tum:true acildi:true gecmis:true adres:true"
     },
     {
-      "ad": "K2a denetim yapılmamış çalışmada özet değil açıklama var",
+      "ad": "K1h yatay kaydırma yok; kaydırılabilir kapsayıcı da taşmıyor",
       "durum": "PASS",
-      "not": "ustBilgi:Henüz denetlenmedi toplam:true bos:true"
+      "not": "sayfa:0 kapsayici:yok"
     },
     {
-      "ad": "K2b sorunsuz denetimde toplam 0 ve kategoriler 'Yok'",
+      "ad": "K1j iki AYRI bulgu kendi ayrıntısını açıyor",
       "durum": "PASS",
-      "not": "toplam:0 yok:6 denetlenmedi:0 ozet:"
+      "not": "ilk:true ikinci:true farkli:true"
     },
     {
-      "ad": "K2c çok kategorili bulguda toplam kategorilerin toplamına eşit",
+      "ad": "K1k 'Sonuçları aç' genel denetim ekranını açıyor, vurgu yok",
       "durum": "PASS",
-      "not": "toplam:8 katilan:8 ulasilamayan:2 not:true ozetKategori:6"
+      "not": "pencere:true kunyeler:true vurgu:0"
     },
     {
-      "ad": "K2d çalışma değişince doğru özet ve geçmiş geliyor",
+      "ad": "K1i Kaynakça, Kütüphanem ile AYNI içerik sınırlarını kullanıyor",
       "durum": "PASS",
-      "not": "bicim:2 bicimGecmis:1 temiz:0 temizGecmis:0"
+      "not": "kutuphane:272-1408 kaynakca:272-1408 ayni:true"
     },
     {
-      "ad": "K2e Kütüphanem sekmesi çalışıyor",
+      "ad": "K2a denetim yapılmamış çalışmada boş durum korunuyor",
       "durum": "PASS",
-      "not": "kaynak:true sekme:1"
+      "not": "ana:Henüz denetlenmedi eylem:Kaynakçamı denetle bos:true gecmisBos:true"
     },
     {
-      "ad": "K2f kaynakça dışa aktarma akışı çalışıyor",
+      "ad": "K2b sorunsuz denetimde 'Açık sorun yok' ve tüm kategoriler Yok",
+      "durum": "PASS",
+      "not": "ana:Açık sorun yok bulguYok:true yok:6"
+    },
+    {
+      "ad": "K2c çok kategorili bulguda toplam ve dağılım tek yerde",
+      "durum": "PASS",
+      "not": "ana:8 açık sorun dagilim:6 ilkEtiket:true ilkTon:danger satir:true"
+    },
+    {
+      "ad": "K2d ayrıntısı olmayan eski kayıtta kategori ve adet gösteriliyor",
+      "durum": "PASS",
+      "not": "ana:2 bulunamayan kaynak ad:Dizinlerde bulunamayan kaynak rozet:2 not:true ok:true"
+    },
+    {
+      "ad": "K2e çalışma değişince şerit, bulgular ve geçmiş birlikte güncelleniyor",
+      "durum": "PASS",
+      "not": "once:2 biçim uyarısı/2/1 sonra:Açık sorun yok/0/0"
+    },
+    {
+      "ad": "K2f Kütüphanem sekmesi ve kaynak listesi çalışıyor",
+      "durum": "PASS",
+      "not": "kaynak:true"
+    },
+    {
+      "ad": "K2g kaynakça dışa aktarma akışı çalışıyor",
       "durum": "PASS",
       "not": "kaynakca:true kopyala:true"
     },
     {
-      "ad": "K3a-tr-dark-1440 özet ve kategoriler çeviride eksiksiz",
+      "ad": "K3a-tr-dark-1440 şerit ve bulgular çeviride eksiksiz",
       "durum": "PASS",
-      "not": "toplam:8 adlar:true turkceKalinti:false"
+      "not": "ana:true meta:true turkceKalinti:false"
     },
     {
-      "ad": "K3b-tr-dark-1440 yatay taşma yok, uzun kategori adı sarıyor",
+      "ad": "K3b-tr-dark-1440 yerleşim: iki sütun",
       "durum": "PASS",
-      "not": "yatayTasma:0 kirpikDegil:true"
+      "not": "ikiSutun:true sira:false adim:4"
     },
     {
-      "ad": "K3c-tr-dark-1440 karşıtlık: özet sayısı okunur",
+      "ad": "K3c-tr-dark-1440 yatay kaydırma yok, uzun ad sarıyor",
       "durum": "PASS",
-      "not": "6.3"
+      "not": "sayfa:0 kapsayici:yok kirpikDegil:true"
     },
     {
-      "ad": "K3a-en-light-1440 özet ve kategoriler çeviride eksiksiz",
+      "ad": "K3f-tr-dark-1440 karşıtlık: şeritteki ifade okunur",
       "durum": "PASS",
-      "not": "toplam:8 adlar:true turkceKalinti:false"
+      "not": "13.4"
     },
     {
-      "ad": "K3b-en-light-1440 yatay taşma yok, uzun kategori adı sarıyor",
+      "ad": "K3a-en-light-1440 şerit ve bulgular çeviride eksiksiz",
       "durum": "PASS",
-      "not": "yatayTasma:0 kirpikDegil:true"
+      "not": "ana:true meta:true turkceKalinti:false"
     },
     {
-      "ad": "K3c-en-light-1440 karşıtlık: özet sayısı okunur",
+      "ad": "K3b-en-light-1440 yerleşim: iki sütun",
       "durum": "PASS",
-      "not": "5.5"
+      "not": "ikiSutun:true sira:false adim:4"
     },
     {
-      "ad": "K3a-en-dark-390 özet ve kategoriler çeviride eksiksiz",
+      "ad": "K3c-en-light-1440 yatay kaydırma yok, uzun ad sarıyor",
       "durum": "PASS",
-      "not": "toplam:8 adlar:true turkceKalinti:false"
+      "not": "sayfa:0 kapsayici:yok kirpikDegil:true"
     },
     {
-      "ad": "K3b-en-dark-390 yatay taşma yok, uzun kategori adı sarıyor",
+      "ad": "K3f-en-light-1440 karşıtlık: şeritteki ifade okunur",
       "durum": "PASS",
-      "not": "yatayTasma:0 kirpikDegil:true"
+      "not": "17.2"
     },
     {
-      "ad": "K3c-en-dark-390 karşıtlık: özet sayısı okunur",
+      "ad": "K3a-en-dark-390 şerit ve bulgular çeviride eksiksiz",
       "durum": "PASS",
-      "not": "6.3"
+      "not": "ana:true meta:true turkceKalinti:false"
     },
     {
-      "ad": "K3a-tr-light-390 özet ve kategoriler çeviride eksiksiz",
+      "ad": "K3b-en-dark-390 yerleşim: tek sütun ve sıra",
       "durum": "PASS",
-      "not": "toplam:8 adlar:true turkceKalinti:false"
+      "not": "ikiSutun:false sira:true adim:4"
     },
     {
-      "ad": "K3b-tr-light-390 yatay taşma yok, uzun kategori adı sarıyor",
+      "ad": "K3c-en-dark-390 yatay kaydırma yok, uzun ad sarıyor",
       "durum": "PASS",
-      "not": "yatayTasma:0 kirpikDegil:true"
+      "not": "sayfa:0 kapsayici:yok kirpikDegil:true"
     },
     {
-      "ad": "K3c-tr-light-390 karşıtlık: özet sayısı okunur",
+      "ad": "K3d-en-dark-390 telefonda ana eylem kart genişliğini kullanıyor",
       "durum": "PASS",
-      "not": "5.5"
+      "not": "oran:91"
+    },
+    {
+      "ad": "K3e-en-dark-390 geçmişin son kaydına dikey kaydırmayla ulaşılıyor",
+      "durum": "PASS",
+      "not": "onceY:1365 gorunur:true"
+    },
+    {
+      "ad": "K3f-en-dark-390 karşıtlık: şeritteki ifade okunur",
+      "durum": "PASS",
+      "not": "13.4"
+    },
+    {
+      "ad": "K3a-tr-light-390 şerit ve bulgular çeviride eksiksiz",
+      "durum": "PASS",
+      "not": "ana:true meta:true turkceKalinti:false"
+    },
+    {
+      "ad": "K3b-tr-light-390 yerleşim: tek sütun ve sıra",
+      "durum": "PASS",
+      "not": "ikiSutun:false sira:true adim:4"
+    },
+    {
+      "ad": "K3c-tr-light-390 yatay kaydırma yok, uzun ad sarıyor",
+      "durum": "PASS",
+      "not": "sayfa:0 kapsayici:yok kirpikDegil:true"
+    },
+    {
+      "ad": "K3d-tr-light-390 telefonda ana eylem kart genişliğini kullanıyor",
+      "durum": "PASS",
+      "not": "oran:91"
+    },
+    {
+      "ad": "K3e-tr-light-390 geçmişin son kaydına dikey kaydırmayla ulaşılıyor",
+      "durum": "PASS",
+      "not": "onceY:1289 gorunur:true"
+    },
+    {
+      "ad": "K3f-tr-light-390 karşıtlık: şeritteki ifade okunur",
+      "durum": "PASS",
+      "not": "17.2"
     }
   ]
 }

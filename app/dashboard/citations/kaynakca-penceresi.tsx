@@ -24,6 +24,7 @@ export default async function KaynakcaPenceresi({
   calisma,
   sonDenetim,
   denetimId = null,
+  vurgulananBulgu = null,
   acikBasla = false,
   triggerLabel,
   triggerClassName = "projects-filter-button button-compact",
@@ -34,6 +35,8 @@ export default async function KaynakcaPenceresi({
   sonDenetim: { tarih: string; skor?: number | null; acikSorun?: number | null } | null;
   /** Geçmişten seçilen denetim; verilmezse SON denetim okunur. */
   denetimId?: string | null;
+  /** Kaynakça kartındaki bulgu satırından gelen künye/atıf anahtarı. */
+  vurgulananBulgu?: string | null;
   /** Geçmiş satırından gelindiyse pencere açık başlar. */
   acikBasla?: boolean;
   /** Kaynaklar sayfasında düğme eylemi söylüyor ("Kaynakçamı denetle"). */
@@ -88,6 +91,7 @@ export default async function KaynakcaPenceresi({
         oncekiSonuc={onceki as (CheckResult & { tarih: string }) | null}
         asistanGecmisi={gecmis}
         kaynakPdfleri={pdfler}
+        vurgulananBulgu={vurgulananBulgu}
       />
     </PanelDrawer>
   );
