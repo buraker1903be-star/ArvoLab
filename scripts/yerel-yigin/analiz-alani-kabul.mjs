@@ -2233,6 +2233,155 @@ try {
     }
   }
 
+  /* ================= S21: Kaydedilen Analizler — uzun listenin sonu =================
+     Güç sekmesinde (S20) kusur, kartın kaydırılabilir bir atası
+     OLMAMASIYDI. Kaydedilen analizler kartı aynı kilidin altında ama
+     kendi kuralı var (.analiz-kayitli-kart { overflow-y: auto }).
+     Burada ölçülüyor: 30 sentetik kayıtla son kayda ve işlem
+     düğmelerine GERÇEK kullanıcı kaydırmasıyla (fare tekerleği /
+     parmak) ulaşılıyor mu, düğmeler çalışıyor mu, masaüstünde sekme
+     şeridi yerinde kalıyor mu. Boş ve kısa liste ile çalışma
+     değişimi de burada. */
+  const S21_UZUN = psql(`insert into public.academic_projects (owner_id, project_type, title)
+    values (${q(KULLANICI)}, 'thesis', 'Uzun kayıt listesi çalışması') returning id`).split("\n")[0];
+  const S21_KISA = psql(`insert into public.academic_projects (owner_id, project_type, title)
+    values (${q(KULLANICI)}, 'thesis', 'Kısa kayıt listesi çalışması') returning id`).split("\n")[0];
+  const S21_BOS = psql(`insert into public.academic_projects (owner_id, project_type, title)
+    values (${q(KULLANICI)}, 'thesis', 'Kayıtsız çalışma') returning id`).split("\n")[0];
+  {
+    const turler = ["ttest", "anova", "correlation", "chisquare", "reliability", "pairedttest"];
+    const satir = (proje, i, sirada) =>
+      `(${q(KULLANICI)}, ${q(proje)}, ${q(turler[i % turler.length])}, ${q(`Sentetik kayıt ${String(i).padStart(2, "0")}`)}, ` +
+      `${q(`t(38) = ${(1 + i / 10).toFixed(2)}, p = .0${(i % 9) + 1}, d = 0.${20 + i}`)}, ${sirada ? "true" : "false"})`;
+    const uzun = [];
+    for (let i = 1; i <= 30; i += 1) uzun.push(satir(S21_UZUN, i, i === 1));
+    psql(`insert into public.analiz_sonuclari (owner_id, project_id, analiz_turu, baslik, apa_metni, teze_eklenecek) values ${uzun.join(",")}`);
+    psql(`insert into public.analiz_sonuclari (owner_id, project_id, analiz_turu, baslik, apa_metni, teze_eklenecek)
+          values ${[satir(S21_KISA, 41, false), satir(S21_KISA, 42, false)].join(",")}`);
+  }
+
+  for (const [olcuAd, g, y, dokunma, dil] of [
+    ["1440x900", 1440, 900, false, "tr"],
+    ["kisa-masaustu-1440x700", 1440, 700, false, "tr"],
+    ["telefon-390x844", 390, 844, true, "tr"],
+    ["1440x900-en", 1440, 900, false, "en"],
+  ]) {
+    psql(`update public.profiles set arayuz_dili = ${q(dil)} where id = ${q(KULLANICI)}`);
+    const ek3 = dokunma ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {};
+    const { ctx: c3, sayfa: s3 } = await oturum(g, y, "light", ek3, [{ name: "arvolab_dil", value: dil, url: UYG }]);
+    const cdp3 = dokunma ? await c3.newCDPSession(s3) : null;
+    const kayitliSekme = async () => {
+      await s3.getByRole("tab", { name: /Kaydedilen analizler|Saved analyses/ }).click();
+      await s3.waitForTimeout(400);
+    };
+    const olcu3 = { g, y };
+    const getir3 = async (hedef) => (dokunma ? await dokunarak(cdp3, s3, hedef, olcu3) : await tekerlekle(s3, hedef, olcu3));
+
+    await git(s3, `/dashboard/analysis?calisma=${S21_UZUN}`);
+    await kayitliSekme();
+
+    await esit(`S21a-${olcuAd}-${dil} 30 kayıtta son kayıt gerçek kaydırmayla tam görünür`, async () => {
+      const satirlar = s3.locator(".analiz-satiri");
+      const sayi = await satirlar.count();
+      const sonSatir = satirlar.last();
+      const once = await sonSatir.boundingBox();
+      const adim = await getir3(sonSatir);
+      const sonra = await sonSatir.boundingBox();
+      const dugmeler = sonSatir.locator(".analiz-satiri-eylem button");
+      const kutular = [];
+      for (let i = 0; i < (await dugmeler.count()); i += 1) kutular.push(await dugmeler.nth(i).boundingBox());
+      /* Masaüstünde sekme şeridi YERİNDE kalmalı: liste kendi alanında kayıyor. */
+      const serit = await s3.locator(".analiz-sekmeler").evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= window.innerHeight;
+      });
+      return [
+        `satir:${sayi}`,
+        `onceDisarda:${!icerde(once, y)}`,
+        `adim:${adim >= 0}`,
+        `sonGorunur:${icerde(sonra, y)}`,
+        `dugmeler:${kutular.length > 0 && kutular.every((b) => icerde(b, y))}`,
+        `seritYerinde:${dokunma ? "telefonda-sayfa-kayiyor" : serit}`,
+      ].join(" ");
+    }, (v) => /satir:30 onceDisarda:true adim:true sonGorunur:true dugmeler:true/.test(v) && !/seritYerinde:false/.test(v));
+
+    await esit(`S21b-${olcuAd}-${dil} son kaydın işlem düğmesi çalışıyor`, async () => {
+      const sonSatir = s3.locator(".analiz-satiri").last();
+      await getir3(sonSatir);
+      const dugme = sonSatir.locator(".analiz-satiri-eylem button").first();
+      const b = await dugme.boundingBox();
+      if (!icerde(b, y)) return "düğme görüş alanında değil";
+      /* Başlık SEKME PANELİNİN içinden okunuyor: gizli "Çalışma alanı"
+         panelindeki başlıklar da aynı sınıfı taşıyor ve gizli öğenin
+         innerText'i boş geliyordu (sayı 0 okunuyordu). */
+      const oncekiBaslik = await s3.locator("#analiz-panel-kayitli .pencere-kart-baslik").first().innerText();
+      if (dokunma) await s3.touchscreen.tap(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+      else await s3.mouse.click(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+      await s3.waitForTimeout(1500);
+      const sonrakiBaslik = await s3.locator("#analiz-panel-kayitli .pencere-kart-baslik").first().innerText();
+      /* Sıraya alınan kayıt "Teze eklenecekler"e geçiyor: sayı artıyor. */
+      const sayi = (x) => Number(x.match(/(\d+)\s*$/)?.[1] ?? 0);
+      return `once:${sayi(oncekiBaslik)} sonra:${sayi(sonrakiBaslik)} artti:${sayi(sonrakiBaslik) === sayi(oncekiBaslik) + 1}`;
+    }, (v) => /artti:true/.test(v));
+
+    if (!dokunma) {
+      await esit(`S21c-${olcuAd}-${dil} klavyeyle son satırın düğmelerine ulaşılıyor`, async () => {
+        const sonSatir = s3.locator(".analiz-satiri").last();
+        const hedef = sonSatir.locator(".analiz-satiri-eylem button").last();
+        await sonSatir.locator("summary").focus();
+        let bulundu = false;
+        for (let i = 0; i < 6 && !bulundu; i += 1) {
+          await s3.keyboard.press("Tab");
+          await s3.waitForTimeout(90);
+          bulundu = await hedef.evaluate((el) => el === document.activeElement);
+        }
+        return `odak:${bulundu} gorunur:${icerde(await hedef.boundingBox(), y)}`;
+      }, "odak:true gorunur:true");
+    }
+
+    await esit(`S21d-${olcuAd}-${dil} kısa listede kart kendi içinde kaymıyor`, async () => {
+      await git(s3, `/dashboard/analysis?calisma=${S21_KISA}`);
+      await kayitliSekme();
+      const sayi = await s3.locator(".analiz-satiri").count();
+      const durum = await s3.locator(".analiz-kayitli-kart").evaluate((el) => ({
+        kayma: el.scrollHeight > el.clientHeight + 1,
+      }));
+      const hepsiGorunur = await s3.locator(".analiz-satiri").evaluateAll((l) =>
+        l.every((e) => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight + 1; }),
+      );
+      return `satir:${sayi} kaymaYok:${!durum.kayma} hepsiGorunur:${hepsiGorunur}`;
+    }, "satir:2 kaymaYok:true hepsiGorunur:true");
+
+    await esit(`S21e-${olcuAd}-${dil} boş listede akış adımları var, yatay taşma yok`, async () => {
+      await git(s3, `/dashboard/analysis?calisma=${S21_BOS}`);
+      await kayitliSekme();
+      const adim = await s3.locator(".analiz-akis li").count();
+      const yatay = await s3.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+      return `satir:${await s3.locator(".analiz-satiri").count()} akis:${adim} yatayTasmaYok:${yatay}`;
+    }, "satir:0 akis:3 yatayTasmaYok:true");
+
+    await esit(`S21f-${olcuAd}-${dil} çalışma değişince doğru kayıtlar geliyor`, async () => {
+      await git(s3, `/dashboard/analysis?calisma=${S21_UZUN}`);
+      await kayitliSekme();
+      const uzunSayi = await s3.locator(".analiz-satiri").count();
+      /* Seçiciden değiştiriliyor: adres çubuğundan değil. */
+      await s3.locator(".kaynaklar-secici .secici-dugme").click();
+      await s3.waitForTimeout(250);
+      await s3.locator(".secici-secenek", { hasText: "Kısa kayıt listesi çalışması" }).first().click();
+      await s3.waitForTimeout(1800);
+      await kayitliSekme();
+      const kisaSayi = await s3.locator(".analiz-satiri").count();
+      const basliklar = (await s3.locator(".analiz-satiri b").allInnerTexts()).join("|");
+      return `uzun:${uzunSayi} kisa:${kisaSayi} baslik:${/41|42/.test(basliklar)}`;
+    }, (v) => /uzun:30 kisa:2 baslik:true/.test(v));
+
+    await cek(s3, `34-kayitli-${olcuAd}-${dil}`);
+    await c3.close();
+    /* Sıraya alınan kayıt geri alınıyor: her ölçü aynı durumdan başlasın. */
+    psql(`update public.analiz_sonuclari set teze_eklenecek = false
+          where project_id = ${q(S21_UZUN)} and baslik <> 'Sentetik kayıt 01'`);
+  }
+
 } catch (e) {
   FAIL("kabul koşusu", `${e.message}\n${e.stack?.split("\n").slice(1, 4).join("\n")}`);
 } finally {

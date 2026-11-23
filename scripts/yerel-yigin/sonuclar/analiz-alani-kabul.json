@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-23T11:14:37.570Z",
-  "head": "4194f05afa3818c650dd38160715bf417dbb857f",
-  "buildId": "EHTV-Ap8pUs-L5fwdWY3G",
+  "tarih": "2026-11-23T12:10:17.960Z",
+  "head": "e0ab3438d6a4cc4dcc7cc0ad9a199e3f597461ed",
+  "buildId": "t2SJoAGrArb4geTiHqW58",
   "uygulama": "http://localhost:3141",
-  "gecen": 264,
+  "gecen": 287,
   "dusen": 0,
   "sonuclar": [
     {
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-70f253.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-4d7e3b.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-70f253.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4d7e3b.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-70f253.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4d7e3b.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "38d3fdc7-57e0-43e1-8baf-e10f2708b7e5"
+      "not": "f9d0ad3a-28ea-4ca1-aeec-bcebd2499690"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-70f253.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-4d7e3b.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-70f253.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-4d7e3b.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-70f253.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-4d7e3b.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -1325,6 +1325,121 @@
       "ad": "S20f-telefon-390x844-en yatay taşma yok, içerik kırpılmıyor",
       "durum": "PASS",
       "not": "yatayTasmaYok:true kirpikDegil:true"
+    },
+    {
+      "ad": "S21a-1440x900-tr 30 kayıtta son kayıt gerçek kaydırmayla tam görünür",
+      "durum": "PASS",
+      "not": "satir:30 onceDisarda:true adim:true sonGorunur:true dugmeler:true seritYerinde:true"
+    },
+    {
+      "ad": "S21b-1440x900-tr son kaydın işlem düğmesi çalışıyor",
+      "durum": "PASS",
+      "not": "once:1 sonra:2 artti:true"
+    },
+    {
+      "ad": "S21c-1440x900-tr klavyeyle son satırın düğmelerine ulaşılıyor",
+      "durum": "PASS",
+      "not": "odak:true gorunur:true"
+    },
+    {
+      "ad": "S21d-1440x900-tr kısa listede kart kendi içinde kaymıyor",
+      "durum": "PASS",
+      "not": "satir:2 kaymaYok:true hepsiGorunur:true"
+    },
+    {
+      "ad": "S21e-1440x900-tr boş listede akış adımları var, yatay taşma yok",
+      "durum": "PASS",
+      "not": "satir:0 akis:3 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S21f-1440x900-tr çalışma değişince doğru kayıtlar geliyor",
+      "durum": "PASS",
+      "not": "uzun:30 kisa:2 baslik:true"
+    },
+    {
+      "ad": "S21a-kisa-masaustu-1440x700-tr 30 kayıtta son kayıt gerçek kaydırmayla tam görünür",
+      "durum": "PASS",
+      "not": "satir:30 onceDisarda:true adim:true sonGorunur:true dugmeler:true seritYerinde:true"
+    },
+    {
+      "ad": "S21b-kisa-masaustu-1440x700-tr son kaydın işlem düğmesi çalışıyor",
+      "durum": "PASS",
+      "not": "once:1 sonra:2 artti:true"
+    },
+    {
+      "ad": "S21c-kisa-masaustu-1440x700-tr klavyeyle son satırın düğmelerine ulaşılıyor",
+      "durum": "PASS",
+      "not": "odak:true gorunur:true"
+    },
+    {
+      "ad": "S21d-kisa-masaustu-1440x700-tr kısa listede kart kendi içinde kaymıyor",
+      "durum": "PASS",
+      "not": "satir:2 kaymaYok:true hepsiGorunur:true"
+    },
+    {
+      "ad": "S21e-kisa-masaustu-1440x700-tr boş listede akış adımları var, yatay taşma yok",
+      "durum": "PASS",
+      "not": "satir:0 akis:3 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S21f-kisa-masaustu-1440x700-tr çalışma değişince doğru kayıtlar geliyor",
+      "durum": "PASS",
+      "not": "uzun:30 kisa:2 baslik:true"
+    },
+    {
+      "ad": "S21a-telefon-390x844-tr 30 kayıtta son kayıt gerçek kaydırmayla tam görünür",
+      "durum": "PASS",
+      "not": "satir:30 onceDisarda:true adim:true sonGorunur:true dugmeler:true seritYerinde:telefonda-sayfa-kayiyor"
+    },
+    {
+      "ad": "S21b-telefon-390x844-tr son kaydın işlem düğmesi çalışıyor",
+      "durum": "PASS",
+      "not": "once:1 sonra:2 artti:true"
+    },
+    {
+      "ad": "S21d-telefon-390x844-tr kısa listede kart kendi içinde kaymıyor",
+      "durum": "PASS",
+      "not": "satir:2 kaymaYok:true hepsiGorunur:true"
+    },
+    {
+      "ad": "S21e-telefon-390x844-tr boş listede akış adımları var, yatay taşma yok",
+      "durum": "PASS",
+      "not": "satir:0 akis:3 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S21f-telefon-390x844-tr çalışma değişince doğru kayıtlar geliyor",
+      "durum": "PASS",
+      "not": "uzun:30 kisa:2 baslik:true"
+    },
+    {
+      "ad": "S21a-1440x900-en-en 30 kayıtta son kayıt gerçek kaydırmayla tam görünür",
+      "durum": "PASS",
+      "not": "satir:30 onceDisarda:true adim:true sonGorunur:true dugmeler:true seritYerinde:true"
+    },
+    {
+      "ad": "S21b-1440x900-en-en son kaydın işlem düğmesi çalışıyor",
+      "durum": "PASS",
+      "not": "once:1 sonra:2 artti:true"
+    },
+    {
+      "ad": "S21c-1440x900-en-en klavyeyle son satırın düğmelerine ulaşılıyor",
+      "durum": "PASS",
+      "not": "odak:true gorunur:true"
+    },
+    {
+      "ad": "S21d-1440x900-en-en kısa listede kart kendi içinde kaymıyor",
+      "durum": "PASS",
+      "not": "satir:2 kaymaYok:true hepsiGorunur:true"
+    },
+    {
+      "ad": "S21e-1440x900-en-en boş listede akış adımları var, yatay taşma yok",
+      "durum": "PASS",
+      "not": "satir:0 akis:3 yatayTasmaYok:true"
+    },
+    {
+      "ad": "S21f-1440x900-en-en çalışma değişince doğru kayıtlar geliyor",
+      "durum": "PASS",
+      "not": "uzun:30 kisa:2 baslik:true"
     }
   ]
 }
