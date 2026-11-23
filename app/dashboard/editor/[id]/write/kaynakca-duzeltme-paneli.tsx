@@ -147,6 +147,20 @@ export default function KaynakcaDuzeltmePaneli({
                     <p className="kaynakca-duzeltme-eski">{d.ham}</p>
                     <p className="kaynakca-duzeltme-yeni">{d.yeni}</p>
                     {d.sebepler.length ? <small className="muted">{d.sebepler.join(" · ")}</small> : null}
+                    {/*
+                      Künyeye GİRMEYEN eksikler: düzeltme engellenmiyor
+                      (bu alanlar olmadan da künye doğru yazılır) ama
+                      eksik olan söyleniyor — biçimleyici olmayan alanı
+                      uydurmaz, hiç yazmaz.
+                    */}
+                    {d.eksikNotu.length ? (
+                      <small className="muted">
+                        {t({
+                          tr: `Kayıtta yok, künyeye de yazılmadı: ${d.eksikNotu.join(", ")}.`,
+                          en: `Missing from the record and left out of the reference: ${d.eksikNotu.join(", ")}.`,
+                        })}
+                      </small>
+                    ) : null}
                     {d.ozelKural ? (
                       <small className="tone-text" data-tone="warning">
                         {t({

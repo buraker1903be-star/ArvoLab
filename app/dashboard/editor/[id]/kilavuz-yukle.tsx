@@ -291,6 +291,23 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           ) : null}
 
           {/*
+            KILAVUZDA YAZAN İFADE ile SEÇİLİ SÜRÜM ayrı satırlarda.
+            Kılavuz yalnızca "APA" diyorsa ürün bunu "APA 7" diye
+            kesinleştiremez: 6. baskıyı kastediyor olabilir ve söylemediği
+            bir şeyi söylemiş gibi göstermek öğrenciyi yanlış sürüme
+            bağlar. Saklanan değer yine katalog kimliği — denetim bir
+            kurallar kümesi olmadan çalışamaz — ama fark söyleniyor.
+          */}
+          {sonuc?.kilavuzIfadesi && form.atifStili && sonuc.kilavuzIfadesi !== t(stilAdiMetni(form.atifStili)) ? (
+            <small className="kilavuz-ifade">
+              {t({
+                tr: `Kılavuzda yazan ifade: “${sonuc.kilavuzIfadesi}”. Seçili sürüm: ${t(stilAdiMetni(form.atifStili))}${sonuc.calismaStili ? ` (çalışmanızda kayıtlı: ${t(stilAdiMetni(sonuc.calismaStili))})` : ""}. Kılavuzunuz başka bir sürümü işaret ediyorsa yukarıdan değiştirin.`,
+                en: `The guideline says “${sonuc.kilavuzIfadesi}”. Selected edition: ${t(stilAdiMetni(form.atifStili))}${sonuc.calismaStili ? ` (saved in your work: ${t(stilAdiMetni(sonuc.calismaStili))})` : ""}. If your guideline points to another edition, change it above.`,
+              })}
+            </small>
+          ) : null}
+
+          {/*
             İLK GÖNDERİMDE SERBEST BİÇİM: kılavuz bir stil adı geçirse de
             ilk gönderimde biçim serbestse, o adı zorunluymuş gibi
             göstermek yanlış alarmdır.

@@ -139,3 +139,32 @@ describe("ilkGonderimdeSerbestMi", () => {
 
   test("boş metin", () => assert.equal(ilkGonderimdeSerbestMi(""), false));
 });
+
+/*
+  KILAVUZDA YAZAN İFADE, katalog etiketinden AYRI. Kılavuz yalnızca
+  "APA" diyorsa ürün bunu "APA 7" diye kesinleştiremez: 6. baskıyı
+  kastediyor olabilir. Saklanan değer katalog kimliği kalır (denetim bir
+  kurallar kümesi olmadan çalışamaz) ama ekran ikisini ayrı yazar.
+*/
+describe("kılavuzda yazan ifade", () => {
+  const govdeIle = (ad: string) => govde(ad, 4);
+
+  test("sürümsüz 'APA' kesinleştirilmiyor", () => {
+    const secim = atifSistemiSec(govdeIle("APA"));
+    assert.equal(secim?.sistem, "apa7");
+    assert.equal(secim?.etiket, "APA 7");
+    assert.equal(secim?.kilavuzIfadesi, "APA");
+  });
+
+  test("kılavuzun yazdığı sürüm korunuyor", () => {
+    assert.equal(atifSistemiSec(govdeIle("APA 6"))?.kilavuzIfadesi, "APA 6");
+    assert.equal(atifSistemiSec(govdeIle("MLA 8"))?.kilavuzIfadesi, "MLA 8");
+    /* Ayraç normalleşir, sürüm değişmez. */
+    assert.equal(atifSistemiSec(govdeIle("apa-7"))?.kilavuzIfadesi, "APA 7");
+  });
+
+  test("sürümü olmayan stillerde ifade adın kendisi", () => {
+    assert.equal(atifSistemiSec(govdeIle("Vancouver"))?.kilavuzIfadesi, "Vancouver");
+    assert.equal(atifSistemiSec(govdeIle("IEEE"))?.kilavuzIfadesi, "IEEE");
+  });
+});

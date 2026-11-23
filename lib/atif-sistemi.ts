@@ -39,6 +39,16 @@ export type AtifSecimi = {
   sistem: AtifSistemi;
   /** Panelde gösterilen ad. */
   etiket: string;
+  /*
+    KILAVUZDA GEÇEN İFADE, olduğu gibi ("APA", "APA 6", "Vancouver").
+    Etiket katalogdaki addır ("APA 7") ve ikisi aynı şey değil: kılavuz
+    yalnızca "APA" diyorsa ürün bunu "APA 7" diye KESİNLEŞTİREMEZ —
+    kılavuz 6. baskıyı da kastediyor olabilir, söylemediği bir şeyi
+    söylemiş gibi göstermek öğrenciyi yanlış sürüme bağlar. Ekran ikisini
+    ayrı yazıyor; saklanan değer yine katalog kimliğidir, çünkü denetim
+    bir kurallar kümesi olmadan çalışamaz.
+  */
+  kilavuzIfadesi: string;
   sayim: number;
   /** İkinci sıradaki sistemin geçiş sayısı; kararın ne kadar net olduğunu gösterir. */
   ikinciSayim: number;
@@ -63,6 +73,31 @@ const EN_AZ_GECIS = 3;
 const BASKINLIK = 2;
 
 const say = (metin: string, desen: RegExp) => metin.match(desen)?.length ?? 0;
+
+/*
+  Sürüm numarası ADIN YANINDA yazılıysa ifadeye katılıyor ("APA 6",
+  "MLA 8"). Sürümü olmayan geçiş olduğu gibi kalır ("APA"): eksik olanı
+  tamamlamak, kılavuzun söylemediğini söyletmektir.
+*/
+const SURUMLU: Partial<Record<AtifSistemi, RegExp>> = {
+  apa7: /\bapa\s*-?\s*(\d{1,2})\b/i,
+  mla: /\bmla\s*-?\s*(\d{1,2})\b/i,
+  chicago: /\bchicago\s*-?\s*(\d{1,2})\b/i,
+};
+
+/** Kılavuzda geçen ifadeyi olduğu gibi okur; bulunamazsa katalog etiketi. */
+export function kilavuzIfadesi(metin: string, sistem: AtifSistemi, etiket: string): string {
+  const surumlu = SURUMLU[sistem]?.exec(metin);
+  if (surumlu) {
+    /* "apa-7", "APA  7" → "APA 7": ayraç normalleşir, SÜRÜM değişmez. */
+    const ad = surumlu[0].replace(/[\s-]+/g, " ").trim();
+    const [tur, surum] = ad.split(" ");
+    return `${tur.toLowerCase() === "chicago" ? "Chicago" : tur.toUpperCase()} ${surum}`;
+  }
+  const desen = DESENLER.find((d) => d.sistem === sistem)?.desen;
+  const duz = desen ? new RegExp(desen.source, "i").exec(metin) : null;
+  return duz ? duz[0].trim() : etiket;
+}
 
 /**
  * Kılavuz metninden atıf sistemini seçer; net bir kazanan yoksa null.
@@ -115,7 +150,14 @@ export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | nul
     );
   }
 
-  return { sistem: kazanan.sistem, etiket: kazanan.etiket, sayim: kazanan.sayim, ikinciSayim, uyarilar };
+  return {
+    sistem: kazanan.sistem,
+    etiket: kazanan.etiket,
+    kilavuzIfadesi: kilavuzIfadesi(metin, kazanan.sistem, kazanan.etiket),
+    sayim: kazanan.sayim,
+    ikinciSayim,
+    uyarilar,
+  };
 }
 
 /*

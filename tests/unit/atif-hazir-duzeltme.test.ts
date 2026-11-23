@@ -113,29 +113,86 @@ describe("künye uydurulmuyor", () => {
   });
 });
 
-describe("eksik bilgi tamamlanmıyor, söyleniyor", () => {
-  test("cildi ve sayfası olmayan kayıt düzeltme değil eksik listesi veriyor", () => {
+describe("eksik bilgi: yalnızca ŞART olan alan engelliyor", () => {
+  /*
+    Eskiden eksik olan HER alan düzeltmeyi engelliyordu: DOI'si olmayan
+    bir dergi makalesi Vancouver'da da IEEE'de de düzeltilemiyordu —
+    oysa bu stiller DOI istemiyor. Künyenin yazılabilmesi için şart
+    olmayan alan artık engel değil, NOT.
+  */
+  const DOISIZ = kaynak({ id: "k5", title: "Motivasyonun sınıf içi rolü", doi_or_url: null });
+
+  test("DOI eksikse düzeltme SUNULUYOR ve künyeye DOI yazılmıyor", () => {
+    for (const stil of ["vancouver", "ieee", "apa7", "chicago"]) {
+      const ozet = hazirDuzeltmeler({
+        kunyeler: [{ raw: "Yılmaz A 2020 Motivasyonun sınıf içi rolü Eğitim Dergisi" }],
+        kaynaklar: [DOISIZ],
+        stil,
+      });
+      assert.equal(ozet.duzeltmeler.length, 1, `${stil}: düzeltme sunulmalı`);
+      assert.deepEqual(ozet.eksikler, [], `${stil}: DOI engel sayılmamalı`);
+      const d = ozet.duzeltmeler[0];
+      assert.ok(!/doi\.org|https?:\/\//.test(d.yeni), `${stil}: künyeye DOI uydurulmuş: ${d.yeni}`);
+      assert.deepEqual(d.eksikNotu, ["DOI"], `${stil}: eksik alan not olarak söylenmeli`);
+    }
+  });
+
+  test("cilt ve sayfa eksikse de düzeltme sunuluyor, not olarak yazılıyor", () => {
     const eksik = kaynak({ id: "k4", title: "Sınıf yönetiminin temelleri", volume: null, pages: null });
     const ozet = hazirDuzeltmeler({
       kunyeler: [{ raw: "Yılmaz A 2020 Sınıf yönetiminin temelleri Eğitim Dergisi" }],
       kaynaklar: [eksik],
       stil: "apa7",
     });
+    assert.equal(ozet.duzeltmeler.length, 1);
+    assert.deepEqual(ozet.eksikler, []);
+    assert.deepEqual(ozet.duzeltmeler[0].eksikNotu, ["cilt", "sayfa aralığı"]);
+  });
+
+  test("DERGİ ADI eksikse engelliyor: künye o olmadan yanlış olurdu", () => {
+    const dergisiz = kaynak({ id: "k6", title: "Dergisi bilinmeyen çalışma", container_title: null });
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yılmaz A 2020 Dergisi bilinmeyen çalışma" }],
+      kaynaklar: [dergisiz],
+      stil: "apa7",
+    });
     assert.deepEqual(ozet.duzeltmeler, []);
     assert.equal(ozet.eksikler.length, 1);
-    assert.deepEqual(ozet.eksikler[0].alanlar, ["cilt", "sayfa aralığı"]);
-    assert.equal(ozet.eksikler[0].kaynakId, "k4");
+    assert.deepEqual(ozet.eksikler[0].alanlar, ["dergi adı"]);
+  });
+
+  test("yazarı ya da yılı olmayan kayıt engelliyor", () => {
+    for (const [ek, beklenen] of [[{ authors: null }, "yazar"], [{ year: null }, "yıl"]] as const) {
+      const bozuk = kaynak({ id: "k7", title: "Yazarsız ya da yılsız çalışma", ...ek });
+      const ozet = hazirDuzeltmeler({
+        kunyeler: [{ raw: "Yılmaz A 2020 Yazarsız ya da yılsız çalışma Eğitim Dergisi" }],
+        kaynaklar: [bozuk],
+        stil: "apa7",
+      });
+      assert.ok(ozet.eksikler[0]?.alanlar.includes(beklenen), `${beklenen} engellemeli: ${JSON.stringify(ozet)}`);
+    }
+  });
+
+  test("doğrulanmış kılavuz kuralı DOI isterse engel olur", () => {
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yılmaz A 2020 Motivasyonun sınıf içi rolü Eğitim Dergisi" }],
+      kaynaklar: [DOISIZ],
+      stil: "vancouver",
+      kilavuzZorunlulari: ["doi"],
+    });
+    assert.deepEqual(ozet.duzeltmeler, []);
+    assert.deepEqual(ozet.eksikler[0].alanlar, ["DOI"]);
   });
 
   test("belirsizlik ötekileri engellemiyor", () => {
-    const eksikKayit = kaynak({ id: "k4", title: "Sınıf yönetiminin temelleri", volume: null, pages: null });
+    const dergisiz = kaynak({ id: "k6", title: "Dergisi bilinmeyen çalışma", container_title: null });
     const ozet = hazirDuzeltmeler({
       kunyeler: [
         { raw: "Yılmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" },
-        { raw: "Yılmaz A 2020 Sınıf yönetiminin temelleri Eğitim Dergisi" },
+        { raw: "Yılmaz A 2020 Dergisi bilinmeyen çalışma" },
         { raw: "Kaya, C. (2021). Hiç bilinmeyen çalışma. Başka Dergi." },
       ],
-      kaynaklar: [OGRENME, eksikKayit],
+      kaynaklar: [OGRENME, dergisiz],
       stil: "apa7",
     });
     assert.equal(ozet.duzeltmeler.length, 1, "düzeltilebilen künye sunulmalı");
@@ -147,7 +204,7 @@ describe("eksik bilgi tamamlanmıyor, söyleniyor", () => {
 describe("özet cümlesi", () => {
   test("sayıyı ve eksikleri iki dilde yazıyor", () => {
     const cumle = duzeltmeOzetCumlesi({
-      duzeltmeler: [{ anahtar: "a", ham: "x", yeni: "y", parcalar: [{ text: "y" }], kaynakId: "k", sebepler: [], ozelKural: false }],
+      duzeltmeler: [{ anahtar: "a", ham: "x", yeni: "y", parcalar: [{ text: "y" }], kaynakId: "k", sebepler: [], ozelKural: false, eksikNotu: [] }],
       eksikler: [{ anahtar: "b", ham: "z", kaynakId: "k2", alanlar: ["cilt"] }],
       eslesmeyen: [],
     });

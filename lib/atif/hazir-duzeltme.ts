@@ -26,7 +26,7 @@
 */
 
 import type { Dil, Metin } from "@/lib/dil";
-import { eksikAlanlar, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
+import { eksikAlanAnahtarlari, formatReferenceParts, kunyeAlanAdi, type CitableSource, type CitationStyle, type KunyeAlani } from "@/lib/citation-format";
 
 /* Kütüphane kaydı: biçimleyicinin istediği alanlar + kaydın kimliği. */
 export type KutuphaneKaynagi = CitableSource & { id: string };
@@ -59,6 +59,13 @@ export type HazirDuzeltme = {
     uygulamak, öğrencinin doğru yazdığı künyeyi bozabilirdi.
   */
   ozelKural: boolean;
+  /*
+    Künyeye GİRMEYEN eksik alanlar (cilt, sayfa, DOI…). Düzeltme yine
+    sunuluyor — bunlar olmadan da künye doğru yazılır — ama öğrenci
+    neyin eksik kaldığını görsün: biçimleyici olmayan alanı hiç yazmaz,
+    uydurmaz.
+  */
+  eksikNotu: string[];
 };
 
 export type EksikBilgili = {
@@ -76,6 +83,64 @@ export type DuzeltmeOzeti = {
   /** Kütüphanede karşılığı bulunamayan ya da birden çok kayda uyan künyeler. */
   eslesmeyen: string[];
 };
+
+/*
+  KÜNYENİN YAZILABİLMESİ İÇİN ŞART OLAN ALANLAR.
+
+  Eskiden eksik olan HER alan düzeltmeyi engelliyordu (eksikAlanlar'ın
+  tamamı). DOI'si olmayan bir dergi makalesi bu yüzden Vancouver'da da
+  IEEE'de de düzeltilemiyordu — oysa bu stiller DOI İSTEMİYOR; APA 7 bile
+  "varsa eklenmeli" diyor, zorunlu tutmuyor. Sonuç, düzeltilebilecek
+  onlarca künyenin "künye bilgisi eksik" diye kenara atılmasıydı.
+
+  Buradaki liste, YOKLUĞUNDA künyenin yanlış ya da kullanılamaz olacağı
+  alanlar: yazar, yıl ve türün taşıyıcısı (makalede dergi, bölümde
+  kitap, kitapta yayınevi, internet kaynağında adres). Cilt, sayı, sayfa
+  ve DOI eksikse künye yine doğru yazılır, yalnızca kısadır: düzeltme
+  SUNULUR ve eksik alanlar NOT olarak söylenir. Eksik bilgi künyeye
+  uydurulmaz — biçimleyici olmayan alanı hiç yazmaz.
+*/
+const TURE_GORE_ZORUNLU: Record<string, KunyeAlani[]> = {
+  article: ["yazar", "yil", "dergi"],
+  chapter: ["yazar", "yil", "kitap"],
+  book: ["yazar", "yil", "yayinevi"],
+  thesis: ["yazar", "yil", "universite"],
+  report: ["yazar", "yil", "yayinevi"],
+  website: ["yil", "url"],
+};
+const VARSAYILAN_ZORUNLU: KunyeAlani[] = ["yazar", "yil"];
+
+/*
+  Stile özel EK zorunluluk. Katalogdaki sekiz stilin hiçbiri bir alanı
+  bunların ötesinde şart koşmuyor; liste, yeni bir stil ya da
+  DOĞRULANMIŞ bir kılavuz kuralı ("bu kurumda her makale künyesinde DOI
+  bulunur") geldiğinde doldurulacak tek yer olsun diye var. Boş
+  bırakmak, olmayan bir kuralı varmış gibi uygulamamak demek.
+*/
+const STILE_GORE_ZORUNLU: Partial<Record<string, KunyeAlani[]>> = {};
+
+/**
+ * Düzeltmeyi ENGELLEYEN eksikler: türün ve stilin gerçekten şart koştuğu,
+ * bu kaynakta boş olan alanlar.
+ *
+ * `kilavuzZorunlulari`: kılavuzdan DOĞRULANMIŞ ek zorunluluklar. Bugün
+ * kılavuzdan böyle bir kural okunmuyor; parametre, okunduğunda tek
+ * noktadan bağlanabilsin diye duruyor ve doldurulmadıkça hiçbir şeyi
+ * engellemiyor.
+ */
+export function engelleyenEksikler(
+  kaynak: CitableSource,
+  stil: string,
+  kilavuzZorunlulari: KunyeAlani[] = [],
+): KunyeAlani[] {
+  const eksik = new Set(eksikAlanAnahtarlari(kaynak));
+  const zorunlu = new Set<KunyeAlani>([
+    ...(TURE_GORE_ZORUNLU[kaynak.source_type] ?? VARSAYILAN_ZORUNLU),
+    ...(STILE_GORE_ZORUNLU[stil] ?? []),
+    ...kilavuzZorunlulari,
+  ]);
+  return [...eksik].filter((alan) => zorunlu.has(alan));
+}
 
 /** Eşleşme için başlığın en az bu kadarı künyede geçmeli. */
 const EN_AZ_BASLIK = 12;
@@ -103,12 +168,15 @@ export function hazirDuzeltmeler({
   stil,
   dil = "tr",
   erisimTarihi = null,
+  kilavuzZorunlulari = [],
 }: {
   kunyeler: DenetlenenKunye[];
   kaynaklar: KutuphaneKaynagi[];
   stil: string;
   dil?: Dil;
   erisimTarihi?: string | null;
+  /** Kılavuzdan DOĞRULANMIŞ ek zorunluluklar; bugün boş (bkz. engelleyenEksikler). */
+  kilavuzZorunlulari?: KunyeAlani[];
 }): DuzeltmeOzeti {
   const duzeltmeler: HazirDuzeltme[] = [];
   const eksikler: EksikBilgili[] = [];
@@ -130,11 +198,15 @@ export function hazirDuzeltmeler({
     }
     const kaynak = adaylar[0];
     const anahtar = kunyeAnahtari(ham);
-    const eksik = eksikAlanlar(kaynak, dil);
-    if (eksik.length) {
-      eksikler.push({ anahtar, ham, kaynakId: kaynak.id, alanlar: eksik });
+    const engel = engelleyenEksikler(kaynak, stil, kilavuzZorunlulari);
+    if (engel.length) {
+      eksikler.push({ anahtar, ham, kaynakId: kaynak.id, alanlar: engel.map((a) => kunyeAlanAdi(a, dil)) });
       return;
     }
+    /* Engellemeyen eksikler künyeye yazılmıyor, NOT olarak söyleniyor. */
+    const eksikNotu = eksikAlanAnahtarlari(kaynak)
+      .filter((alan) => !engel.includes(alan))
+      .map((alan) => kunyeAlanAdi(alan, dil));
     const parcalar = formatReferenceParts(kaynak, stil as CitationStyle, numarali ? indeks + 1 : 1, { erisimTarihi }, dil);
     const yeni = parcalar.map((p) => p.text).join("").trim();
     /* Zaten doğruysa düzeltme sunulmaz: "6 düzeltme hazır" derken
@@ -147,6 +219,7 @@ export function hazirDuzeltmeler({
       parcalar,
       kaynakId: kaynak.id,
       ozelKural: kaynak.source_type === "website",
+      eksikNotu,
       sebepler: (kunye.issues ?? []).map((s) => s.message).filter(Boolean),
     });
   });

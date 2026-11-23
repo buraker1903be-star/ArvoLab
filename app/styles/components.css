@@ -2040,6 +2040,8 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .kilavuz-celiski li { display: grid; gap: 2px; justify-items: start; font-size: var(--fs-sm); }
 .kilavuz-celiski q { color: var(--ink); font-style: italic; }
 .kilavuz-celiski-mevcut { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 650; }
+/* Kılavuzun ifadesi ile seçili sürüm farkı: bilgi satırı. */
+.kilavuz-ifade { display: block; margin-top: 4px; color: var(--ink-soft); }
 /* İlk gönderimde serbest biçim notu: uyarı değil bilgi, bu yüzden nötr. */
 .kilavuz-serbest { display: block; margin-top: 4px; color: var(--ink-soft); }
 .kilavuz-etiketler .chip { display: inline-flex; align-items: center; gap: 4px; }

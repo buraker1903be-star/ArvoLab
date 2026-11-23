@@ -100,6 +100,8 @@ const P_CELISKI2 = proje("Celiskili kilavuz - secim yapilan calisma");
 const P_SERBEST = proje("Ilk gonderimde serbest bicim calismasi");
 /* Çalışmanın stili Vancouver; denetim tek seferlik APA 7 ile yapıldı. */
 const P_EKLE = proje("Kaynakcaya ekleme calismasi", "vancouver");
+/* DOI'si olmayan dergi makalesi; Vancouver DOI istemiyor. */
+const P_DOISIZ = proje("DOI siz makale calismasi", "vancouver");
 
 /* ---------- Kılavuz PDF'leri (ASCII) ---------- */
 const kilavuzPdf = (satirlar) => sentetikPdf([satirlar]);
@@ -210,6 +212,23 @@ psql(`insert into public.citation_checks (project_id, project_title, raw_referen
     ]))}::jsonb,
     '{}'::jsonb, 80, 'apa7', ${q(KULLANICI)})`);
 
+/* ---------- DOI'siz makale: künye APA biçiminde, çalışma Vancouver ---------- */
+const DOISIZ_APA = "Demir, B. (2019). Motivasyonun sinif ici rolu. Psikoloji Dergisi, 8(1), 10-25.";
+psql(`insert into public.literature_sources (owner_id, project_id, title, authors, year, container_title, volume, issue, pages, doi_or_url, source_type, status)
+  values (${q(KULLANICI)}, ${q(P_DOISIZ)}, 'Motivasyonun sinif ici rolu', 'Demir, B.', 2019, 'Psikoloji Dergisi', '8', '1', '10-25', null, 'article', 'used')`);
+const DOISIZ_JSON = {
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Giris" }] },
+    { type: "paragraph", content: [{ type: "text", text: "Motivasyon sinif ici surecleri etkiler (1)." }] },
+    { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Kaynakça" }] },
+    { type: "paragraph", content: [{ type: "text", text: DOISIZ_APA }] },
+  ],
+};
+const DOISIZ_METIN = ["Giris", "Motivasyon sinif ici surecleri etkiler (1).", "", "Kaynakça", DOISIZ_APA].join("\n");
+psql(`insert into public.project_manuscripts (project_id, content, plain_text, word_count, updated_by)
+      values (${q(P_DOISIZ)}, ${q(JSON.stringify(DOISIZ_JSON))}::jsonb, ${q(DOISIZ_METIN)}, ${DOISIZ_METIN.split(/\s+/).length}, ${q(KULLANICI)})`);
+
 const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
 const oturum = async (g = 1440, y = 900, dil = "tr") => {
   psql(`update public.profiles set arayuz_dili = ${q(dil)} where id = ${q(KULLANICI)}`);
@@ -245,6 +264,28 @@ const bolumEkle = async (pencere, ad = "Giriş") => {
   const kutu = pencere.locator('input[placeholder*="Bölüm ekle"]');
   await kutu.fill(ad);
   await kutu.press("Enter");
+};
+
+/**
+ * Kaynakça penceresinden GERÇEK denetimi çalıştırır ve kaydın
+ * bulgularını döner. Ağa giden dizin doğrulaması yerelde zaman aşımına
+ * düştüğü için bekleme uzun.
+ */
+const denetleVeOku = async (s, projeId) => {
+  const once = Number(psql(`select count(*) from public.citation_checks where project_id = ${q(projeId)}`));
+  await s.goto(`${UYG}/dashboard/literature?calisma=${projeId}&sekme=kaynakca`, { waitUntil: "domcontentloaded" });
+  await s.waitForLoadState("networkidle").catch(() => {});
+  await s.locator(".kaynakca-serit-eylem").first().click();
+  const pencere = s.locator(".drawer-root.open section.drawer");
+  await pencere.waitFor({ state: "visible", timeout: 20000 });
+  await pencere.locator("button", { hasText: /Kaynakçamı denetle|Check my reference list/ }).first().click();
+  for (let i = 0; i < 300; i += 1) {
+    if (Number(psql(`select count(*) from public.citation_checks where project_id = ${q(projeId)}`)) > once) break;
+    await s.waitForTimeout(1000);
+  }
+  const satir = psql(`select coalesce(parsed_references::text, '[]') from public.citation_checks
+                      where project_id = ${q(projeId)} order by created_at desc limit 1`);
+  return JSON.parse(satir || "[]");
 };
 
 /** Kılavuz dosyasını yükleyip doğrulama adımına geçer. */
@@ -404,9 +445,15 @@ await dene("G3c", "İlk gönderimde serbest biçimde zorunluluk uyarısı üreti
     dogru(/zorunlu değil/.test(metin), `stilin zorunlu olmadığı yazılmıyor: ${metin.slice(0, 400)}`);
     /* Kılavuz APA diyor ama bu bir ZORUNLULUK olarak sunulmuyor. */
     dogru(!/uymuyor|zorunludur|istiyor/.test(metin), `zorunluluk dili kaldı: ${metin.slice(0, 400)}`);
+    /*
+      KILAVUZ YALNIZCA "APA" DİYOR: ürün bunu "APA 7" diye
+      kesinleştirmiyor; ifade ile seçili sürüm ayrı yazılı.
+    */
+    dogru(/Kılavuzda yazan ifade: “APA”/.test(metin), `kılavuzun ifadesi ayrı yazılmıyor: ${metin.slice(0, 500)}`);
+    dogru(/Seçili sürüm: APA 7/.test(metin), `seçili sürüm yazılmıyor: ${metin.slice(0, 500)}`);
     const kayitli = psql(`select citation_style from public.academic_projects where id = ${q(P_SERBEST)}`);
     dogru(kayitli === "apa7", `tarama çalışmanın stilini değiştirdi: ${kayitli}`);
-    return { ayrinti: "serbest biçim notu var, zorunluluk dili yok, çalışma stili değişmedi" };
+    return { ayrinti: "serbest biçim notu var, zorunluluk dili yok, “APA” ifadesi ile APA 7 sürümü ayrı, çalışma stili değişmedi" };
   } finally { await ctx.close(); }
 });
 
@@ -494,6 +541,50 @@ await dene("G5", "Kaynakçaya ekle: çalışmanın stiliyle, ikinci kez eklenmed
     const kayitli = psql(`select citation_style from public.academic_projects where id = ${q(P_EKLE)}`);
     dogru(kayitli === "vancouver", `çalışmanın stili değişti: ${kayitli}`);
     return { ayrinti: `Vancouver künyesi eklendi, ikinci denemede yinelenmedi (${sayiOnce}); çalışma stili ${kayitli}` };
+  } finally { await ctx.close(); }
+});
+
+await dene("G6", "DOI'si olmayan makale düzeltilebiliyor; uygulandıktan sonra numara uyarısı kalkıyor", async () => {
+  const { ctx, s } = await oturum();
+  try {
+    /* 1) Vancouver denetimi: APA biçimli künye "numarayla başlamıyor" demeli. */
+    const once = await denetleVeOku(s, P_DOISIZ);
+    const uyarilar = (no) => no.flatMap((r) => (r.issues ?? []).map((i) => i.message));
+    dogru(once.length === 1, `denetim künyeyi okuyamadı: ${JSON.stringify(once).slice(0, 200)}`);
+    dogru(uyarilar(once).some((m) => /numarayla başlamıyor/.test(m)),
+      `beklenen numara uyarısı yok: ${uyarilar(once).join(" | ").slice(0, 300)}`);
+
+    /* 2) Hazır düzeltme SUNULUYOR: DOI yokluğu engel değil. */
+    await s.goto(`${UYG}/dashboard/editor/${P_DOISIZ}/write?sol=kaynakca`, { waitUntil: "domcontentloaded" });
+    await s.waitForLoadState("networkidle").catch(() => {});
+    const panel = s.locator(".kaynakca-duzeltme");
+    await panel.waitFor({ state: "visible", timeout: 30000 });
+    await panel.locator("button", { hasText: /Hazır düzeltmeleri göster/ }).click();
+    await panel.locator(".kaynakca-duzeltme-liste").first().waitFor({ state: "visible", timeout: 30000 });
+    const onizleme = await panel.innerText();
+    if (GORSEL) await s.screenshot({ path: `${GORSEL}/G6-doisiz-duzeltme.png`, fullPage: true });
+    dogru(/1 kaynakça düzeltmesi hazır/.test(onizleme), `düzeltme sunulmadı: ${onizleme.slice(0, 400)}`);
+    dogru(!/Künye bilgisi eksik/.test(onizleme), `DOI yokluğu hâlâ engel sayılıyor: ${onizleme.slice(0, 400)}`);
+    /* Eksik alan künyeye UYDURULMUYOR, not olarak söyleniyor. */
+    dogru(/künyeye de yazılmadı: DOI/.test(onizleme), `eksik DOI notu yok: ${onizleme.slice(0, 400)}`);
+    const yeniKunye = (await panel.locator(".kaynakca-duzeltme-yeni").first().innerText()).trim();
+    dogru(/^1\. Demir B/.test(yeniKunye), `düzeltme Vancouver biçiminde değil: ${yeniKunye}`);
+    dogru(!/doi\.org|https?:\/\//.test(yeniKunye), `künyeye DOI eklenmiş: ${yeniKunye}`);
+
+    /* 3) Uygula ve kaydın belgeye geçmesini bekle. */
+    await panel.locator("button", { hasText: /Seçilenleri uygula/ }).click();
+    let kaydedildi = false;
+    for (let i = 0; i < 60; i += 1) {
+      if (psql(`select coalesce(plain_text, '') like '%1. Demir B%' from public.project_manuscripts where project_id = ${q(P_DOISIZ)}`) === "t") { kaydedildi = true; break; }
+      await s.waitForTimeout(1000);
+    }
+    dogru(kaydedildi, "düzeltilen kaynakça kaydedilmedi; yeniden denetim anlamsız olurdu");
+
+    /* 4) YENİDEN denetle: numara uyarısı kalkmalı. */
+    const sonra = await denetleVeOku(s, P_DOISIZ);
+    dogru(!uyarilar(sonra).some((m) => /numarayla başlamıyor/.test(m)),
+      `numara uyarısı sürüyor: ${uyarilar(sonra).join(" | ").slice(0, 300)}`);
+    return { ayrinti: `önce "${uyarilar(once)[0]?.slice(0, 60)}…" · düzeltme uygulandı · sonra ${uyarilar(sonra).length} uyarı` };
   } finally { await ctx.close(); }
 });
 

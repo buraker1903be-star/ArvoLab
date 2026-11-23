@@ -110,6 +110,12 @@ export interface TaramaSonucu {
   /** Çalışmanın ŞU ANKİ stili; ekran onu ayrı bir cümleyle söylüyor. */
   calismaStili?: string | null;
   /*
+    Kılavuzda GEÇEN ifade, olduğu gibi ("APA", "APA 6"). Katalog
+    etiketinden ("APA 7") ayrı tutuluyor: kılavuz yalnızca "APA" diyorsa
+    ürün bunu 7. baskı diye kesinleştiremez. Ekran ikisini ayrı yazıyor.
+  */
+  kilavuzIfadesi?: string | null;
+  /*
     Kılavuz ilk gönderimde serbest biçime izin veriyor mu
     (lib/atif-sistemi.ts). Veriyorsa ekran "şu stil zorunlu" demiyor:
     öğrenci daha ilk taslağında, aslında serbest olan bir şey için
@@ -352,6 +358,7 @@ export async function kilavuzuTara(
       stilAdaylari: celiskiVar ? adaylar : undefined,
       /* Ekran "Çalışmanız şu anda X kullanıyor" diyebilsin. */
       calismaStili: (calisma.citation_style as string | null) ?? null,
+      kilavuzIfadesi: atifSistemiSec(tarama.metin, dil)?.kilavuzIfadesi ?? null,
       serbestBicim,
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
       kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],

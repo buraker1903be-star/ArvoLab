@@ -429,10 +429,23 @@ const ALAN_ADI = {
   url: { tr: "adres (URL)", en: "address (URL)" },
 } as const;
 
-export function eksikAlanlar(source: CitableSource, dil: Dil = "tr"): string[] {
+/** Alan anahtarları; çağıranlar hangi alanın eksik olduğuna göre karar verebilsin. */
+export type KunyeAlani = keyof typeof ALAN_ADI;
+export const kunyeAlanAdi = (alan: KunyeAlani, dil: Dil = "tr") => ALAN_ADI[alan][dil];
+
+/**
+ * Eksik alanların ANAHTARLARI.
+ *
+ * Eskiden yalnızca çevrilmiş adlar dönüyordu ve çağıran "DOI eksik" ile
+ * "dergi adı eksik" arasında ayrım yapamıyordu: hazır kaynakça
+ * düzeltmesi (lib/atif/hazir-duzeltme.ts) ikisini de engel sayıyor,
+ * DOI'si olmayan bir Vancouver makalesine —Vancouver DOI istemediği
+ * hâlde— düzeltme sunmuyordu.
+ */
+export function eksikAlanAnahtarlari(source: CitableSource): KunyeAlani[] {
   const bos = (deger: string | null | undefined) => !deger?.trim();
-  const eksik: string[] = [];
-  const ekle = (alan: keyof typeof ALAN_ADI) => eksik.push(ALAN_ADI[alan][dil]);
+  const eksik: KunyeAlani[] = [];
+  const ekle = (alan: KunyeAlani) => eksik.push(alan);
   if (bos(source.authors)) ekle("yazar");
   if (bos(source.year)) ekle("yil");
   switch (source.source_type) {
@@ -458,6 +471,10 @@ export function eksikAlanlar(source: CitableSource, dil: Dil = "tr"): string[] {
       break;
   }
   return eksik;
+}
+
+export function eksikAlanlar(source: CitableSource, dil: Dil = "tr"): string[] {
+  return eksikAlanAnahtarlari(source).map((alan) => ALAN_ADI[alan][dil]);
 }
 
 function link(source: CitableSource): string | null {
