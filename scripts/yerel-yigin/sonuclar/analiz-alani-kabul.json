@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-22T20:56:39.085Z",
-  "head": "4fc0eba7dd52dc1f14d7f6a97e90fccd28cf422d",
-  "buildId": "vZSUWwi_NkwhLGKuE7gPo",
-  "uygulama": "http://localhost:3133",
-  "gecen": 96,
+  "tarih": "2026-11-23T05:32:40.635Z",
+  "head": "b74ba2e47fe3d53a05f3d98cf893ffc8eec04964",
+  "buildId": "3vVwsw36BDS8NlNB0leI2",
+  "uygulama": "http://localhost:3134",
+  "gecen": 112,
   "dusen": 0,
   "sonuclar": [
     {
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-72adbd.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-6875d4.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-72adbd.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-6875d4.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-72adbd.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-6875d4.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "09f115aa-fa74-4f06-a58a-35d5d29fe059"
+      "not": "47f48bb3-082f-45cd-9873-cf4f20b32abd"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-72adbd.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-6875d4.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-72adbd.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-6875d4.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-72adbd.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-6875d4.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -390,6 +390,86 @@
       "ad": "S12c4 tek ikili sütun kalırsa ikinci alan boşalıyor ve hesap engelleniyor",
       "durum": "PASS",
       "not": "basari/ · bos:1 · dugme:0"
+    },
+    {
+      "ad": "S13a üç ölçümde ikili karşılaştırma tablosu çiziliyor",
+      "durum": "PASS",
+      "not": "true · true"
+    },
+    {
+      "ad": "S13b düzeltmenin ADI tabloda yazılı",
+      "durum": "PASS",
+      "not": "Ölçüm\tOrtalama\non\t11.82\nson\t14.18\nizleme\t17.18\n\nF(2, 20) = 279.04, p < .001 — istatistiksel olarak anlamlı\n\nKı"
+    },
+    {
+      "ad": "S13c eksik veri politikası sessiz değil: düşen satır yazılıyor",
+      "durum": "PASS",
+      "not": "Ölçüm\tOrtalama\non\t11.82\nson\t14.18\nizleme\t17.18\n\nF(2, 20) = 279.04, p < .001 — istatistiksel olarak anlamlı\n\nKı"
+    },
+    {
+      "ad": "S13d üç ölçümde üç çift (k(k−1)/2)",
+      "durum": "PASS",
+      "not": "3"
+    },
+    {
+      "ad": "S13e sabit farklı çift 'anlamlı değil' demiyor, sebebini yazıyor",
+      "durum": "PASS",
+      "not": "true · true"
+    },
+    {
+      "ad": "S13f Mauchly hesaplanamadıysa 'varsayım sağlanıyor' denmiyor",
+      "durum": "PASS",
+      "not": "true · true"
+    },
+    {
+      "ad": "S14a tekil kovaryanslı karma desende 'küresellik sağlanıyor' denmiyor",
+      "durum": "PASS",
+      "not": "true · true"
+    },
+    {
+      "ad": "S14b denetlenemeyen küresellikte temkinli taraf (GG) uygulandığı yazılı",
+      "durum": "PASS",
+      "not": "Grup\tN\ton\tson\ttekil\ndeney\t8\t11.13\t13.25\t14.13\nkontrol\t8\t13.25\t15.88\t16.25\nKaynak\tsd\tF\tp\tKısmi η²\ngrup\t1, 14\t8."
+    },
+    {
+      "ad": "S14c hesaplanamayan p'den anlamlı/anlamsız hükmü üretilmiyor",
+      "durum": "PASS",
+      "not": "p hesaplandı (hüküm beklenir)"
+    },
+    {
+      "ad": "S14c2 GG de üretilemezse p yok ve hüküm verilmiyor",
+      "durum": "PASS",
+      "not": "hesap reddedildi: true"
+    },
+    {
+      "ad": "S14c3 GG epsilon da hesaplanamıyorsa: bildiriliyor ve hüküm verilmiyor",
+      "durum": "PASS",
+      "not": "bildirildi:true hukumYok:true kuresellikIddiasiYok:true"
+    },
+    {
+      "ad": "S14f etkileşim hesaplanamadığında 'anlamlı olmadığı için' paragrafı YOK",
+      "durum": "PASS",
+      "not": "celiskiliParagrafYok:true uyariVar:true basitEtkiYok:true"
+    },
+    {
+      "ad": "S14g GG uygulanan grup içi zaman etkisi: ekrandaki sd ve Bonferroni p referansla aynı",
+      "durum": "PASS",
+      "not": "deney:tamam|df=1.06/11.66|p=0.002 kontrol:tamam|df=1.26/13.81|p=0.68"
+    },
+    {
+      "ad": "S14h GG üretilemeyen grupta 'düzeltme uygulandı' ve hüküm yok, normal grup bozulmuyor",
+      "durum": "PASS",
+      "not": "kYanlisBasariYok:true kBildirildi:true kHukumYok:true dHukumVar:true dDuzeltmesiz:true"
+    },
+    {
+      "ad": "S14d NORMAL desen bozulmadı: Mauchly hesaplanıyor ve hüküm veriliyor",
+      "durum": "PASS",
+      "not": "true · true · true"
+    },
+    {
+      "ad": "S14e normal desende iki ölçümlü karma da çalışıyor",
+      "durum": "PASS",
+      "not": "true · true"
     },
     {
       "ad": "S10a-1440 yatay kaydırma yok",

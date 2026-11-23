@@ -137,6 +137,117 @@ describe("değişken seçimi iki yolda da aynı doğrulamadan geçiyor", () => {
   });
 });
 
+/*
+  TEKRARLI ÖLÇÜMLER SONRASI İKİLİ KARŞILAŞTIRMALAR (23.11.2026).
+  Hesap bağımsız referanslara karşı sınanıyor
+  (tests/unit/stats-tekrarli-ikili.test.ts); burada arayüzün o hesaba
+  NE VERDİĞİ ve sonucu NASIL yazdığı sabitleniyor.
+*/
+describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
+  test("satır eşleşmesi korunuyor: fonksiyona eşleşmiş sütunlar veriliyor", () => {
+    /* eslesenSutunlar, bütün ölçümleri dolu satırları hizasını bozmadan
+       veriyor; doğrudan ham sütun geçirmek çiftleri kaydırırdı. */
+    assert.match(analizci, /const veri = eslesenSutunlar\(\.\.\.olcumler\);/);
+    assert.match(analizci, /tekrarliIkiliKarsilastirmalar\(veri\.sutunlar, olcumler\)/);
+  });
+
+  test("eksik veri politikası sessiz değil: düşen satır sayısı yazılıyor", () => {
+    assert.match(analizci, /\{elemeNotu\(veri, dil\) \? <p className="muted text-sm">\{elemeNotu\(veri, dil\)\}<\/p> : null\}/);
+  });
+
+  test("çoklu karşılaştırma düzeltmesinin ADI tabloda yazılı", () => {
+    assert.match(analizci, /İkili karşılaştırmalar \(eşleştirilmiş t, Bonferroni düzeltmesi\)/);
+    assert.match(analizci, /Pairwise comparisons \(paired t, Bonferroni correction\)/);
+  });
+
+  test("hesaplanamayan çift 'anlamlı değil' diye yazılmıyor", () => {
+    /* engel null değilse p basılmıyor, sebebi yazılıyor. */
+    assert.match(analizci, /\{c\.engel === null \? \(/);
+    assert.match(analizci, /fark bütün katılımcılarda aynı \(varyans sıfır\)/);
+    assert.match(analizci, /en az iki eşleşen gözlem gerekir/);
+  });
+
+  test("Mauchly denetlenemediyse 'varsayım sağlanıyor' yazılmıyor", () => {
+    assert.match(analizci, /const kuresellikBozuk = r\.k > 2 && r\.kuresellikDenetlendi && isSignificant\(r\.mauchlyP\);/);
+    assert.match(analizci, /\{r\.kuresellikDenetlendi \? \(/);
+    assert.match(analizci, /Mauchly testi hesaplanamadı/);
+    assert.match(analizci, /no verdict about sphericity is possible/);
+    /* Denetlenemeyen durumda temkinli taraf: Greenhouse-Geisser. */
+    assert.match(analizci, /const onerilen = kuresellikBelirsiz \? "gg"/);
+  });
+
+  test("KARMA ANOVA: küresellik kararı kuresellikDenetlendi'ye bağlı", () => {
+    assert.match(analizci, /const kuresellikBozuk = olcumler\.length > 2 && r\.kuresellikDenetlendi && isSignificant\(r\.mauchlyP\);/);
+    assert.match(analizci, /const kuresellikBelirsiz = olcumler\.length > 2 && !r\.kuresellikDenetlendi;/);
+    /* Denetlenemediyse temkinli taraf: Greenhouse-Geisser. */
+    assert.match(analizci, /const duzeltme = kuresellikBelirsiz \? "gg"/);
+    assert.match(analizci, /\{r\.kuresellikDenetlendi \? \(\s*<>/);
+  });
+
+  test("KARMA ANOVA: GG düzeltmesi de üretilemezse açıkça bildiriliyor", () => {
+    assert.match(analizci, /const epsGecerli = Number\.isFinite\(hamEps\) && hamEps > 0;/);
+    assert.match(analizci, /const duzeltmeUygulanamadi = duzeltme !== null && !epsGecerli;/);
+    assert.match(analizci, /Greenhouse-Geisser düzeltmesi de üretilemedi/);
+    assert.match(analizci, /could not be produced either/);
+  });
+
+  test("sonlu olmayan p'den anlamlı/anlamsız hükmü üretilmiyor", () => {
+    /* Üç değerli hüküm (lib/apa-format.ts pHukmu) ikili koşulla yazılamaz. */
+    assert.match(analizci, /const etkilesimHukmu = pHukmu\(raporP\(r\.etkilesim\)\);/);
+    assert.match(analizci, /p hesaplanamadı; etkileşim hakkında hüküm verilemez/);
+    /* Basit etkiler de aynı hükümden geçiyor. */
+    assert.equal(analizci.match(/const hukum = pHukmu\(b\.p\);/g)?.length, 2);
+    assert.match(analizci, /p hesaplanamadı; hüküm verilemez/);
+  });
+
+  /*
+    Buradaki eşleşmeler yalnızca SÖZLEŞMEYİ sabitler: hesabın kendisi
+    tests/unit/karma-grup-ici-zaman.test.ts'te bağımsız referansa
+    (pingouin) karşı, gerçek arayüzde ise analiz-alani-kabul.mjs
+    S14f–S14h'de sınanıyor.
+  */
+  test("grup içi zaman etkisinde küresellik ayrı denetleniyor", () => {
+    assert.match(analizci, /const ggGerekli = cokOlcum && \(!ta\.kuresellikDenetlendi \|\| isSignificant\(ta\.mauchlyP\)\);/);
+    assert.match(analizci, /const ggVar = Number\.isFinite\(ta\.ggEpsilon\) && ta\.ggEpsilon > 0 && Number\.isFinite\(ta\.ggP\);/);
+    assert.match(analizci, /bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı/);
+    assert.match(analizci, /bu grupta küresellik sağlanmıyor; Greenhouse-Geisser düzeltmesi uygulandı/);
+  });
+
+  /*
+    SERBESTLİK DERECELERİ DE DÜZELTİLİR (23.11.2026). Eskiden F satırı
+    düzeltilmemiş sd ile yazılıp yanına GG'li p konuyordu; iki sayı
+    aynı testten gelmiyordu. Aile içi Bonferroni de korunmalı.
+  */
+  test("GG uygulanınca sd düzeltiliyor ve Bonferroni korunuyor", () => {
+    assert.match(analizci, /df1: ggUygulandi \? ta\.df1 \* ta\.ggEpsilon : ta\.df1,/);
+    assert.match(analizci, /df2: ggUygulandi \? ta\.df2 \* ta\.ggEpsilon : ta\.df2,/);
+    assert.match(analizci, /p: Number\.isFinite\(hamP\) \? Math\.min\(1, hamP \* groupLevels\.length\) : NaN,/);
+    /* Düzeltilmemiş sd tam sayı kalır; ondalıklı yazım düzeltmeyi gösterir. */
+    assert.match(analizci, /const sd = \(v: number\) => \(b\.dfDuzeltildi \? yazSayi\(v, 2\) : String\(v\)\);/);
+    assert.match(analizci, /düzeltilmiş p ve serbestlik dereceleri hesaplanamadı; hüküm verilemez/);
+    /* Üretilemeyen düzeltme "uygulandı" diye yazılmamalı. */
+    assert.match(analizci, /bu grupta küresellik denetlenemedi ve Greenhouse-Geisser düzeltmesi de üretilemedi/);
+  });
+
+  /*
+    HESAPLANAMAYAN ETKİLEŞİMDE ANA ETKİ YÖNLENDİRMESİ YOK. "Etkileşim
+    anlamlı olmadığı için…" paragrafı YALNIZCA "anlamsiz" dalında
+    çizilmeli; eskiden hesaplanamayan durumda da çıkıyor ve üstteki
+    "hüküm verilemez" satırıyla çelişiyordu.
+  */
+  test("çelişkili ana etki paragrafı yalnızca gerçekten anlamsızken", () => {
+    assert.match(analizci, /\) : etkilesimHukmu === "anlamsiz" \? \(/);
+    assert.match(analizci, /Etkileşim anlamlı olmadığı için \$\{groupVar\}/);
+    assert.match(analizci, /varsayarak yorumlamayın/);
+    /* Yönlendirme cümlesi tek yerde: ikinci bir kopya sessizce geri gelmesin. */
+    assert.equal(analizci.match(/Etkileşim anlamlı olmadığı için/g)?.length, 1);
+  });
+
+  test("ikili karşılaştırmalar yalnızca ANOVA anlamlıyken çiziliyor", () => {
+    assert.match(analizci, /const ikili = sig \? tekrarliIkiliKarsilastirmalar\(/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);

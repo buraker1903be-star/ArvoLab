@@ -28,7 +28,7 @@ import {
   type DescriptiveStats,
   type EtkiYorumu,
 } from "@/lib/stats-tests-core";
-import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-format";
+import { formatP, hesaplanabilir, isSignificant, formatNumber, pHukmu } from "@/lib/apa-format";
 import { ANALIZ_ETIKETLERI_METIN, ANALIZ_GRUPLARI, ANALIZ_TURLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
@@ -1554,8 +1554,17 @@ export default function DataAnalyzer({
           görüyor (Girden, 1992). Hepsi tabloda; ekran hangisini
           önerdiğini yazıyor.
         */
-        const kuresellikBozuk = r.k > 2 && isSignificant(r.mauchlyP);
-        const onerilen = !kuresellikBozuk ? "kuresel" : r.ggEpsilon > 0.75 ? "hf" : "gg";
+        /*
+          DENETLENEMEDİYSE "SAĞLANIYOR" DENMEZ (23.11.2026). Bir ölçüm
+          ötekinin sabit kaydırılmışıysa kovaryans matrisi tekil: W = 0,
+          χ² ve p tanımsız. isSignificant(NaN) false döndüğü için satır
+          "küresellik varsayımı sağlanıyor" diye bitiyor ve hiç
+          denetlenmemiş bir varsayım geçmiş gibi görünüyordu.
+        */
+        const kuresellikBozuk = r.k > 2 && r.kuresellikDenetlendi && isSignificant(r.mauchlyP);
+        /* Denetlenemediyse temkinli taraf: Greenhouse-Geisser raporlanır. */
+        const kuresellikBelirsiz = r.k > 2 && !r.kuresellikDenetlendi;
+        const onerilen = kuresellikBelirsiz ? "gg" : !kuresellikBozuk ? "kuresel" : r.ggEpsilon > 0.75 ? "hf" : "gg";
         const raporP = onerilen === "kuresel" ? r.p : onerilen === "gg" ? r.ggP : r.hfP;
         const eps = onerilen === "gg" ? r.ggEpsilon : onerilen === "hf" ? r.hfEpsilon : 1;
         const sig = isSignificant(raporP);
@@ -1585,10 +1594,19 @@ export default function DataAnalyzer({
               <ul className="muted text-sm">
                 {r.k > 2 ? (
                   <li>
-                    {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
-                    {kuresellikBozuk
-                      ? t({ tr: "küresellik varsayımı sağlanmıyor", en: "the sphericity assumption is violated" })
-                      : t({ tr: "küresellik varsayımı sağlanıyor", en: "the sphericity assumption is met" })}
+                    {r.kuresellikDenetlendi ? (
+                      <>
+                        {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
+                        {kuresellikBozuk
+                          ? t({ tr: "küresellik varsayımı sağlanmıyor", en: "the sphericity assumption is violated" })
+                          : t({ tr: "küresellik varsayımı sağlanıyor", en: "the sphericity assumption is met" })}
+                      </>
+                    ) : (
+                      t({
+                        tr: "Mauchly testi hesaplanamadı (ölçümlerden biri bir diğerinin sabit kaydırılmışı olabilir); küresellik hakkında hüküm verilemez. Aşağıdaki Greenhouse-Geisser düzeltmeli p temkinli seçenektir.",
+                        en: "Mauchly's test could not be computed (one measurement may be a constant shift of another), so no verdict about sphericity is possible. The Greenhouse-Geisser corrected p below is the cautious choice.",
+                      })
+                    )}
                   </li>
                 ) : (
                   <li>{t({ tr: "İki ölçümde küresellik tanım gereği sağlanır.", en: "With two measurements, sphericity is met by definition." })}</li>
@@ -1601,12 +1619,39 @@ export default function DataAnalyzer({
             </div>
             {ikili.length ? (
               <div className="mt-sm">
-                <strong>{t({ tr: "İkili karşılaştırmalar (eşleştirilmiş t, Bonferroni)", en: "Pairwise comparisons (paired t, Bonferroni)" })}</strong>
+                <strong>
+                  {t({
+                    tr: "İkili karşılaştırmalar (eşleştirilmiş t, Bonferroni düzeltmesi)",
+                    en: "Pairwise comparisons (paired t, Bonferroni correction)",
+                  })}
+                </strong>
                 <ul className="muted text-sm">
                   {ikili.map((c) => (
                     <li key={`${c.a}-${c.b}`}>
-                      {c.a} — {c.b}: {t({ tr: "fark", en: "difference" })} {yazSayi(c.fark)}, {yazP(c.p)}
-                      {c.anlamli ? t({ tr: " — anlamlı", en: " — significant" }) : t({ tr: " — anlamlı değil", en: " — not significant" })}
+                      {c.a} — {c.b}: {t({ tr: "fark", en: "difference" })} {yazSayi(c.fark)}
+                      {/*
+                        HESAPLANAMAYAN ÇİFT "ANLAMLI DEĞİL" DEĞİLDİR. Farkların
+                        varyansı sıfırken (her katılımcıda tam olarak aynı
+                        değişim) t tanımsız; eskiden p boş basılıp satır
+                        "anlamlı değil" diye bitiyordu ve kullanıcı o çifti
+                        raporlamaktan vazgeçiyordu.
+                      */}
+                      {c.engel === null ? (
+                        <>
+                          , {yazP(c.p)}
+                          {c.anlamli ? t({ tr: " — anlamlı", en: " — significant" }) : t({ tr: " — anlamlı değil", en: " — not significant" })}
+                        </>
+                      ) : c.engel === "sabit-fark" ? (
+                        t({
+                          tr: " — t hesaplanamadı: fark bütün katılımcılarda aynı (varyans sıfır), p üretilemez.",
+                          en: " — t could not be computed: the difference is identical for every participant (zero variance), so no p is produced.",
+                        })
+                      ) : (
+                        t({
+                          tr: " — t hesaplanamadı: en az iki eşleşen gözlem gerekir.",
+                          en: " — t could not be computed: at least two matched observations are required.",
+                        })
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -1979,10 +2024,28 @@ export default function DataAnalyzer({
           );
         if (!hesaplanabilir(r.olcum.f, r.etkilesim.f, r.grup.f)) return setResultError(t(DEGISKENLIK_YOK));
 
-        /* Küresellik bozuksa tekrarlı etkilerde Greenhouse-Geisser (ε > .75 ise Huynh-Feldt). */
-        const kuresellikBozuk = olcumler.length > 2 && isSignificant(r.mauchlyP);
-        const duzeltme = !kuresellikBozuk ? null : r.ggEpsilon > 0.75 ? "hf" : "gg";
-        const eps = duzeltme === "gg" ? r.ggEpsilon : duzeltme === "hf" ? r.hfEpsilon : 1;
+        /*
+          KÜRESELLİK DENETLENEMEDİYSE "SAĞLANIYOR" DENMEZ (23.11.2026).
+          Ölçümlerden biri bir diğerinin sabit kaydırılmışıysa kovaryans
+          matrisi tekil olur: Mauchly W = 0, χ² ve p tanımsız kalır.
+          isSignificant(NaN) false döndüğü için düzeltme uygulanmıyor,
+          ham p raporlanıyor ve satır "küresellik sağlanıyor" diye
+          bitiyordu — hiç denetlenmemiş bir varsayım geçmiş gibi.
+          Tekrarlı ölçümler ANOVA'da aynı kusur 96910e0'da kapatıldı.
+        */
+        const kuresellikBozuk = olcumler.length > 2 && r.kuresellikDenetlendi && isSignificant(r.mauchlyP);
+        const kuresellikBelirsiz = olcumler.length > 2 && !r.kuresellikDenetlendi;
+        /* Denetlenemediyse temkinli taraf: Greenhouse-Geisser. */
+        const duzeltme = kuresellikBelirsiz ? "gg" : !kuresellikBozuk ? null : r.ggEpsilon > 0.75 ? "hf" : "gg";
+        const hamEps = duzeltme === "gg" ? r.ggEpsilon : duzeltme === "hf" ? r.hfEpsilon : 1;
+        /*
+          DÜZELTMENİN KENDİSİ DE HESAPLANAMAYABİLİR: tekil matriste
+          epsilon da tanımsız çıkabiliyor. O durumda düzeltilmiş sd ve p
+          üretilmez; aşağıda bunun söylendiği bir satır yazılıyor.
+        */
+        const epsGecerli = Number.isFinite(hamEps) && hamEps > 0;
+        const eps = epsGecerli ? hamEps : 1;
+        const duzeltmeUygulanamadi = duzeltme !== null && !epsGecerli;
         const raporP = (e: typeof r.olcum) => (duzeltme === "gg" ? e.ggP : duzeltme === "hf" ? e.hfP : e.p);
         const df = (d: number, tekrarli: boolean) => (tekrarli && eps !== 1 ? yazSayi(d * eps, 2) : String(d));
         const satirlar = [
@@ -1990,7 +2053,14 @@ export default function DataAnalyzer({
           { e: r.olcum, tekrarli: true },
           { e: r.etkilesim, tekrarli: true },
         ];
-        const etkilesimSig = isSignificant(raporP(r.etkilesim));
+        /*
+          HÜKÜM SONLU OLMAYAN p'DEN ÜRETİLMEZ (lib/apa-format.ts pHukmu).
+          Düzeltilmiş p hesaplanamadığında "etkileşim anlamlı değil"
+          demek, yapılmamış bir testi raporlamak olurdu; basit etkiler de
+          o hükme göre çiziliyordu.
+        */
+        const etkilesimHukmu = pHukmu(raporP(r.etkilesim));
+        const etkilesimSig = etkilesimHukmu === "anlamli";
 
         /*
           BASİT ETKİLER: etkileşim anlamlıysa ana etkiler tek başına
@@ -2006,8 +2076,44 @@ export default function DataAnalyzer({
         const gruptaZaman = etkilesimSig
           ? groupLevels.map((g, j) => {
               const ta = tekrarliOlcumlerAnova(veriGruplari[j]);
-              const pp = olcumler.length > 2 && isSignificant(ta.mauchlyP) ? ta.ggP : ta.p;
-              return { ad: g, f: ta.f, df1: ta.df1, df2: ta.df2, p: Math.min(1, pp * groupLevels.length) };
+              /*
+                GRUP İÇİ KÜRESELLİK AYRI DENETLENİR. Her grubun kendi
+                kovaryans matrisi var; biri tekil olabilir. Eskiden
+                isSignificant(NaN) false döndüğü için o grupta DÜZELTMESİZ
+                p raporlanıyordu — denetlenmemiş bir varsayım, sağlanmış
+                gibi. Denetlenemediğinde temkinli taraf (GG) uygulanıyor.
+              */
+              const cokOlcum = olcumler.length > 2;
+              /* GG gerekiyor mu: küresellik denetlenemediyse ya da bozuksa. */
+              const ggGerekli = cokOlcum && (!ta.kuresellikDenetlendi || isSignificant(ta.mauchlyP));
+              /*
+                GG ÜRETİLEBİLDİ Mİ: epsilon ve düzeltilmiş p'nin ikisi de
+                sonlu olmalı. Tekil kovaryansta epsilon da düşebiliyor;
+                o zaman düzeltilmiş sd ve p üretilemez.
+              */
+              const ggVar = Number.isFinite(ta.ggEpsilon) && ta.ggEpsilon > 0 && Number.isFinite(ta.ggP);
+              const ggUygulandi = ggGerekli && ggVar;
+              const duzeltmeBasarisiz = ggGerekli && !ggVar;
+              /*
+                SERBESTLİK DERECELERİ DE DÜZELTİLİR. Eskiden F satırında
+                düzeltilmemiş sd yazılıp yanına düzeltilmiş p konuyordu;
+                okuyan kişi F(2, 14) = … , p(GG) eşleşmesini raporlayınca
+                tutarsız bir satır yazmış oluyordu.
+              */
+              const hamP = ggUygulandi ? ta.ggP : ggGerekli ? NaN : ta.p;
+              return {
+                ad: g,
+                f: ta.f,
+                df1: ggUygulandi ? ta.df1 * ta.ggEpsilon : ta.df1,
+                df2: ggUygulandi ? ta.df2 * ta.ggEpsilon : ta.df2,
+                dfDuzeltildi: ggUygulandi,
+                epsilon: ta.ggEpsilon,
+                /* Aile içi Bonferroni korunuyor: grup sayısı kadar çarpılıyor. */
+                p: Number.isFinite(hamP) ? Math.min(1, hamP * groupLevels.length) : NaN,
+                kuresellikBelirsiz: cokOlcum && !ta.kuresellikDenetlendi,
+                ggUygulandi,
+                duzeltmeBasarisiz,
+              };
             })
           : [];
         const dusen = dataset.rows.length - tamSatirlar.length;
@@ -2071,22 +2177,38 @@ export default function DataAnalyzer({
                 </tbody>
               </table>
             </div>
-            <p className="tone-text mt-sm" data-tone={etkilesimSig ? "success" : "warning"}>
+            <p className="tone-text mt-sm" data-tone={etkilesimHukmu === "anlamli" ? "success" : "warning"}>
               {t({ tr: `Etkileşim (ölçüm × ${groupVar})`, en: `Interaction (measurement × ${groupVar})` })}: F({df(r.etkilesim.df1, true)}, {df(r.etkilesim.df2, true)}) = {yazSayi(r.etkilesim.f)},{" "}
               {yazP(raporP(r.etkilesim))}
-              {etkilesimSig
+              {etkilesimHukmu === "anlamli"
                 ? t({ tr: " — grupların zaman içindeki değişimi farklı", en: " — the groups change differently over time" })
-                : t({ tr: " — grupların zaman içindeki değişimi farklı değil", en: " — the groups do not change differently over time" })}
-              {duzeltme === "gg" ? " (Greenhouse-Geisser)" : duzeltme === "hf" ? " (Huynh-Feldt)" : ""}
+                : etkilesimHukmu === "anlamsiz"
+                  ? t({ tr: " — grupların zaman içindeki değişimi farklı değil", en: " — the groups do not change differently over time" })
+                  : t({ tr: " — p hesaplanamadı; etkileşim hakkında hüküm verilemez", en: " — p could not be computed, so no verdict about the interaction is possible" })}
+              {epsGecerli && duzeltme === "gg" ? " (Greenhouse-Geisser)" : epsGecerli && duzeltme === "hf" ? " (Huynh-Feldt)" : ""}
             </p>
             <ul className="muted text-sm">
               {olcumler.length > 2 ? (
                 <li>
-                  {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
-                  {kuresellikBozuk
-                    ? t({ tr: "küresellik sağlanmıyor; tekrarlı etkilerde düzeltilmiş sd ve p yazıldı", en: "sphericity is violated; corrected df and p are reported for the within-subjects effects" })
-                    : t({ tr: "küresellik sağlanıyor", en: "sphericity is met" })}{" "}
-                  · GG ε = {yazSayi(r.ggEpsilon, 3)}, HF ε = {yazSayi(r.hfEpsilon, 3)}
+                  {r.kuresellikDenetlendi ? (
+                    <>
+                      {t({ tr: "Mauchly W", en: "Mauchly's W" })} = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
+                      {kuresellikBozuk
+                        ? t({ tr: "küresellik sağlanmıyor; tekrarlı etkilerde düzeltilmiş sd ve p yazıldı", en: "sphericity is violated; corrected df and p are reported for the within-subjects effects" })
+                        : t({ tr: "küresellik sağlanıyor", en: "sphericity is met" })}{" "}
+                      · GG ε = {yazSayi(r.ggEpsilon, 3)}, HF ε = {yazSayi(r.hfEpsilon, 3)}
+                    </>
+                  ) : duzeltmeUygulanamadi ? (
+                    t({
+                      tr: "Mauchly testi hesaplanamadı (ölçümlerden biri bir diğerinin sabit kaydırılmışı olabilir) ve Greenhouse-Geisser düzeltmesi de üretilemedi: tekrarlı etkilerin p değerleri için hüküm verilemez.",
+                      en: "Mauchly's test could not be computed (one measurement may be a constant shift of another) and the Greenhouse-Geisser correction could not be produced either, so no verdict is possible for the within-subjects p values.",
+                    })
+                  ) : (
+                    t({
+                      tr: `Mauchly testi hesaplanamadı (ölçümlerden biri bir diğerinin sabit kaydırılmışı olabilir); küresellik hakkında hüküm verilemez. Tekrarlı etkilerde temkinli taraf olan Greenhouse-Geisser düzeltmesi uygulandı (ε = ${yazSayi(r.ggEpsilon, 3)}).`,
+                      en: `Mauchly's test could not be computed (one measurement may be a constant shift of another), so no verdict about sphericity is possible. The cautious Greenhouse-Geisser correction was applied to the within-subjects effects (ε = ${yazSayi(r.ggEpsilon, 3)}).`,
+                    })
+                  )}
                 </li>
               ) : (
                 <li>{t({ tr: "İki ölçümde küresellik tanım gereği sağlanır.", en: "With two measurements, sphericity is met by definition." })}</li>
@@ -2107,29 +2229,72 @@ export default function DataAnalyzer({
               <div className="mt-sm">
                 <strong>{t({ tr: "Basit etkiler (Bonferroni düzeltmeli)", en: "Simple effects (Bonferroni-corrected)" })}</strong>
                 <ul className="muted text-sm">
-                  {olcumdeGrup.map((b) => (
-                    <li key={`o-${b.ad}`}>
-                      {t({ tr: `${b.ad} ölçümünde gruplar`, en: `Groups at ${b.ad}` })}: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
-                      {isSignificant(b.p)
-                        ? t({ tr: " — fark anlamlı", en: " — the difference is significant" })
-                        : t({ tr: " — fark anlamlı değil", en: " — the difference is not significant" })}
-                    </li>
-                  ))}
-                  {gruptaZaman.map((b) => (
-                    <li key={`g-${b.ad}`}>
-                      {t({ tr: `${b.ad} grubunda zaman`, en: `Time within group ${b.ad}` })}: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
-                      {isSignificant(b.p)
-                        ? t({ tr: " — değişim anlamlı", en: " — the change is significant" })
-                        : t({ tr: " — değişim anlamlı değil", en: " — the change is not significant" })}
-                    </li>
-                  ))}
+                  {olcumdeGrup.map((b) => {
+                    const hukum = pHukmu(b.p);
+                    return (
+                      <li key={`o-${b.ad}`}>
+                        {t({ tr: `${b.ad} ölçümünde gruplar`, en: `Groups at ${b.ad}` })}: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
+                        {hukum === "anlamli"
+                          ? t({ tr: " — fark anlamlı", en: " — the difference is significant" })
+                          : hukum === "anlamsiz"
+                            ? t({ tr: " — fark anlamlı değil", en: " — the difference is not significant" })
+                            : t({ tr: " — p hesaplanamadı; hüküm verilemez", en: " — p could not be computed; no verdict is possible" })}
+                      </li>
+                    );
+                  })}
+                  {gruptaZaman.map((b) => {
+                    const hukum = pHukmu(b.p);
+                    /* Düzeltilmiş sd ondalıklı yazılır; düzeltilmemiş tam sayı. */
+                    const sd = (v: number) => (b.dfDuzeltildi ? yazSayi(v, 2) : String(v));
+                    return (
+                      <li key={`g-${b.ad}`}>
+                        {t({ tr: `${b.ad} grubunda zaman`, en: `Time within group ${b.ad}` })}: F({sd(b.df1)}, {sd(b.df2)}) = {yazSayi(b.f)}, {yazP(b.p)}
+                        {hukum === "anlamli"
+                          ? t({ tr: " — değişim anlamlı", en: " — the change is significant" })
+                          : hukum === "anlamsiz"
+                            ? t({ tr: " — değişim anlamlı değil", en: " — the change is not significant" })
+                            : t({ tr: " — düzeltilmiş p ve serbestlik dereceleri hesaplanamadı; hüküm verilemez", en: " — the corrected p and degrees of freedom could not be computed; no verdict is possible" })}
+                        {b.ggUygulandi
+                          ? b.kuresellikBelirsiz
+                            ? t({
+                                tr: ` (bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı, ε = ${yazSayi(b.epsilon, 3)})`,
+                                en: ` (sphericity could not be checked in this group; the Greenhouse-Geisser correction was applied, ε = ${yazSayi(b.epsilon, 3)})`,
+                              })
+                            : t({
+                                tr: ` (bu grupta küresellik sağlanmıyor; Greenhouse-Geisser düzeltmesi uygulandı, ε = ${yazSayi(b.epsilon, 3)})`,
+                                en: ` (sphericity is violated in this group; the Greenhouse-Geisser correction was applied, ε = ${yazSayi(b.epsilon, 3)})`,
+                              })
+                          : b.duzeltmeBasarisiz
+                            ? t({
+                                tr: " (bu grupta küresellik denetlenemedi ve Greenhouse-Geisser düzeltmesi de üretilemedi)",
+                                en: " (sphericity could not be checked in this group and the Greenhouse-Geisser correction could not be produced either)",
+                              })
+                            : ""}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
-            ) : (
+            ) : etkilesimHukmu === "anlamsiz" ? (
               <p className="muted text-sm">
                 {t({
                   tr: `Etkileşim anlamlı olmadığı için ${groupVar} ve ölçüm ana etkileri tablodaki gibi yorumlanır.`,
                   en: `Because the interaction is not significant, the main effects of ${groupVar} and measurement are interpreted as shown in the table.`,
+                })}
+              </p>
+            ) : (
+              /*
+                HESAPLANAMAYAN ETKİLEŞİMDE YÖNLENDİRME YOK (23.11.2026).
+                Bu dal eskiden "anlamsiz" ile birlikteydi: üstte "hüküm
+                verilemez" yazarken altta "etkileşim anlamlı olmadığı
+                için ana etkileri yorumlayın" deniyordu. İki cümle
+                birbirini çürütüyor ve ikincisi, yapılmamış bir testin
+                sonucuna dayanan bir yönergeydi.
+              */
+              <p className="alert mt-sm" data-tone="warning" role="status">
+                {t({
+                  tr: `Etkileşimin düzeltilmiş p değeri hesaplanamadı; etkileşim hakkında hüküm verilemez. Ana etkileri "etkileşim anlamlı değil" varsayarak yorumlamayın. Bu çoğunlukla ölçümlerden birinin bir diğerinin sabit kaydırılmışı olmasından kaynaklanır — ölçüm sütunlarını gözden geçirin.`,
+                  en: `The corrected p value for the interaction could not be computed, so no verdict about the interaction is possible. Do not interpret the main effects on the assumption that the interaction is non-significant. This usually happens when one measurement is a constant shift of another — review your measurement columns.`,
                 })}
               </p>
             )}

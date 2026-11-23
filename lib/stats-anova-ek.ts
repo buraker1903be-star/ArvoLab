@@ -128,7 +128,15 @@ function kuresellik(S: number[][], N: number, a: number) {
     mauchlyChi = -dfS * d * Math.log(mauchlyW);
     mauchlyP = Number.isFinite(mauchlyChi) ? 1 - chiKareCDF(mauchlyChi, mauchlyDf) : NaN;
   }
-  return { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon };
+  /*
+    KÜRESELLİK DENETLENEBİLDİ Mİ (23.11.2026). Bir ölçüm ötekinin sabit
+    kaydırılmışıysa kovaryans matrisi tekil olur: W = 0, χ² ve p
+    tanımsız kalır. Arayüz `isSignificant(NaN)` false döndüğü için
+    "küresellik varsayımı sağlanıyor" yazıyordu — hiç denetlenmemiş bir
+    varsayım, denetlenip geçmiş gibi görünüyordu.
+  */
+  const kuresellikDenetlendi = Number.isFinite(mauchlyP);
+  return { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, kuresellikDenetlendi, ggEpsilon, hfEpsilon };
 }
 
 /* ---------- Tekrarlı ölçümler ANOVA ---------- */
@@ -150,6 +158,8 @@ export interface TekrarliAnovaSonucu {
   mauchlyChi: number;
   mauchlyDf: number;
   mauchlyP: number;
+  /** Mauchly hesaplanabildi mi; false ise varsayım hakkında hüküm verilemez. */
+  kuresellikDenetlendi: boolean;
   ggEpsilon: number;
   hfEpsilon: number;
   /** Greenhouse-Geisser düzeltmeli p (df'ler ε ile çarpılır). */
@@ -185,7 +195,7 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
       return t / (n - 1);
     }),
   );
-  const { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon } = kuresellik(S, n, 1);
+  const { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, kuresellikDenetlendi, ggEpsilon, hfEpsilon } = kuresellik(S, n, 1);
 
   return {
     n,
@@ -202,6 +212,7 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
     mauchlyChi,
     mauchlyDf,
     mauchlyP,
+    kuresellikDenetlendi,
     ggEpsilon,
     hfEpsilon,
     ggP: Number.isFinite(f) ? fTestP(f, df1 * ggEpsilon, df2 * ggEpsilon) : NaN,
@@ -211,15 +222,72 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
 
 
 /** Ölçüm çiftleri: eşleştirilmiş t, Bonferroni düzeltmeli. */
-export function tekrarliIkiliKarsilastirmalar(olcumler: number[][], adlar: string[]) {
+/** Bir çiftin neden hesaplanamadığı; null ise hesaplandı. */
+export type IkiliEngel = "sabit-fark" | "az-gozlem";
+
+export interface TekrarliIkiliCift {
+  a: string;
+  b: string;
+  fark: number;
+  t: number;
+  /** Bonferroni ile düzeltilmiş p; hesaplanamayan çiftte NaN. */
+  p: number;
+  anlamli: boolean;
+  /** Hesap yapılamadıysa sebebi; yapıldıysa null. */
+  engel: IkiliEngel | null;
+}
+
+/*
+  TEKRARLI ÖLÇÜMLER SONRASI İKİLİ KARŞILAŞTIRMALAR.
+
+  Eşleştirilmiş t-testi + BONFERRONI düzeltmesi (ham p × çift sayısı,
+  1'de sınırlı). SciPy (ttest_rel) ve statsmodels (multipletests,
+  "bonferroni") ile doğrulanıyor: tests/unit/stats-tekrarli-ikili.test.ts.
+
+  HESAPLANAMAYAN ÇİFT "ANLAMLI DEĞİL" DEĞİLDİR (23.11.2026). Eskiden
+  t tanımsız olduğunda (farkların varyansı sıfır ya da tek gözlem) p
+  NaN kalıyor ve `anlamli` false oluyordu: her katılımcıda tam olarak
+  aynı değişimin görüldüğü bir çift — bulunabilecek en güçlü örüntü —
+  ekranda "anlamlı değil" diye görünüyordu. Kullanıcı o çifti
+  raporlamaktan vazgeçiyordu. Artık `engel` alanı sebebi taşıyor ve
+  arayüz onu yazıyor.
+
+  EŞLEŞMEYEN UZUNLUK REDDEDİLİR. Eşleştirilmiş t fazlalığı kırpıyor;
+  farklı uzunluktaki ölçümlerde her çift BAŞKA bir n ile hesaplanır ve
+  Bonferroni ailesi tutarsız kalırdı. Arayüz zaten satırları
+  eşleştirerek veriyor (lib/veri-eslestirme.ts); doğrudan çağrıda sessiz
+  kalmak yerine hata veriliyor.
+*/
+export function tekrarliIkiliKarsilastirmalar(olcumler: number[][], adlar: string[]): TekrarliIkiliCift[] {
   const k = olcumler.length;
+  if (adlar.length < k) {
+    throw new Error(`tekrarliIkiliKarsilastirmalar: ${k} ölçüm için ${adlar.length} etiket verildi.`);
+  }
+  const n = olcumler[0]?.length ?? 0;
+  if (olcumler.some((o) => o.length !== n)) {
+    throw new Error(
+      `tekrarliIkiliKarsilastirmalar: ölçümlerin uzunluğu eşit olmalı (${olcumler.map((o) => o.length).join(", ")}). Satırları önce eşleştirin.`,
+    );
+  }
   const sayi = (k * (k - 1)) / 2;
-  const ciftler: { a: string; b: string; fark: number; t: number; p: number; anlamli: boolean }[] = [];
+  const ciftler: TekrarliIkiliCift[] = [];
   for (let i = 0; i < k; i += 1) {
     for (let j = i + 1; j < k; j += 1) {
       const r = eslestirilmisTTest(olcumler[i], olcumler[j]);
-      const p = Number.isFinite(r.p) ? Math.min(1, r.p * sayi) : NaN;
-      ciftler.push({ a: adlar[i], b: adlar[j], fark: r.farkOrtalamasi, t: r.t, p, anlamli: Number.isFinite(p) && p < 0.05 });
+      const hesaplandi = Number.isFinite(r.t) && Number.isFinite(r.p);
+      const p = hesaplandi ? Math.min(1, r.p * sayi) : NaN;
+      /* Tek gözlemde t zaten tanımsız; sebebi ayırmak kullanıcıya ne
+         yapacağını söylüyor (veri toplamak mı, farkı yorumlamak mı). */
+      const engel: IkiliEngel | null = hesaplandi ? null : r.n < 2 ? "az-gozlem" : "sabit-fark";
+      ciftler.push({
+        a: adlar[i],
+        b: adlar[j],
+        fark: r.farkOrtalamasi,
+        t: r.t,
+        p,
+        anlamli: hesaplandi && p < 0.05,
+        engel,
+      });
     }
   }
   return ciftler;
@@ -363,6 +431,8 @@ export interface KarmaAnovaSonucu {
   mauchlyChi: number;
   mauchlyDf: number;
   mauchlyP: number;
+  /** Mauchly hesaplanabildi mi; false ise varsayım hakkında hüküm verilemez. */
+  kuresellikDenetlendi: boolean;
   ggEpsilon: number;
   hfEpsilon: number;
 }

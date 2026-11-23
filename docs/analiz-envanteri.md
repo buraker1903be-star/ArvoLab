@@ -109,7 +109,7 @@ tarayıcıda yapılıyor; dosya sunucuya gitmiyor.
 |---|---|
 | Hesap | `tekrarliOlcumlerAnova`, `tekrarliIkiliKarsilastirmalar` (`stats-anova-ek.ts`) |
 | Gerekli değişken | 3+ ölçüm sütunu |
-| Varsayım | **Küresellik**: Greenhouse–Geisser ve Huynh–Feldt epsilon değerleri hesaplanıyor |
+| Varsayım | **Küresellik**: Mauchly testi, Greenhouse–Geisser ve Huynh–Feldt epsilon değerleri. Mauchly hesaplanamazsa (tekil kovaryans matrisi) hüküm verilmiyor, GG düzeltmesi raporlanıyor |
 | Üretilen | F, df, p (düzeltilmiş df'lerle birlikte), ikili karşılaştırmalar |
 | GA | — |
 | Etki | **Kısmi η²** |
@@ -133,12 +133,12 @@ tarayıcıda yapılıyor; dosya sunucuya gitmiyor.
 |---|---|
 | Hesap | `ancova` (`stats-anova-ek.ts`) |
 | Gerekli değişken | Grup değişkeni + bağımlı değişken + kovaryat(lar) |
-| Varsayım | Hata durumları ayrı ("az-grup", "az-gozlem", "tekil"); **eğim homojenliği sınanmıyor** |
+| Varsayım | Hata durumları ayrı ("az-grup", "az-gozlem", "tekil"); **eğim homojenliği (grup × kovaryat) hesaplanıyor** (`egimF`, `egimDf1`, `egimDf2`, `egimP`) |
 | Üretilen | Düzeltilmiş ortalamalar, her etki için F/df/p |
 | GA | — |
 | Etki | **Kısmi η²** |
-| Doğrulama | `pingouin` / `statsmodels`; SPSS'in düzeltilmiş kestirimleriyle karşılaştırma |
-| Eksik | Regresyon eğimlerinin homojenliği (kovaryat × grup etkileşimi) kullanıcıya gösterilmiyor |
+| Doğrulama | `pingouin` / `statsmodels`; SPSS'in düzeltilmiş kestirimleriyle karşılaştırma. Eğim homojenliği `statsmodels` iç içe model karşılaştırmasıyla sınanıyor (`stats-anova-ek.test.ts`: F = 0,169305, p = 0,846233, sd 2/12) |
+| Eksik | Düzeltilmiş ortalamaların güven aralığı yok |
 
 ## 10–14. Korelasyon / Regresyon
 
@@ -192,17 +192,31 @@ Dunn post hoc, Friedman sonrası ikili karşılaştırma yok.
 
 ## Boşluklar — doğrulanmış özet
 
-1. **`tekrarliIkiliKarsilastirmalar` hiç test edilmiyor.** Tekrarlı
-   ölçümler ANOVA'nın kendisi `pingouin`'e karşı sınanıyor, ardından
-   gelen ikili karşılaştırmalar sınanmıyor. Ekranda görünen bir
-   çıktıdır; sessizce yanlış olabilir.
+1. ~~`tekrarliIkiliKarsilastirmalar` hiç test edilmiyor.~~ **Kapatıldı
+   (23.11.2026).** SciPy `ttest_rel` ve statsmodels `multipletests`
+   ("bonferroni") ile bağımsız referanslara karşı sınanıyor
+   (`tests/unit/stats-tekrarli-ikili.test.ts`, referanslar
+   `scripts/referans/tekrarli-ikili-referans.py` ile üretiliyor).
+   Doğrulanan: ortalama farkı, t, düzeltilmiş p, anlamlılık, çift
+   sayısı ve etiketler; üç ve dört ölçüm, anlamlı/anlamsız sonuçlar,
+   negatif fark, ölçüm sırası değişimi ve p'nin 1'de sınırlanması.
+   **Hesap doğru çıktı** — SciPy/statsmodels ile toleranslar içinde
+   birebir. Sınır durumlarında iki kusur bulundu ve düzeltildi
+   (aşağıda, "Düzeltilen kusurlar").
 2. **`describeNumeric` için doğrudan test yok** (alt parçaları SPSS'e
    karşı sınanıyor, dolaylı kapsam).
 3. **Güven aralığı yalnızca 6 analizde:** üç t-testi, lojistik Exp(B),
    aracılık/düzenleyicilik bootstrap. Korelasyon r, η², Cohen d,
    Cronbach α, RMSEA ve regresyon katsayıları için GA yok.
-4. **ANCOVA'da eğim homojenliği sınanmıyor** — varsayım çiğnenirse
-   kullanıcı bunu göremiyor.
+4. ~~ANCOVA'da eğim homojenliği sınanmıyor.~~ **Bu madde yanlıştı
+   (23.11.2026 düzeltmesi).** Üç başlık ayrı ayrı denetlendi ve üçü de
+   karşılanıyor: *hesap* `lib/stats-anova-ek.ts`'te (`egimF`, `egimDf1`,
+   `egimDf2`, `egimP`); *arayüzde gösterim* ANCOVA sonucunun altında, F,
+   sd ve p ile birlikte ve varsayım bozuksa uyarı tonuyla
+   ("varsayım sağlanmıyor; kovaryatın etkisi gruplarda farklı, ANCOVA
+   sonucu yanıltıcı olabilir"); *test* `stats-anova-ek.test.ts` içinde
+   `statsmodels` iç içe model karşılaştırmasına karşı. Envanterin ilk
+   sürümü bu üçünü ayırmadan "eksik" demişti.
 5. **Post hoc eksikleri:** Kruskal-Wallis (Dunn), Friedman (ikili),
    karma ANOVA'da gruplar arası.
 6. **Varsayım şeridi yalnızca 6 analizde çiziliyor** (betimsel, iki
@@ -212,3 +226,81 @@ Dunn post hoc, Friedman sonrası ikili karşılaştırma yok.
 
 Mevcut yetenekler arasında "arayüzde var ama hesabı yok" **hiçbir
 analiz bulunmadı**: 25 adın 25'i gerçekten hesaplanıyor.
+
+## Düzeltilen kusurlar (23.11.2026)
+
+Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan altı
+kusur. Altısı da hesabın kendisinde değil, **sonucun
+bildirilmesinde**:
+
+1. **Hesaplanamayan çift "anlamlı değil" diye görünüyordu.** Farkların
+   varyansı sıfırken (her katılımcıda tam olarak aynı değişim) t
+   tanımsız kalıyor; `p` NaN olduğu için `anlamli` false oluyordu ve
+   ekranda satır "anlamlı değil" diye bitiyordu. Bulunabilecek en güçlü
+   örüntü, kullanıcıya raporlanmaması gereken bir sonuç gibi
+   görünüyordu. Artık çift `engel` alanı taşıyor ("sabit-fark" /
+   "az-gozlem") ve arayüz sebebi yazıyor.
+2. **Eşleşmeyen uzunluk sessizce kırpılıyordu.** Eşleştirilmiş t fazla
+   gözlemi atıyor; farklı uzunluktaki ölçümlerde her çift başka bir n
+   ile hesaplanıyor ve Bonferroni ailesi tutarsız kalıyordu. Arayüz
+   zaten satırları eşleştirerek veriyor (`lib/veri-eslestirme.ts`,
+   liste bazlı eleme + "N = … (x satır düştü)" notu); doğrudan çağrı
+   artık hata veriyor. Etiket sayısı ölçüm sayısından azsa da hata
+   veriliyor (eskiden `undefined` etiketli çift üretiliyordu).
+
+3. **Mauchly hesaplanamadığında "küresellik varsayımı sağlanıyor"
+   yazılıyordu.** Ölçümlerden biri bir diğerinin sabit kaydırılmışıysa
+   kovaryans matrisi tekil olur: W = 0, χ² ve p tanımsız kalır.
+   `isSignificant(NaN)` false döndüğü için satır "küresellik varsayımı
+   sağlanıyor" diye bitiyordu — hiç denetlenmemiş bir varsayım,
+   denetlenip geçmiş gibi görünüyordu. Sonuç artık
+   `kuresellikDenetlendi` taşıyor; denetlenemediğinde arayüz hüküm
+   vermiyor ve temkinli taraf olan Greenhouse-Geisser düzeltmeli p'yi
+   raporluyor.
+
+4. **Karma ANOVA'da da aynı kusur vardı** ve aynı pakette kapatıldı.
+   Sonuç sunumu, Mauchly hesaplanamadığında "küresellik sağlanıyor"
+   diyor ve DÜZELTMESİZ p raporluyordu; grup içi basit etkiler
+   (her grupta zaman) de kendi Mauchly'sini aynı şekilde yorumluyordu.
+   İkisi de artık `kuresellikDenetlendi` alanına bakıyor ve
+   denetlenemediğinde Greenhouse-Geisser uygulanıp bu yazılıyor.
+
+   **Düzeltmenin kendisi de hesaplanamayabiliyor:** Mauchly determinant
+   istediği için tekil matriste düşer, GG epsilon ise bir iz oranı
+   olduğundan çoğu tekil desende hâlâ hesaplanır. İki ölçüm birebir
+   aynı olduğunda GG de düşüyor; o durumda düzeltilmiş p üretilmiyor ve
+   **sonlu olmayan p'den anlamlı/anlamsız hükmü çıkarılmıyor**. Hüküm
+   artık üç değerli bir yardımcıdan geçiyor (`pHukmu`,
+   `lib/apa-format.ts`): "hesaplanamadi" durumu TÜRDE zorunlu olduğu
+   için çağıran yer onu atlayamıyor.
+
+5. **Hesaplanamayan etkileşimde ana etkilerin yorumlanması
+   öneriliyordu.** Karma ANOVA sonucunun üstünde "p hesaplanamadı;
+   etkileşim hakkında hüküm verilemez" yazarken, altındaki paragraf
+   "Etkileşim anlamlı olmadığı için … ana etkileri tablodaki gibi
+   yorumlanır" diyordu: iki cümle birbirini çürütüyor ve ikincisi
+   yapılmamış bir testin sonucuna dayanan bir yönergeydi. O paragraf
+   artık YALNIZCA `etkilesimHukmu === "anlamsiz"` dalında çiziliyor;
+   hesaplanamayan durumda yerine, ana etkileri "etkileşim anlamlı
+   değil" varsayarak yorumlamamayı söyleyen bir uyarı var.
+
+6. **Düzeltilmiş p düzeltilmemiş serbestlik dereceleriyle
+   yazılıyordu.** Grup içi zaman etkisinde Greenhouse-Geisser'li p
+   raporlanırken F satırındaki pay/payda sd ham kalıyordu; okuyan kişi
+   "F(2, 22) = …, p(GG) = …" diye, iki sayısı iki ayrı testten gelen
+   bir satır raporluyordu. Sd'ler artık o grubun KENDİ epsilon'uyla
+   çarpılıyor (ekranda iki ondalıkla) ve epsilon satırda yazılı; aile
+   içi Bonferroni (p × grup sayısı) korunuyor. Düzeltme
+   üretilemediğinde "uygulandı" mesajı çıkmıyor, düzeltilmiş p ve
+   sd'nin hesaplanamadığı açıkça yazılıyor ve hüküm verilmiyor.
+
+   Beklenen sd ve Bonferroni sonrası p değerleri ArvoLab'ın kodundan
+   değil, **pingouin** ile ayrıca üretildi
+   (`scripts/referans/grup-ici-zaman-referans.py` →
+   `tests/fixtures/grup-ici-zaman-referans.json`); birim testi
+   `tests/unit/karma-grup-ici-zaman.test.ts`, gerçek arayüz sınaması
+   `scripts/yerel-yigin/analiz-alani-kabul.mjs` S14f–S14h.
+
+Sonuç tablosunun başlığı çoklu karşılaştırma düzeltmesinin adını açıkça
+yazıyor: "İkili karşılaştırmalar (eşleştirilmiş t, **Bonferroni
+düzeltmesi**)".

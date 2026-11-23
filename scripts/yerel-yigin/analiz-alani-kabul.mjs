@@ -162,6 +162,112 @@ const S11 = {};
   /* S12: ortak sütunu olmayan ikinci dosya ve üç ikili sütunlu dosya. */
   yaz("e", ["skor", "sure2", "takim"], (i) => [(30 + ((i * 11) % 50)).toFixed(1), (5 + ((i * 3) % 20)).toFixed(1), i % 2 ? "X" : "Y"]);
   yaz("f", ["once", "sonra", "ucuncu"], (i) => [i % 2 ? "evet" : "hayir", i % 3 ? "evet" : "hayir", i % 4 ? "var" : "yok"]);
+  /*
+    S13: tekrarlı ölçümler. Üç ölçüm; "sabit" sütunu ön testten TAM
+    OLARAK 3 puan yüksek (farkların varyansı sıfır) ve bir satırda
+    eksik veri var — eleme notunun çalıştığı da görülsün.
+  */
+  {
+    const satirlar = ["katilimci,on,son,izleme,sabit"];
+    const on = [10, 12, 11, 14, 13, 15, 9, 12, 13, 11, 10, 14];
+    const son = [12, 15, 13, 16, 15, 18, 11, 14, 16, 13, 12, 17];
+    const izleme = [15, 18, 17, 19, 19, 21, 13, 18, 19, 15, 14, 20];
+    for (let i = 0; i < on.length; i += 1) {
+      /* 4. satırda "son" eksik: liste bazlı eleme devreye girer. */
+      const sonDeger = i === 3 ? "" : son[i];
+      satirlar.push(`K${i + 1},${on[i]},${sonDeger},${izleme[i]},${on[i] + 3}`);
+    }
+    const p = path.join(KOK, `.tmp-s13-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.tekrarli = p;
+  }
+  /*
+    S14: KARMA DESEN. İki grup × üç ölçüm.
+      - "tekil" sütunu ön testin tam 3 puan kaydırılmışı → kovaryans
+        matrisi tekil, Mauchly hesaplanamaz.
+      - "son" ve "izleme" normal: aynı dosyayla hesaplanabilen desen de
+        sınanıyor (düzeltmenin normal desenleri bozmadığı görülsün).
+  */
+  {
+    const satirlar = ["katilimci,grup,on,son,izleme,tekil,tekil2"];
+    const on = [10, 12, 11, 14, 13, 15, 9, 12, 13, 11, 10, 14, 11, 13, 12, 15];
+    const son = [12, 15, 13, 16, 15, 18, 11, 14, 16, 13, 12, 17, 13, 16, 14, 18];
+    const izleme = [15, 18, 17, 19, 19, 21, 13, 18, 19, 15, 14, 20, 16, 19, 17, 21];
+    for (let i = 0; i < on.length; i += 1) {
+      const grup = i % 2 === 0 ? "deney" : "kontrol";
+      /* tekil = on + 3, tekil2 = on + 6: ikisi de ön testin sabit
+         kaydırılmışı. on/tekil/tekil2 birlikte seçilince yalnızca
+         Mauchly değil, GG epsilon da hesaplanamıyor. */
+      satirlar.push(`K${i + 1},${grup},${on[i]},${son[i]},${izleme[i]},${on[i] + 3},${on[i] + 6}`);
+    }
+    const p = path.join(KOK, `.tmp-s14-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.karma = p;
+  }
+  /*
+    S14c3: GG epsilon'un DA hesaplanamadığı karma desen. Mauchly
+    determinant ister ve tekil matriste düşer; GG iz oranı olduğu için
+    çoğu tekil desende hâlâ hesaplanır. İki ölçüm BİREBİR aynı olunca
+    GG de düşüyor ama F'ler sonlu kalıyor — yani hesap reddedilmiyor ve
+    arayüz "düzeltme üretilemedi" dalına giriyor.
+  */
+  {
+    const satirlar = ["katilimci,grup,on,kopya,kaydirik"];
+    const deney = [10, 12, 11, 14, 13, 15, 9, 12];
+    const kontrol = [9, 11, 10, 13, 12, 14, 8, 11];
+    for (let i = 0; i < 16; i += 1) {
+      const grup = i % 2 === 0 ? "deney" : "kontrol";
+      const v = (grup === "deney" ? deney : kontrol)[Math.floor(i / 2)];
+      satirlar.push(`K${i + 1},${grup},${v},${v},${v + 2}`);
+    }
+    const p = path.join(KOK, `.tmp-s14gg-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.karmaGG = p;
+  }
+  /*
+    S14g: GG'nin BAŞARIYLA uygulandığı karma desen. Küresellik gerçekten
+    bozuk (üçüncü ölçümün hata varyansı çok büyük), Mauchly hesaplanıyor
+    ve anlamlı çıkıyor; GG epsilon ile düzeltilmiş p iki grupta da
+    ekranda SAYI olarak basılıyor (biri anlamlı, biri değil). Beklenen
+    serbestlik dereceleri ve Bonferroni sonrası p
+    `tests/fixtures/grup-ici-zaman-referans.json`'da — ArvoLab'ın kendi
+    kodundan değil, pingouin'den üretildi
+    (`scripts/referans/grup-ici-zaman-referans.py`). Diziler o betikteki
+    GG_ON / GG_ARA / GG_SON ile BİREBİR aynı olmalı.
+  */
+  {
+    const on = [51, 58, 46, 47, 50, 52, 47, 49, 48, 59, 51, 51, 48, 51, 55, 53, 53, 54, 47, 44, 53, 46, 58, 43];
+    const ara = [58, 65, 51, 54, 54, 59, 53, 57, 55, 63, 55, 59, 50, 50, 56, 53, 52, 57, 49, 46, 54, 49, 59, 41];
+    const son = [73, 58, 51, 54, 56, 56, 68, 56, 70, 67, 67, 62, 54, 46, 56, 43, 55, 57, 47, 43, 53, 47, 57, 42];
+    const satirlar = ["katilimci,grup,on,ara,son"];
+    for (let i = 0; i < on.length; i += 1) {
+      /* İlk 12 satır deney, son 12 satır kontrol (referans betiğiyle aynı sıra). */
+      satirlar.push(`K${i + 1},${i < 12 ? "deney" : "kontrol"},${on[i]},${ara[i]},${son[i]}`);
+    }
+    const p = path.join(KOK, `.tmp-s14uyg-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.ggUygulanan = p;
+  }
+  /*
+    S14h: TEK BİR GRUPTA GG üretilemeyen karma desen. Kontrol grubunda
+    "ara" ölçümü ön testle BİREBİR aynı, "son" ise sabit kaydırılmışı:
+    o grubun fark varyansları sıfır, epsilon üretilemiyor. Deney grubu
+    normal — aynı ekranda hem düzeltmesiz hüküm hem "üretilemedi" dalı
+    görünüyor. Havuzlanmış kovaryans deney grubundan değişkenlik aldığı
+    için ETKİLEŞİM hesaplanabiliyor; basit etkiler böylece çiziliyor.
+  */
+  {
+    const onD = [51, 58, 46, 47, 50, 52, 47, 49, 48, 59, 51, 51];
+    const araD = [58, 65, 51, 54, 54, 59, 53, 57, 55, 63, 55, 59];
+    const sonD = [66, 70, 58, 61, 63, 64, 60, 65, 62, 72, 64, 67];
+    const onK = [48, 51, 55, 53, 53, 54, 47, 44, 53, 46, 58, 43];
+    const satirlar = ["katilimci,grup,on,ara,son"];
+    for (let i = 0; i < onD.length; i += 1) satirlar.push(`D${i + 1},deney,${onD[i]},${araD[i]},${sonD[i]}`);
+    for (let i = 0; i < onK.length; i += 1) satirlar.push(`K${i + 1},kontrol,${onK[i]},${onK[i]},${onK[i] + 2}`);
+    const p = path.join(KOK, `.tmp-s14kismi-${ek}.csv`);
+    fs.writeFileSync(p, satirlar.join("\n"), "utf8");
+    S11.kismiTekil = p;
+  }
 }
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
 const BOZUK_YOLU = path.join(KOK, `.tmp-analiz-bozuk-${ek}.csv`);
@@ -586,6 +692,21 @@ try {
       if (!sel) return "select yok";
       return { deger: sel.value, gorunen: sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent.trim() : "(hiç)" };
     }, etiket);
+  /*
+    "Veriyi değiştir" onayı. `once` ile kaydedilen işleyici, o çağrıda
+    diyalog çıkmazsa kayıtlı kalıyor ve bir sonraki diyaloğu önce o
+    yakalıyordu; ikinci işleyici aynı diyaloğu kabul etmeye çalışınca
+    koşu "already handled" ile düşüyordu. İşleyici burada tıklamadan
+    sonra kaldırılıyor.
+  */
+  const veriyiDegistir = async () => {
+    const kabul = async (dl) => { await dl.accept().catch(() => {}); };
+    sayfa.on("dialog", kabul);
+    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
+    await sayfa.waitForTimeout(600);
+    sayfa.off("dialog", kabul);
+  };
+
   const yukle = async (p) => {
     await sayfa.locator('.dropzone input[type="file"]').setInputFiles(p);
     await sayfa.waitForSelector(".analiz-veri-serit", { timeout: 25000 });
@@ -626,9 +747,7 @@ try {
 
   /* (c) Veri değiştir: yeni dosyada eski sütun adları YOK. */
   await esit("S11c veri değişince seçimler yeni sütunlara yenileniyor", async () => {
-    sayfa.once("dialog", async (dl) => { await dl.accept(); });
-    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
-    await sayfa.waitForTimeout(500);
+    await veriyiDegistir();
     await yukle(S11.c);
     const once = await kutuDurumu("Önceki ölçüm");
     return `${once.deger} · ${/^sonucDurumu/.test(once.gorunen)}`;
@@ -703,9 +822,7 @@ try {
 
   /* (2) Yeni dosyada sütun adları tamamen farklı. */
   await esit("S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor", async () => {
-    sayfa.once("dialog", async (dl) => { await dl.accept(); });
-    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
-    await sayfa.waitForTimeout(500);
+    await veriyiDegistir();
     await yukle(S11.e);
     const say = await kutuDurumu("Sayısal değişken");
     const grup = await kutuDurumu("Grup değişkeni");
@@ -737,14 +854,279 @@ try {
     return `${kunye.includes(`önceki ölçüm · ${a.deger}`)} ${kunye.includes(`sonraki ölçüm · ${b.deger}`)} ${/McNemar/.test(kunye)}`;
   }, "true true true");
   await esit("S12c4 tek ikili sütun kalırsa ikinci alan boşalıyor ve hesap engelleniyor", async () => {
-    sayfa.once("dialog", async (dl) => { await dl.accept(); });
-    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
-    await sayfa.waitForTimeout(500);
+    await veriyiDegistir();
     await yukle(S11.a); /* yalnızca "basari" iki kategorili */
     const a = await kutuDurumu("Önceki ölçüm");
     const b = await kutuDurumu("Sonraki ölçüm");
     return `${a.deger}/${b.deger} · bos:${await sayfa.locator(".analiz-eksik-alan").count()} · dugme:${await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).count()}`;
   }, "basari/ · bos:1 · dugme:0");
+
+  /* ================= S13: tekrarlı ölçümler sonrası ikili karşılaştırmalar =================
+     Hesap bağımsız referanslara karşı sınanıyor (tests/unit/stats-tekrarli-ikili.test.ts);
+     burada arayüzün o hesabı NASIL sunduğu doğrulanıyor. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("anova", "Tekrarlı Ölçümler ANOVA");
+  await yukle(S11.tekrarli);
+  const olcumSec = async (adlar) => {
+    const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: "Ölçümler" });
+    const kutular = alan.locator('.sutun-secimi-liste input[type="checkbox"]');
+    const etiketler = await alan.locator(".sutun-secimi-liste label span").allInnerTexts();
+    for (const ad of adlar) {
+      const i = etiketler.indexOf(ad);
+      if (i < 0) throw new Error(`ölçüm listesinde ${ad} yok: ${etiketler.join(",")}`);
+      await kutular.nth(i).check();
+    }
+    await sayfa.waitForTimeout(150);
+  };
+  await esit("S13a üç ölçümde ikili karşılaştırma tablosu çiziliyor", async () => {
+    await olcumSec(["on", "son", "izleme"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const satir = (metin.match(/—/g) ?? []).length;
+    return `${/İkili karşılaştırmalar/.test(metin)} · ${satir >= 3}`;
+  }, "true · true");
+  await esit("S13b düzeltmenin ADI tabloda yazılı", async () =>
+    (await sayfa.locator(".analiz-sonuc").innerText()), (v) => /eşleştirilmiş t, Bonferroni düzeltmesi/.test(v));
+  await esit("S13c eksik veri politikası sessiz değil: düşen satır yazılıyor", async () =>
+    (await sayfa.locator(".analiz-sonuc").innerText()), (v) => /1 satır eksik veri yüzünden analiz dışı bırakıldı/.test(v));
+  await cek(sayfa, "19-tekrarli-ikili-karsilastirmalar");
+  await esit("S13d üç ölçümde üç çift (k(k−1)/2)", async () => {
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("İkili karşılaştırmalar"));
+    return (bolum.match(/fark /g) ?? []).length;
+  }, 3);
+  /*
+    SIFIR FARK VARYANSI: "sabit" sütunu ön testten tam olarak 3 puan
+    yüksek. Eskiden bu çift "anlamlı değil" diye görünüyordu.
+  */
+  await esit("S13e sabit farklı çift 'anlamlı değil' demiyor, sebebini yazıyor", async () => {
+    await olcumSec(["sabit"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("İkili karşılaştırmalar"));
+    const sabitSatir = bolum.split("\n").find((x) => /on — sabit|sabit/.test(x) && /t hesaplanamadı/.test(x)) ?? "";
+    return `${/varyans sıfır/.test(sabitSatir)} · ${!/on — sabit.*anlamlı değil/.test(bolum)}`;
+  }, "true · true");
+  await esit("S13f Mauchly hesaplanamadıysa 'varsayım sağlanıyor' denmiyor", async () => {
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const bolum = metin.slice(metin.indexOf("Küresellik"), metin.indexOf("İkili karşılaştırmalar"));
+    return `${/Mauchly testi hesaplanamadı/.test(bolum)} · ${!/küresellik varsayımı sağlanıyor/.test(bolum)}`;
+  }, "true · true");
+  await cek(sayfa, "20-sabit-fark-hesaplanamadi");
+
+  /* ================= S14: karma ANOVA'da küresellik hükmü =================
+     Hesaplanamayan Mauchly sonucu "küresellik sağlanıyor" diye
+     yorumlanmamalı; düzeltilmiş p üretilemezse anlamlı/anlamsız hükmü
+     de verilmemeli. Normal hesaplanabilen desen aynı dosyada ayrıca
+     sınanıyor: düzeltme kararı onu bozmamalı. */
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("anova", "Karma ANOVA");
+  await yukle(S11.karma);
+  const karmaOlcumSec = async (adlar) => {
+    const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: "Ölçümler" });
+    const kutular = alan.locator('.sutun-secimi-liste input[type="checkbox"]');
+    const etiketler = await alan.locator(".sutun-secimi-liste label span").allInnerTexts();
+    for (const kutu of await kutular.all()) if (await kutu.isChecked()) await kutu.uncheck();
+    for (const ad of adlar) {
+      const i = etiketler.indexOf(ad);
+      if (i < 0) throw new Error(`ölçüm listesinde ${ad} yok: ${etiketler.join(",")}`);
+      await kutular.nth(i).check();
+    }
+    await sayfa.waitForTimeout(150);
+  };
+  const karmaCalistir = async () => {
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    await sayfa.waitForTimeout(200);
+    return await sayfa.locator(".analiz-sonuc").innerText();
+  };
+  await esit("S14a tekil kovaryanslı karma desende 'küresellik sağlanıyor' denmiyor", async () => {
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    await karmaOlcumSec(["on", "son", "tekil"]);
+    const metin = await karmaCalistir();
+    return `${/Mauchly testi hesaplanamadı/.test(metin)} · ${!/küresellik sağlanıyor/.test(metin)}`;
+  }, "true · true");
+  await esit("S14b denetlenemeyen küresellikte temkinli taraf (GG) uygulandığı yazılı", async () =>
+    (await sayfa.locator(".analiz-sonuc").innerText()),
+    (v) => /Greenhouse-Geisser düzeltmesi uygulandı/.test(v) || /Greenhouse-Geisser düzeltmesi de üretilemedi/.test(v));
+  await esit("S14c hesaplanamayan p'den anlamlı/anlamsız hükmü üretilmiyor", async () => {
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    /* p sütununda "—" varsa o satır için hüküm cümlesi olmamalı. */
+    const etkilesim = metin.split("\n").find((x) => /Etkileşim \(ölçüm/.test(x)) ?? "";
+    if (!/—\s*$|p hesaplanamadı/.test(etkilesim) && !/—,/.test(etkilesim)) return "p hesaplandı (hüküm beklenir)";
+    return /hüküm verilemez/.test(etkilesim) ? "hüküm verilmedi" : "HÜKÜM ÜRETİLDİ";
+  }, (v) => v !== "HÜKÜM ÜRETİLDİ");
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "22-karma-tekil-kovaryans");
+  /*
+    GG DE HESAPLANAMAZSA: Mauchly determinant ister ve tekil matriste
+    düşer; GG epsilon iz oranı olduğu için çoğu tekil desende hâlâ
+    hesaplanır. Üç ölçümün üçü de birbirinin sabit kaydırılmışı olunca
+    GG de düşüyor — o zaman hiçbir p üretilmemeli.
+  */
+  await esit("S14c2 GG de üretilemezse p yok ve hüküm verilmiyor", async () => {
+    await karmaOlcumSec(["on", "tekil", "tekil2"]);
+    const dugme = sayfa.getByRole("button", { name: /Analizi Çalıştır/ });
+    await dugme.click();
+    await sayfa.waitForTimeout(2500);
+    const hata = (await sayfa.locator('.alert[data-tone="danger"]').allInnerTexts()).join(" ");
+    if (hata) return `hesap reddedildi: ${/değişkenlik|varyans|hesaplan/i.test(hata)}`;
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const etkilesim = metin.split("\n").find((x) => /Etkileşim \(ölçüm/.test(x)) ?? "";
+    const bildirildi = /Greenhouse-Geisser düzeltmesi de üretilemedi/.test(metin);
+    const hukumYok = !/değişimi farklı(?! değil)/.test(etkilesim) && !/değişimi farklı değil/.test(etkilesim);
+    return `bildirildi:${bildirildi} hukumYok:${hukumYok}`;
+  }, (v) => v.startsWith("hesap reddedildi: true") || v === "bildirildi:true hukumYok:true");
+
+  await esit("S14c3 GG epsilon da hesaplanamıyorsa: bildiriliyor ve hüküm verilmiyor", async () => {
+    await veriyiDegistir();
+    await yukle(S11.karmaGG);
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    await karmaOlcumSec(["on", "kopya", "kaydirik"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForTimeout(2500);
+    const hata = (await sayfa.locator('.alert[data-tone="danger"]').allInnerTexts()).join(" ");
+    if (hata) return `hesap reddedildi (bu da kabul): ${hata.slice(0, 40)}`;
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const etkilesim = metin.split("\n").find((x) => /Etkileşim \(ölçüm/.test(x)) ?? "";
+    return [
+      `bildirildi:${/Greenhouse-Geisser düzeltmesi de üretilemedi/.test(metin)}`,
+      `hukumYok:${/hüküm verilemez/.test(etkilesim)}`,
+      `kuresellikIddiasiYok:${!/küresellik sağlanıyor/.test(metin)}`,
+    ].join(" ");
+  }, (v) => v.startsWith("hesap reddedildi") || v === "bildirildi:true hukumYok:true kuresellikIddiasiYok:true");
+
+  /*
+    S14f: ETKİLEŞİM HESAPLANAMADIĞINDA ÇELİŞKİLİ YÖNLENDİRME OLMAMALI.
+    S14c3 ekranı hâlâ açık: etkileşimin düzeltilmiş p'si üretilemedi.
+    Eskiden üstte "hüküm verilemez" yazarken altta "Etkileşim anlamlı
+    olmadığı için ana etkileri yorumlayın" deniyordu — yapılmamış bir
+    testin sonucuna dayanan bir yönergeydi.
+  */
+  await esit("S14f etkileşim hesaplanamadığında 'anlamlı olmadığı için' paragrafı YOK", async () => {
+    const hata = (await sayfa.locator('.alert[data-tone="danger"]').allInnerTexts()).join(" ");
+    if (hata) return "hesap reddedildi (bu da kabul)";
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    const etkilesim = metin.split("\n").find((x) => /Etkileşim \(ölçüm/.test(x)) ?? "";
+    if (!/hüküm verilemez/.test(etkilesim)) return `etkileşim hesaplanmış: ${etkilesim.slice(0, 70)}`;
+    return [
+      `celiskiliParagrafYok:${!/Etkileşim anlamlı olmadığı için/.test(metin)}`,
+      `uyariVar:${/varsayarak yorumlamayın/.test(metin)}`,
+      `basitEtkiYok:${!/Basit etkiler/.test(metin)}`,
+    ].join(" ");
+  }, (v) => v === "hesap reddedildi (bu da kabul)" || v === "celiskiliParagrafYok:true uyariVar:true basitEtkiYok:true");
+
+  /*
+    S14g: GG BAŞARIYLA UYGULANDIĞINDA EKRANDAKİ SAYILAR.
+    Beklenen pay/payda serbestlik dereceleri (df × ε) ve aile içi
+    Bonferroni sonrası p (p_GG × grup sayısı), ArvoLab'ın kodundan
+    bağımsız olarak pingouin ile üretildi:
+    scripts/referans/grup-ici-zaman-referans.py → fixtures JSON.
+  */
+  const REFERANS = JSON.parse(fs.readFileSync(path.join(KOK, "tests/fixtures/grup-ici-zaman-referans.json"), "utf8"));
+  const REF_GG = REFERANS.veriSetleri.find((v) => v.ad === "ggUygulanan");
+  /*
+    "F(1.06, 11.66) = 17.48, p = .002" ya da virgüllü karşılığı. p APA
+    gereği baştaki sıfır olmadan yazılıyor, bu yüzden tam kısmı isteğe
+    bağlı.
+  */
+  const SAYI = "[0-9]*[.,][0-9]+|[0-9]+";
+  const satirSayilari = (satir) => {
+    const m = satir.match(
+      new RegExp(`F\\(\\s*(${SAYI})\\s*,\\s*(${SAYI})\\s*\\)\\s*=\\s*(${SAYI})\\s*,\\s*p\\s*([<=])\\s*(${SAYI})`),
+    );
+    if (!m) return null;
+    const s2n = (x) => Number(x.replace(",", ".").replace(/^\./, "0."));
+    return { df1: s2n(m[1]), df2: s2n(m[2]), f: s2n(m[3]), iliski: m[4], p: s2n(m[5]) };
+  };
+  await esit("S14g GG uygulanan grup içi zaman etkisi: ekrandaki sd ve Bonferroni p referansla aynı", async () => {
+    await veriyiDegistir();
+    await yukle(S11.ggUygulanan);
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    await karmaOlcumSec(["on", "ara", "son"]);
+    const metin = await karmaCalistir();
+    if (!/Basit etkiler/.test(metin)) return `basit etkiler çizilmedi: ${metin.slice(0, 90)}`;
+    const sonuc = [];
+    for (const ref of REF_GG.gruptaZaman) {
+      const satir = metin.split("\n").find((x) => x.startsWith(`${ref.grup} grubunda zaman`));
+      if (!satir) { sonuc.push(`${ref.grup}:satir-yok`); continue; }
+      const s2 = satirSayilari(satir);
+      if (!s2) { sonuc.push(`${ref.grup}:okunamadi(${satir.slice(0, 60)})`); continue; }
+      /* Ekranda p üç ondalığa yuvarlanıyor: referansı aynı şekilde yuvarlayıp karşılaştırıyoruz. */
+      const beklenenP = Number(ref.beklenen_p_bonferroni.toFixed(3));
+      const tamam = [
+        Math.abs(s2.df1 - ref.beklenen_df1) < 0.005,
+        Math.abs(s2.df2 - ref.beklenen_df2) < 0.005,
+        Math.abs(s2.f - Number(ref.F.toFixed(2))) < 0.005,
+        s2.iliski === "=" && Math.abs(s2.p - beklenenP) < 1e-9,
+        /küresellik sağlanmıyor; Greenhouse-Geisser düzeltmesi uygulandı/.test(satir),
+        /* Ayırıcı dile göre değişiyor; baştaki sıfır de isteğe bağlı. */
+        new RegExp(`ε = 0?[.,]${ref.eps.toFixed(3).slice(2)}`).test(satir),
+        /* Anlamlılık hükmü düzeltilmiş p'ye göre: 0,00241 anlamlı, 0,680 değil. */
+        ref.beklenen_p_bonferroni < 0.05
+          ? /— değişim anlamlı(?! değil)/.test(satir)
+          : /— değişim anlamlı değil/.test(satir),
+      ];
+      sonuc.push(`${ref.grup}:${tamam.every(Boolean) ? "tamam" : tamam.map((x) => (x ? "1" : "0")).join("")}|df=${s2.df1}/${s2.df2}|p=${s2.p}`);
+    }
+    return sonuc.join(" ");
+  }, (v) => /^deney:tamam\|/.test(v) && / kontrol:tamam\|/.test(v));
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "23-karma-gg-uygulandi");
+
+  /*
+    S14h: BİR GRUPTA GG ÜRETİLEMEZSE o satırda yanlış başarı mesajı ve
+    anlamlılık hükmü olmamalı; AYNI ekranda normal grup hükmünü
+    almaya devam etmeli.
+  */
+  await esit("S14h GG üretilemeyen grupta 'düzeltme uygulandı' ve hüküm yok, normal grup bozulmuyor", async () => {
+    await veriyiDegistir();
+    await yukle(S11.kismiTekil);
+    const g = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g.selectOption({ label: "grup" });
+    await karmaOlcumSec(["on", "ara", "son"]);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır/ }).click();
+    await sayfa.waitForTimeout(2500);
+    const hata = (await sayfa.locator('.alert[data-tone="danger"]').allInnerTexts()).join(" ");
+    if (hata) return `hesap reddedildi: ${hata.slice(0, 50)}`;
+    const metin = await sayfa.locator(".analiz-sonuc").innerText();
+    if (!/Basit etkiler/.test(metin)) return `basit etkiler çizilmedi: ${metin.slice(0, 90)}`;
+    const satir = (ad) => metin.split("\n").find((x) => x.startsWith(`${ad} grubunda zaman`)) ?? "";
+    const k = satir("kontrol");
+    const d = satir("deney");
+    return [
+      `kYanlisBasariYok:${!/düzeltmesi uygulandı/.test(k)}`,
+      `kBildirildi:${/Greenhouse-Geisser düzeltmesi de üretilemedi/.test(k)}`,
+      `kHukumYok:${!/değişim anlamlı/.test(k) && /hüküm verilemez/.test(k)}`,
+      `dHukumVar:${/— değişim anlamlı/.test(d)}`,
+      `dDuzeltmesiz:${/F\(2, 22\)/.test(d) && !/düzeltmesi uygulandı/.test(d)}`,
+    ].join(" ");
+  }, "kYanlisBasariYok:true kBildirildi:true kHukumYok:true dHukumVar:true dDuzeltmesiz:true");
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "24-karma-gg-uretilemedi");
+
+  await esit("S14d NORMAL desen bozulmadı: Mauchly hesaplanıyor ve hüküm veriliyor", async () => {
+    await veriyiDegistir();
+    await yukle(S11.karma);
+    const g2 = sayfa.locator("label").filter({ hasText: "Grup değişkeni" }).locator("select").first();
+    await g2.selectOption({ label: "grup" });
+    await karmaOlcumSec(["on", "son", "izleme"]);
+    const metin = await karmaCalistir();
+    const mauchly = /Mauchly W = /.test(metin);
+    const hukum = /küresellik sağlanıyor|küresellik sağlanmıyor/.test(metin);
+    const etkilesim = /grupların zaman içindeki değişimi farklı/.test(metin);
+    return `${mauchly} · ${hukum} · ${etkilesim}`;
+  }, "true · true · true");
+  await esit("S14e normal desende iki ölçümlü karma da çalışıyor", async () => {
+    await karmaOlcumSec(["on", "son"]);
+    const metin = await karmaCalistir();
+    return `${/İki ölçümde küresellik tanım gereği sağlanır/.test(metin)} · ${/Etkileşim \(ölçüm/.test(metin)}`;
+  }, "true · true");
 
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);
