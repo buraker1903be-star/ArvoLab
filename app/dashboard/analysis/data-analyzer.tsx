@@ -2145,7 +2145,7 @@ export default function DataAnalyzer({
                 </tbody>
               </table>
             </div>
-            <div className="table-scroll" role="region" aria-label={t({ tr: "Karma ANOVA tablosu", en: "Mixed ANOVA table" })} tabIndex={0}>
+            <div className="table-scroll analiz-tablo-aralik" role="region" aria-label={t({ tr: "Karma ANOVA tablosu", en: "Mixed ANOVA table" })} tabIndex={0}>
               <table className="stats-result-table">
                 <thead>
                   <tr>

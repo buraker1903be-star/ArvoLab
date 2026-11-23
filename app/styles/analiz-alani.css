@@ -449,3 +449,20 @@
 .analiz-eksik-alan ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .analiz-eksik-alan li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
 .analiz-eksik-alan > p { margin: 0; color: var(--muted); font-size: var(--os5-fs-en-kucuk); }
+
+/* ---------- Ardışık sonuç tabloları: dış kapsayıcılar arasında boşluk ----------
+   Karma ANOVA sonucunda hücre ortalamaları ve ANOVA tablosu alt alta
+   çiziliyor; iki kaydırma kutusunun kenarlıkları birbirine yapışık
+   duruyor ve tek bir tablo gibi okunuyordu. Boşluk tablonun değil DIŞ
+   kapsayıcının üstüne veriliyor: kaydırma alanı ve kenarlık ayrılsın,
+   hücre dolguları değişmesin. Değer boşluk ölçeğinden (16 px). */
+.analiz-sonuc .analiz-tablo-aralik { margin-top: var(--s-4); }
+
+/* ---------- Geniş tablo kendi kutusunda kalsın ----------
+   .analiz-sonuc bir grid ve içindeki sarmalayıcının min-width'i
+   "auto". Geniş bir tablo (çok ölçümlü karma ANOVA) sarmalayıcıyı
+   max-content'e kadar büyütüyordu: tablo kendi kaydırma kutusuna
+   SIĞIYOR, yani hiç kaymıyor; taşma sayfaya çıkıyor ve telefonda
+   bütün ekran yana kayıyordu. min-width: 0 ile sarmalayıcı sütuna
+   sığıyor, .table-scroll yeniden gerçekten yatay kaydırılabiliyor. */
+.analiz-sonuc > * { min-width: 0; }
