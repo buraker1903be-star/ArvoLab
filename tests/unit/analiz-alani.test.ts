@@ -426,6 +426,34 @@ describe("stil kapsamı", () => {
     assert.match(stil, /--analiz-gezgin-genislik/);
   });
 
+  /*
+    ARDIŞIK SONUÇ TABLOLARI (23.11.2026). Karma ANOVA'da hücre
+    ortalamaları ve ANOVA tablosu alt alta çiziliyor; iki kaydırma
+    kutusunun kenarlıkları yapışıkken tek bir tablo gibi okunuyordu.
+    Boşluk ölçekten alınıyor (--s-4 = 16px): ham piksel yazılsaydı
+    ölçek değiştiğinde burası geride kalırdı.
+  */
+  test("ardışık sonuç tablolarının arası boşluk ölçeğinden geliyor", () => {
+    assert.match(stil, /\.analiz-sonuc \.analiz-tablo-aralik \{ margin-top: var\(--s-4\); \}/);
+    assert.match(oku("app/styles/tokens.css"), /--s-4: 16px;/);
+    /* Boşluk tablonun değil DIŞ kapsayıcının üstünde. */
+    assert.match(analizci, /className="table-scroll analiz-tablo-aralik"/);
+    /* Yalnızca ikinci tabloda: ilk tablo sonuç kartının başında boşluk almamalı. */
+    assert.equal(analizci.match(/table-scroll analiz-tablo-aralik/g)?.length, 1);
+  });
+
+  /*
+    GENİŞ TABLO SAYFAYI KAYDIRMASIN (23.11.2026). .analiz-sonuc bir
+    grid; içindeki sarmalayıcının min-width'i "auto" olduğu için geniş
+    bir tablo onu max-content'e büyütüyordu. Sonuç: tablo kendi
+    kaydırma kutusuna sığıyor (hiç kaymıyor), taşma SAYFAYA çıkıyor —
+    telefonda bütün ekran yana kayıyordu. Gerçek ölçüm
+    analiz-alani-kabul.mjs S15b'de (12 ölçümlü karma desen).
+  */
+  test("sonuç kartının grid çocukları sütuna sığıyor", () => {
+    assert.match(stil, /\.analiz-sonuc > \* \{ min-width: 0; \}/);
+  });
+
   test("telefonda ayrı iç kenar çubuğu yok: tek sütun", () => {
     assert.match(stil, /@media \(max-width: 1100px\)/);
     assert.match(stil, /\.analiz-alan \{ grid-template-columns: minmax\(0, 1fr\); \}/);
