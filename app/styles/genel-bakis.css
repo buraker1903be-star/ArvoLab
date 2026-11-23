@@ -416,6 +416,10 @@
   okunsun. Uygulanamayan kontroller uyarı tonunda, uygulananların dökümü
   katlanır — sorun yokken liste yer kaplamasın.
 */
+/* Penceredeki denetimde stil seçimi: katlı, tek düğmelik akışı bozmasın. */
+.denetim-stili-sec > summary { color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; }
+.denetim-stili-sec > summary:hover { color: var(--ink); }
+.denetim-stili-sec > label { display: grid; gap: 4px; margin-top: 8px; }
 .denetlenen-stil { flex: 1 1 100%; display: grid; gap: 8px; }
 .denetlenen-stil-satir { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); }
 .denetlenen-stil-satir b { color: var(--ink); font-weight: 650; }

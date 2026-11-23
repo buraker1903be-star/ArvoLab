@@ -27,7 +27,7 @@ import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-chec
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
-import { stilAdi, type AtifTuru } from "@/lib/atif/stiller";
+import { stilAdiMetni, type AtifTuru } from "@/lib/atif/stiller";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import DenetlenenStil from "./denetlenen-stil";
 import type { KapsamSatiri } from "@/lib/atif/denetim-kapsami";
@@ -948,9 +948,30 @@ export default function CitationCheckForm({
                 tr: "Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili: ",
                 en: "Your reference list and text are taken from the last saved version in the editor. Citation style: ",
               })}
-              <b>{stilAdi(citationStyle)}</b>
+              <b>{t(stilAdiMetni(citationStyle))}</b>
               {t({ tr: " (çalışma ayarlarından).", en: " (from the work's settings)." })}
             </p>
+            {/*
+              DENETİM STİLİ BU PENCEREDE DE SEÇİLEBİLİR (23.11.2026), ama
+              KATLI: tek düğmelik akış bozulmasın. Stil çalışmanın
+              ayarından geliyor; danışmanın gönderdiği metni ya da dergiye
+              göndereceği sürümü BAŞKA bir stille denetlemek isteyen
+              buradan değiştiriyor ve seçim yalnızca o denetime geçiyor —
+              çalışmanın ayarı değişmiyor.
+            */}
+            <details className="denetim-stili-sec">
+              <summary>{t({ tr: "Bu denetimde başka bir stil kullan", en: "Use a different style for this check" })}</summary>
+              <label>
+                <span>{t({ tr: "Denetim stili", en: "Check style" })}</span>
+                <StilSecici value={citationStyle} onChange={setCitationStyle} />
+                <small className="muted">
+                  {t({
+                    tr: "Yalnızca bu denetimde geçerli; çalışmanızın ayarı değişmez ve sonuçta “Denetlenen stil” olarak saklanır.",
+                    en: "Applies to this check only; your work's setting stays as it is and the choice is stored as the “Checked style” of the result.",
+                  })}
+                </small>
+              </label>
+            </details>
             <div className="pencere-dugmeler">
               <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
                 {loading ? t({ tr: "Kaynaklar dizinlerde aranıyor…", en: "Searching the indexes for sources…" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}
