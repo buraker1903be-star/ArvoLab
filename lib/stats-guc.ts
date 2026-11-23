@@ -144,6 +144,7 @@ export type GucEngel =
   | "yordayici-gecersiz"
   | "dagilim-gecersiz"
   | "kayip-gecersiz"
+  | "sayisal-hata"
   | "ulasilamiyor";
 
 export interface GucGirdisi {
@@ -205,6 +206,16 @@ export const GUC_ENGEL_METNI: Record<GucEngel, Metin> = {
   "yordayici-gecersiz": { tr: "Yordayıcı sayısı en az 1 olmalı ve tam sayı olmalı.", en: "The number of predictors must be a whole number and at least 1." },
   "dagilim-gecersiz": { tr: "Dağılım oranı sıfırdan büyük olmalı.", en: "The allocation ratio must be greater than zero." },
   "kayip-gecersiz": { tr: "Beklenen kayıp oranı 0 ile 1 arasında olmalı (örneğin %10 için 0,10).", en: "The expected dropout rate must be between 0 and 1 (e.g. 0.10 for 10%)." },
+  /*
+    SAYISAL HATA, "ULAŞILAMIYOR"DAN AYRI. İkisi farklı şeyler:
+    biri "bu kadar kişiyle olmaz", öteki "hesabı yapamadım".
+    Aynı mesaja koymak, hesap hatasını kullanıcıya bir ARAŞTIRMA
+    sonucu gibi gösterirdi.
+  */
+  "sayisal-hata": {
+    tr: "Güç bu değerlerde sayısal olarak hesaplanamadı. Etki büyüklüğünü ya da hedef gücü biraz değiştirip yeniden deneyin; sorun sürerse bildirin.",
+    en: "The power could not be computed numerically for these values. Try adjusting the effect size or the target power slightly; if it persists, please report it.",
+  },
   ulasilamiyor: {
     tr: "Bu etki büyüklüğü ve hedef güç makul bir örneklemle (en çok 100.000) karşılanmıyor. Etki büyüklüğünü ya da hedef gücü gözden geçirin.",
     en: "This effect size and target power cannot be met with a reasonable sample (up to 100,000). Review the effect size or the target power.",
@@ -269,30 +280,62 @@ function hipergeometrik2F1(a: number, b: number, c: number, z: number): number {
 }
 
 /**
- * İki değişkenli normalde örneklem korelasyonu r'nin TAM yoğunluğu
- * (Hotelling). Fisher z yaklaşıklığı yerine bu kullanılıyor.
+ * r'nin TAM yoğunluğunun LOGARİTMASI (Hotelling).
+ *
+ * ÜSLER LOG UZAYINDA TOPLANIYOR. Eskiden üç `Math.pow` ayrı ayrı
+ * alınıp çarpılıyordu; büyük N'de (1 − r²)^((n−4)/2) sıfıra iniyor,
+ * (1 − ρr)^(−(n−1,5)) sonsuza çıkıyor ve çarpım 0 × ∞ = NaN oluyordu.
+ * ρ = 0,01 ile N = 78.500'de güç NaN dönüyor, arama bunu sayı sanıp
+ * "güç hesaplanamadı" demek yerine bir örneklem bildiriyordu.
+ * 1'e yakın tabanlarda `log1p` kullanılıyor: log(1 − x) doğrudan
+ * hesaplanınca küçük x'te anlamlı basamak kaybediyor.
  */
-export function korelasyonYogunlugu(r: number, rho: number, n: number): number {
-  if (!(n > 3) || Math.abs(r) >= 1) return 0;
-  const sabit = ((n - 2) / Math.sqrt(2 * Math.PI)) * Math.exp(lgamma(n - 1) - lgamma(n - 0.5));
+export function korelasyonLogYogunlugu(r: number, rho: number, n: number): number {
+  if (!(n > 4) || Math.abs(r) >= 1 || Math.abs(rho) >= 1) return -Infinity;
+  const f = hipergeometrik2F1(0.5, 0.5, n - 0.5, (1 + rho * r) / 2);
+  if (!(f > 0) || !Number.isFinite(f)) return NaN;
   return (
-    sabit *
-    Math.pow(1 - rho * rho, (n - 1) / 2) *
-    Math.pow(1 - r * r, (n - 4) / 2) *
-    Math.pow(1 - rho * r, -(n - 1.5)) *
-    hipergeometrik2F1(0.5, 0.5, n - 0.5, (1 + rho * r) / 2)
+    Math.log(n - 2) -
+    0.5 * Math.log(2 * Math.PI) +
+    lgamma(n - 1) -
+    lgamma(n - 0.5) +
+    ((n - 1) / 2) * Math.log1p(-rho * rho) +
+    ((n - 4) / 2) * Math.log1p(-r * r) -
+    (n - 1.5) * Math.log1p(-rho * r) +
+    Math.log(f)
   );
 }
 
-/* Yoğunluğun [a, b] aralığındaki Simpson integrali. */
-function korelasyonAlani(a: number, b: number, rho: number, n: number, adim = 400): number {
-  if (!(b > a)) return 0;
-  const h = (b - a) / adim;
+/** Yoğunluğun kendisi; toplam TEK SEFERDE üsse çevriliyor. */
+export function korelasyonYogunlugu(r: number, rho: number, n: number): number {
+  const l = korelasyonLogYogunlugu(r, rho, n);
+  if (Number.isNaN(l)) return NaN;
+  return l === -Infinity ? 0 : Math.exp(l);
+}
+
+/*
+  Yoğunluğun [a, b] aralığındaki Simpson integrali.
+
+  PENCERE N'E GÖRE DARALIYOR. r'nin standart hatası yaklaşık
+  (1 − ρ²)/√n; N büyüdükçe yoğunluk ρ çevresinde daralıyor ve sabit
+  aralıkta sabit adımla integral alınca tepe birkaç noktaya düşüyordu
+  (N = 78.500'de adım, tepe genişliğinden büyüktü). Artık integral
+  yalnızca ρ ± 16σ penceresinde alınıyor; dışarıda yoğunluk 1e-50'nin
+  altında ve aralık dışıysa integral sıfır.
+*/
+function korelasyonAlani(a: number, b: number, rho: number, n: number, adim = 2000): number {
+  const sigma = Math.max((1 - rho * rho) / Math.sqrt(Math.max(n, 5)), 1e-9);
+  const alt = Math.max(a, Math.max(-1, rho - 16 * sigma));
+  const ust = Math.min(b, Math.min(1, rho + 16 * sigma));
+  if (!(ust > alt)) return 0;
+  const h = (ust - alt) / adim;
   let toplam = 0;
   for (let i = 0; i <= adim; i += 1) {
-    const r = a + i * h;
+    const r = alt + i * h;
     const w = i === 0 || i === adim ? 1 : i % 2 === 1 ? 4 : 2;
-    toplam += w * korelasyonYogunlugu(r, rho, n);
+    const y = korelasyonYogunlugu(r, rho, n);
+    if (!Number.isFinite(y)) return NaN;
+    toplam += w * y;
   }
   return (toplam * h) / 3;
 }
@@ -307,7 +350,9 @@ export function gucKorelasyon(n: number, r: number, alfa: number, yon: TestYonu)
   const tc = tKritik(n - 2, yon === "tek" ? 1 - 2 * alfa : 1 - alfa);
   const rc = tc / Math.sqrt(tc * tc + n - 2);
   const ust = korelasyonAlani(rc, 1, r, n);
-  return Math.min(1, Math.max(0, yon === "tek" ? ust : ust + korelasyonAlani(-1, -rc, r, n)));
+  const toplam = yon === "tek" ? ust : ust + korelasyonAlani(-1, -rc, r, n);
+  if (!Number.isFinite(toplam)) return NaN;
+  return Math.min(1, Math.max(0, toplam));
 }
 
 /** Çoklu doğrusal regresyonun omnibus F testi (R² sıfırdan farklı mı); f² Cohen f². */
@@ -463,7 +508,21 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
 
   const adim = adimBoyu(g);
   const bas = Math.ceil(enKucukBaslangic(g) / adim) * adim;
-  const guc = (N: number) => gucHesapla(g, N).guc;
+  /*
+    HER GÜÇ DEĞERLENDİRMESİNDE SONLULUK DOĞRULANIYOR. Sonlu olmayan bir
+    değer karşılaştırmalarda sessizce "hedefi karşılamadı" gibi
+    davranıyor ve arama yanlış yere gidiyordu; ρ = 0,01'de N = 100.000
+    bildiriliyor ama gücü NaN oluyordu.
+  */
+  let sayisalHata = false;
+  const guc = (N: number) => {
+    const v = gucHesapla(g, N).guc;
+    if (!Number.isFinite(v)) {
+      sayisalHata = true;
+      return NaN;
+    }
+    return v;
+  };
   const kayip = g.kayipOrani ?? 0;
   const sonucUret = (N: number, oncekiGuc: number | null): GucSonucu => {
     const a = gucHesapla(g, N);
@@ -483,7 +542,9 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
     };
   };
 
-  if (guc(bas) >= g.hedefGuc) return sonucUret(bas, null);
+  const basGuc = guc(bas);
+  if (sayisalHata) return { engel: "sayisal-hata" };
+  if (basGuc >= g.hedefGuc) return sonucUret(bas, null);
 
   /*
     ÜST SINIRDAKİ GEÇERLİ ÖRNEKLEM ATLANMIYOR. Aralığı ikiye katlayarak
@@ -492,7 +553,11 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
     aday hedefi karşılıyor olabilirdi. Önce o aday sınanıyor.
   */
   const enBuyuk = bas + Math.floor((EN_COK_N - bas) / adim) * adim;
-  if (enBuyuk < bas || guc(enBuyuk) < g.hedefGuc) return { engel: "ulasilamiyor" };
+  if (enBuyuk < bas) return { engel: "ulasilamiyor" };
+  const enBuyukGuc = guc(enBuyuk);
+  if (sayisalHata) return { engel: "sayisal-hata" };
+  /* "Ulaşılamıyor" yalnızca HESAPLANABİLEN son aday gerçekten hedefin altındaysa. */
+  if (enBuyukGuc < g.hedefGuc) return { engel: "ulasilamiyor" };
 
   let alt = bas;
   let ust = enBuyuk;
@@ -504,11 +569,13 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
     }
     alt = deneme;
   }
+  if (sayisalHata) return { engel: "sayisal-hata" };
   while (ust - alt > adim) {
     const orta = alt + Math.floor((ust - alt) / (2 * adim)) * adim;
     if (orta === alt) break;
     if (guc(orta) >= g.hedefGuc) ust = orta;
     else alt = orta;
+    if (sayisalHata) return { engel: "sayisal-hata" };
   }
   /* Yerel tekdüze olmama payı: en küçüğü bulana kadar aşağı yürü. */
   let bulunan = ust;
@@ -521,15 +588,20 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
     "ulaşılamıyor" dönmesi yeğdir.
   */
   while (bulunan <= enBuyuk && guc(bulunan) < g.hedefGuc) bulunan += adim;
+  if (sayisalHata) return { engel: "sayisal-hata" };
   if (bulunan > enBuyuk) return { engel: "ulasilamiyor" };
   const oncekiGuc = bulunan - adim >= bas ? guc(bulunan - adim) : null;
+  if (sayisalHata) return { engel: "sayisal-hata" };
   if (oncekiGuc !== null && oncekiGuc >= g.hedefGuc) return { engel: "ulasilamiyor" };
-  return sonucUret(bulunan, oncekiGuc);
+  const son = sonucUret(bulunan, oncekiGuc);
+  if (!Number.isFinite(son.ulasilanGuc)) return { engel: "sayisal-hata" };
+  return son;
 }
 
 /** Belirli bir örneklemde gücü verir (sınır senaryoları ve testler için). */
 export function gucDegeri(g: GucGirdisi, N: number): number | GucEngeli {
   const engel = girdiDenetle(g);
   if (engel) return { engel };
-  return gucHesapla(g, N).guc;
+  const v = gucHesapla(g, N).guc;
+  return Number.isFinite(v) ? v : { engel: "sayisal-hata" };
 }

@@ -1,7 +1,7 @@
 {
-  "tarih": "2026-11-23T09:00:35.191Z",
-  "head": "c5ab744ce4f45548d7a921ccc9d0f76f83da515b",
-  "buildId": "xC4ZYqiZWZdqnmvR2vb39",
+  "tarih": "2026-11-23T09:14:24.513Z",
+  "head": "7f64cf55bc953dd0c4072b1dd1569d2567c251b4",
+  "buildId": "9TvAmnvKU7m-f8oc_7SBO",
   "uygulama": "http://localhost:3137",
   "gecen": 178,
   "dusen": 0,
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-9d6d7b.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-4ce65c.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9d6d7b.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4ce65c.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9d6d7b.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4ce65c.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "353db46c-b2ca-4065-b8c9-5868f1b87bc6"
+      "not": "016f454f-d05b-476d-bd66-8e9d3a0ca78c"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-9d6d7b.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-4ce65c.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-9d6d7b.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-4ce65c.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-9d6d7b.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-4ce65c.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   EN_COK_N,
+  gucKorelasyon,
   GUC_ENGEL_METNI,
   gucDegeri,
   noncentralFCDF,
@@ -135,6 +136,117 @@ describe("korelasyonda tam dağılım, yaklaşıklık değil", () => {
     assert.ok((s.fisherZGuc as number) < 0.8, "Fisher z 84'te hedefi karşılamıyor");
     const r = ornekemBuyuklugu(girdiden(s));
     assert.ok(r.engel === null && r.n === 84);
+  });
+});
+
+/*
+  KORELASYONDA BÜYÜK N (23.11.2026 regresyonu).
+
+  Yoğunluktaki üç üs ayrı ayrı alınıp çarpılıyordu; büyük N'de
+  (1 − r²)^((n−4)/2) sıfıra, (1 − ρr)^(−(n−1,5)) sonsuza gidiyor ve
+  çarpım NaN oluyordu. ρ = 0,01 ile N = 78.500'de güç NaN dönüyor,
+  arama bunu sayı sanıp 100.000 bildiriyordu — gücü olmayan bir
+  örneklem. Üsler artık log uzayında (log1p) toplanıp TEK SEFERDE
+  üsse çevriliyor; integral penceresi de N'e göre daralıyor.
+
+  BAĞIMSIZ, YÜKSEK HASSASİYETLİ REFERANS: mpmath 40 basamak
+  (scripts/referans/korelasyon-guc-mp.py). ArvoLab'ın kodundan hiçbir
+  şey kullanılmıyor; kritik r SciPy'nin t niceliğinden.
+*/
+const MP = JSON.parse(readFileSync("tests/fixtures/korelasyon-guc-mp.json", "utf8")) as {
+  uretim: { basamak: number; tolerans: { guc: number } };
+  noktalar: { ad: string; rho: number; alfa: number; yon: "iki" | "tek"; n: number; guc: number; gucMetin: string }[];
+};
+
+describe("korelasyonda büyük N: tam güç hesabı", () => {
+  test("ρ = 0,01 · α = .05 · çift yönlü · hedef .80 — sonuç üretiliyor, NaN değil", () => {
+    const g: GucGirdisi = { yontem: "korelasyon", etki: 0.01, alfa: 0.05, hedefGuc: 0.8, yon: "iki" };
+    const r = ornekemBuyuklugu(g);
+    assert.equal(r.engel, null, "eskiden gücü NaN olan bir N bildiriliyordu");
+    if (r.engel !== null) return;
+    assert.ok(Number.isFinite(r.ulasilanGuc), "ulaşılan güç sonlu olmalı");
+    assert.ok(Number.isFinite(r.birKucukGuc as number), "bir önceki adayın gücü de sonlu olmalı");
+    assert.equal(r.n, 78486);
+    assert.ok(r.ulasilanGuc >= 0.8);
+    assert.ok((r.birKucukGuc as number) < 0.8);
+  });
+
+  test("N = 78.500 ve üst sınır N = 100.000'de güç sonlu", () => {
+    for (const n of [78500, 99999, EN_COK_N]) {
+      const v = gucKorelasyon(n, 0.01, 0.05, "iki");
+      assert.ok(Number.isFinite(v), `n=${n}: ${v}`);
+      assert.ok(v > 0 && v <= 1, `n=${n}: ${v}`);
+    }
+    /* Geniş bir tarama: hiçbir N'de NaN/∞ olmamalı. */
+    for (let n = 5; n <= EN_COK_N; n = Math.ceil(n * 1.7)) {
+      for (const rho of [0.01, 0.05, 0.2, 0.5, 0.9]) {
+        const v = gucKorelasyon(n, rho, 0.05, "iki");
+        assert.ok(Number.isFinite(v), `n=${n} ρ=${rho}: ${v}`);
+      }
+    }
+  });
+
+  test("integral yüksek hassasiyetli referansla örtüşüyor (mpmath, 40 basamak)", () => {
+    for (const nokta of MP.noktalar) {
+      const v = gucKorelasyon(nokta.n, nokta.rho, nokta.alfa, nokta.yon);
+      assert.ok(Number.isFinite(v), `${nokta.ad} n=${nokta.n}`);
+      assert.ok(
+        Math.abs(v - nokta.guc) < MP.uretim.tolerans.guc,
+        `${nokta.ad} n=${nokta.n}: ${v} ≠ ${nokta.gucMetin}`,
+      );
+    }
+  });
+
+  test("referans, dönen N'nin hedefi karşıladığını ve bir öncekinin karşılamadığını gösteriyor", () => {
+    const ciftler: [number, number, number, "iki" | "tek", number, number][] = [
+      /* [ρ, α, hedef, yön, çözüm, bir önceki] */
+      [0.3, 0.05, 0.8, "iki", 84, 83],
+      [0.5, 0.05, 0.9, "tek", 31, 30],
+      [0.01, 0.05, 0.8, "iki", 78486, 78485],
+    ];
+    for (const [rho, alfa, hedef, yon, cozum, onceki] of ciftler) {
+      const bul = (n: number) => MP.noktalar.find((x) => x.n === n && x.rho === rho && x.yon === yon);
+      const mpCozum = bul(cozum);
+      const mpOnceki = bul(onceki);
+      assert.ok(mpCozum && mpOnceki, `referansta ρ=${rho} n=${cozum}/${onceki} yok`);
+      /* Bağımsız referansın kendisi iki yönlü koşulu sağlıyor. */
+      assert.ok(mpCozum.guc >= hedef, `referans: n=${cozum} hedefi karşılamalı`);
+      assert.ok(mpOnceki.guc < hedef, `referans: n=${onceki} hedefin altında olmalı`);
+      /* ArvoLab aynı N'yi buluyor. */
+      const r = ornekemBuyuklugu({ yontem: "korelasyon", etki: rho, alfa, hedefGuc: hedef, yon });
+      assert.ok(r.engel === null && r.n === cozum, `ρ=${rho}: ${r.engel === null ? r.n : r.engel} ≠ ${cozum}`);
+      if (r.engel !== null) continue;
+      assert.ok(Math.abs(r.ulasilanGuc - mpCozum.guc) < MP.uretim.tolerans.guc);
+      assert.ok(Math.abs((r.birKucukGuc as number) - mpOnceki.guc) < MP.uretim.tolerans.guc);
+    }
+  });
+
+  /* Sayısal hata ile "ulaşılamıyor" ayrı iki durum: ayrı mesajları var. */
+  test("sayısal hata ayrı bir engel ve ayrı mesaj", () => {
+    assert.ok(GUC_ENGEL_METNI["sayisal-hata"].tr.includes("sayısal olarak hesaplanamadı"));
+    assert.ok(GUC_ENGEL_METNI["sayisal-hata"].en.includes("could not be computed numerically"));
+    assert.notEqual(GUC_ENGEL_METNI["sayisal-hata"].tr, GUC_ENGEL_METNI.ulasilamiyor.tr);
+  });
+
+  test("hiçbir yöntemde sonlu olmayan güçle sonuç dönmüyor", () => {
+    const denemeler: GucGirdisi[] = [
+      { yontem: "korelasyon", etki: 0.01, alfa: 0.05, hedefGuc: 0.8, yon: "iki" },
+      { yontem: "korelasyon", etki: 0.02, alfa: 0.01, hedefGuc: 0.9, yon: "tek" },
+      { yontem: "korelasyon", etki: 0.95, alfa: 0.05, hedefGuc: 0.99, yon: "iki" },
+      { yontem: "bagimsizT", etki: 0.02, alfa: 0.05, hedefGuc: 0.8, yon: "iki" },
+      { yontem: "eslestirilmisT", etki: 0.01, alfa: 0.05, hedefGuc: 0.8, yon: "iki" },
+      { yontem: "tekYonluAnova", etki: 0.01, alfa: 0.05, hedefGuc: 0.8, grupSayisi: 3 },
+      { yontem: "regresyon", etki: 0.001, alfa: 0.05, hedefGuc: 0.8, yordayiciSayisi: 2 },
+    ];
+    for (const g of denemeler) {
+      const r = ornekemBuyuklugu(g);
+      if (r.engel !== null) {
+        assert.ok(["ulasilamiyor", "sayisal-hata"].includes(r.engel), `${JSON.stringify(g)}: ${r.engel}`);
+        continue;
+      }
+      assert.ok(Number.isFinite(r.ulasilanGuc), JSON.stringify(g));
+      assert.ok(r.birKucukGuc === null || Number.isFinite(r.birKucukGuc), JSON.stringify(g));
+    }
   });
 });
 
