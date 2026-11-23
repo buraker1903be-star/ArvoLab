@@ -204,6 +204,62 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             üstteki uyarı satırında "(+N not)" arkasında kalıyordu ve
             "Kurallarımı uygula" hata veriyordu (02.11.2026).
           */}
+          {/*
+            DAYANAK (23.11.2026): stilin kılavuzun HANGİ cümlesinden
+            okunduğu. Eskiden yalnızca adı yazıyordu; öğrenci doğrulamak
+            için kılavuzu açmak zorundaydı ve çoğu açmıyordu. Alıntı
+            bulunamazsa hiçbir şey yazılmıyor — uydurma alıntı,
+            alıntısızlıktan kötüdür.
+          */}
+          {sonuc?.stilDayanagi ? (
+            <small className="kilavuz-dayanak">
+              {sonuc.stilDayanagi.bolum || sonuc.stilDayanagi.sayfa
+                ? t({
+                    tr: `Kılavuzda ${[sonuc.stilDayanagi.bolum && `“${sonuc.stilDayanagi.bolum}” bölümünde`, sonuc.stilDayanagi.sayfa && `${sonuc.stilDayanagi.sayfa}. sayfada`].filter(Boolean).join(", ")}: `,
+                    en: `In the guideline${[sonuc.stilDayanagi.bolum && `, section “${sonuc.stilDayanagi.bolum}”`, sonuc.stilDayanagi.sayfa && `, page ${sonuc.stilDayanagi.sayfa}`].filter(Boolean).join("")}: `,
+                  })
+                : t({ tr: "Kılavuzda: ", en: "In the guideline: " })}
+              <q>{sonuc.stilDayanagi.alinti}</q>
+            </small>
+          ) : null}
+
+          {/*
+            ÇELİŞKİ: iki sistem birden geçiyorsa karar öğrencinin ve soru
+            YALNIZCA bu noktada soruluyor — bütün formu yeniden
+            doldurtmak yerine iki cümle gösterilip biri seçtiriliyor.
+          */}
+          {sonuc?.stilAdaylari?.length ? (
+            <div className="kilavuz-celiski">
+              <strong>{t({ tr: "Kılavuzda birden çok sistem geçiyor; hangisi sizin için geçerli?", en: "The guideline mentions more than one style; which one applies to you?" })}</strong>
+              <ul>
+                {sonuc.stilAdaylari.map((aday) => (
+                  <li key={aday.sistem}>
+                    <button
+                      type="button"
+                      className={form.atifStili === aday.sistem ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
+                      onClick={() => {
+                        setStilEksik(false);
+                        setForm({ ...form, atifStili: aday.sistem });
+                      }}
+                    >
+                      {aday.etiket}
+                    </button>
+                    {aday.dayanak ? (
+                      <small>
+                        {aday.dayanak.bolum ? t({ tr: `“${aday.dayanak.bolum}” bölümü: `, en: `Section “${aday.dayanak.bolum}”: ` }) : ""}
+                        <q>{aday.dayanak.alinti}</q>
+                      </small>
+                    ) : (
+                      <small className="muted">
+                        {t({ tr: `Kılavuzda ${aday.sayim} kez geçiyor; kuralı söyleyen cümlesini bulamadım.`, en: `Mentioned ${aday.sayim} times in the guideline; I couldn't find the sentence that states the rule.` })}
+                      </small>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {stilUyarisi ? (
             <small>{stilUyarisi}</small>
           ) : !sonuc?.form?.atifStili ? (

@@ -209,8 +209,10 @@ import {
   convertReferenceListsToParagraphs,
   applyHangingIndent,
   clearManualTextFormat,
+  kaynakcaDuzeltmeleriniUygula,
   type OutlineHeading,
 } from "./editor-navigation";
+import KaynakcaDuzeltmePaneli from "./kaynakca-duzeltme-paneli";
 
 /*
   SEYREK AÇILAN PENCERELER TEMBEL YÜKLENİR (Phase 2, 04.11.2026). Editörün
@@ -3120,6 +3122,19 @@ export default function ManuscriptEditor({
                       <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
                       <b>{stilAdi(citationStyle)}</b>
                     </p>
+                    {/*
+                      HAZIR DÜZELTMELER (23.11.2026): son denetimin
+                      bulgularından çıkarılan künyeler, önizlemeli ve tek
+                      geri alma adımıyla. Denetimin kendisi belgeyi
+                      değiştirmiyor; yazan tek şey buradaki düğme.
+                    */}
+                    {kaynakcaBasligi ? (
+                      <KaynakcaDuzeltmePaneli
+                        projectId={projectId}
+                        onUygula={(duzeltmeler) => (editor ? kaynakcaDuzeltmeleriniUygula(editor, duzeltmeler) : 0)}
+                        onGeriAl={() => editor?.chain().focus().undo().run()}
+                      />
+                    ) : null}
                     {kaynakcaBasligi ? (
                       <button
                         type="button"

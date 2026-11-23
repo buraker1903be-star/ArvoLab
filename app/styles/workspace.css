@@ -1889,6 +1889,21 @@
 .sol-arama-govde .project-form-grid { grid-template-columns: 1fr 1fr; }
 /* Kaynakça ve Kılavuz ve biçim araçları (manuscript-editor.tsx): durum satırları, sorun listesi, eylemler. */
 .sol-arac-govde > * + * { margin-top: var(--s-2); }
+
+/*
+  HAZIR KAYNAKÇA DÜZELTMELERİ (23.11.2026). Önizleme zorunlu: eski künye
+  üstü çizili ve soluk, yeni hâli vurgulu. İkisini yan yana koymak dar
+  araç sütununda okunmuyor; alt alta.
+*/
+.kaynakca-duzeltme { display: grid; gap: var(--s-2); }
+.kaynakca-duzeltme-ozet { margin: 0; font-size: var(--fs-sm); }
+.kaynakca-duzeltme-liste { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
+.kaynakca-duzeltme-liste > li { display: grid; gap: 2px; padding: var(--s-2); border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); }
+.kaynakca-duzeltme-ad { font-size: var(--fs-sm); font-weight: 650; }
+.kaynakca-duzeltme-eski { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: line-through; }
+.kaynakca-duzeltme-yeni { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 600; }
+.kaynakca-duzeltme-eksik { display: grid; gap: var(--s-1); padding: var(--s-2); border-left: 3px solid var(--warning); border-radius: var(--r-sm); background: var(--surface-2); }
+.kaynakca-duzeltme-eksik > strong { font-size: var(--fs-sm); }
 .sol-arac-satir { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--os5-fs-meta); }
 .sol-arac-satir span { color: var(--muted); }
 .sol-arac-satir b { color: var(--ink); font-weight: 600; text-align: right; }

@@ -7,7 +7,8 @@ import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { atifYontemleri, otomatikAtifSistemi } from "@/lib/atif-sistemi";
+import { atifSistemiSec, atifYontemleri, otomatikAtifSistemi } from "@/lib/atif-sistemi";
+import { celiskiliAdaylar, stilDayanagi, type StilDayanagi } from "@/lib/kilavuz-stil-dayanagi";
 import { stilAdi } from "@/lib/atif/stiller";
 import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
@@ -93,6 +94,19 @@ export interface TaramaSonucu {
   uyarilar?: string[];
   /** Atıf yönteminin neden öğrenciye bırakıldığı; seçim kutusunun altında gösterilir. */
   atifUyarisi?: string | null;
+  /*
+    STİLİN DAYANAĞI (23.11.2026): kılavuzun hangi cümlesinden okundu.
+    Eskiden yalnızca adı yazıyordu ve öğrenci doğrulamak için kılavuzu
+    açmak zorundaydı; çoğu açmıyor, yanlış bir çıkarım sessizce
+    çalışmaya yerleşiyordu. Bulunamazsa null — alıntı uydurulmaz.
+  */
+  stilDayanagi?: StilDayanagi | null;
+  /*
+    ÇELİŞKİ: iki sistem birden geçiyor ve biri ötekini açık ara
+    geçmiyorsa karar öğrencinin. Adaylar kendi cümleleriyle geliyor:
+    soruyu cevaplanabilir kılan tek şey o.
+  */
+  stilAdaylari?: { sistem: string; etiket: string; sayim: number; dayanak: StilDayanagi | null }[];
   /*
     Onaylatılmayan ama UYGULANACAK biçim kuralları, okunur cümleler
     hâlinde. Düzenlenmiyor, söyleniyor: on alanlık bir form okunmadan
@@ -297,6 +311,14 @@ export async function kilavuzuTara(
       /* Ayrı alan: eskiden genel uyarı satırında "(+3 not)" arkasında
          kalıyordu ve kutunun yanında yalnızca "bulamadım" yazıyordu. */
       atifUyarisi: atifNotu,
+      stilDayanagi: stilDayanagi(tarama.metin, sonuc.detectedCitationStyle),
+      /*
+        Adaylar YALNIZCA karar verilemediğinde: tek kazanan varken ikinci
+        bir seçenek göstermek, net bir çıkarımı tartışmalı gibi
+        gösterirdi. atifSistemiSec'in ölçütü (sayım ve baskınlık)
+        burada da geçerli.
+      */
+      stilAdaylari: atifSistemiSec(tarama.metin, dil) ? undefined : celiskiliAdaylar(tarama.metin, sonuc.citationMentions ?? []),
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
       kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],
       okuyan: yz.okuma ? "yapay-zeka" : "kalip",

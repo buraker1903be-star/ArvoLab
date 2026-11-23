@@ -80,6 +80,34 @@ describe("alıntı ve atıf", () => {
     assert.equal(metin(s).split("Seasonal patterns in synthetic data").length - 1, 1, metin(s));
   });
 
+  /*
+    KÜNYE ÇALIŞMANIN STİLİNDE YAZILIYOR. Atıf eklemenin kaynakçayı
+    kendiliğinden kurması ancak doğru BİÇİMDE kurarsa işe yarar; stil
+    geçirilmezse ya da biçimleyici stili tanımazsa künye sessizce APA
+    çıkar ve öğrenci bunu ancak danışmanından öğrenir.
+  */
+  test("kaynakça girdisi çalışmanın stiline göre yazılıyor", () => {
+    const yaz = (stil: Parameters<typeof atifIslemi>[2]) => {
+      const s = durum();
+      const tr = s.tr;
+      atifIslemi(tr, kaynak, stil, { konum: { from: PARAGRAF_SONU, to: PARAGRAF_SONU } });
+      return metin(s.apply(tr)).split("\nKaynakça\n")[1] ?? "";
+    };
+    const apa = yaz("apa7");
+    const ieee = yaz("ieee");
+    const chicagoNotlar = yaz("chicago-notlar");
+    assert.match(apa, /^Fisher, E\. W\., & Other, J\. \(2023\)\./);
+    assert.match(ieee, /^\[1\] E\. W\. Fisher/);
+    /*
+      Chicago Notlar–Kaynakça: yıl SONDA. Yazar–tarih sürümünde yazardan
+      hemen sonra gelirdi ("Fisher, E. W. 2023. …"); ikisini aynı saymak
+      öğrenciye yanlış kaynakça yazmak olurdu.
+    */
+    assert.match(chicagoNotlar, /\(2023\)\.$/);
+    assert.doesNotMatch(chicagoNotlar, /^Fisher[^.]*\.\s*2023\./);
+    assert.equal(new Set([apa, ieee, chicagoNotlar]).size, 3, `${apa} | ${ieee} | ${chicagoNotlar}`);
+  });
+
   test("hazır (CSL) atıf ve dipnot biçimi de aynı işlemde", () => {
     const s = durum();
     const tr = s.tr;
