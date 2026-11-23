@@ -317,8 +317,12 @@ fs.writeFileSync(BOZUK_YOLU, "ad;soyad\nAli\nVeli;Yilmaz;fazla\n", "utf8");
 const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
 const sayim = () => Number(psql(`select count(*) from public.analiz_sonuclari where owner_id = ${q(KULLANICI)}`));
 
-async function oturum(genislik = 1440, yukseklik = 900, tema = "light") {
-  const ctx = await tarayici.newContext({ viewport: { width: genislik, height: yukseklik }, colorScheme: tema, locale: "tr-TR" });
+async function oturum(genislik = 1440, yukseklik = 900, tema = "light", ekstra = {}, cerezler = []) {
+  const ctx = await tarayici.newContext({ viewport: { width: genislik, height: yukseklik }, colorScheme: tema, locale: "tr-TR", ...ekstra });
+  /* Dil çerezi: kullanıcının dil seçimi burada (lib/dil.ts DIL_CEREZI).
+     Telefon bağlamında üst çubuktaki dil menüsü dar ve tıklama zaman
+     aşımına uğruyor; seçimi çerezle kurmak aynı duruma denk. */
+  if (cerezler.length) await ctx.addCookies(cerezler);
   const sayfa = await ctx.newPage();
   await sayfa.goto(`${UYG}/`, { waitUntil: "domcontentloaded" });
   await sayfa.fill('input[name="email"]', adres);
@@ -1531,10 +1535,11 @@ try {
       }
       return { satirlar, govde: kap.innerText, metin: kap.querySelector(".analiz-guc-metin p")?.innerText ?? null };
     });
-  const kartMetniGuc = async () => {
-    const k = sayfa.locator(".analiz-guc .analiz-veri-karti");
-    return (await k.count()) ? await k.innerText() : null;
-  };
+  /* Açıklamalar 23.11.2026'da bölündü: üç kavramın kısa hâli kendi
+     alanının altında, uzun hâli kartın açılır bölümünde. Bu yüzden
+     okunan şey artık panelin GÖRÜNÜR metni (kapalı details'in içi
+     innerText'e girmiyor: "açmadan okunabiliyor mu" sınanıyor). */
+  const panelMetniGuc = async () => await sayfa.locator(".analiz-guc").innerText();
 
   for (const [dil, olcu] of [["tr", "masaüstü"], ["tr", "telefon"], ["en", "masaüstü"], ["en", "telefon"]]) {
     const telefon = olcu === "telefon";
@@ -1565,21 +1570,41 @@ try {
     }, "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true");
 
     await esit(`S18b-${dil}-${olcu} "Hangi bilgiler gerekli?" kartı üç kavramı ve gerekçelendirmeyi anlatıyor`, async () => {
-      const m = (await kartMetniGuc()) ?? "";
+      const m = await panelMetniGuc();
       const anahtarlar = dil === "tr"
         ? ["Etki büyüklüğü", "yanlış alarm", "YAKALAMA olasılığınız", "ÖNCEKİ ARAŞTIRMALARIN", "PİLOT", "EN KÜÇÜK FARK"]
         : ["Effect size", "false alarm", "DETECTING", "PREVIOUS RESEARCH", "PILOT", "SMALLEST DIFFERENCE"];
+      /* Hiçbir şey açmadan: üç kavram da ekranda yazılı olmalı. */
       return `kavramlar:${anahtarlar.every((a) => m.includes(a))}`;
     }, "kavramlar:true");
 
     /* Dosya yüklenmediği için yönteme özgü form girdilerinin tek
        açıklaması bu kart: yöntem değişince kart da değişiyor. */
-    await esit(`S18b2-${dil}-${olcu} kart yönteme özgü girdileri anlatıyor`, async () => {
-      const bagimsizM = (await kartMetniGuc()) ?? "";
+    /* Kısa ipuçları ALANIN KENDİ etiketinin içinde: kavramı okumak
+       için yukarıdaki karta dönmek gerekmiyor. */
+    await esit(`S18b3-${dil}-${olcu} üç kavramın ipucu kendi alanının yanında`, async () => {
+      const ipucu = async (etiket) => (await gucAlan(etiket).locator("small").innerText()).trim();
+      const e = await ipucu(etiketEtki);
+      const al = await ipucu(etiketAlfa);
+      const gu = await ipucu(dil === "tr" ? "Hedef güç" : "Target power");
+      const bekle = dil === "tr"
+        ? [/Cohen eşikleri/, /yanlış alarm/, /YAKALAMA olasılığınız/]
+        : [/Cohen's conventions/, /false alarm/, /DETECTING/];
+      return `etki:${bekle[0].test(e)} alfa:${bekle[1].test(al)} guc:${bekle[2].test(gu)}`;
+    }, "etki:true alfa:true guc:true");
+
+    const ayrintiAc = async () => {
+      const d = sayfa.locator(".analiz-guc-ayrinti");
+      if (!(await d.evaluate((el) => el.open))) await d.locator("summary").click();
+      await sayfa.waitForTimeout(150);
+      return await d.innerText();
+    };
+    await esit(`S18b2-${dil}-${olcu} ayrıntı bölümü yönteme özgü girdileri anlatıyor`, async () => {
+      const bagimsizM = await ayrintiAc();
       await gucYontemSec(sorular.anova);
-      const anovaM = (await kartMetniGuc()) ?? "";
+      const anovaM = await ayrintiAc();
       await gucYontemSec(sorular.regresyon);
-      const regM = (await kartMetniGuc()) ?? "";
+      const regM = await ayrintiAc();
       await gucYontemSec(sorular.bagimsiz);
       const A = dil === "tr"
         ? { oran: "Dağılım oranı", yon: "Test yönü", kayip: "Beklenen kayıp oranı", grup: "Grup sayısı", yordayici: "Yordayıcı sayısı" }
@@ -1598,7 +1623,7 @@ try {
       await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
       await sayfa.waitForTimeout(300);
       const etki = await gucAlan(etiketEtki).locator("input").inputValue();
-      const m = (await kartMetniGuc()) ?? "";
+      const m = await panelMetniGuc();
       return `etki:${etki} uyari:${/ÖRNEK DEĞERLER|EXAMPLE VALUES/.test(m)} gerekce:${/gerekçelendirin|Justify your own/.test(m)}`;
     }, "etki:0.5 uyari:true gerekce:true");
 
@@ -2016,6 +2041,198 @@ try {
     });
   }, (v) => v === "ortusme yok" || v === "dock yok");
   await tel.close();
+
+  /* ================= S20: Güç sekmesinde GERÇEK kaydırma =================
+     Kusur: tek ekran kilidi sayfayı kaydırmıyor, güç kartına da iç
+     kayma verilmemişti; kart KIRPILIYOR ve "Hangi bilgiler gerekli?"nin
+     altındaki alanlara ulaşılamıyordu. Locator'ın hedefi otomatik
+     ekrana getirmesi kaydırmanın çalıştığını GÖSTERMEZ: Playwright
+     overflow:hidden kapsayıcıyı da programla kaydırıyor, gerçek
+     kullanıcının tekerleği kaydırmıyor. Bu yüzden burada yalnızca
+     gerçek girdi kullanılıyor — masaüstünde fare tekerleği ve Tab,
+     telefonda dokunma hareketi (CDP Input.synthesizeScrollGesture) —
+     ve tıklamadan ÖNCE öğenin kutusunun görüş alanında olduğu
+     ölçülüyor. */
+  const GUC_OLCU = [
+    { ad: "1440x900", g: 1440, y: 900, dokunma: false },
+    { ad: "kisa-masaustu-1440x700", g: 1440, y: 700, dokunma: false },
+    { ad: "telefon-390x844", g: 390, y: 844, dokunma: true },
+  ];
+  /* Görüş alanının İÇİNDE mi: üstü ve altı birlikte. */
+  const icerde = (b, y) => Boolean(b && b.y >= 0 && b.y + b.height <= y + 1);
+  /* Hedef YUKARIDA kalmışsa yukarı kaydırılıyor: kullanıcı da öyle
+     yapar. Tek yöne kaydıran yardımcı, aşağı inildikten sonra
+     yukarıdaki düğmeye ulaşamıyordu. */
+  const yon = async (hedef) => {
+    const b = await hedef.boundingBox();
+    if (!b) return 1;
+    return b.y < 0 ? -1 : 1;
+  };
+  const tekerlekle = async (s, hedef, olcu) => {
+    await s.mouse.move(Math.round(olcu.g / 2), Math.round(olcu.y * 0.6));
+    for (let i = 0; i <= 40; i += 1) {
+      if (icerde(await hedef.boundingBox(), olcu.y)) return i;
+      await s.mouse.wheel(0, 200 * (await yon(hedef)));
+      await s.waitForTimeout(70);
+    }
+    return icerde(await hedef.boundingBox(), olcu.y) ? 40 : -1;
+  };
+  /* GERÇEK PARMAK SÜRÜKLEMESİ. Input.synthesizeScrollGesture bu
+     Chromium'da hiçbir şeyi oynatmadı (ölçüldü: scrollY 0 -> 0);
+     touchStart + touchMove dizisi + touchEnd sayfayı gerçekten
+     kaydırıyor (0 -> 1041). Playwright'ın kendi kaydırması bilerek
+     kullanılmıyor: overflow:hidden kapsayıcıyı da oynatıyor. */
+  const parmakla = async (cdp, s, olcu, asagi, mesafe = 420) => {
+    const x = Math.round(olcu.g / 2);
+    /* Aşağı kaydırmak için parmak YUKARI sürüklenir. */
+    const bas = Math.round(olcu.y * (asagi ? 0.82 : 0.18));
+    const adim = (asagi ? -mesafe : mesafe) / 12;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: bas }] });
+    for (let i = 1; i <= 12; i += 1) {
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: Math.round(bas + adim * i) }] });
+      await s.waitForTimeout(26);
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    /* Parmak kalkınca ATALET kaydırması sürüyor; konum durana kadar
+       bekleniyor, yoksa ölçülen kutu eskiyor ve dokunma ıskalıyor. */
+    let onceki = -1;
+    let simdi = await s.evaluate(() => window.scrollY);
+    while (onceki !== simdi) {
+      await s.waitForTimeout(160);
+      onceki = simdi;
+      simdi = await s.evaluate(() => window.scrollY);
+    }
+  };
+  const dokunarak = async (cdp, s, hedef, olcu) => {
+    for (let i = 0; i <= 24; i += 1) {
+      if (icerde(await hedef.boundingBox(), olcu.y)) return i;
+      await parmakla(cdp, s, olcu, (await yon(hedef)) > 0);
+    }
+    return icerde(await hedef.boundingBox(), olcu.y) ? 24 : -1;
+  };
+
+  for (const olcu of GUC_OLCU) {
+    for (const dil of ["tr", "en"]) {
+      const ek2 = olcu.dokunma ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {};
+      /* Dil tercihi PROFİLDE: giriş, profildeki dili çereze yazıyor
+         (app/actions/auth.ts) ve önceden konan çerezi eziyor. Önce
+         profili kuruyoruz — kullanıcının dil seçimiyle aynı durum. */
+      psql(`update public.profiles set arayuz_dili = ${q(dil)} where id = ${q(KULLANICI)}`);
+      const { ctx: c2, sayfa: s2 } = await oturum(olcu.g, olcu.y, "light", ek2, [
+        { name: "arvolab_dil", value: dil, url: UYG },
+      ]);
+      await c2.grantPermissions(["clipboard-read", "clipboard-write"], { origin: UYG });
+      const cdp = olcu.dokunma ? await c2.newCDPSession(s2) : null;
+      await git(s2, ANALIZ_YOLU);
+      await s2.getByRole("tab", { name: /Güç ve örneklem|Power and sample size/ }).click();
+      await s2.waitForTimeout(350);
+      const et = {
+        sonAlan: dil === "tr" ? "Beklenen kayıp" : "Expected dropout",
+        etki: dil === "tr" ? "Etki büyüklüğü" : "Effect size",
+        ornek: dil === "tr" ? "Örneği doldur" : "Fill in the example",
+        kopyala: dil === "tr" ? "Kopyala" : "Copy",
+      };
+      const sonAlan = s2.locator(".analiz-guc label").filter({ hasText: et.sonAlan }).first();
+      const getir = async (hedef) => (olcu.dokunma ? await dokunarak(cdp, s2, hedef, olcu) : await tekerlekle(s2, hedef, olcu));
+
+      /* (a) Kaydırılabilir bir ata GERÇEKTEN var mı? Kusurlu hâlde
+             zincirdeki tek overflow `hidden`di ve hiçbir öğe kaymıyordu. */
+      await esit(`S20a-${olcu.ad}-${dil} kartın kaydırılabilir bir atası var`, async () => {
+        return await s2.evaluate(() => {
+          const kart = document.querySelector(".analiz-guc");
+          const kayan = [];
+          let el = kart;
+          while (el) {
+            const s = getComputedStyle(el);
+            if (el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(s.overflowY)) {
+              kayan.push(el.id ? `#${el.id}` : el.className.split(" ")[0] || el.tagName.toLowerCase());
+            }
+            el = el.parentElement;
+          }
+          const sayfaKayiyor = document.documentElement.scrollHeight > document.documentElement.clientHeight + 1;
+          return `kayan:${kayan.length ? kayan[0] : "YOK"} sayfaKayiyor:${sayfaKayiyor}`;
+        });
+      }, (v) => !/kayan:YOK sayfaKayiyor:false/.test(v));
+
+      /* (b) Son form alanına GERÇEK kaydırmayla ulaşılıyor. */
+      await esit(`S20b-${olcu.ad}-${dil} son form alanına gerçek kaydırmayla ulaşılıyor`, async () => {
+        const once = await sonAlan.boundingBox();
+        const adim = await getir(sonAlan);
+        const sonra = await sonAlan.boundingBox();
+        return `onceY:${once ? Math.round(once.y) : "yok"} adim:${adim >= 0} gorunur:${icerde(sonra, olcu.y)}`;
+      }, (v) => /adim:true gorunur:true/.test(v));
+
+      /* (c) Masaüstünde klavye: Tab'la son alana gidiliyor ve alan
+             görüş alanına giriyor. Telefonda dokunma sınanıyor. */
+      if (!olcu.dokunma) {
+        await esit(`S20c-${olcu.ad}-${dil} klavyeyle son alana ulaşılıyor`, async () => {
+          const etkiAlani = s2.locator(".analiz-guc label").filter({ hasText: et.etki }).first().locator("input");
+          await etkiAlani.focus();
+          let bulundu = false;
+          for (let i = 0; i < 12 && !bulundu; i += 1) {
+            await s2.keyboard.press("Tab");
+            await s2.waitForTimeout(90);
+            bulundu = await sonAlan.locator("input").evaluate((el) => el === document.activeElement);
+          }
+          const b = await sonAlan.boundingBox();
+          return `odak:${bulundu} gorunur:${icerde(b, olcu.y)}`;
+        }, "odak:true gorunur:true");
+      }
+
+      /* (d) Örneği doldur → sonuç tablosu, yöntem metninin SON satırı
+             ve Kopyala düğmesi gerçek kaydırmayla erişiliyor. */
+      await esit(`S20d-${olcu.ad}-${dil} örnek dolduruluyor, sonuç ve yöntem metni görünüyor`, async () => {
+        const dugme = s2.getByRole("button", { name: et.ornek });
+        const adimD = await getir(dugme);
+        if (adimD < 0) return "Örneği doldur düğmesine ulaşılamadı";
+        await dugme.click();
+        await s2.waitForTimeout(400);
+        const tablo = s2.locator(".analiz-guc-sonuc table");
+        const adimT = await getir(tablo);
+        const satirlar = (await tablo.innerText()).replace(/\n/g, " · ");
+        const paragraf = s2.locator(".analiz-guc-metin > p");
+        const adimP = await getir(paragraf);
+        const pKutu = await paragraf.boundingBox();
+        /* Son satır: paragrafın ALT kenarı da görüş alanında olmalı. */
+        const sonSatir = (await paragraf.innerText()).trim().split(/(?<=\.)\s+/).pop() ?? "";
+        return [
+          `tablo:${adimT >= 0}`,
+          `n:${/\d/.test(satirlar)}`,
+          `paragrafTam:${adimP >= 0 && icerde(pKutu, olcu.y)}`,
+          `sonSatir:${sonSatir.length > 20}`,
+        ].join(" ");
+      }, (v) => !/false/.test(v) && !/ulaşılamadı/.test(v));
+
+      await esit(`S20e-${olcu.ad}-${dil} Kopyala düğmesi görüş alanında ve panoya yazıyor`, async () => {
+        const dugme = s2.getByRole("button", { name: new RegExp(et.kopyala) });
+        const adim = await getir(dugme);
+        const b = await dugme.boundingBox();
+        if (!icerde(b, olcu.y)) return `kaydirmayla ulaşılamadı (adim:${adim})`;
+        if (olcu.dokunma) await s2.touchscreen.tap(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+        else await s2.mouse.click(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+        await s2.waitForTimeout(400);
+        const pano = await s2.evaluate(() => navigator.clipboard.readText().catch(() => ""));
+        const metinPara = (await s2.locator(".analiz-guc-metin > p").innerText()).trim();
+        return `gorunur:true pano:${pano.trim() === metinPara} uzunluk:${pano.trim().length > 80}`;
+      }, "gorunur:true pano:true uzunluk:true");
+
+      /* (e) Yatay taşma yok; kart içeriği kırpılmıyor. */
+      await esit(`S20f-${olcu.ad}-${dil} yatay taşma yok, içerik kırpılmıyor`, async () => {
+        return await s2.evaluate(() => {
+          const kart = document.querySelector(".analiz-guc");
+          const yatay = document.documentElement.scrollWidth <= window.innerWidth + 1;
+          /* Kartın görünür yüksekliği içeriğinden küçükse iç kayma
+             OLMALI: kırpma budur. */
+          const kirpik = kart.scrollHeight > kart.clientHeight + 1 && !/auto|scroll/.test(getComputedStyle(kart).overflowY);
+          return `yatayTasmaYok:${yatay} kirpikDegil:${!kirpik}`;
+        });
+      }, "yatayTasmaYok:true kirpikDegil:true");
+
+      await cek(s2, `33-guc-${olcu.ad}-${dil}`);
+      await c2.close();
+    }
+  }
+
 } catch (e) {
   FAIL("kabul koşusu", `${e.message}\n${e.stack?.split("\n").slice(1, 4).join("\n")}`);
 } finally {
