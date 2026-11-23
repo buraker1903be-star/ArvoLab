@@ -70,7 +70,7 @@ export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
   anova: "Üç ve daha çok grubun ortalamasını karşılaştırır",
   correlation: "İki sayısal değişken arasındaki ilişki",
   chisquare: "İki kategorik değişken arasındaki ilişki",
-  reliability: "Ölçeğin iç tutarlılığı (Cronbach α)",
+  reliability: "Ölçeğin iç tutarlılığı (Cronbach α, McDonald ω)",
   pairedttest: "Ön test – son test karşılaştırması",
   mannwhitney: "İki grup, normal dağılmayan veri",
   kruskalwallis: "Üç ve daha çok grup, normal dağılmayan veri",
@@ -98,7 +98,7 @@ const YONTEM_ACIKLAMASI_EN: Record<AnalizTuru, string> = {
   anova: "Compares the means of three or more groups",
   correlation: "Relationship between two numeric variables",
   chisquare: "Relationship between two categorical variables",
-  reliability: "Internal consistency of a scale (Cronbach's α)",
+  reliability: "Internal consistency of a scale (Cronbach's α, McDonald's ω)",
   pairedttest: "Pretest–posttest comparison",
   mannwhitney: "Two groups, non-normally distributed data",
   kruskalwallis: "Three or more groups, non-normally distributed data",
@@ -381,7 +381,7 @@ function r(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
     spearman: `cor.test(veri$${a}, veri$${b}, method = "spearman")`,
     /* correct = FALSE: ArvoLab düzeltmesiz Pearson χ² veriyor; R 2×2 tabloda öntanımlı olarak Yates uyguluyordu ve p değerleri uyuşmuyordu. */
     chisquare: `chisq.test(table(veri$${a}, veri$${b}), correct = FALSE)`,
-    reliability: `library(psych)\nalpha(veri[, c(${maddeler})])`,
+    reliability: `library(psych)\nalpha(veri[, c(${maddeler})])\n# McDonald omega: ArvoLab ile aynı model ve kestirim (tek faktör, ML, liste bazlı eleme)\nlibrary(lavaan); library(semTools)\nmaddeler <- veri[, c(${maddeler})]\nuyum <- cfa(paste("F =~", paste(names(maddeler), collapse = " + ")), data = maddeler,\n            std.lv = TRUE, missing = "listwise", estimator = "ML")\nreliability(uyum)["omega", ]`,
     pairedttest: `t.test(veri$${a}, veri$${b}, paired = TRUE)`,
     /* ArvoLab normal yaklaşımı süreklilik düzeltmesi olmadan kullanıyor (bağ düzeltmeli); Wilcoxon satırı gibi buna eşlendi. */
     mannwhitney: `wilcox.test(${a} ~ ${g}, data = veri, exact = FALSE, correct = FALSE)`,

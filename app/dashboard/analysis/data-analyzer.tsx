@@ -28,7 +28,8 @@ import {
   type DescriptiveStats,
   type EtkiYorumu,
 } from "@/lib/stats-tests-core";
-import { formatP, hesaplanabilir, isSignificant, formatNumber, pHukmu } from "@/lib/apa-format";
+import { formatP, HESAPLANAMADI, hesaplanabilir, isSignificant, formatNumber, pHukmu } from "@/lib/apa-format";
+import { mcdonaldOmega, OMEGA_ENGEL_METNI } from "@/lib/stats-omega";
 import { ANALIZ_ETIKETLERI_METIN, ANALIZ_GRUPLARI, ANALIZ_TURLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
@@ -3198,25 +3199,90 @@ export default function DataAnalyzer({
         }
         const r = cronbachAlpha(veri.sutunlar);
         if (!hesaplanabilir(r.alpha)) return setResultError(t(DEGISKENLIK_YOK));
-        const level =
-          r.alpha >= 0.9
+        /*
+          α ve ω AYNI maddeler ve AYNI eksiksiz satırlar üzerinden
+          (23.11.2026). İkisi ayrı eleme yapsaydı tablodaki iki sayı
+          farklı örneklemlere ait olur, karşılaştırmaları anlamsızlaşırdı.
+        */
+        const omega = mcdonaldOmega(veri.sutunlar, reliabilityItems);
+        const duzey = (x: number) =>
+          x >= 0.9
             ? t({ tr: "mükemmel", en: "excellent" })
-            : r.alpha >= 0.8
+            : x >= 0.8
             ? t({ tr: "iyi", en: "good" })
-            : r.alpha >= 0.7
+            : x >= 0.7
             ? t({ tr: "kabul edilebilir", en: "acceptable" })
-            : r.alpha >= 0.6
+            : x >= 0.6
             ? t({ tr: "şüpheli", en: "questionable" })
             : t({ tr: "düşük", en: "poor" });
         setResult(
           <div>
             <p>
               <strong>
-                Cronbach&apos;s α = {yazSayi(r.alpha, 3)} (
-                {t({ tr: `${r.k} madde, N = ${r.n}`, en: `${r.k} items, N = ${r.n}` })}) —{" "}
-                {t({ tr: "güvenilirlik düzeyi", en: "reliability level" })}: {level}
+                {t({ tr: `Güvenilirlik: ${r.k} madde, N = ${r.n}`, en: `Reliability: ${r.k} items, N = ${r.n}` })}
               </strong>
               {elemeNotu(veri, dil) ? <span className="muted text-sm"> · {elemeNotu(veri, dil)}</span> : null}
+            </p>
+            {/*
+              İKİ KATSAYI TEK TABLODA. α tau-eşdeğerlik varsayar (bütün
+              maddeler aynı yükle bağlanır) ve bu sağlanmadığında
+              güvenilirliği OLDUĞUNDAN DÜŞÜK gösterir; ω yüklerin farklı
+              olmasına izin verir. Aynı veride yan yana durmaları,
+              hangisinin raporlanacağına kullanıcının karar vermesini
+              sağlıyor.
+            */}
+            <div className="table-scroll" role="region" aria-label={t({ tr: "Güvenilirlik katsayıları", en: "Reliability coefficients" })} tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>{t({ tr: "Katsayı", en: "Coefficient" })}</th>
+                    <th>{t({ tr: "Değer", en: "Value" })}</th>
+                    <th>{t({ tr: "Yorum", en: "Interpretation" })}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Cronbach α</td>
+                    <td>{yazSayi(r.alpha, 3)}</td>
+                    <td>{duzey(r.alpha)}</td>
+                  </tr>
+                  <tr>
+                    <td>McDonald ω</td>
+                    <td>{omega.engel === null ? yazSayi(omega.omega, 3) : HESAPLANAMADI}</td>
+                    <td>{omega.engel === null ? duzey(omega.omega) : t(OMEGA_ENGEL_METNI[omega.engel])}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {/*
+              HANGİ MODEL, HANGİ KESTİRİM. ω'nın bir tek değeri yok:
+              model ve puanlama değişince sayı değişir. Okuyan kişi
+              raporuna neyi yazdığını bilmeli.
+            */}
+            <p className="muted text-sm">
+              {omega.engel === null
+                ? t({
+                    tr: `ω: tek faktörlü doğrulayıcı faktör analizi (bütün maddeler tek gizil değişkene yüklenir, hatalar ilişkisiz), en çok olabilirlik kestirimi. HAM madde toplam puanı için, standartlaştırılmamış yükler ve maddenin kendi ölçeğindeki hata varyanslarıyla: ω = (Σλ)² / ((Σλ)² + Σθ); Σλ = ${yazSayi(omega.yukToplami, 3)}, Σθ = ${yazSayi(omega.hataToplami, 3)}.`,
+                    en: `ω: one-factor confirmatory factor analysis (all items load on a single latent variable, errors uncorrelated), maximum likelihood estimation. For the RAW item total score, using unstandardised loadings and error variances in the item metric: ω = (Σλ)² / ((Σλ)² + Σθ); Σλ = ${yazSayi(omega.yukToplami, 3)}, Σθ = ${yazSayi(omega.hataToplami, 3)}.`,
+                  })
+                : t({
+                    tr: "ω tek faktörlü doğrulayıcı faktör analizinden (en çok olabilirlik) ham madde toplam puanı için hesaplanır; bu seçimde üretilemedi.",
+                    en: "ω is computed from a one-factor confirmatory factor analysis (maximum likelihood) for the raw item total score; it could not be produced for this selection.",
+                  })}
+            </p>
+            {omega.engel === null && omega.tersYuklenen.length ? (
+              <p className="alert mt-sm" data-tone="warning" role="status">
+                {t({
+                  tr: `${omega.tersYuklenen.join(", ")}: bu madde(ler) diğerlerinin tersine yükleniyor, ters kodlanmış olabilir. ArvoLab maddeleri KENDİLİĞİNDEN ÇEVİRMEZ; iki katsayı da ham toplam puanı ölçer. Çevirmek gerekiyorsa veriyi düzeltip analizi yeniden çalıştırın.`,
+                  en: `${omega.tersYuklenen.join(", ")}: these items load in the opposite direction to the others and may be reverse-coded. ArvoLab does NOT reverse items automatically; both coefficients describe the raw total score. If reversing is needed, correct the data and run the analysis again.`,
+                })}
+              </p>
+            ) : null}
+            <p className="muted text-sm">
+              {t({
+                tr: "Tek faktörlü modelin kurulabilmesi ölçeğin TEK BOYUTLU olduğunun kanıtı değildir: model her veriye kurulur, uyup uymadığı ayrı bir sorudur. Uyum indeksleri için Doğrulayıcı Faktör Analizi'ni çalıştırın.",
+                en: "The fact that a one-factor model can be fitted is NOT evidence that the scale is unidimensional: a model can be fitted to any data; whether it fits is a separate question. Run the Confirmatory Factor Analysis for fit indices.",
+              })}
             </p>
             {/*
               MADDE İSTATİSTİKLERİ. Tek bir alfa sayısı "ölçek güvenilir mi"

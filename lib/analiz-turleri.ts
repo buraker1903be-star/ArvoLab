@@ -15,7 +15,7 @@ export const ANALIZ_ETIKETLERI = {
   anova: "Tek Yönlü ANOVA",
   correlation: "Pearson Korelasyonu",
   chisquare: "Ki-Kare Bağımsızlık Testi",
-  reliability: "Güvenilirlik Analizi (Cronbach Alpha)",
+  reliability: "Güvenilirlik Analizi (Cronbach α, McDonald ω)",
   /*
     Parametrik olmayan karşılıklar (25.10.2026). Varsayım şeridi
     bunları öneriyordu ama program yapamıyordu; öneri, karşılığı
@@ -82,7 +82,7 @@ const ANALIZ_ETIKETLERI_EN: Record<AnalizTuru, string> = {
   anova: "One-Way ANOVA",
   correlation: "Pearson Correlation",
   chisquare: "Chi-Square Test of Independence",
-  reliability: "Reliability Analysis (Cronbach's Alpha)",
+  reliability: "Reliability Analysis (Cronbach's α, McDonald's ω)",
   pairedttest: "Paired Samples t-Test",
   mannwhitney: "Mann-Whitney U Test",
   kruskalwallis: "Kruskal-Wallis H Test",

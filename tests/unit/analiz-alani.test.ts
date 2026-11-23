@@ -248,6 +248,57 @@ describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
   });
 });
 
+describe("güvenilirlik: α ve ω", () => {
+  /*
+    İKİ KATSAYI AYNI SATIRLARDAN (23.11.2026). α ve ω ayrı eleme
+    yapsaydı tablodaki iki sayı farklı örneklemlere ait olurdu.
+    Hesabın kendisi bağımsız referansa karşı
+    tests/unit/stats-omega.test.ts'te; gerçek arayüz
+    scripts/yerel-yigin/analiz-alani-kabul.mjs S16'da.
+  */
+  test("α ve ω aynı eşleşmiş sütunlardan hesaplanıyor", () => {
+    assert.match(analizci, /const r = cronbachAlpha\(veri\.sutunlar\);/);
+    assert.match(analizci, /const omega = mcdonaldOmega\(veri\.sutunlar, reliabilityItems\);/);
+    /* Eleme notu ve N aynı `veri` nesnesinden. */
+    assert.match(analizci, /Güvenilirlik: \$\{r\.k\} madde, N = \$\{r\.n\}/);
+    assert.match(analizci, /elemeNotu\(veri, dil\)/);
+  });
+
+  test("model, kestirim ve puanlama ekranda yazılı", () => {
+    assert.match(analizci, /tek faktörlü doğrulayıcı faktör analizi/);
+    assert.match(analizci, /en çok olabilirlik/);
+    assert.match(analizci, /HAM madde toplam puanı/);
+    assert.match(analizci, /one-factor confirmatory factor analysis/);
+    assert.match(analizci, /RAW item total score/);
+  });
+
+  /* Model kurulabiliyor olmak uyduğu anlamına gelmez; ekran bunu söylemeli. */
+  test("tek faktörlü model tek boyutluluğun kanıtı diye sunulmuyor", () => {
+    assert.match(analizci, /TEK BOYUTLU olduğunun kanıtı değildir/);
+    assert.match(analizci, /NOT evidence that the scale is unidimensional/);
+  });
+
+  test("ω üretilemediğinde sayı değil sebep yazılıyor", () => {
+    assert.match(analizci, /omega\.engel === null \? yazSayi\(omega\.omega, 3\) : HESAPLANAMADI/);
+    assert.match(analizci, /t\(OMEGA_ENGEL_METNI\[omega\.engel\]\)/);
+  });
+
+  test("ters madde çevrilmiyor, bildiriliyor", () => {
+    assert.match(analizci, /KENDİLİĞİNDEN ÇEVİRMEZ/);
+    assert.match(analizci, /does NOT reverse items automatically/);
+    const omega = oku("lib/stats-omega.ts");
+    /* Mutlak değer alınsaydı kullanıcının yapmadığı dönüşüm yapılmış olurdu. */
+    assert.doesNotMatch(omega, /Math\.abs\(s\.yuk\)|Math\.abs\(y\.b\)/);
+    assert.match(omega, /tersYuklenen/);
+  });
+
+  /* İki madde alfayı düşürmemeli: kapı yalnızca ω'da. */
+  test("iki maddede güvenilirlik akışı durmuyor", () => {
+    assert.match(analizci, /if \(reliabilityItems\.length < 2\) \{/);
+    assert.match(oku("lib/stats-omega.ts"), /export const OMEGA_EN_AZ_MADDE = 3;/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);
