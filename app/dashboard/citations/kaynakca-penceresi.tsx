@@ -2,7 +2,7 @@ import { Quote } from "lucide-react";
 import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
 import PanelDrawer from "../_components/panel-drawer";
 import CitationCheckForm, { type CheckResult } from "./citation-check-form";
-import { sonKaynakcaDenetimi } from "@/app/actions/citation-check";
+import { kaynakcaDenetimi, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import { kaynakPdfleri } from "@/app/actions/kaynak-pdf";
 import { ceviri, tarihler } from "@/lib/dil-sunucu";
@@ -23,6 +23,8 @@ import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 export default async function KaynakcaPenceresi({
   calisma,
   sonDenetim,
+  denetimId = null,
+  acikBasla = false,
   triggerLabel,
   triggerClassName = "projects-filter-button button-compact",
 }: {
@@ -30,6 +32,10 @@ export default async function KaynakcaPenceresi({
   /* Yalnızca tarih kullanılıyor; açık sorun sayısı pencerenin kendi okuduğu son
      denetimden hesaplanır. `skor` eski çağıranlar için kabul edilir, GÖSTERİLMEZ. */
   sonDenetim: { tarih: string; skor?: number | null; acikSorun?: number | null } | null;
+  /** Geçmişten seçilen denetim; verilmezse SON denetim okunur. */
+  denetimId?: string | null;
+  /** Geçmiş satırından gelindiyse pencere açık başlar. */
+  acikBasla?: boolean;
   /** Kaynaklar sayfasında düğme eylemi söylüyor ("Kaynakçamı denetle"). */
   triggerLabel?: string;
   triggerClassName?: string;
@@ -38,7 +44,7 @@ export default async function KaynakcaPenceresi({
   const { tarihSaat } = await tarihler();
   const [asistanAcik, onceki, gecmis, pdfler] = await Promise.all([
     kaynakcaAsistaniAcik(),
-    sonKaynakcaDenetimi(calisma.id),
+    denetimId ? kaynakcaDenetimi(denetimId, calisma.id) : sonKaynakcaDenetimi(calisma.id),
     asistanGecmisim("kaynakca", 8, calisma.id),
     kaynakPdfleri(calisma.id),
   ]);
@@ -59,6 +65,7 @@ export default async function KaynakcaPenceresi({
         en: "The format of each reference, its match with in-text citations, and whether the source actually exists (Crossref, OpenAlex) are checked together.",
       })}
       boy="tam"
+      acikBasla={acikBasla}
       basaridaKapan={false}
     >
       {/* Son denetim kayıtlıysa tarihi ve puanı sonuç kartında yazıyor;

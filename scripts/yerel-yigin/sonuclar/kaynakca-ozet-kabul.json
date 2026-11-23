@@ -1,0 +1,135 @@
+{
+  "tarih": "2026-11-23T12:49:51.015Z",
+  "head": "1587ce4bab5cb20d9d07731c59c14c6d6742269c",
+  "buildId": "uRfvj7pLQJvkqoW-Sz-tS",
+  "uygulama": "http://localhost:3141",
+  "gecen": 25,
+  "dusen": 0,
+  "sonuclar": [
+    {
+      "ad": "K1a toplam ile kategoriler aynı denetimi gösteriyor (biçim satırları var)",
+      "durum": "PASS",
+      "not": "toplam:2 bicimHata:1 bicimUyari:1 kategoriToplami:2"
+    },
+    {
+      "ad": "K1b açık sorunun hangi kategoride olduğu özette yazılı",
+      "durum": "PASS",
+      "not": "ozet:true"
+    },
+    {
+      "ad": "K1c ölçülmeyen kategori 'Yok' değil 'Denetlenmedi'",
+      "durum": "PASS",
+      "not": "denetlenmedi:4 sebepli:true yok:0"
+    },
+    {
+      "ad": "K1d son denetimin tarihi, saati ve künye sayısı aynı kartta",
+      "durum": "PASS",
+      "not": "ustBilgi:true toplamMetni:true"
+    },
+    {
+      "ad": "K1e aynı gün iki denetim saatleriyle ayrışıyor ve satır kendi sonucunu açıyor",
+      "durum": "PASS",
+      "not": "sayi:1 saatli:true hedef:true"
+    },
+    {
+      "ad": "K1f geçmiş satırına KLAVYEYLE ulaşılıyor ve o denetimin sonucu açılıyor",
+      "durum": "PASS",
+      "not": "odak:a adres:true pencereAcik:true secilen:true"
+    },
+    {
+      "ad": "K1g yerleşim: liste ile geçmiş arasında büyük boşluk ve yatay taşma yok",
+      "durum": "PASS",
+      "not": "bosluk:10 yatayTasma:0"
+    },
+    {
+      "ad": "K2a denetim yapılmamış çalışmada özet değil açıklama var",
+      "durum": "PASS",
+      "not": "ustBilgi:Henüz denetlenmedi toplam:true bos:true"
+    },
+    {
+      "ad": "K2b sorunsuz denetimde toplam 0 ve kategoriler 'Yok'",
+      "durum": "PASS",
+      "not": "toplam:0 yok:6 denetlenmedi:0 ozet:"
+    },
+    {
+      "ad": "K2c çok kategorili bulguda toplam kategorilerin toplamına eşit",
+      "durum": "PASS",
+      "not": "toplam:8 katilan:8 ulasilamayan:2 not:true ozetKategori:6"
+    },
+    {
+      "ad": "K2d çalışma değişince doğru özet ve geçmiş geliyor",
+      "durum": "PASS",
+      "not": "bicim:2 bicimGecmis:1 temiz:0 temizGecmis:0"
+    },
+    {
+      "ad": "K2e Kütüphanem sekmesi çalışıyor",
+      "durum": "PASS",
+      "not": "kaynak:true sekme:1"
+    },
+    {
+      "ad": "K2f kaynakça dışa aktarma akışı çalışıyor",
+      "durum": "PASS",
+      "not": "kaynakca:true kopyala:true"
+    },
+    {
+      "ad": "K3a-tr-dark-1440 özet ve kategoriler çeviride eksiksiz",
+      "durum": "PASS",
+      "not": "toplam:8 adlar:true turkceKalinti:false"
+    },
+    {
+      "ad": "K3b-tr-dark-1440 yatay taşma yok, uzun kategori adı sarıyor",
+      "durum": "PASS",
+      "not": "yatayTasma:0 kirpikDegil:true"
+    },
+    {
+      "ad": "K3c-tr-dark-1440 karşıtlık: özet sayısı okunur",
+      "durum": "PASS",
+      "not": "6.3"
+    },
+    {
+      "ad": "K3a-en-light-1440 özet ve kategoriler çeviride eksiksiz",
+      "durum": "PASS",
+      "not": "toplam:8 adlar:true turkceKalinti:false"
+    },
+    {
+      "ad": "K3b-en-light-1440 yatay taşma yok, uzun kategori adı sarıyor",
+      "durum": "PASS",
+      "not": "yatayTasma:0 kirpikDegil:true"
+    },
+    {
+      "ad": "K3c-en-light-1440 karşıtlık: özet sayısı okunur",
+      "durum": "PASS",
+      "not": "5.5"
+    },
+    {
+      "ad": "K3a-en-dark-390 özet ve kategoriler çeviride eksiksiz",
+      "durum": "PASS",
+      "not": "toplam:8 adlar:true turkceKalinti:false"
+    },
+    {
+      "ad": "K3b-en-dark-390 yatay taşma yok, uzun kategori adı sarıyor",
+      "durum": "PASS",
+      "not": "yatayTasma:0 kirpikDegil:true"
+    },
+    {
+      "ad": "K3c-en-dark-390 karşıtlık: özet sayısı okunur",
+      "durum": "PASS",
+      "not": "6.3"
+    },
+    {
+      "ad": "K3a-tr-light-390 özet ve kategoriler çeviride eksiksiz",
+      "durum": "PASS",
+      "not": "toplam:8 adlar:true turkceKalinti:false"
+    },
+    {
+      "ad": "K3b-tr-light-390 yatay taşma yok, uzun kategori adı sarıyor",
+      "durum": "PASS",
+      "not": "yatayTasma:0 kirpikDegil:true"
+    },
+    {
+      "ad": "K3c-tr-light-390 karşıtlık: özet sayısı okunur",
+      "durum": "PASS",
+      "not": "5.5"
+    }
+  ]
+}
