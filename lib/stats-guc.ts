@@ -176,6 +176,11 @@ export interface GucSonucu {
   ulasilanGuc: number;
   /** Bir küçük örneklemde güç (hedefin altında kaldığı görülsün); yoksa null. */
   birKucukGuc: number | null;
+  /**
+   * Arama adımı: bir önceki GEÇERLİ aday N − adim'dir. Ekran bu sayıyı
+   * kendi hesaplamıyor — eşit dağılımda adım 2, ANOVA'da grup sayısı.
+   */
+  adim: number;
   /** Kayıp payı eklenmiş, başlangıçta alınması gereken sayı; kayıp yoksa null. */
   baslangicN: number | null;
   df1: number | null;
@@ -196,8 +201,8 @@ export const GUC_ENGEL_METNI: Record<GucEngel, Metin> = {
   },
   "alfa-gecersiz": { tr: "Alfa 0 ile 1 arasında olmalı (yaygın değer 0,05).", en: "Alpha must be between 0 and 1 (commonly .05)." },
   "guc-gecersiz": { tr: "Hedef güç 0 ile 1 arasında olmalı (yaygın değer 0,80).", en: "The target power must be between 0 and 1 (commonly .80)." },
-  "grup-gecersiz": { tr: "Grup sayısı en az 2 olmalı.", en: "The number of groups must be at least 2." },
-  "yordayici-gecersiz": { tr: "Yordayıcı sayısı en az 1 olmalı.", en: "The number of predictors must be at least 1." },
+  "grup-gecersiz": { tr: "Grup sayısı en az 2 olmalı ve tam sayı olmalı.", en: "The number of groups must be a whole number and at least 2." },
+  "yordayici-gecersiz": { tr: "Yordayıcı sayısı en az 1 olmalı ve tam sayı olmalı.", en: "The number of predictors must be a whole number and at least 1." },
   "dagilim-gecersiz": { tr: "Dağılım oranı sıfırdan büyük olmalı.", en: "The allocation ratio must be greater than zero." },
   "kayip-gecersiz": { tr: "Beklenen kayıp oranı 0 ile 1 arasında olmalı (örneğin %10 için 0,10).", en: "The expected dropout rate must be between 0 and 1 (e.g. 0.10 for 10%)." },
   ulasilamiyor: {
@@ -321,19 +326,36 @@ function girdiDenetle(g: GucGirdisi): GucEngel | null {
   if (g.yontem === "korelasyon" && g.etki >= 1) return "etki-gecersiz";
   if (!Number.isFinite(g.alfa) || g.alfa <= 0 || g.alfa >= 1) return "alfa-gecersiz";
   if (!Number.isFinite(g.hedefGuc) || g.hedefGuc <= 0 || g.hedefGuc >= 1) return "guc-gecersiz";
-  if (g.yontem === "tekYonluAnova" && (!Number.isFinite(g.grupSayisi ?? NaN) || (g.grupSayisi ?? 0) < 2)) return "grup-gecersiz";
-  if (g.yontem === "regresyon" && (!Number.isFinite(g.yordayiciSayisi ?? NaN) || (g.yordayiciSayisi ?? 0) < 1)) return "yordayici-gecersiz";
+  /*
+    GRUP ve YORDAYICI SAYISI TAM SAYI OLMALI. 2,5 grup diye bir şey
+    yok; üstelik `new Array(2.5)` RangeError atıyordu ve hesap
+    katmanı kullanıcıya sebep yerine çökme veriyordu.
+  */
+  if (g.yontem === "tekYonluAnova" && (!Number.isInteger(g.grupSayisi ?? NaN) || (g.grupSayisi ?? 0) < 2)) return "grup-gecersiz";
+  if (g.yontem === "regresyon" && (!Number.isInteger(g.yordayiciSayisi ?? NaN) || (g.yordayiciSayisi ?? 0) < 1)) return "yordayici-gecersiz";
   if (g.yontem === "bagimsizT" && g.dagilimOrani !== undefined && (!Number.isFinite(g.dagilimOrani) || g.dagilimOrani <= 0)) return "dagilim-gecersiz";
   const kayip = g.kayipOrani ?? 0;
   if (!Number.isFinite(kayip) || kayip < 0 || kayip >= 1) return "kayip-gecersiz";
   return null;
 }
 
-/* Bağımsız t'de toplam N, oranla ikiye bölünüyor: n1 = round(N/(1+κ)). */
+/*
+  BAĞIMSIZ t'DE TOPLAM N'İN İKİYE BÖLÜNMESİ.
+
+  YUVARLAMA KURALI: n1 = round(N / (1 + κ)), sonra [2, N − 2] aralığına
+  sıkıştırılıyor; n2 = N − n1. Yani ikinci grup ARTIK, birinciden
+  hesaplanmıyor: n1 + n2 HER ZAMAN N. Eskiden n2 ayrıca `max(2, …)`
+  ile büyütülüyordu ve uç oranlarda (κ çok küçük ya da çok büyük)
+  toplam, aranan N'yi AŞIYORDU: ekranda "128" yazarken gruplar
+  126 + 2 = 128 değil 126 + 2'den başka bir toplam veriyordu.
+  JavaScript'in `Math.round` kuralı yarımı yukarı atar (0,5 → 1), bu
+  yüzden κ = 1 ve tek N'de birinci grup bir kişi büyük olurdu —
+  eşit dağılımda arama adımı 2 olduğu için o durum hiç oluşmuyor.
+*/
 function ikiGrup(N: number, oran: number): [number, number] {
-  const n1 = Math.max(2, Math.round(N / (1 + oran)));
-  const n2 = Math.max(2, N - n1);
-  return [n1, n2];
+  const ham = Math.round(N / (1 + oran));
+  const n1 = Math.min(Math.max(2, ham), N - 2);
+  return [n1, N - n1];
 }
 
 /** Verilen örneklemde gücü hesaplar; arama ve rapor aynı fonksiyonu kullanır. */
@@ -365,7 +387,8 @@ function gucHesapla(g: GucGirdisi, N: number): { guc: number; grupBasina: number
       const k = g.grupSayisi ?? 2;
       return {
         guc: gucTekYonluAnova(N, k, g.etki, g.alfa),
-        grupBasina: new Array<number>(k).fill(N / k),
+        /* k tam sayı (girdiDenetle) ve N, k'nin katı (adimBoyu): bölme tam. */
+        grupBasina: new Array<number>(k).fill(Math.round(N / k)),
         df1: k - 1,
         df2: N - k,
         ncp: g.etki * g.etki * N,
@@ -416,8 +439,17 @@ function enKucukBaslangic(g: GucGirdisi): number {
 }
 
 /** ANOVA'da eşit grup: toplam N grup sayısının katı olmalı. */
+/*
+  ARAMA ADIMI. ANOVA'da eşit grup istendiği için toplam N grup
+  sayısının katı olmalı. Bağımsız t'de dağılım oranı 1 ise adım 2:
+  aksi hâlde 128'in (64 + 64) bir önceki adayı 127 (64 + 63) olurdu
+  ve "eşit dağılım" dediğimiz yerde dengesiz bir aday gösterirdik.
+  Oran 1 değilken zaten dengeli bir bölme aranmıyor, adım 1.
+*/
 function adimBoyu(g: GucGirdisi): number {
-  return g.yontem === "tekYonluAnova" ? (g.grupSayisi ?? 2) : 1;
+  if (g.yontem === "tekYonluAnova") return g.grupSayisi ?? 2;
+  if (g.yontem === "bagimsizT" && (g.dagilimOrani ?? 1) === 1) return 2;
+  return 1;
 }
 
 /**
@@ -432,57 +464,67 @@ export function ornekemBuyuklugu(g: GucGirdisi): GucSonucu | GucEngeli {
   const adim = adimBoyu(g);
   const bas = Math.ceil(enKucukBaslangic(g) / adim) * adim;
   const guc = (N: number) => gucHesapla(g, N).guc;
-  /*
-    ÖNCE ARALIK, SONRA İKİYE BÖLME. Doğrusal tarama her adımda bir güç
-    hesabı demek ve korelasyonun tam dağılımı tarayıcıda pahalı.
-    İkiye bölmeden sonra BİR AŞAĞI YÜRÜYÜŞ var: grup büyüklüğü
-    yuvarlanırken güç yerel olarak tekdüze olmayabiliyor, en küçük N
-    yine de bulunuyor.
-  */
-  if (guc(bas) >= g.hedefGuc) {
-    const ayrintiBas = gucHesapla(g, bas);
-    const kayipBas = g.kayipOrani ?? 0;
+  const kayip = g.kayipOrani ?? 0;
+  const sonucUret = (N: number, oncekiGuc: number | null): GucSonucu => {
+    const a = gucHesapla(g, N);
     return {
-      engel: null, n: bas, grupBasina: ayrintiBas.grupBasina,
+      engel: null,
+      n: N,
+      grupBasina: a.grupBasina,
       birim: g.yontem === "eslestirilmisT" ? "katilimci" : "gozlem",
-      ulasilanGuc: ayrintiBas.guc, birKucukGuc: null,
-      baslangicN: kayipBas > 0 ? Math.ceil(bas / (1 - kayipBas)) : null,
-      df1: ayrintiBas.df1, df2: ayrintiBas.df2, ncp: ayrintiBas.ncp, kritikDeger: ayrintiBas.kritik,
+      ulasilanGuc: a.guc,
+      birKucukGuc: oncekiGuc,
+      adim,
+      baslangicN: kayip > 0 ? Math.ceil(N / (1 - kayip)) : null,
+      df1: a.df1,
+      df2: a.df2,
+      ncp: a.ncp,
+      kritikDeger: a.kritik,
     };
-  }
+  };
+
+  if (guc(bas) >= g.hedefGuc) return sonucUret(bas, null);
+
+  /*
+    ÜST SINIRDAKİ GEÇERLİ ÖRNEKLEM ATLANMIYOR. Aralığı ikiye katlayarak
+    genişletirken sonraki adım EN_COK_N'i aşınca doğrudan
+    "ulaşılamıyor" dönülüyordu; oysa sınırın ALTINDA kalan son geçerli
+    aday hedefi karşılıyor olabilirdi. Önce o aday sınanıyor.
+  */
+  const enBuyuk = bas + Math.floor((EN_COK_N - bas) / adim) * adim;
+  if (enBuyuk < bas || guc(enBuyuk) < g.hedefGuc) return { engel: "ulasilamiyor" };
+
   let alt = bas;
-  let ust = bas + adim;
-  while (ust <= EN_COK_N && guc(ust) < g.hedefGuc) {
-    alt = ust;
-    ust = Math.min(EN_COK_N + adim, alt + Math.max(adim, (ust - bas) * 2));
+  let ust = enBuyuk;
+  /* Önce dar bir aralık: büyük N'de güç hesabı pahalı. */
+  for (let deneme = bas + adim; deneme < enBuyuk; deneme = alt + Math.max(adim, (deneme - bas) * 2)) {
+    if (guc(deneme) >= g.hedefGuc) {
+      ust = deneme;
+      break;
+    }
+    alt = deneme;
   }
-  if (ust > EN_COK_N) return { engel: "ulasilamiyor" };
   while (ust - alt > adim) {
     const orta = alt + Math.floor((ust - alt) / (2 * adim)) * adim;
     if (orta === alt) break;
     if (guc(orta) >= g.hedefGuc) ust = orta;
     else alt = orta;
   }
+  /* Yerel tekdüze olmama payı: en küçüğü bulana kadar aşağı yürü. */
   let bulunan = ust;
   while (bulunan - adim >= bas && guc(bulunan - adim) >= g.hedefGuc) bulunan -= adim;
-  const sonGuc = guc(bulunan);
-  const oncekiGuc = bulunan - adim >= bas ? guc(bulunan - adim) : null;
 
-  const ayrinti = gucHesapla(g, bulunan);
-  const kayip = g.kayipOrani ?? 0;
-  return {
-    engel: null,
-    n: bulunan,
-    grupBasina: ayrinti.grupBasina,
-    birim: g.yontem === "eslestirilmisT" ? "katilimci" : "gozlem",
-    ulasilanGuc: sonGuc,
-    birKucukGuc: oncekiGuc,
-    baslangicN: kayip > 0 ? Math.ceil(bulunan / (1 - kayip)) : null,
-    df1: ayrinti.df1,
-    df2: ayrinti.df2,
-    ncp: ayrinti.ncp,
-    kritikDeger: ayrinti.kritik,
-  };
+  /*
+    SONUÇ DÖNMEDEN ÖNCE SÖZLEŞME DOĞRULANIYOR: bulunan aday hedefi
+    GERÇEKTEN karşılamalı ve bir önceki GEÇERLİ aday hedefin altında
+    kalmalı. Arama bir gün bozulursa sessiz yanlış sayı yerine
+    "ulaşılamıyor" dönmesi yeğdir.
+  */
+  while (bulunan <= enBuyuk && guc(bulunan) < g.hedefGuc) bulunan += adim;
+  if (bulunan > enBuyuk) return { engel: "ulasilamiyor" };
+  const oncekiGuc = bulunan - adim >= bas ? guc(bulunan - adim) : null;
+  if (oncekiGuc !== null && oncekiGuc >= g.hedefGuc) return { engel: "ulasilamiyor" };
+  return sonucUret(bulunan, oncekiGuc);
 }
 
 /** Belirli bir örneklemde gücü verir (sınır senaryoları ve testler için). */

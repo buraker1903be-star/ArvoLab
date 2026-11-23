@@ -1,7 +1,7 @@
 {
-  "tarih": "2026-11-23T08:45:07.602Z",
-  "head": "3e88da61d3fc46448343d635fa0b20cb675c6277",
-  "buildId": "zkUHfU4Fapm9MI39jnhcp",
+  "tarih": "2026-11-23T09:00:35.191Z",
+  "head": "c5ab744ce4f45548d7a921ccc9d0f76f83da515b",
+  "buildId": "xC4ZYqiZWZdqnmvR2vb39",
   "uygulama": "http://localhost:3137",
   "gecen": 178,
   "dusen": 0,
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-4e686a.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-9d6d7b.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4e686a.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9d6d7b.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-4e686a.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-9d6d7b.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "62148ee9-adce-4923-91be-5a1c19161bff"
+      "not": "353db46c-b2ca-4065-b8c9-5868f1b87bc6"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-4e686a.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-9d6d7b.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-4e686a.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-9d6d7b.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-4e686a.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-9d6d7b.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -614,7 +614,7 @@
     {
       "ad": "S18e-tr-masaüstü bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
       "durum": "PASS",
-      "not": "baslik127:true deger:true altinda:true"
+      "not": "baslik:true deger:true altinda:true"
     },
     {
       "ad": "S18f-tr-masaüstü kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
@@ -664,7 +664,7 @@
     {
       "ad": "S18e-tr-telefon bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
       "durum": "PASS",
-      "not": "baslik127:true deger:true altinda:true"
+      "not": "baslik:true deger:true altinda:true"
     },
     {
       "ad": "S18f-tr-telefon kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
@@ -719,7 +719,7 @@
     {
       "ad": "S18e-en-masaüstü bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
       "durum": "PASS",
-      "not": "baslik127:true deger:true altinda:true"
+      "not": "baslik:true deger:true altinda:true"
     },
     {
       "ad": "S18f-en-masaüstü kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",
@@ -769,7 +769,7 @@
     {
       "ad": "S18e-en-telefon bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı",
       "durum": "PASS",
-      "not": "baslik127:true deger:true altinda:true"
+      "not": "baslik:true deger:true altinda:true"
     },
     {
       "ad": "S18f-en-telefon kayıp oranı: analize gereken ile başlangıçta alınacak AYRI",

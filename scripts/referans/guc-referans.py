@@ -23,7 +23,7 @@ from statsmodels.stats.power import FTestAnovaPower, FTestPower, TTestIndPower, 
 
 SENARYOLAR = [
     {"ad": "bagimsizT-d05", "yontem": "bagimsizT", "etki": 0.5, "alfa": 0.05, "yon": "iki", "N": 128},
-    {"ad": "bagimsizT-d08-tek", "yontem": "bagimsizT", "etki": 0.8, "alfa": 0.05, "yon": "tek", "N": 55},
+    {"ad": "bagimsizT-d08-tek", "yontem": "bagimsizT", "etki": 0.8, "alfa": 0.05, "yon": "tek", "N": 56},
     {"ad": "eslestirilmisT-dz04", "yontem": "eslestirilmisT", "etki": 0.4, "alfa": 0.05, "yon": "iki", "N": 52},
     {"ad": "eslestirilmisT-dz025-tek", "yontem": "eslestirilmisT", "etki": 0.25, "alfa": 0.01, "yon": "tek", "N": 211},
     {"ad": "anova-k3-f025", "yontem": "tekYonluAnova", "etki": 0.25, "alfa": 0.05, "k": 3, "N": 159},
@@ -40,7 +40,7 @@ YON = {"iki": "two-sided", "tek": "larger"}
 def guc(s, N):
     y = s["yontem"]
     if y == "bagimsizT":
-        n1 = round(N / 2)
+        n1 = min(max(2, round(N / 2)), N - 2)
         return float(TTestIndPower().power(effect_size=s["etki"], nobs1=n1, alpha=s["alfa"], ratio=(N - n1) / n1,
                                            alternative=YON[s["yon"]]))
     if y == "eslestirilmisT":

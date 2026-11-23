@@ -58,7 +58,7 @@ guc_t <- function(ncp, df, alfa, yon) {
   }
 }
 guc_bagimsiz <- function(N, d, alfa, yon, oran = 1) {
-  n1 <- max(2, round(N / (1 + oran))); n2 <- max(2, N - n1)
+  n1 <- min(max(2, round(N / (1 + oran))), N - 2); n2 <- N - n1
   guc_t(d * sqrt(n1 * n2 / (n1 + n2)), n1 + n2 - 2, alfa, yon)
 }
 guc_eslestirilmis <- function(N, dz, alfa, yon) guc_t(dz * sqrt(N), N - 1, alfa, yon)
@@ -96,10 +96,10 @@ guc_korelasyon_fisher <- function(N, r, alfa, yon) {
 }
 
 senaryolar <- list(
-  list(ad = "bagimsizT-d05", yontem = "bagimsizT", etki = 0.5, alfa = 0.05, hedef = 0.80, yon = "iki", adim = 1,
+  list(ad = "bagimsizT-d05", yontem = "bagimsizT", etki = 0.5, alfa = 0.05, hedef = 0.80, yon = "iki", adim = 2,
        guc = function(N) guc_bagimsiz(N, 0.5, 0.05, "iki"),
        pwrN = ceiling(pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.80, type = "two.sample")$n) * 2),
-  list(ad = "bagimsizT-d08-tek", yontem = "bagimsizT", etki = 0.8, alfa = 0.05, hedef = 0.90, yon = "tek", adim = 1,
+  list(ad = "bagimsizT-d08-tek", yontem = "bagimsizT", etki = 0.8, alfa = 0.05, hedef = 0.90, yon = "tek", adim = 2,
        guc = function(N) guc_bagimsiz(N, 0.8, 0.05, "tek"),
        pwrN = ceiling(pwr.t.test(d = 0.8, sig.level = 0.05, power = 0.90, type = "two.sample", alternative = "greater")$n) * 2),
   list(ad = "bagimsizT-oran2", yontem = "bagimsizT", etki = 0.5, alfa = 0.05, hedef = 0.80, yon = "iki", adim = 1, oran = 2,
@@ -165,7 +165,7 @@ json <- paste0(
   ",\"pwr\":", metin(as.character(packageVersion("pwr"))),
   ",\"yol\":", metin("noncentral t (pt) ve noncentral F (pf); iki kuyruklu t gücünde her iki kuyruk"),
   ",\"korelasyonYolu\":", metin("r'nin tam yoğunluğu (Hotelling, 2F1 serisi) — G*Power Exact ile aynı model"),
-  ",\"tolerans\":{\"dagilim\":1e-9,\"guc\":1e-8}",
+  ",\"tolerans\":{\"dagilim\":1e-9,\"guc\":1e-7,\"not\":\"guc toleransinin alt siniri normalCDF (~1e-8); olculen en buyuk fark 1,1e-8\"}",
   "},\n  \"tNoktalari\": [", paste(unlist(t_noktalari), collapse = ","), "],\n",
   "  \"fNoktalari\": [", paste(unlist(f_noktalari), collapse = ","), "],\n",
   "  \"senaryolar\": [\n    ", paste(parcalar, collapse = ",\n    "), "\n  ]\n}\n")

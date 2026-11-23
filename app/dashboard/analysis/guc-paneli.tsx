@@ -244,8 +244,8 @@ export default function GucPaneli() {
                 {sonuc.birKucukGuc !== null ? (
                   <tr>
                     <th scope="row">
-                      {t({ tr: `Bir küçük örneklemde (${sonuc.n - (sonuc.grupBasina && yontem === "tekYonluAnova" ? sonuc.grupBasina.length : 1)}) güç`,
-                           en: `Power at the next smaller sample (${sonuc.n - (sonuc.grupBasina && yontem === "tekYonluAnova" ? sonuc.grupBasina.length : 1)})` })}
+                      {t({ tr: `Bir küçük örneklemde (${sonuc.n - sonuc.adim}) güç`,
+                           en: `Power at the next smaller sample (${sonuc.n - sonuc.adim})` })}
                     </th>
                     <td className="tone-text" data-tone="warning">
                       {say(sonuc.birKucukGuc)} — {t({ tr: "hedefin altında", en: "below the target" })}

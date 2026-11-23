@@ -1591,8 +1591,9 @@ try {
       if (!satir) return "satır yok";
       const ref = gucSeti("bagimsizT-d05");
       const beklenen = ref.birKucukGuc.toFixed(3);
-      return `baslik127:${/\(127\)/.test(satir[0])} deger:${satir[1].replace(",", ".").startsWith(beklenen)} altinda:${/hedefin altında|below the target/.test(satir[1])}`;
-    }, "baslik127:true deger:true altinda:true");
+      const oncekiN = ref.enKucukN - ref.adim;
+      return `baslik:${new RegExp(`\\(${oncekiN}\\)`).test(satir[0])} deger:${satir[1].replace(",", ".").startsWith(beklenen)} altinda:${/hedefin altında|below the target/.test(satir[1])}`;
+    }, "baslik:true deger:true altinda:true");
 
     await esit(`S18f-${dil}-${olcu} kayıp oranı: analize gereken ile başlangıçta alınacak AYRI`, async () => {
       await gucYaz(etiketKayip, "0.2");

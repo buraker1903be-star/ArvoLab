@@ -192,6 +192,118 @@ describe("sınır senaryoları", () => {
     assert.ok((kayipli.baslangicN as number) > kayipli.n);
   });
 
+  /*
+    REGRESYON 1 (23.11.2026). `ikiGrup` gruplardan biri 2'nin altına
+    düşünce onu BÜYÜTÜYOR ve n1 + n2 aranan N'yi aşabiliyordu: ekranda
+    yazan toplam ile grupların toplamı ayrışıyordu.
+  */
+  test("her oranda n1 + n2 toplam N'ye eşit ve iki grup da en az 2", () => {
+    for (const oran of [0.02, 0.05, 0.1, 0.5, 1, 2, 10, 50, 100]) {
+      const r = ornekemBuyuklugu({ ...taban, dagilimOrani: oran });
+      assert.equal(r.engel, null, `oran ${oran}`);
+      if (r.engel !== null) continue;
+      const [n1, n2] = r.grupBasina as number[];
+      assert.equal(n1 + n2, r.n, `oran ${oran}: ${n1} + ${n2} ≠ ${r.n}`);
+      assert.ok(n1 >= 2 && n2 >= 2, `oran ${oran}: ${n1}, ${n2}`);
+      /* Yuvarlama kuralı: n1 = round(N/(1+κ)), [2, N−2] aralığına sıkıştırılmış. */
+      const beklenen = Math.min(Math.max(2, Math.round(r.n / (1 + oran))), r.n - 2);
+      assert.equal(n1, beklenen, `oran ${oran}: yuvarlama kuralı`);
+    }
+  });
+
+  test("küçük toplamlarda da toplam aşılmıyor", () => {
+    for (let N = 4; N <= 12; N += 1) {
+      for (const oran of [0.02, 1, 100]) {
+        const g = gucDegeri({ ...taban, dagilimOrani: oran }, N);
+        assert.ok(typeof g === "number" && g >= 0 && g <= 1, `N=${N} oran=${oran}`);
+      }
+    }
+  });
+
+  /* Eşit dağılım 1:1 sunuluyorsa bir önceki aday da dengeli olmalı. */
+  test("eşit dağılımda bir önceki geçerli aday da dengeli (64+64 → 63+63)", () => {
+    const r = ornekemBuyuklugu(taban);
+    assert.ok(r.engel === null);
+    if (r.engel !== null) return;
+    assert.equal(r.n, 128);
+    assert.deepEqual(r.grupBasina, [64, 64]);
+    assert.equal(r.adim, 2, "eşit dağılımda arama adımı 2");
+    const onceki = r.n - r.adim;
+    assert.equal(onceki, 126);
+    const o = gucDegeri({ ...taban }, onceki);
+    assert.ok(typeof o === "number" && Math.abs(o - (r.birKucukGuc as number)) < 1e-12);
+    /* 126 = 63 + 63: dengeli. */
+    const ayrinti = ornekemBuyuklugu({ ...taban, hedefGuc: 0.795 });
+    assert.ok(ayrinti.engel === null && (ayrinti.grupBasina as number[])[0] === (ayrinti.grupBasina as number[])[1]);
+  });
+
+  test("oran 1 değilken adım 1, ANOVA'da grup sayısı", () => {
+    const oranli = ornekemBuyuklugu({ ...taban, dagilimOrani: 2 });
+    assert.ok(oranli.engel === null && oranli.adim === 1);
+    const anova = ornekemBuyuklugu({ yontem: "tekYonluAnova", etki: 0.25, alfa: 0.05, hedefGuc: 0.8, grupSayisi: 3 });
+    assert.ok(anova.engel === null && anova.adim === 3);
+  });
+
+  /*
+    REGRESYON 2. Aralık ikiye katlanırken sonraki adım 100.000'i aşınca
+    doğrudan "ulaşılamıyor" dönülüyordu; sınırın ALTINDAKİ son geçerli
+    aday hedefi karşılıyor olsa bile.
+  */
+  test("üst sınıra yakın geçerli örneklem atlanmıyor", () => {
+    const r = ornekemBuyuklugu({ ...taban, etki: 0.01775 });
+    assert.equal(r.engel, null, "sınırın altında geçerli aday var, bulunmalı");
+    if (r.engel !== null) return;
+    assert.ok(r.n <= EN_COK_N && r.n > 99000, `N=${r.n}`);
+    assert.ok(r.ulasilanGuc >= 0.8);
+    assert.ok((r.birKucukGuc as number) < 0.8, "bir önceki aday hedefin altında");
+  });
+
+  test("dönen her sonuçta hedef karşılanıyor ve bir önceki aday altında", () => {
+    const denemeler: GucGirdisi[] = [
+      taban,
+      { ...taban, yon: "tek" },
+      { ...taban, dagilimOrani: 3 },
+      { yontem: "eslestirilmisT", etki: 0.4, alfa: 0.05, hedefGuc: 0.9, yon: "iki" },
+      { yontem: "tekYonluAnova", etki: 0.2, alfa: 0.01, hedefGuc: 0.85, grupSayisi: 5 },
+      { yontem: "korelasyon", etki: 0.2, alfa: 0.05, hedefGuc: 0.8, yon: "iki" },
+      { yontem: "regresyon", etki: 0.1, alfa: 0.05, hedefGuc: 0.9, yordayiciSayisi: 4 },
+    ];
+    for (const g of denemeler) {
+      const r = ornekemBuyuklugu(g);
+      assert.equal(r.engel, null, JSON.stringify(g));
+      if (r.engel !== null) continue;
+      const simdi = gucDegeri(g, r.n);
+      assert.ok(typeof simdi === "number" && simdi >= g.hedefGuc, `${JSON.stringify(g)}: ${simdi} < ${g.hedefGuc}`);
+      const onceki = gucDegeri(g, r.n - r.adim);
+      assert.ok(typeof onceki === "number" && onceki < g.hedefGuc, `${JSON.stringify(g)}: bir önceki ${onceki} hedefin altında olmalı`);
+    }
+  });
+
+  /*
+    REGRESYON 3. `new Array(2.5)` RangeError atıyordu: kullanıcı sebep
+    yerine çökme görüyordu.
+  */
+  test("tam sayı olmayan grup ve yordayıcı sayısı alan hatasıyla reddediliyor", () => {
+    for (const k of [2.5, 3.1, Math.PI, NaN, Infinity]) {
+      const r = ornekemBuyuklugu({ yontem: "tekYonluAnova", etki: 0.25, alfa: 0.05, hedefGuc: 0.8, grupSayisi: k });
+      assert.equal(r.engel, "grup-gecersiz", `k=${k}`);
+      assert.equal((gucDegeri({ yontem: "tekYonluAnova", etki: 0.25, alfa: 0.05, hedefGuc: 0.8, grupSayisi: k }, 60) as { engel: string }).engel, "grup-gecersiz");
+    }
+    for (const p of [1.5, 2.7, NaN, Infinity]) {
+      const r = ornekemBuyuklugu({ yontem: "regresyon", etki: 0.15, alfa: 0.05, hedefGuc: 0.8, yordayiciSayisi: p });
+      assert.equal(r.engel, "yordayici-gecersiz", `p=${p}`);
+    }
+  });
+
+  test("geçerli grup sayısında ANOVA dizi hatası vermiyor", () => {
+    for (const k of [2, 3, 7]) {
+      const r = ornekemBuyuklugu({ yontem: "tekYonluAnova", etki: 0.3, alfa: 0.05, hedefGuc: 0.8, grupSayisi: k });
+      assert.ok(r.engel === null && r.grupBasina?.length === k);
+      assert.ok((r.grupBasina as number[]).every(Number.isInteger), `k=${k} grup başına tam sayı`);
+      assert.equal((r.grupBasina as number[]).reduce((a, b) => a + b, 0), r.n);
+    }
+  });
+
   test("geçersiz girişlerin her biri kendi sebebini veriyor", () => {
     const durumlar: [Partial<GucGirdisi>, GucEngel][] = [
       [{ etki: 0 }, "etki-gecersiz"],
