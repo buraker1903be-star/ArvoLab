@@ -72,7 +72,15 @@ NOKTALAR = [
     ("r001-iki", 0.01, 0.05, "iki", 78500),
     ("r001-iki", 0.01, 0.05, "iki", 100000),
     ("r02-iki", 0.2, 0.05, "iki", 20000),
+    # UÇ ρ, KÜÇÜK N: dağılım r = 1 ucunda yoğunlaşıyor ve asimptotik σ
+    # yayılımı dar gösteriyor. Ret bölgesinin TAMAMI integre ediliyor.
+    ("r099-iki", 0.99, 0.10, "iki", 5),
+    ("r099-iki", 0.99, 0.10, "iki", 6),
+    ("r099-iki", 0.99, 0.10, "iki", 7),
 ]
+
+# ρ ± 16σ penceresinin attığı olasılık: düzeltmeden önceki kusurun ölçüsü.
+PENCERE_OLCUMU = [("r099-iki", 0.99, 0.10, "iki", 5), ("r099-iki", 0.99, 0.10, "iki", 6)]
 
 
 def main():
@@ -92,6 +100,23 @@ def main():
         cikti["noktalar"].append({"ad": ad, "rho": rho, "alfa": alfa, "yon": yon, "n": n, "guc": float(p),
                                   "gucMetin": mp.nstr(p, 25)})
         print(f"  {ad:10s} n={n:7d}  guc={mp.nstr(p, 18)}")
+    cikti["pencereOlcumu"] = []
+    for ad, rho, alfa, yon, n in PENCERE_OLCUMU:
+        tc = stats.t.ppf(1 - alfa / 2, n - 2)
+        rc = mp.mpf(tc) / mp.sqrt(mp.mpf(tc) ** 2 + n - 2)
+        sigma = (1 - mp.mpf(rho) ** 2) / mp.sqrt(n)
+        alt = max(rc, mp.mpf(rho) - 16 * sigma)
+        tam = guc(n, rho, alfa, yon)
+        pencere = mp.quad(lambda r: yogunluk(r, rho, n), [alt, mp.mpf(rho), mp.mpf(1)]) if alt < 1 else mp.mpf(0)
+        atilan = tam - pencere
+        cikti["pencereOlcumu"].append({
+            "ad": ad, "rho": rho, "alfa": alfa, "yon": yon, "n": n,
+            "kritikR": float(rc), "pencereAlt": float(alt),
+            "tamGuc": float(tam), "pencereyleGuc": float(pencere), "atilanOlasilik": float(atilan),
+        })
+        print(f"  PENCERE {ad} n={n}: ret bolgesi [{mp.nstr(rc,8)}, 1], pencere [{mp.nstr(alt,8)}, 1], "
+              f"atilan={mp.nstr(atilan,8)}")
+
     yol = os.path.join("tests", "fixtures", "korelasyon-guc-mp.json")
     os.makedirs(os.path.dirname(yol), exist_ok=True)
     with open(yol, "w", encoding="utf-8") as f:

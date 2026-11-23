@@ -313,31 +313,72 @@ export function korelasyonYogunlugu(r: number, rho: number, n: number): number {
   return l === -Infinity ? 0 : Math.exp(l);
 }
 
-/*
-  Yoğunluğun [a, b] aralığındaki Simpson integrali.
-
-  PENCERE N'E GÖRE DARALIYOR. r'nin standart hatası yaklaşık
-  (1 − ρ²)/√n; N büyüdükçe yoğunluk ρ çevresinde daralıyor ve sabit
-  aralıkta sabit adımla integral alınca tepe birkaç noktaya düşüyordu
-  (N = 78.500'de adım, tepe genişliğinden büyüktü). Artık integral
-  yalnızca ρ ± 16σ penceresinde alınıyor; dışarıda yoğunluk 1e-50'nin
-  altında ve aralık dışıysa integral sıfır.
-*/
-function korelasyonAlani(a: number, b: number, rho: number, n: number, adim = 2000): number {
-  const sigma = Math.max((1 - rho * rho) / Math.sqrt(Math.max(n, 5)), 1e-9);
-  const alt = Math.max(a, Math.max(-1, rho - 16 * sigma));
-  const ust = Math.min(b, Math.min(1, rho + 16 * sigma));
-  if (!(ust > alt)) return 0;
-  const h = (ust - alt) / adim;
+/* Bir alt aralığın Simpson integrali; yoğunluk sonlu değilse NaN. */
+function simpsonParca(a: number, b: number, rho: number, n: number, adim: number): number {
+  if (!(b > a)) return 0;
+  const h = (b - a) / adim;
   let toplam = 0;
   for (let i = 0; i <= adim; i += 1) {
-    const r = alt + i * h;
+    const r = a + i * h;
     const w = i === 0 || i === adim ? 1 : i % 2 === 1 ? 4 : 2;
     const y = korelasyonYogunlugu(r, rho, n);
     if (!Number.isFinite(y)) return NaN;
     toplam += w * y;
   }
   return (toplam * h) / 3;
+}
+
+/*
+  ±1 UCUNA DEĞEN PARÇADA DEĞİŞKEN DÖNÜŞÜMÜ. Yoğunlukta
+  (1 − r²)^((n−4)/2) var; küçük örneklemde (n = 5 → üs 1/2) bu, r → ±1'de
+  türevi sonsuz olan bir karekök. Düz Simpson orada yavaş yakınsıyor:
+  n = 5, ρ = 0,99'da 2.000 aralıkla hata 2,0e-4 kalıyordu. r = 1 − u²
+  (ya da r = −1 + u²) koyunca Jacobian 2u, karekökü sadeleştiriyor ve
+  integral 200 aralıkta bile 12 basamak oturuyor.
+*/
+function ucParcasi(ic: number, uc: 1 | -1, rho: number, n: number, adim: number): number {
+  const U = Math.sqrt(uc === 1 ? 1 - ic : ic + 1);
+  if (!(U > 0)) return 0;
+  const h = U / adim;
+  let toplam = 0;
+  for (let i = 0; i <= adim; i += 1) {
+    const u = i * h;
+    const r = uc === 1 ? 1 - u * u : -1 + u * u;
+    const w = i === 0 || i === adim ? 1 : i % 2 === 1 ? 4 : 2;
+    const y = korelasyonYogunlugu(r, rho, n) * 2 * u;
+    if (!Number.isFinite(y)) return NaN;
+    toplam += w * y;
+  }
+  return (toplam * h) / 3;
+}
+
+/*
+  Yoğunluğun [a, b] aralığındaki integrali.
+
+  BÜTÜN ARALIK İNTEGRE EDİLİYOR; TEPE PENCERESİ YALNIZCA ÇÖZÜNÜRLÜĞÜ
+  YÖNLENDİRİYOR. Büyük N'de yoğunluk ρ çevresinde daraldığı için sabit
+  ızgara tepeyi kaçırıyordu; bunun için ρ ± 16σ penceresi eklenmişti
+  (σ ≈ (1 − ρ²)/√n). Ama o pencereyle SINIRLI kalmak, asimptotik σ'nın
+  yayılımı olduğundan dar gösterdiği yerlerde olasılık ATIYORDU:
+  ρ = 0,99 ve n = 5'te ret bölgesi [0,805, 1] iken pencere [0,848, 1]
+  kalıyor, 0,0025'lik olasılık düşüyor ve güç 0,99604 yerine 0,99356
+  çıkıyordu — hedef 0,995 olduğunda arama N = 5 yerine N = 6 diyordu.
+  Artık aralık üçe bölünüyor: tepe sık ızgarayla, iki yanı kendi
+  ızgaralarıyla; ±1'e değen parça dönüşümle. Kapsam tam, çözünürlük
+  tepede ve uçta.
+*/
+function korelasyonAlani(a: number, b: number, rho: number, n: number): number {
+  if (!(b > a)) return 0;
+  const sigma = Math.max((1 - rho * rho) / Math.sqrt(Math.max(n, 5)), 1e-9);
+  const tepeAlt = Math.min(Math.max(a, rho - 16 * sigma), b);
+  const tepeUst = Math.max(Math.min(b, rho + 16 * sigma), a);
+  const parca = (x: number, y: number, adim: number) => {
+    if (!(y > x)) return 0;
+    if (y === 1) return ucParcasi(x, 1, rho, n, adim);
+    if (x === -1) return ucParcasi(y, -1, rho, n, adim);
+    return simpsonParca(x, y, rho, n, adim);
+  };
+  return parca(a, tepeAlt, 1000) + parca(tepeAlt, tepeUst, 2000) + parca(tepeUst, b, 1000);
 }
 
 /**

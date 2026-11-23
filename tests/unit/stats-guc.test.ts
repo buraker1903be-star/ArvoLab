@@ -156,6 +156,7 @@ describe("korelasyonda tam dağılım, yaklaşıklık değil", () => {
 const MP = JSON.parse(readFileSync("tests/fixtures/korelasyon-guc-mp.json", "utf8")) as {
   uretim: { basamak: number; tolerans: { guc: number } };
   noktalar: { ad: string; rho: number; alfa: number; yon: "iki" | "tek"; n: number; guc: number; gucMetin: string }[];
+  pencereOlcumu: { ad: string; rho: number; alfa: number; yon: "iki" | "tek"; n: number; kritikR: number; pencereAlt: number; tamGuc: number; pencereyleGuc: number; atilanOlasilik: number }[];
 };
 
 describe("korelasyonda büyük N: tam güç hesabı", () => {
@@ -218,6 +219,53 @@ describe("korelasyonda büyük N: tam güç hesabı", () => {
       if (r.engel !== null) continue;
       assert.ok(Math.abs(r.ulasilanGuc - mpCozum.guc) < MP.uretim.tolerans.guc);
       assert.ok(Math.abs((r.birKucukGuc as number) - mpOnceki.guc) < MP.uretim.tolerans.guc);
+    }
+  });
+
+  /*
+    UÇ ρ ve KÜÇÜK N (23.11.2026 regresyonu). ρ ± 16σ penceresiyle
+    SINIRLI integral, asimptotik σ'nın yayılımı dar gösterdiği yerlerde
+    olasılık atıyordu: ρ = 0,99, α = 0,10, çift yönlü, n = 5'te ret
+    bölgesi [0,805, 1] iken pencere [0,848, 1] kalıyor ve 0,00248'lik
+    olasılık düşüyordu. Güç 0,99604 yerine 0,99356 çıkıyor, hedef
+    0,995 olduğunda arama N = 5 yerine N = 6 diyordu.
+  */
+  test("ρ = 0,99 · α = .10 · çift yönlü · n = 5 gücü tam integralle doğru", () => {
+    const mpNokta = MP.noktalar.find((x) => x.rho === 0.99 && x.n === 5);
+    assert.ok(mpNokta, "referansta ρ=0,99 n=5 yok");
+    const v = gucKorelasyon(5, 0.99, 0.1, "iki");
+    assert.ok(Number.isFinite(v));
+    assert.ok(Math.abs(v - mpNokta.guc) < MP.uretim.tolerans.guc, `${v} ≠ ${mpNokta.gucMetin}`);
+    assert.ok(v >= 0.995, "n = 5 zaten hedefi karşılıyor");
+  });
+
+  test("ρ = 0,99 · hedef .995 aramasında N = 5 dönüyor", () => {
+    const r = ornekemBuyuklugu({ yontem: "korelasyon", etki: 0.99, alfa: 0.1, hedefGuc: 0.995, yon: "iki" });
+    assert.equal(r.engel, null);
+    if (r.engel !== null) return;
+    assert.equal(r.n, 5, "eskiden pencere olasılık attığı için 6 dönüyordu");
+    const mpNokta = MP.noktalar.find((x) => x.rho === 0.99 && x.n === 5);
+    assert.ok(mpNokta && Math.abs(r.ulasilanGuc - mpNokta.guc) < MP.uretim.tolerans.guc);
+    /* 5 en küçük geçerli örneklem: bir öncesi yok. */
+    assert.equal(r.birKucukGuc, null);
+  });
+
+  test("pencerenin attığı olasılık ölçüldü ve artık atılmıyor", () => {
+    for (const o of MP.pencereOlcumu) {
+      /* Referans, kusurun büyüklüğünü sayıyla gösteriyor. */
+      assert.ok(o.atilanOlasilik > 1e-3, `${o.ad} n=${o.n}: atılan ${o.atilanOlasilik}`);
+      assert.ok(o.pencereAlt > o.kritikR, "pencere, ret bölgesinin altını kesiyordu");
+      /* ArvoLab artık TAM gücü veriyor, pencereyle sınırlı olanı değil. */
+      const v = gucKorelasyon(o.n, o.rho, o.alfa, o.yon);
+      assert.ok(Math.abs(v - o.tamGuc) < MP.uretim.tolerans.guc, `${o.ad} n=${o.n}: ${v} ≠ ${o.tamGuc}`);
+      assert.ok(Math.abs(v - o.pencereyleGuc) > 1e-3, "pencereyle sınırlı değer raporlanmamalı");
+    }
+  });
+
+  test("yoğunluk ±1 ucunda yoğunlaşan desenlerde de integral 1'e tamamlanıyor", () => {
+    for (const [n, rho] of [[5, 0.99], [5, 0.0], [6, 0.95], [8, -0.9], [40, 0.8]] as [number, number][]) {
+      const ust = gucKorelasyon(n, rho, 0.999999, "iki");
+      assert.ok(Math.abs(ust - 1) < 1e-5, `n=${n} ρ=${rho}: toplam olasılık ${ust}`);
     }
   });
 
