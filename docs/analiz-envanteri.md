@@ -229,8 +229,8 @@ analiz bulunmadı**: 25 adın 25'i gerçekten hesaplanıyor.
 
 ## Düzeltilen kusurlar (23.11.2026)
 
-Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan dört
-kusur. Dördü de hesabın kendisinde değil, **hesaplanamayan durumun
+Bağımsız doğrulama sırasında bulunan ve aynı pakette kapatılan altı
+kusur. Altısı da hesabın kendisinde değil, **sonucun
 bildirilmesinde**:
 
 1. **Hesaplanamayan çift "anlamlı değil" diye görünüyordu.** Farkların
@@ -273,6 +273,33 @@ bildirilmesinde**:
    artık üç değerli bir yardımcıdan geçiyor (`pHukmu`,
    `lib/apa-format.ts`): "hesaplanamadi" durumu TÜRDE zorunlu olduğu
    için çağıran yer onu atlayamıyor.
+
+5. **Hesaplanamayan etkileşimde ana etkilerin yorumlanması
+   öneriliyordu.** Karma ANOVA sonucunun üstünde "p hesaplanamadı;
+   etkileşim hakkında hüküm verilemez" yazarken, altındaki paragraf
+   "Etkileşim anlamlı olmadığı için … ana etkileri tablodaki gibi
+   yorumlanır" diyordu: iki cümle birbirini çürütüyor ve ikincisi
+   yapılmamış bir testin sonucuna dayanan bir yönergeydi. O paragraf
+   artık YALNIZCA `etkilesimHukmu === "anlamsiz"` dalında çiziliyor;
+   hesaplanamayan durumda yerine, ana etkileri "etkileşim anlamlı
+   değil" varsayarak yorumlamamayı söyleyen bir uyarı var.
+
+6. **Düzeltilmiş p düzeltilmemiş serbestlik dereceleriyle
+   yazılıyordu.** Grup içi zaman etkisinde Greenhouse-Geisser'li p
+   raporlanırken F satırındaki pay/payda sd ham kalıyordu; okuyan kişi
+   "F(2, 22) = …, p(GG) = …" diye, iki sayısı iki ayrı testten gelen
+   bir satır raporluyordu. Sd'ler artık o grubun KENDİ epsilon'uyla
+   çarpılıyor (ekranda iki ondalıkla) ve epsilon satırda yazılı; aile
+   içi Bonferroni (p × grup sayısı) korunuyor. Düzeltme
+   üretilemediğinde "uygulandı" mesajı çıkmıyor, düzeltilmiş p ve
+   sd'nin hesaplanamadığı açıkça yazılıyor ve hüküm verilmiyor.
+
+   Beklenen sd ve Bonferroni sonrası p değerleri ArvoLab'ın kodundan
+   değil, **pingouin** ile ayrıca üretildi
+   (`scripts/referans/grup-ici-zaman-referans.py` →
+   `tests/fixtures/grup-ici-zaman-referans.json`); birim testi
+   `tests/unit/karma-grup-ici-zaman.test.ts`, gerçek arayüz sınaması
+   `scripts/yerel-yigin/analiz-alani-kabul.mjs` S14f–S14h.
 
 Sonuç tablosunun başlığı çoklu karşılaştırma düzeltmesinin adını açıkça
 yazıyor: "İkili karşılaştırmalar (eşleştirilmiş t, **Bonferroni

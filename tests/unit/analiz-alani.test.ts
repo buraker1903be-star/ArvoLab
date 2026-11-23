@@ -200,10 +200,47 @@ describe("ikili karşılaştırmaların arayüz sözleşmesi", () => {
     assert.match(analizci, /p hesaplanamadı; hüküm verilemez/);
   });
 
+  /*
+    Buradaki eşleşmeler yalnızca SÖZLEŞMEYİ sabitler: hesabın kendisi
+    tests/unit/karma-grup-ici-zaman.test.ts'te bağımsız referansa
+    (pingouin) karşı, gerçek arayüzde ise analiz-alani-kabul.mjs
+    S14f–S14h'de sınanıyor.
+  */
   test("grup içi zaman etkisinde küresellik ayrı denetleniyor", () => {
-    assert.match(analizci, /const ggKullan = cokOlcum && \(!ta\.kuresellikDenetlendi \|\| isSignificant\(ta\.mauchlyP\)\);/);
-    assert.match(analizci, /p: Number\.isFinite\(pp\) \? Math\.min\(1, pp \* groupLevels\.length\) : NaN,/);
+    assert.match(analizci, /const ggGerekli = cokOlcum && \(!ta\.kuresellikDenetlendi \|\| isSignificant\(ta\.mauchlyP\)\);/);
+    assert.match(analizci, /const ggVar = Number\.isFinite\(ta\.ggEpsilon\) && ta\.ggEpsilon > 0 && Number\.isFinite\(ta\.ggP\);/);
     assert.match(analizci, /bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı/);
+    assert.match(analizci, /bu grupta küresellik sağlanmıyor; Greenhouse-Geisser düzeltmesi uygulandı/);
+  });
+
+  /*
+    SERBESTLİK DERECELERİ DE DÜZELTİLİR (23.11.2026). Eskiden F satırı
+    düzeltilmemiş sd ile yazılıp yanına GG'li p konuyordu; iki sayı
+    aynı testten gelmiyordu. Aile içi Bonferroni de korunmalı.
+  */
+  test("GG uygulanınca sd düzeltiliyor ve Bonferroni korunuyor", () => {
+    assert.match(analizci, /df1: ggUygulandi \? ta\.df1 \* ta\.ggEpsilon : ta\.df1,/);
+    assert.match(analizci, /df2: ggUygulandi \? ta\.df2 \* ta\.ggEpsilon : ta\.df2,/);
+    assert.match(analizci, /p: Number\.isFinite\(hamP\) \? Math\.min\(1, hamP \* groupLevels\.length\) : NaN,/);
+    /* Düzeltilmemiş sd tam sayı kalır; ondalıklı yazım düzeltmeyi gösterir. */
+    assert.match(analizci, /const sd = \(v: number\) => \(b\.dfDuzeltildi \? yazSayi\(v, 2\) : String\(v\)\);/);
+    assert.match(analizci, /düzeltilmiş p ve serbestlik dereceleri hesaplanamadı; hüküm verilemez/);
+    /* Üretilemeyen düzeltme "uygulandı" diye yazılmamalı. */
+    assert.match(analizci, /bu grupta küresellik denetlenemedi ve Greenhouse-Geisser düzeltmesi de üretilemedi/);
+  });
+
+  /*
+    HESAPLANAMAYAN ETKİLEŞİMDE ANA ETKİ YÖNLENDİRMESİ YOK. "Etkileşim
+    anlamlı olmadığı için…" paragrafı YALNIZCA "anlamsiz" dalında
+    çizilmeli; eskiden hesaplanamayan durumda da çıkıyor ve üstteki
+    "hüküm verilemez" satırıyla çelişiyordu.
+  */
+  test("çelişkili ana etki paragrafı yalnızca gerçekten anlamsızken", () => {
+    assert.match(analizci, /\) : etkilesimHukmu === "anlamsiz" \? \(/);
+    assert.match(analizci, /Etkileşim anlamlı olmadığı için \$\{groupVar\}/);
+    assert.match(analizci, /varsayarak yorumlamayın/);
+    /* Yönlendirme cümlesi tek yerde: ikinci bir kopya sessizce geri gelmesin. */
+    assert.equal(analizci.match(/Etkileşim anlamlı olmadığı için/g)?.length, 1);
   });
 
   test("ikili karşılaştırmalar yalnızca ANOVA anlamlıyken çiziliyor", () => {

@@ -2084,15 +2084,35 @@ export default function DataAnalyzer({
                 gibi. Denetlenemediğinde temkinli taraf (GG) uygulanıyor.
               */
               const cokOlcum = olcumler.length > 2;
-              const ggKullan = cokOlcum && (!ta.kuresellikDenetlendi || isSignificant(ta.mauchlyP));
-              const pp = ggKullan ? ta.ggP : ta.p;
+              /* GG gerekiyor mu: küresellik denetlenemediyse ya da bozuksa. */
+              const ggGerekli = cokOlcum && (!ta.kuresellikDenetlendi || isSignificant(ta.mauchlyP));
+              /*
+                GG ÜRETİLEBİLDİ Mİ: epsilon ve düzeltilmiş p'nin ikisi de
+                sonlu olmalı. Tekil kovaryansta epsilon da düşebiliyor;
+                o zaman düzeltilmiş sd ve p üretilemez.
+              */
+              const ggVar = Number.isFinite(ta.ggEpsilon) && ta.ggEpsilon > 0 && Number.isFinite(ta.ggP);
+              const ggUygulandi = ggGerekli && ggVar;
+              const duzeltmeBasarisiz = ggGerekli && !ggVar;
+              /*
+                SERBESTLİK DERECELERİ DE DÜZELTİLİR. Eskiden F satırında
+                düzeltilmemiş sd yazılıp yanına düzeltilmiş p konuyordu;
+                okuyan kişi F(2, 14) = … , p(GG) eşleşmesini raporlayınca
+                tutarsız bir satır yazmış oluyordu.
+              */
+              const hamP = ggUygulandi ? ta.ggP : ggGerekli ? NaN : ta.p;
               return {
                 ad: g,
                 f: ta.f,
-                df1: ta.df1,
-                df2: ta.df2,
-                p: Number.isFinite(pp) ? Math.min(1, pp * groupLevels.length) : NaN,
+                df1: ggUygulandi ? ta.df1 * ta.ggEpsilon : ta.df1,
+                df2: ggUygulandi ? ta.df2 * ta.ggEpsilon : ta.df2,
+                dfDuzeltildi: ggUygulandi,
+                epsilon: ta.ggEpsilon,
+                /* Aile içi Bonferroni korunuyor: grup sayısı kadar çarpılıyor. */
+                p: Number.isFinite(hamP) ? Math.min(1, hamP * groupLevels.length) : NaN,
                 kuresellikBelirsiz: cokOlcum && !ta.kuresellikDenetlendi,
+                ggUygulandi,
+                duzeltmeBasarisiz,
               };
             })
           : [];
@@ -2224,30 +2244,57 @@ export default function DataAnalyzer({
                   })}
                   {gruptaZaman.map((b) => {
                     const hukum = pHukmu(b.p);
+                    /* Düzeltilmiş sd ondalıklı yazılır; düzeltilmemiş tam sayı. */
+                    const sd = (v: number) => (b.dfDuzeltildi ? yazSayi(v, 2) : String(v));
                     return (
                       <li key={`g-${b.ad}`}>
-                        {t({ tr: `${b.ad} grubunda zaman`, en: `Time within group ${b.ad}` })}: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
+                        {t({ tr: `${b.ad} grubunda zaman`, en: `Time within group ${b.ad}` })}: F({sd(b.df1)}, {sd(b.df2)}) = {yazSayi(b.f)}, {yazP(b.p)}
                         {hukum === "anlamli"
                           ? t({ tr: " — değişim anlamlı", en: " — the change is significant" })
                           : hukum === "anlamsiz"
                             ? t({ tr: " — değişim anlamlı değil", en: " — the change is not significant" })
-                            : t({ tr: " — p hesaplanamadı; hüküm verilemez", en: " — p could not be computed; no verdict is possible" })}
-                        {b.kuresellikBelirsiz
-                          ? t({
-                              tr: " (bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı)",
-                              en: " (sphericity could not be checked in this group; the Greenhouse-Geisser correction was applied)",
-                            })
-                          : ""}
+                            : t({ tr: " — düzeltilmiş p ve serbestlik dereceleri hesaplanamadı; hüküm verilemez", en: " — the corrected p and degrees of freedom could not be computed; no verdict is possible" })}
+                        {b.ggUygulandi
+                          ? b.kuresellikBelirsiz
+                            ? t({
+                                tr: ` (bu grupta küresellik denetlenemedi; Greenhouse-Geisser düzeltmesi uygulandı, ε = ${yazSayi(b.epsilon, 3)})`,
+                                en: ` (sphericity could not be checked in this group; the Greenhouse-Geisser correction was applied, ε = ${yazSayi(b.epsilon, 3)})`,
+                              })
+                            : t({
+                                tr: ` (bu grupta küresellik sağlanmıyor; Greenhouse-Geisser düzeltmesi uygulandı, ε = ${yazSayi(b.epsilon, 3)})`,
+                                en: ` (sphericity is violated in this group; the Greenhouse-Geisser correction was applied, ε = ${yazSayi(b.epsilon, 3)})`,
+                              })
+                          : b.duzeltmeBasarisiz
+                            ? t({
+                                tr: " (bu grupta küresellik denetlenemedi ve Greenhouse-Geisser düzeltmesi de üretilemedi)",
+                                en: " (sphericity could not be checked in this group and the Greenhouse-Geisser correction could not be produced either)",
+                              })
+                            : ""}
                       </li>
                     );
                   })}
                 </ul>
               </div>
-            ) : (
+            ) : etkilesimHukmu === "anlamsiz" ? (
               <p className="muted text-sm">
                 {t({
                   tr: `Etkileşim anlamlı olmadığı için ${groupVar} ve ölçüm ana etkileri tablodaki gibi yorumlanır.`,
                   en: `Because the interaction is not significant, the main effects of ${groupVar} and measurement are interpreted as shown in the table.`,
+                })}
+              </p>
+            ) : (
+              /*
+                HESAPLANAMAYAN ETKİLEŞİMDE YÖNLENDİRME YOK (23.11.2026).
+                Bu dal eskiden "anlamsiz" ile birlikteydi: üstte "hüküm
+                verilemez" yazarken altta "etkileşim anlamlı olmadığı
+                için ana etkileri yorumlayın" deniyordu. İki cümle
+                birbirini çürütüyor ve ikincisi, yapılmamış bir testin
+                sonucuna dayanan bir yönergeydi.
+              */
+              <p className="alert mt-sm" data-tone="warning" role="status">
+                {t({
+                  tr: `Etkileşimin düzeltilmiş p değeri hesaplanamadı; etkileşim hakkında hüküm verilemez. Ana etkileri "etkileşim anlamlı değil" varsayarak yorumlamayın. Bu çoğunlukla ölçümlerden birinin bir diğerinin sabit kaydırılmışı olmasından kaynaklanır — ölçüm sütunlarını gözden geçirin.`,
+                  en: `The corrected p value for the interaction could not be computed, so no verdict about the interaction is possible. Do not interpret the main effects on the assumption that the interaction is non-significant. This usually happens when one measurement is a constant shift of another — review your measurement columns.`,
                 })}
               </p>
             )}
