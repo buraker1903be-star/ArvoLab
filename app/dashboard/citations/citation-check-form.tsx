@@ -1,7 +1,7 @@
 "use client";
 
 import { asistanCagir } from "@/lib/asistan-istemci";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import AsistanSonuc from "../_components/asistan-sonuc";
@@ -31,6 +31,7 @@ import { stilAdi, type AtifTuru } from "@/lib/atif/stiller";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
+import { bulguAnahtari } from "@/lib/kaynakca-bulgulari";
 import { kaynakcaOzeti } from "@/lib/kaynakca-ozeti";
 
 interface Project {
@@ -127,6 +128,7 @@ export default function CitationCheckForm({
   oncekiSonuc = null,
   asistanGecmisi = [],
   kaynakPdfleri = [],
+  vurgulananBulgu = null,
 }: {
   projects: Project[];
   asistanAcik: boolean;
@@ -145,6 +147,14 @@ export default function CitationCheckForm({
   oncekiSonuc?: (CheckResult & { tarih: string }) | null;
   /** Bu çalışmanın kayıtlı asistan yorumları (penceredeki "Geçmiş sorgular"). */
   asistanGecmisi?: GecmisKaydi[];
+  /*
+    Kaynakça kartındaki bulgu satırından gelen künye/atıf anahtarı
+    (lib/kaynakca-bulgulari.ts bulguAnahtari). Sonuç ekranı o kaydı
+    vurgulayıp görünür kılıyor: ok, TIKLANAN bulgunun ayrıntısına
+    götürmeli; eskiden yalnızca ekranı açıyordu ve öğrenci uzun
+    listede kendi künyesini arıyordu.
+  */
+  vurgulananBulgu?: string | null;
   /** Bu çalışmanın kaynak PDF kayıtları (kaynak_pdfleri). */
   kaynakPdfleri?: PdfSatiri[];
 }) {
@@ -220,6 +230,29 @@ export default function CitationCheckForm({
     }));
   };
   const [kunyeSuzgeci, setKunyeSuzgeci] = useState<"hepsi" | "dikkat" | "tamam">("hepsi");
+  /* Vurgulanan kayıt: anahtarı eşleşen künye/atıf. */
+  const vurguluMu = useCallback(
+    (ham: string) => Boolean(vurgulananBulgu) && bulguAnahtari(ham) === vurgulananBulgu,
+    [vurgulananBulgu],
+  );
+  /*
+    Vurgulanan kayıt ekrana getiriliyor. Pencere açılırken içerik
+    sonradan yerleşiyor; bir kez deneyip bırakmak yerine kısa bir süre
+    aranıyor.
+  */
+  useEffect(() => {
+    if (!vurgulananBulgu) return;
+    let kalan = 20;
+    const zaman = setInterval(() => {
+      const hedef = document.querySelector<HTMLElement>("[data-vurgulu='true']");
+      kalan -= 1;
+      if (hedef) {
+        hedef.scrollIntoView({ block: "center" });
+        clearInterval(zaman);
+      } else if (kalan <= 0) clearInterval(zaman);
+    }, 150);
+    return () => clearInterval(zaman);
+  }, [vurgulananBulgu]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
@@ -601,12 +634,12 @@ export default function CitationCheckForm({
               ) : (
                 <ul className="result-list">
                   {atifsizKaynak.map((reference, index) => (
-                    <li key={`k${index}`} className="tone-text" data-tone="warning">
+                    <li key={`k${index}`} className="tone-text" data-tone="warning" data-vurgulu={vurguluMu(reference.raw) || undefined}>
                       {t({ tr: "Kaynakçada var, metinde atfı yok:", en: "In the reference list but not cited in the text:" })} {reference.raw}
                     </li>
                   ))}
                   {kaynaksizAtif.map((citation, index) => (
-                    <li key={`a${index}`} className="tone-text" data-tone="danger">
+                    <li key={`a${index}`} className="tone-text" data-tone="danger" data-vurgulu={vurguluMu(citation.raw) || undefined}>
                       {t({ tr: "Metinde atıf var, kaynakçada yok:", en: "Cited in the text but missing from the reference list:" })} {citation.raw}
                     </li>
                   ))}
@@ -708,7 +741,7 @@ export default function CitationCheckForm({
                 const eslesme = dogrulama?.bestMatch ?? null;
                 if (kunyeSuzgeci !== "hepsi" && (kunyeSuzgeci === "dikkat") !== dikkatIster(reference)) return null;
                 return (
-                  <article key={index} className="result-item kunye-kart" data-tone={meta.tone}>
+                  <article key={index} className="result-item kunye-kart" data-tone={meta.tone} data-vurgulu={vurguluMu(reference.raw) || undefined}>
                     <div className="kunye-kart-bas">
                       <span className="kunye-no" aria-hidden="true">{index + 1}</span>
                       <p className="kunye-metin">{reference.raw}</p>

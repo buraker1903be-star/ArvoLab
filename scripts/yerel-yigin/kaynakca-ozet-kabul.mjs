@@ -291,6 +291,36 @@ try {
       return `sayfa:${k.yatayTasma} kapsayici:${k.tasanKapsayici.join("|") || "yok"}`;
     }, (v) => /^sayfa:(-?\d+) kapsayici:yok/.test(v) && Number(v.match(/sayfa:(-?\d+)/)[1]) <= 0);
 
+    await esit("K1j iki AYRI bulgu kendi ayrıntısını açıyor", async () => {
+      const bulunan = [];
+      for (const i of [0, 1]) {
+        await kaynakcaya(s, P_BICIM);
+        const satir = s.locator(".kaynakca-bulgular .kaynakca-liste a").nth(i);
+        const beklenen = (await satir.locator("b").innerText()).trim();
+        await satir.click();
+        await s.waitForTimeout(1800);
+        const vurgulu = s.locator(".drawer-root.open [data-vurgulu='true']");
+        const metin = (await vurgulu.count()) ? (await vurgulu.first().innerText()).trim() : "";
+        bulunan.push({ beklenen, metin, dogru: metin.includes(beklenen) });
+      }
+      return [
+        `ilk:${bulunan[0].dogru}`,
+        `ikinci:${bulunan[1].dogru}`,
+        /* İki tıklama AYNI kaydı açmamalı. */
+        `farkli:${bulunan[0].beklenen !== bulunan[1].beklenen && bulunan[0].metin !== bulunan[1].metin}`,
+      ].join(" ");
+    }, "ilk:true ikinci:true farkli:true");
+
+    await esit("K1k 'Sonuçları aç' genel denetim ekranını açıyor, vurgu yok", async () => {
+      await kaynakcaya(s, P_BICIM);
+      await s.locator(".kaynakca-serit-eylem").click();
+      await s.waitForTimeout(1500);
+      const acik = s.locator(".drawer-root.open section.drawer");
+      const metin = (await acik.count()) ? await acik.first().innerText() : "";
+      const vurgu = await s.locator(".drawer-root.open [data-vurgulu='true']").count();
+      return `pencere:${metin.length > 50} kunyeler:${/Sentetik çalışma 1/.test(metin) && /Sentetik çalışma 2/.test(metin)} vurgu:${vurgu}`;
+    }, "pencere:true kunyeler:true vurgu:0");
+
     await esit("K1i Kaynakça, Kütüphanem ile AYNI içerik sınırlarını kullanıyor", async () => {
       const olc = async (kaynakcaMi) => {
         await s.goto(`${UYG}/dashboard/literature?calisma=${P_BICIM}${kaynakcaMi ? "&sekme=kaynakca" : ""}`, { waitUntil: "domcontentloaded" });

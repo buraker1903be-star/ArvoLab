@@ -21,7 +21,7 @@ import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslMi } from "@/lib/atif/csl-kimlik";
 import type { CitationStyle } from "@/lib/citation-format";
 import { dikkatKategorileri, kaynakcaOzeti, otekiKategoriler, ozetVurgusu, type KategoriAnahtari } from "@/lib/kaynakca-ozeti";
-import { ayrintiVar, bulguSatirlari } from "@/lib/kaynakca-bulgulari";
+import { ayrintiVar, bulguAnahtari, bulguSatirlari } from "@/lib/kaynakca-bulgulari";
 import type { Metin } from "@/lib/dil";
 
 export async function generateMetadata() {
@@ -64,9 +64,9 @@ const SIRA: Durum[] = ["to_review", "read", "used"];
 export default async function KaynaklarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string; kaynak?: string; kapsam?: string; denetim?: string }>;
+  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string; sekme?: string; kaynak?: string; kapsam?: string; denetim?: string; bulgu?: string }>;
 }) {
-  const { calisma: istenen, doi: gelenDoi, ekle, sekme, kaynak: istenenKaynak, kapsam, denetim: istenenDenetim } = await searchParams;
+  const { calisma: istenen, doi: gelenDoi, ekle, sekme, kaynak: istenenKaynak, kapsam, denetim: istenenDenetim, bulgu: istenenBulgu } = await searchParams;
   const t = await ceviri();
   const { tarihSaat } = await tarihler();
   const [
@@ -439,6 +439,7 @@ export default async function KaynaklarPage({
                   calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
                   sonDenetim={sonDenetim ? { acikSorun: ozet?.acikSorun ?? null, tarih: sonDenetim.tarih } : null}
                   denetimId={secilenDenetim}
+                  vurgulananBulgu={istenenBulgu ?? null}
                   acikBasla={Boolean(secilenDenetim)}
                   triggerLabel={
                     secilenDenetim
@@ -476,9 +477,12 @@ export default async function KaynaklarPage({
                           */}
                           {gorunenBulgular.map((b, i) => (
                             <li key={`${b.anahtar}-${i}`}>
+                              {/* Ok, TIKLANAN künyenin/atfın ayrıntısına
+                                  gidiyor: sonuç ekranı o kaydı vurgulayıp
+                                  görünür kılıyor (bulgu=<anahtar>). */}
                               <Link
                                 className="kaynakca-satir"
-                                href={ayrintiAdresi}
+                                href={`${ayrintiAdresi}&bulgu=${bulguAnahtari(b.metin)}`}
                                 aria-label={`${t(KATEGORI_KISA[b.anahtar])}: ${b.metin}`}
                               >
                                 <span className="kaynakca-satir-govde">

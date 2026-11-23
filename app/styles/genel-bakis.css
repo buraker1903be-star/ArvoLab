@@ -1653,3 +1653,11 @@ a.kaynakca-satir:hover .kaynakca-satir-govde b { color: var(--primary-ink); }
   /* Ana eylem telefonda kartın genişliğini kullanıyor. */
   .kaynakca-serit .kaynakca-serit-eylem { width: 100%; justify-content: center; }
 }
+
+/* Kaynakça kartındaki bulgu satırından gelinen kayıt sonuç ekranında
+   vurgulanıyor: ok TIKLANAN künyeye götürmeli, kullanıcı uzun listede
+   kendi künyesini aramamalı. */
+[data-vurgulu="true"] {
+  border-radius: var(--kontrol-r);
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 6px var(--primary-soft);
+}

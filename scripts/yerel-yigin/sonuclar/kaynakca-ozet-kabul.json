@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-23T14:54:46.642Z",
-  "head": "d22945e461639418c5b9eefd97567784c24d1ac8",
-  "buildId": "lRs0DgJaHOHAAyXYJajED",
+  "tarih": "2026-11-23T15:08:22.643Z",
+  "head": "e99a1b85594365b699936fd8797fc7e83ea46713",
+  "buildId": "uzXTp4JVKTjNYD-qhqr2H",
   "uygulama": "http://localhost:3141",
-  "gecen": 36,
+  "gecen": 38,
   "dusen": 0,
   "sonuclar": [
     {
@@ -45,6 +45,16 @@
       "ad": "K1h yatay kaydırma yok; kaydırılabilir kapsayıcı da taşmıyor",
       "durum": "PASS",
       "not": "sayfa:0 kapsayici:yok"
+    },
+    {
+      "ad": "K1j iki AYRI bulgu kendi ayrıntısını açıyor",
+      "durum": "PASS",
+      "not": "ilk:true ikinci:true farkli:true"
+    },
+    {
+      "ad": "K1k 'Sonuçları aç' genel denetim ekranını açıyor, vurgu yok",
+      "durum": "PASS",
+      "not": "pencere:true kunyeler:true vurgu:0"
     },
     {
       "ad": "K1i Kaynakça, Kütüphanem ile AYNI içerik sınırlarını kullanıyor",

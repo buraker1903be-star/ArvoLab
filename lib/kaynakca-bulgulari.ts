@@ -73,6 +73,22 @@ export function bulguSatirlari(g: BulguGirdisi, metinler: { atifsiz: string; kar
   return satirlar.sort((a, b) => AGIRLIK[a.anahtar] - AGIRLIK[b.anahtar]);
 }
 
+/**
+ * Bulgunun KARARLI anahtarı: adrese konup sonuç ekranında aynı
+ * künyeyi/atfı bulmak için. Ham metin adrese sığmayacak kadar uzun ve
+ * değişken; sıra numarası ise denetim yeniden çalıştırılınca kayıyor.
+ * FNV-1a: saf, sunucuda ve tarayıcıda aynı sonucu veriyor.
+ */
+export function bulguAnahtari(metin: string): string {
+  const düz = metin.trim().replace(/\s+/g, " ").toLocaleLowerCase("tr");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < düz.length; i += 1) {
+    h ^= düz.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
 /** Bir kategorinin ayrıntısı var mı? Yoksa ekran kategori+adet satırına düşer. */
 export function ayrintiVar(satirlar: BulguSatiri[], anahtar: KategoriAnahtari): boolean {
   return satirlar.some((s) => s.anahtar === anahtar);
