@@ -50,7 +50,7 @@ export interface OzetGirdisi {
     referencesWithoutCitation: unknown[];
     citationsWithoutReference: unknown[];
   };
-  verificationSummary?: { notFound: number; unreachable?: number } | null;
+  verificationSummary?: { notFound: number; unreachable?: number; verified?: number; possible?: number } | null;
   dogrulananSayisi?: number | null;
   /**
    * Metinden çıkarılan atıflar. VERİLMEZSE (eski çağıranlar, editör)
@@ -84,6 +84,58 @@ export interface KaynakcaOzeti {
   ton: "success" | "warning" | "danger";
 }
 
+/*
+  EKRANDAKİ SIRA ve VURGU (23.11.2026 tasarım turu). Kart önce
+  İNCELENMESİ GEREKENLERİ gösteriyor; temiz ve denetlenmemiş
+  kategoriler "Tüm kontroller" altında kalıyor. Sıralama ağırlığa
+  göre: düzeltilmesi zorunlu olanlar (biçim hatası, karşılıksız atıf)
+  başta, geçici arıza (dizine ulaşılamayan) en sonda.
+*/
+const AGIRLIK: Record<KategoriAnahtari, number> = {
+  bicimHatali: 0,
+  karsiliksizAtif: 1,
+  bicimUyarili: 2,
+  atifsizKaynak: 3,
+  bulunamayan: 4,
+  kilavuzAtifi: 5,
+  ulasilamayan: 6,
+};
+
+/** Bulgusu olan kategoriler: ağırlığa göre sıralı. */
+export function dikkatKategorileri(o: KaynakcaOzeti): OzetKategorisi[] {
+  return o.kategoriler.filter((k) => k.olculdu && k.sayi > 0).sort((a, b) => AGIRLIK[a.anahtar] - AGIRLIK[b.anahtar]);
+}
+
+/** Temiz ve denetlenmemiş kategoriler: "Tüm kontroller" altında. */
+export function otekiKategoriler(o: KaynakcaOzeti): OzetKategorisi[] {
+  return o.kategoriler.filter((k) => !(k.olculdu && k.sayi > 0)).sort((a, b) => AGIRLIK[a.anahtar] - AGIRLIK[b.anahtar]);
+}
+
+export interface OzetVurgusu {
+  /** tek: tek tür bulgu var; coklu: birden çok; temiz: bulgu yok. */
+  tur: "tek" | "coklu" | "temiz";
+  /** tek ise o kategori. */
+  anahtar: KategoriAnahtari | null;
+  /** tek ise kategorinin sayısı, coklu ise açık sorun toplamı. */
+  sayi: number;
+  /** coklu ise kategori dağılımı (şeritte tek yerde yazılıyor). */
+  dagilim: OzetKategorisi[];
+}
+
+/**
+ * Şeritte ÖNE ÇIKAN ifade. Tek tür bulgu varsa türün kendisi yazılıyor
+ * ("2 biçim uyarısı"): "2 açık sorun" kullanıcıyı neyin sorun olduğunu
+ * aramaya gönderiyordu. Birden çok tür varsa toplam ve dağılım aynı
+ * şeritte; ayrı bir özet satırında TEKRARLANMIYOR.
+ */
+export function ozetVurgusu(o: KaynakcaOzeti): OzetVurgusu {
+  const dikkat = dikkatKategorileri(o);
+  const sayilan = dikkat.filter((k) => k.toplamaKatilir);
+  if (!dikkat.length) return { tur: "temiz", anahtar: null, sayi: 0, dagilim: [] };
+  if (dikkat.length === 1) return { tur: "tek", anahtar: dikkat[0].anahtar, sayi: dikkat[0].sayi, dagilim: [] };
+  return { tur: "coklu", anahtar: null, sayi: o.acikSorun, dagilim: sayilan };
+}
+
 export function kaynakcaOzeti(g: OzetGirdisi): KaynakcaOzeti {
   const kunye = g.references.length;
   const hatali = g.references.filter((r) => r.issues?.some((i) => i.severity === "error")).length;
@@ -100,7 +152,16 @@ export function kaynakcaOzeti(g: OzetGirdisi): KaynakcaOzeti {
   const bicimOlculdu = kunye > 0;
   /* citations verilmediyse eski çağırandır: ölçüldü sayılır. */
   const atifOlculdu = g.citations === undefined ? true : (g.citations?.length ?? 0) > 0;
-  const dizinOlculdu = (g.dogrulananSayisi ?? 0) > 0;
+  /*
+    Dizin ÖLÇÜLDÜ mü? Künye künye liste (academicVerification) en
+    güvenilir ölçü, ama eski kayıtlarda o liste olmadan yalnızca özet
+    sayıları duruyor. Özette bir hüküm varsa (doğrulandı + olası +
+    bulunamadı) denetim yapılmıştır; ayrıntı yoksa ekran kategori ve
+    adet satırına düşer, "denetlenmedi" demez.
+  */
+  const dizinHukmu =
+    (g.verificationSummary?.verified ?? 0) + (g.verificationSummary?.possible ?? 0) + (g.verificationSummary?.notFound ?? 0);
+  const dizinOlculdu = (g.dogrulananSayisi ?? 0) > 0 || dizinHukmu > 0;
   const kilavuzOlculdu = Array.isArray(g.tyk);
 
   const kategoriler: OzetKategorisi[] = [

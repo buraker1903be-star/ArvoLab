@@ -20,7 +20,8 @@ import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslMi } from "@/lib/atif/csl-kimlik";
 import type { CitationStyle } from "@/lib/citation-format";
-import { kaynakcaOzeti, type KategoriAnahtari } from "@/lib/kaynakca-ozeti";
+import { dikkatKategorileri, kaynakcaOzeti, otekiKategoriler, ozetVurgusu, type KategoriAnahtari } from "@/lib/kaynakca-ozeti";
+import { ayrintiVar, bulguSatirlari } from "@/lib/kaynakca-bulgulari";
 import type { Metin } from "@/lib/dil";
 
 export async function generateMetadata() {
@@ -137,12 +138,71 @@ export default async function KaynaklarPage({
     kilavuzAtifi: { tr: "bu denetimde ölçülmedi", en: "not measured in this check" },
     ulasilamayan: { tr: "bu turda dizine bakılmadı", en: "the index wasn't queried this round" },
   };
+  /* Şeritteki kısa ifade: "2 biçim uyarısı". Sayı kategoriyle birlikte
+     yazılıyor; Türkçede çoğul eki yok, İngilizcede var. */
+  const KATEGORI_SAYISI: Record<KategoriAnahtari, (n: number) => Metin> = {
+    bicimHatali: (n) => ({ tr: `${n} biçim hatası`, en: `${n} format ${n === 1 ? "error" : "errors"}` }),
+    bicimUyarili: (n) => ({ tr: `${n} biçim uyarısı`, en: `${n} format ${n === 1 ? "warning" : "warnings"}` }),
+    karsiliksizAtif: (n) => ({ tr: `${n} karşılıksız atıf`, en: `${n} ${n === 1 ? "citation" : "citations"} without a reference` }),
+    atifsizKaynak: (n) => ({ tr: `${n} atıfsız kaynak`, en: `${n} ${n === 1 ? "source" : "sources"} not cited` }),
+    bulunamayan: (n) => ({ tr: `${n} bulunamayan kaynak`, en: `${n} ${n === 1 ? "source" : "sources"} not found` }),
+    kilavuzAtifi: (n) => ({ tr: `${n} kılavuz dışı atıf`, en: `${n} ${n === 1 ? "citation" : "citations"} off the guideline` }),
+    ulasilamayan: (n) => ({ tr: `${n} künyede dizine ulaşılamadı`, en: `index unreachable for ${n}` }),
+  };
+  /* Satırdaki rozetin tonu: kategorinin ağırlığı. */
+  const TON: Record<KategoriAnahtari, "danger" | "warning" | "info"> = {
+    bicimHatali: "danger",
+    karsiliksizAtif: "danger",
+    bicimUyarili: "warning",
+    atifsizKaynak: "warning",
+    bulunamayan: "warning",
+    kilavuzAtifi: "warning",
+    ulasilamayan: "info",
+  };
+  /* Kısa etiket (ayrıntı satırının rozetinde). */
+  const KATEGORI_KISA: Record<KategoriAnahtari, Metin> = {
+    bicimHatali: { tr: "Biçim hatası", en: "Format error" },
+    bicimUyarili: { tr: "Biçim uyarısı", en: "Format warning" },
+    karsiliksizAtif: { tr: "Karşılıksız atıf", en: "No reference" },
+    atifsizKaynak: { tr: "Atıfsız kaynak", en: "Not cited" },
+    bulunamayan: { tr: "Bulunamadı", en: "Not found" },
+    kilavuzAtifi: { tr: "Kılavuz dışı", en: "Off guideline" },
+    ulasilamayan: { tr: "Dizine ulaşılamadı", en: "Index unreachable" },
+  };
+
   /* Ulaşılamayan satırı yalnızca VARSA çiziliyor: geçici arıza yoksa
-     satır gürültü. Ötekiler her zaman görünür — "Yok" da bir bilgi. */
-  const kategoriler = (ozet?.kategoriler ?? []).filter((k) => k.anahtar !== "ulasilamayan" || k.sayi > 0);
-  /* Özette doğrudan görünen bulgular: "Sonuçları aç"a basmadan hangi
-     kategoride kaç sorun olduğu okunabilsin. */
-  const acikKategoriler = kategoriler.filter((k) => k.toplamaKatilir && k.olculdu && k.sayi > 0);
+     satır gürültü. Ötekiler "Tüm kontroller"de her zaman görünür —
+     "Yok" da bir bilgi. */
+  const vurgu = ozet ? ozetVurgusu(ozet) : { tur: "temiz" as const, anahtar: null, sayi: 0, dagilim: [] };
+  const dikkat = ozet ? dikkatKategorileri(ozet).filter((k) => k.anahtar !== "ulasilamayan" || k.sayi > 0) : [];
+  const otekiler = ozet ? otekiKategoriler(ozet).filter((k) => k.anahtar !== "ulasilamayan" || k.sayi > 0) : [];
+  /*
+    Ayrıntılı bulgu satırları: künye/atıf metni + gerçek uyarı
+    (lib/kaynakca-bulgulari.ts). Liste UZUNSA kesiliyor; kalan sonuç
+    ekranında. Satır sayısı bir TOPLAM değildir.
+  */
+  const AYRINTI_SINIRI = 12;
+  const bulgular = sonDenetim
+    ? bulguSatirlari(
+        {
+          references: sonDenetim.references,
+          crossCheck: sonDenetim.crossCheck,
+          academicVerification: sonDenetim.academicVerification as { reference?: string; status?: string }[],
+          tyk: sonDenetim.tyk,
+        },
+        {
+          atifsiz: t({ tr: "Kaynakçada var, metinde atfı yok", en: "In the reference list but not cited in the text" }),
+          karsiliksiz: t({ tr: "Metinde atıf var, kaynakçada yok", en: "Cited in the text but missing from the reference list" }),
+          bulunamayan: t({ tr: "Dizinlerde kayıt bulunamadı", en: "No record found in the indexes" }),
+          ulasilamayan: t({ tr: "Dizine ulaşılamadı; tekrar denetleyin", en: "The index couldn't be reached; check again" }),
+        },
+      )
+    : [];
+  const gorunenBulgular = bulgular.slice(0, AYRINTI_SINIRI);
+  const kalanBulgu = bulgular.length - gorunenBulgular.length;
+  /* Eski kayıtta ayrıntı yoksa kategori+adet satırı çiziliyor. */
+  const ayrintisizKategoriler = dikkat.filter((k) => !ayrintiVar(bulgular, k.anahtar));
+
 
   /* Adresteki denetim YALNIZCA bu çalışmanın geçmişindeyse kabul
      ediliyor: başkasının kimliğiyle pencere açılmasın (okuma zaten
@@ -155,6 +215,8 @@ export default async function KaynaklarPage({
     calisma
       ? `/dashboard/literature?calisma=${encodeURIComponent(calisma.id)}${bagsiz ? "&kapsam=bagsiz" : ""}`
       : "/dashboard/literature";
+  /* Ayrıntı, SON denetimin kendi sonuç ekranında açılıyor. */
+  const ayrintiAdresi = `${kapsamAdresi(false)}&sekme=kaynakca${oncekiDenetimler[0] ? `&denetim=${encodeURIComponent(oncekiDenetimler[0].id)}` : ""}`;
 
   /*
     TEK BİRİNCİL EYLEM: "Kaynak ekle" (sayfa başlığının sağında). Üç yol
@@ -327,121 +389,219 @@ export default async function KaynaklarPage({
           </div>
 
           {kaynakcaSekmesi ? (
-            <section className="kaynak-tek" aria-label={t({ tr: "Kaynakça", en: "Reference list" })}>
-          <article className="gb-kart gb-sutun kaynak-tek-kart">
-            <header className="gb-kart-bas">
-              <div>
-                <h2>{t({ tr: "Kaynakça", en: "Reference list" })}</h2>
-                <p>
-                  {sonDenetim
-                    ? t({
-                        tr: `Son denetim ${tarihSaat(sonDenetim.tarih)} · ${sonDenetim.toplamKaynak} künye`,
-                        en: `Last checked ${tarihSaat(sonDenetim.tarih)} · ${sonDenetim.toplamKaynak} ${sonDenetim.toplamKaynak === 1 ? "reference" : "references"}`,
-                      })
-                    : t({ tr: "Henüz denetlenmedi", en: "Not checked yet" })}
-                </p>
-              </div>
-              {/* Geçmişten bir satır seçildiyse (?denetim=) pencere O
-                  denetimin sonucunu açar; yoksa sonuncusunu. */}
-              <KaynakcaPenceresi
-                /* key: geçmişten başka bir denetim seçilince pencere
-                   YENİDEN kuruluyor. PanelDrawer açık/kapalı durumunu
-                   mount'ta okuyor; aynı bileşen örneği üzerinde
-                   `acikBasla` değişince pencere açılmıyordu. */
-                key={secilenDenetim ?? "son-denetim"}
-                calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
-                sonDenetim={sonDenetim ? { acikSorun: ozet?.acikSorun ?? null, tarih: sonDenetim.tarih } : null}
-                denetimId={secilenDenetim}
-                acikBasla={Boolean(secilenDenetim)}
-                triggerLabel={
-                  secilenDenetim
-                    ? t({ tr: "Seçilen denetimi aç", en: "Open the selected check" })
-                    : sonDenetim
-                      ? t({ tr: "Sonuçları aç", en: "Open results" })
-                      : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })
-                }
-                triggerClassName="projects-primary-button button-compact"
-              />
-            </header>
-            {sonDenetim ? (
-              <>
-                {/*
-                  SON DENETİM TEK KARTTA: tarih-saat, denetlenen künye
-                  sayısı, açık sorun toplamı ve sorunun HANGİ
-                  kategorilerde olduğu. Kullanıcı "Sonuçları aç"a
-                  basmadan bunu görebilmeli.
-                */}
-                <div className="kaynakca-puan" data-tone={ton}>
-                  <b>{ozet?.acikSorun ?? 0}</b>
-                  <span>
-                    {t({
-                      tr: `açık sorun · ${ozet?.kunye ?? 0} künye denetlendi (biçim, atıf eşleşmesi, dizin)`,
-                      en: `open ${ozet?.acikSorun === 1 ? "issue" : "issues"} · ${ozet?.kunye ?? 0} references checked (format, citation matching, index)`,
-                    })}
+            <section className="kaynak-tek kaynakca-alan" aria-label={t({ tr: "Kaynakça", en: "Reference list" })}>
+              {/*
+                DENETİM ÖZETİ ŞERİDİ (23.11.2026 tasarım turu). Sekmelerin
+                hemen altında tek ve kompakt: solda durum + incelenen künye
+                sayısı + son denetimin tarihi ve saati, sağda ana eylem.
+                Tek kategorili bulguda türün kendisi yazılıyor ("2 biçim
+                uyarısı"); "2 açık sorun" kullanıcıyı neyin sorun olduğunu
+                aramaya gönderiyordu.
+              */}
+              <div className="kaynakca-serit" data-tone={sonDenetim ? ton : "neutral"}>
+                <span className="kaynakca-serit-govde">
+                  <span className="kaynakca-serit-ana">
+                    {sonDenetim && ozet ? <i className="kaynakca-nokta" data-tone={ton} aria-hidden="true" /> : null}
+                    {!sonDenetim || !ozet
+                      ? t({ tr: "Henüz denetlenmedi", en: "Not checked yet" })
+                      : vurgu.tur === "temiz"
+                        ? t({ tr: "Açık sorun yok", en: "No open issues" })
+                        : vurgu.tur === "tek" && vurgu.anahtar
+                          ? t(KATEGORI_SAYISI[vurgu.anahtar](vurgu.sayi))
+                          : t({
+                              tr: `${vurgu.sayi} açık sorun`,
+                              en: `${vurgu.sayi} open ${vurgu.sayi === 1 ? "issue" : "issues"}`,
+                            })}
                   </span>
-                </div>
-                {acikKategoriler.length ? (
-                  <p className="kaynakca-ozet-satiri">
-                    {acikKategoriler.map((k) => `${t(KATEGORI_ADI[k.anahtar])}: ${k.sayi}`).join(" · ")}
-                  </p>
-                ) : null}
-                <ul className="gb-liste kaynakca-kategoriler">
-                  {kategoriler.map((k) => (
-                    <li key={k.anahtar} className="gb-satir">
-                      <span className="gb-satir-govde">
-                        <b>{t(KATEGORI_ADI[k.anahtar])}</b>
-                        {k.olculdu && !k.toplamaKatilir ? (
-                          <small>{t({ tr: "geçici arıza; toplama katılmıyor", en: "temporary failure; not counted in the total" })}</small>
+                  {sonDenetim && ozet ? (
+                    <span className="kaynakca-serit-meta">
+                      {t({
+                        tr: `${ozet.kunye} künye incelendi · son denetim ${tarihSaat(sonDenetim.tarih)}`,
+                        en: `${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"} checked · last check ${tarihSaat(sonDenetim.tarih)}`,
+                      })}
+                    </span>
+                  ) : null}
+                  {/* Dağılım TEK yerde: ayrı bir özet satırında tekrarlanmıyor. */}
+                  {vurgu.tur === "coklu" ? (
+                    <span className="kaynakca-serit-dagilim">
+                      {vurgu.dagilim.map((k) => (
+                        <span key={k.anahtar}>{t(KATEGORI_SAYISI[k.anahtar](k.sayi))}</span>
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
+                <KaynakcaPenceresi
+                  /* key: geçmişten başka bir denetim seçilince pencere
+                     YENİDEN kuruluyor. PanelDrawer açık/kapalı durumunu
+                     mount'ta okuyor; aynı örnekte `acikBasla` değişince
+                     pencere açılmıyordu. */
+                  key={secilenDenetim ?? "son-denetim"}
+                  calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
+                  sonDenetim={sonDenetim ? { acikSorun: ozet?.acikSorun ?? null, tarih: sonDenetim.tarih } : null}
+                  denetimId={secilenDenetim}
+                  acikBasla={Boolean(secilenDenetim)}
+                  triggerLabel={
+                    secilenDenetim
+                      ? t({ tr: "Seçilen denetimi aç", en: "Open the selected check" })
+                      : sonDenetim
+                        ? t({ tr: "Sonuçları aç", en: "Open results" })
+                        : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })
+                  }
+                  triggerClassName="projects-primary-button button-compact kaynakca-serit-eylem"
+                />
+              </div>
+
+              <div className="kaynakca-ikili">
+                <article className="gb-kart kaynakca-bulgular">
+                  {sonDenetim && ozet ? (
+                    <>
+                      <div className="kaynakca-bolum-bas">
+                        <h3>{t({ tr: "İncelenmesi gerekenler", en: "What needs attention" })}</h3>
+                        {dikkat.length ? (
+                          <small>
+                            {t({
+                              tr: `${dikkat.length} kategori`,
+                              en: `${dikkat.length} ${dikkat.length === 1 ? "category" : "categories"}`,
+                            })}
+                          </small>
                         ) : null}
-                        {k.olculdu ? null : <small>{t(OLCULMEDI_SEBEBI[k.anahtar])}</small>}
-                      </span>
-                      {k.olculdu ? (
-                        <span className="status-pill" data-tone={k.sayi ? (k.toplamaKatilir ? "warning" : "info") : "success"}>
-                          {k.sayi ? k.sayi : t({ tr: "Yok", en: "None" })}
-                        </span>
+                      </div>
+                      {dikkat.length ? (
+                        <ul className="kaynakca-liste">
+                          {/*
+                            Ayrıntısı olan bulgular künyesi ve GERÇEK uyarı
+                            metniyle; aynı künyenin uyarıları tek satırda.
+                            Satır sayısı bir toplam değildir — toplam
+                            lib/kaynakca-ozeti.ts'ten gelir.
+                          */}
+                          {gorunenBulgular.map((b, i) => (
+                            <li key={`${b.anahtar}-${i}`}>
+                              <Link
+                                className="kaynakca-satir"
+                                href={ayrintiAdresi}
+                                aria-label={`${t(KATEGORI_KISA[b.anahtar])}: ${b.metin}`}
+                              >
+                                <span className="kaynakca-satir-govde">
+                                  <b>{b.metin}</b>
+                                  {b.uyarilar.map((u) => (
+                                    <small key={u}>
+                                      <i className="kaynakca-nokta" data-tone={TON[b.anahtar]} aria-hidden="true" />
+                                      {u}
+                                    </small>
+                                  ))}
+                                </span>
+                                <ChevronRight size={15} aria-hidden="true" />
+                              </Link>
+                            </li>
+                          ))}
+                          {/* Eski kayıtta ayrıntı yok: kategori ve adet. */}
+                          {ayrintisizKategoriler.map((k) => (
+                            <li key={k.anahtar}>
+                              <Link className="kaynakca-satir" href={ayrintiAdresi}>
+                                <span className="kaynakca-satir-govde">
+                                  <b>{t(KATEGORI_ADI[k.anahtar])}</b>
+                                  <small>
+                                    <i className="kaynakca-nokta" data-tone={TON[k.anahtar]} aria-hidden="true" />
+                                    {t({ tr: "ayrıntı bu kayıtta yok; sonuç ekranında inceleyin", en: "no detail in this record; review it on the results screen" })}
+                                  </small>
+                                </span>
+                                <span className="status-pill" data-tone={TON[k.anahtar]}>{k.sayi}</span>
+                                <ChevronRight size={15} aria-hidden="true" />
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
-                        /* "Yok" DEĞİL: ölçülmemiş bir kategoriyi sorunsuz
-                           göstermek, yapılmamış denetimi temiz rapor gibi
-                           sunuyordu. */
-                        <span className="status-pill" data-tone="neutral">
-                          {t({ tr: "Denetlenmedi", en: "Not checked" })}
-                        </span>
+                        <p className="kaynakca-bos">{t({ tr: "İncelenmesi gereken bulgu yok.", en: "Nothing needs attention." })}</p>
                       )}
-                    </li>
-                  ))}
-                </ul>
-                {/* Kısmi kapsam notu: hiç bakılmadıysa satırın kendisi
-                    "bu turda dizine bakılmadı" diyor, ikinci kez yazmıyoruz. */}
-                {ozet && ozet.dizindeBakilan != null && ozet.dizindeBakilan > 0 && ozet.dizindeBakilan < ozet.kunye ? (
-                  <p className="kaynakca-kapsam">
-                    {t({
-                      tr: `Dizin doğrulaması ${ozet.dizindeBakilan}/${ozet.kunye} künyede yapıldı; kalanlara bu turda bakılmadı.`,
-                      en: `Index verification covered ${ozet.dizindeBakilan}/${ozet.kunye} references; the rest weren't checked this round.`,
-                    })}
-                  </p>
-                ) : null}
-                {oncekiDenetimler.length > 1 ? (
-                  <>
-                    {/*
-                      ÖNCEKİ DENETİMLER: aynı gün yapılanlar SAATİYLE
-                      ayrışıyor (eskiden yalnızca tarih yazıyordu ve iki
-                      denetim birbirinin aynısı görünüyordu). Her satır
-                      bir bağlantı: klavyeyle erişilir ve KENDİ denetim
-                      sonucunu açar.
-                    */}
-                    <h3 className="calisma-durum-alt">{t({ tr: "Önceki denetimler", en: "Previous checks" })}</h3>
-                    <ul className="gb-liste kaynakca-gecmis">
+                      {kalanBulgu > 0 ? (
+                        <Link className="kaynakca-daha" href={ayrintiAdresi}>
+                          {t({
+                            tr: `Bu kategorilerde ${kalanBulgu} kayıt daha var — sonuç ekranında görün`,
+                            en: `${kalanBulgu} more entries in these categories — see them on the results screen`,
+                          })}
+                        </Link>
+                      ) : null}
+                      {ozet.dizindeBakilan != null && ozet.dizindeBakilan > 0 && ozet.dizindeBakilan < ozet.kunye ? (
+                        <p className="kaynakca-kapsam">
+                          {t({
+                            tr: `Dizin doğrulaması ${ozet.dizindeBakilan}/${ozet.kunye} künyede yapıldı; kalanlara bu turda bakılmadı.`,
+                            en: `Index verification covered ${ozet.dizindeBakilan}/${ozet.kunye} references; the rest weren't checked this round.`,
+                          })}
+                        </p>
+                      ) : null}
+                      {/*
+                        TÜM KONTROLLER kapalı başlıyor: temiz ve
+                        denetlenmemiş kategoriler erişilebilir kalsın ama
+                        ilk bakışı doldurmasın. Sayı denetimin kategori
+                        listesinden; satır sayısından türetilmiyor.
+                      */}
+                      <details className="kaynakca-tum">
+                        <summary>
+                          {/* Sayı, denetimin kategori listesinden (çizilen
+                              satırların sayısı); bulgu satırlarından
+                              türetilmiyor. */}
+                          {t({
+                            tr: `Tüm kontroller (${dikkat.length + otekiler.length})`,
+                            en: `All checks (${dikkat.length + otekiler.length})`,
+                          })}
+                        </summary>
+                        <ul className="kaynakca-liste">
+                          {[...dikkat, ...otekiler].map((k) => (
+                            <li key={k.anahtar}>
+                              <span className="kaynakca-satir">
+                                <span className="kaynakca-satir-govde">
+                                  <b>{t(KATEGORI_ADI[k.anahtar])}</b>
+                                  {k.olculdu && !k.toplamaKatilir ? (
+                                    <small>{t({ tr: "geçici arıza; toplama katılmıyor", en: "temporary failure; not counted in the total" })}</small>
+                                  ) : null}
+                                  {k.olculdu ? null : <small>{t(OLCULMEDI_SEBEBI[k.anahtar])}</small>}
+                                </span>
+                                {k.olculdu ? (
+                                  <span className="status-pill" data-tone={k.sayi ? TON[k.anahtar] : "success"}>
+                                    {k.sayi
+                                      ? k.anahtar === "ulasilamayan"
+                                        ? t({ tr: `Dizine ulaşılamadı: ${k.sayi}`, en: `Index unreachable: ${k.sayi}` })
+                                        : k.sayi
+                                      : t({ tr: "Yok", en: "None" })}
+                                  </span>
+                                ) : (
+                                  <span className="status-pill" data-tone="neutral">{t({ tr: "Denetlenmedi", en: "Not checked" })}</span>
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    </>
+                  ) : (
+                    <p className="gb-bos">
+                      {t({
+                        tr: "Kaynakçanız editördeki metinden alınır ya da yapıştırılır; künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte denetlenir.",
+                        en: "Your reference list is taken from your text in the editor or pasted in; the format of each reference, its match with in-text citations, and whether the source actually exists (Crossref, OpenAlex) are checked together.",
+                      })}
+                    </p>
+                  )}
+                </article>
+
+                {/* Geçmiş kendi kartında; SON denetim burada tekrarlanmıyor. */}
+                <aside className="gb-kart kaynakca-gecmis-kart" aria-label={t({ tr: "Denetim geçmişi", en: "Check history" })}>
+                  <div className="kaynakca-bolum-bas">
+                    <h3>{t({ tr: "Denetim geçmişi", en: "Check history" })}</h3>
+                  </div>
+                  {oncekiDenetimler.length > 1 ? (
+                    <ul className="kaynakca-liste kaynakca-gecmis">
                       {oncekiDenetimler.slice(1).map((d) => (
                         <li key={d.id}>
                           <Link
-                            className="gb-satir"
+                            className="kaynakca-satir"
                             href={`${kapsamAdresi(false)}&sekme=kaynakca&denetim=${encodeURIComponent(d.id)}`}
                             aria-label={t({
                               tr: `${tarihSaat(d.created_at)} denetiminin sonucunu aç`,
                               en: `Open the result of the check from ${tarihSaat(d.created_at)}`,
                             })}
                           >
-                            <span className="gb-satir-govde">
+                            <span className="kaynakca-satir-govde">
                               <b>{tarihSaat(d.created_at)}</b>
                             </span>
                             <ChevronRight size={15} aria-hidden="true" />
@@ -449,18 +609,13 @@ export default async function KaynaklarPage({
                         </li>
                       ))}
                     </ul>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <p className="gb-bos">
-                {t({
-                  tr: "Kaynakçanız editördeki metinden alınır ya da yapıştırılır; künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte denetlenir.",
-                  en: "Your reference list is taken from your text in the editor or pasted in; the format of each reference, its match with in-text citations, and whether the source actually exists (Crossref, OpenAlex) are checked together.",
-                })}
-              </p>
-            )}
-          </article>
+                  ) : (
+                    <p className="kaynakca-bos">
+                      {t({ tr: "Bu çalışmanın başka denetimi yok.", en: "This work has no other checks." })}
+                    </p>
+                  )}
+                </aside>
+              </div>
             </section>
           ) : (
           <section className="kaynak-tek kaynak-arastirma" aria-label={t({ tr: "Kaynaklar", en: "Sources" })}>

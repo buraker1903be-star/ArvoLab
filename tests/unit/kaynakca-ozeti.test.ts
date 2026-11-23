@@ -103,9 +103,12 @@ describe("kaynakça özeti: toplam ve kategoriler", () => {
 describe("kaynakça kartı tek kaynaktan okuyor", () => {
   const sayfa = readFileSync("app/dashboard/literature/page.tsx", "utf8");
 
+  /* Ekranın yapısı tests/unit/kaynakca-bulgulari.test.ts'te; burada
+     yalnızca SAYIM kaynağı sınanıyor: satırlar ve toplam özetten
+     geliyor mu. */
   test("kategori satırları özetten geliyor, elle yazılmıyor", () => {
-    assert.match(sayfa, /ozet\?\.kategoriler \?\? \[\]/);
-    assert.match(sayfa, /kategoriler\.map\(\(k\) => \(/);
+    assert.match(sayfa, /dikkatKategorileri\(ozet\)/);
+    assert.match(sayfa, /otekiKategoriler\(ozet\)/);
     assert.match(sayfa, /tr: "Biçim hatası olan künye"/);
     assert.match(sayfa, /tr: "Biçim uyarısı olan künye"/);
   });
@@ -115,19 +118,15 @@ describe("kaynakça kartı tek kaynaktan okuyor", () => {
     assert.match(sayfa, /tr: "metinden atıf çıkarılamadı"/);
   });
 
-  test("açık sorunun hangi kategoride olduğu özette yazılı", () => {
-    assert.match(sayfa, /acikKategoriler\.map\(\(k\) => `\$\{t\(KATEGORI_ADI\[k\.anahtar\]\)\}: \$\{k\.sayi\}`\)/);
+  test("şeritteki vurgu özetten hesaplanıyor", () => {
+    assert.match(sayfa, /ozetVurgusu\(ozet\)/);
+    assert.match(sayfa, /vurgu\.tur === "tek"/);
   });
 
   test("geçmiş satırı saatiyle yazılıyor ve kendi denetimini açıyor", () => {
-    assert.match(sayfa, /className="gb-liste kaynakca-gecmis"/);
+    assert.match(sayfa, /className="kaynakca-liste kaynakca-gecmis"/);
     assert.match(sayfa, /tarihSaat\(d\.created_at\)/);
     assert.match(sayfa, /&denetim=\$\{encodeURIComponent\(d\.id\)\}/);
     assert.match(sayfa, /denetimId=\{secilenDenetim\}/);
-  });
-
-  test("kategori listesi tek ekranda büyümüyor (geçmişi dibe iten boşluk)", () => {
-    const stil = readFileSync("app/styles/genel-bakis.css", "utf8");
-    assert.match(stil, /\.gb-tek-ekran \.kaynakca-kategoriler \{ flex: none/);
   });
 });
