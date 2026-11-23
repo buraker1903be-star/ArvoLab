@@ -1,0 +1,80 @@
+{
+  "tarih": "2026-11-23T06:37:43.366Z",
+  "head": "4f7b8eee6015df0ee774ef0d25e0b1bd3c44b62c",
+  "buildId": "qoLUtKF9LRO-0l4AU_WFY",
+  "uygulama": "http://localhost:3135",
+  "gecen": 14,
+  "dusen": 0,
+  "sonuclar": [
+    {
+      "ad": "K1-masaüstü uzun listenin ilk satırında menü açılıyor ve kırpılmıyor",
+      "durum": "PASS",
+      "not": "ustKatman:true ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K1b-masaüstü ilk satırda menü düğmenin ALTINDA açılıyor",
+      "durum": "PASS",
+      "not": "altta:true"
+    },
+    {
+      "ad": "K2-masaüstü son satırda menü ekranın içinde ve sil tıklanabilir",
+      "durum": "PASS",
+      "not": "ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K2b-masaüstü son satırda altta yer yoksa ÜSTE geçiyor",
+      "durum": "PASS",
+      "not": "altta yer var, altta:true"
+    },
+    {
+      "ad": "K2c-masaüstü altta yer kalmayınca menü ÜSTE geçiyor",
+      "durum": "PASS",
+      "not": "ustte:true ekranIci:true sil:true/true"
+    },
+    {
+      "ad": "K3-masaüstü bağsız tek kaynakta menü açılıyor, sil tıklanabilir",
+      "durum": "PASS",
+      "not": "satir:1 ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K1-telefon uzun listenin ilk satırında menü açılıyor ve kırpılmıyor",
+      "durum": "PASS",
+      "not": "ustKatman:true ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K1b-telefon ilk satırda menü düğmenin ALTINDA açılıyor",
+      "durum": "PASS",
+      "not": "altta:true"
+    },
+    {
+      "ad": "K2-telefon son satırda menü ekranın içinde ve sil tıklanabilir",
+      "durum": "PASS",
+      "not": "ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K2b-telefon son satırda altta yer yoksa ÜSTE geçiyor",
+      "durum": "PASS",
+      "not": "altta yer var, altta:true"
+    },
+    {
+      "ad": "K2c-telefon altta yer kalmayınca menü ÜSTE geçiyor",
+      "durum": "PASS",
+      "not": "ustte:true ekranIci:true sil:true/true"
+    },
+    {
+      "ad": "K3-telefon bağsız tek kaynakta menü açılıyor, sil tıklanabilir",
+      "durum": "PASS",
+      "not": "satir:1 ekranIci:true konum:true sil:true/true"
+    },
+    {
+      "ad": "K4a onay sorusu kaynağın adıyla çıkıyor ve VAZGEÇİNCE silinmiyor",
+      "durum": "PASS",
+      "not": "soru:true geriAlinamaz:true duruyor:true sayiAyni:true"
+    },
+    {
+      "ad": "K4b onaylayınca kaynak gerçekten siliniyor",
+      "durum": "PASS",
+      "not": "silindi:true birAzaldi:true"
+    }
+  ]
+}
