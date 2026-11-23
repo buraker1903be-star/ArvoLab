@@ -377,6 +377,47 @@ describe("gerekli veri kartı: güvenilirlikten bütün analizlere", () => {
   });
 });
 
+describe("güç ve örneklem: kaydırma ve yerleşim", () => {
+  /*
+    GÜÇ KARTI KIRPILIYORDU. Tek ekran kilidi (.dashboard-content-shell:
+    height 100dvh + overflow hidden) sayfayı kaydırmıyor; çalışma alanı
+    sekmesinde sağdaki kart kendi içinde kayıyor. Güç kartı
+    `.analiz-alan`ın içinde değil, sekme panelinin doğrudan çocuğu
+    olduğu için ona hiçbir kural kayma vermiyordu: 1440x900'de 1201 px
+    gövde 623 px'e kırpılıyor, zincirdeki tek overflow `hidden` olduğu
+    için tekerlek hiçbir şeyi oynatmıyordu.
+  */
+  const guc = oku("app/dashboard/analysis/guc-paneli.tsx");
+
+  test("güç sekmesinin kartı kendi içinde kayıyor", () => {
+    assert.match(stil, /#analiz-panel-guc > \.analiz-guc \{[^}]*overflow-y: auto/);
+    /* Kilit yalnızca 1101 px üstünde ve 640 px'ten uzun pencerelerde. */
+    assert.match(stil, /@media \(min-width: 1101px\) and \(min-height: 640px\) \{\s*#analiz-panel-guc/);
+  });
+
+  /* Alanlar seçimlerin HEMEN ALTINDA: uzun kart artık altta. */
+  test("girdiler 'Hangi bilgiler gerekli?' kartından ÖNCE çiziliyor", () => {
+    const girdiler = guc.indexOf('className="analiz-guc-girdiler"');
+    const kart = guc.indexOf('className="analiz-veri-karti"');
+    const yontem = guc.indexOf('className="analiz-guc-yontem"');
+    assert.ok(yontem > 0 && girdiler > yontem, "girdiler yöntem seçiminden sonra");
+    assert.ok(kart > girdiler, "kart girdilerden sonra");
+  });
+
+  test("yöntem listesi masaüstünde iki sütuna iniyor", () => {
+    assert.match(stil, /@media \(min-width: 900px\) \{\s*\.analiz-guc-yontem \{ grid-template-columns: repeat\(auto-fit/);
+  });
+
+  /* Üç kavramın kısa hâli alanının altında, uzunu açılır bölümde. */
+  test("kısa ipuçları alanların içinde, ayrıntı açılır bölümde", () => {
+    assert.match(guc, /Cohen eşikleri küçük/);
+    assert.match(guc, /yanlış alarm\. Yaygın değer 0,05/);
+    assert.match(guc, /YAKALAMA olasılığınız\. Yaygın değer 0,80/);
+    assert.match(guc, /<details className="analiz-guc-ayrinti">/);
+    assert.match(stil, /\.analiz-guc-ayrinti > summary \{/);
+  });
+});
+
 describe("eskiyen sonuç ve veri değişimi", () => {
   test("tazelik denetimi çalıştırılan seçimle ekrandaki seçimi karşılaştırıyor", () => {
     assert.match(analizci, /tazelikDenetle\(calisanAnaliz, \{ tur: analysisType, secim: guncelSecim \}\)/);

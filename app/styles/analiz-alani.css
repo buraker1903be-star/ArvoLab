@@ -528,3 +528,41 @@
   font-size: var(--os5-fs-govde);
   line-height: var(--lh-metin);
 }
+
+/* ============================================================
+   GÜÇ ve ÖRNEKLEM SEKMESİNİN YERLEŞİMİ (23.11.2026 düzeltmesi).
+
+   Tek ekran kilidi (.dashboard-content-shell: height 100dvh,
+   overflow hidden — genel-bakis.css) sayfanın kaymasını kapatıyor.
+   Çalışma alanı sekmesinde sağdaki kart kendi içinde kayıyor
+   (`.analiz-alan > .project-form-card { overflow-y: auto }`). Güç
+   kartı `.analiz-alan`ın İÇİNDE DEĞİL, sekme panelinin doğrudan
+   çocuğu: hiçbir kural ona kayma vermiyordu. Ölçüldü (1440x900):
+   kartın 1201 px gövdesi 623 px'e kırpılıyor, zincirdeki tek
+   overflow `hidden` olduğu için tekerlek de klavye de hiçbir şeyi
+   oynatmıyor; "Hangi bilgiler gerekli?"nin altındaki alanlara
+   ulaşılamıyordu. Kilit yalnızca 1101 px üstünde ve 640 px'ten uzun
+   pencerelerde var; iç kayma da oraya kurulu.
+   ============================================================ */
+@media (min-width: 1101px) and (min-height: 640px) {
+  #analiz-panel-guc > .analiz-guc {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
+  }
+}
+
+/* Yöntem listesi kompakt: beş seçenek masaüstünde iki sütuna
+   iniyor, böylece alanlar ilk ekranda görünüyor. */
+@media (min-width: 900px) {
+  .analiz-guc-yontem { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .analiz-guc-yontem > legend { grid-column: 1 / -1; }
+}
+.analiz-guc-girdiler { display: grid; gap: var(--s-2); }
+/* .alert'in kendi alt boşluğu ızgaranın gap'iyle üst üste biniyordu. */
+.analiz-guc-girdiler > .alert { margin: 0; }
+.analiz-guc-ayrinti > summary {
+  min-height: 44px; display: flex; align-items: center;
+  color: var(--primary-ink); font-size: var(--os5-fs-govde); font-weight: 600; cursor: pointer;
+}
+.analiz-guc-ayrinti > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.analiz-guc-ayrinti > ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.analiz-guc-ayrinti li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
