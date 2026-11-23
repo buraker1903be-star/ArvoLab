@@ -33,7 +33,7 @@ describe("kaydedilen analizin başlığı", () => {
   });
 
   test("güvenilirlik madde sayısını yazıyor", () => {
-    assert.equal(analizBasligi("reliability", { maddeSayisi: 12 }), "Güvenilirlik Analizi (Cronbach Alpha): 12 madde");
+    assert.equal(analizBasligi("reliability", { maddeSayisi: 12 }), "Güvenilirlik Analizi (Cronbach α, McDonald ω): 12 madde");
   });
 
   /*
@@ -60,7 +60,7 @@ describe("İngilizce (28.10.2026)", () => {
   test("etiket ve başlık İngilizce çıkıyor, Türkçe varsayılan değişmiyor", () => {
     assert.equal(analizEtiketi("ttest", "en"), "Independent Samples t-Test");
     assert.equal(analizEtiketi("mancova", "en"), "mancova");
-    assert.equal(analizBasligi("reliability", { maddeSayisi: 12 }, "en"), "Reliability Analysis (Cronbach's Alpha): 12 items");
+    assert.equal(analizBasligi("reliability", { maddeSayisi: 12 }, "en"), "Reliability Analysis (Cronbach's α, McDonald's ω): 12 items");
     assert.equal(analizBasligi("descriptives", {}, "en"), "Descriptive Statistics: all numeric variables");
     assert.equal(analizBasligi("descriptives", {}, "tr"), "Betimsel İstatistikler: tüm sayısal değişkenler");
   });

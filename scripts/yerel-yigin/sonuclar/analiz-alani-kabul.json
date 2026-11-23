@@ -1,9 +1,9 @@
 {
-  "tarih": "2026-11-23T05:53:52.529Z",
-  "head": "859dbe55573584e088f381104f28379de31c8432",
-  "buildId": "BLG0ycXMRtD07rRAeOZ_J",
-  "uygulama": "http://localhost:3134",
-  "gecen": 116,
+  "tarih": "2026-11-23T07:56:57.145Z",
+  "head": "8e057377154de9cebcaa5d1ec7512dee27885dce",
+  "buildId": "slMlCK434fhBm5CR23x-f",
+  "uygulama": "http://localhost:3136",
+  "gecen": 136,
   "dusen": 0,
   "sonuclar": [
     {
@@ -134,7 +134,7 @@
     {
       "ad": "S7g 'Bu analizi aç' kullanıcının eylemi: seçimi değiştiriyor",
       "durum": "PASS",
-      "not": "Güvenilirlik Analizi (Cronbach Alpha)"
+      "not": "Güvenilirlik Analizi (Cronbach α, McDonald ω)"
     },
     {
       "ad": "S7h yardım paneli analizi açınca kapanıyor",
@@ -164,7 +164,7 @@
     {
       "ad": "S2a dosya yüklenince gerçek satır/sütun sayısı yazılıyor",
       "durum": "PASS",
-      "not": ".tmp-analiz-kabul-dd21cb.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
+      "not": ".tmp-analiz-kabul-d9073b.csv\n40 satır · 14 sütun (10 sayısal, 4 kategorik)"
     },
     {
       "ad": "S2b adım şeridi çiziliyor; 'Kontroller' önceden 'uygun' demiyor",
@@ -209,12 +209,12 @@
     {
       "ad": "S3c sonuç künyesi hangi analiz ve değişkenlerle üretildiğini yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-dd21cb.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d9073b.csv\nsayısal "
     },
     {
       "ad": "S3c2 künye BU analizin kullanmadığı alanı yazmıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-dd21cb.csv\nsayısal "
+      "not": "Hesaplanan sonuç\nBağımsız Örneklem t-Testi: son_test ~ grup\nveri dosyası\n.tmp-analiz-kabul-d9073b.csv\nsayısal "
     },
     {
       "ad": "S3d adım şeridi: hesap tamam, kontroller 'okunacak' (geçti DEĞİL)",
@@ -269,7 +269,7 @@
     {
       "ad": "S3h güvenilirlik: madde seçimi → α",
       "durum": "PASS",
-      "not": "Cronbach's α = 0.230 (5 madde, N = 40) — güvenilirlik düzeyi: düşük\n\nMadde\tDüzeltilmiş madde-toplam r\tMadde si"
+      "not": "Güvenilirlik: 5 madde, N = 40\n\nKatsayı\tDeğer\tYorum\nCronbach α\t0.230\tdüşük\nMcDonald ω\t—\tKestirim yakınsamadı; ω"
     },
     {
       "ad": "S5a kaydedilmemiş sonuç varken 'Veriyi değiştir' onay istiyor",
@@ -289,7 +289,7 @@
     {
       "ad": "S8e 'Teze ekleme sırasına koy' doğru çalışmaya kaydediyor",
       "durum": "PASS",
-      "not": "8de2e993-b11c-4ada-872a-32cdc997f212"
+      "not": "d0e7e3cd-2bde-49bb-94ad-1d1577f89492"
     },
     {
       "ad": "S8f kayıt 'Kaydedilen analizler' sekmesinde görünüyor",
@@ -309,7 +309,7 @@
     {
       "ad": "S11a2 lojistik hesabı çalışıyor ve künye doğru sütunu yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-dd21cb.csv bağımlı değ"
+      "not": "Hesaplanan sonuç İkili Lojistik Regresyon: basari ~ 1 yordayıcı veri dosyası .tmp-s11-a-d9073b.csv bağımlı değ"
     },
     {
       "ad": "S11b McNemar: iki AYRI geçerli sütun seçiliyor",
@@ -359,7 +359,7 @@
     {
       "ad": "S12a2 varsayılanlar STATE'e de yazıldı: hesap künyesi aynı sütunları yazıyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-dd21cb.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: yas ~ basari · veri dosyası · .tmp-s11-a-d9073b.csv · sayısal de"
     },
     {
       "ad": "S12b yeni dosyada farklı sütun adlarıyla seçimler yenileniyor",
@@ -369,7 +369,7 @@
     {
       "ad": "S12b2 yenilenen seçim hesap künyesinde de görünüyor",
       "durum": "PASS",
-      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-dd21cb.csv · sayısal de"
+      "not": "Hesaplanan sonuç · Bağımsız Örneklem t-Testi: skor ~ takim · veri dosyası · .tmp-s11-e-d9073b.csv · sayısal de"
     },
     {
       "ad": "S12c McNemar başlangıç: iki ayrı geçerli sütun",
@@ -490,6 +490,106 @@
       "ad": "S15b-telefon taşan tablolar yatay kaydırılıyor, sayfa taşmıyor",
       "durum": "PASS",
       "not": "kaydi+tasmiyor · sayfaTasmasi:false"
+    },
+    {
+      "ad": "S16a α ve ω TEK tabloda, ikisi de referansla aynı",
+      "durum": "PASS",
+      "not": "satir:2 alfa:true omega:true N:true"
+    },
+    {
+      "ad": "S16b model ve kestirim yöntemi ekranda yazılı",
+      "durum": "PASS",
+      "not": "tekFaktor:true ml:true hamPuan:true standartlastirilmamis:true tekBoyutUyarisi:true"
+    },
+    {
+      "ad": "S16c eksik veri: kullanılan N ve düşen satır yazılı, iki katsayı aynı satırlardan",
+      "durum": "PASS",
+      "not": "alfa:true omega:true N:true dusen:true"
+    },
+    {
+      "ad": "S16d ters madde çevrilmiyor: sebep yazılı, ω ham puanın değeri",
+      "durum": "PASS",
+      "not": "omega:true alfa:true uyari:true madde:true"
+    },
+    {
+      "ad": "S16e iki maddede α çalışıyor, ω için sebep yazılı",
+      "durum": "PASS",
+      "not": "alfa:true omegaSayiYok:true sebep:true"
+    },
+    {
+      "ad": "S16f tekil veride ω üretilmiyor, sebebi yazılı; α duruyor",
+      "durum": "PASS",
+      "not": "alfa:true omegaSayiYok:true sebep:true"
+    },
+    {
+      "ad": "S16g İngilizcede tablo çevrilmiş, sayılar aynı",
+      "durum": "PASS",
+      "not": "alfa:true omega:true model:true ml:true hamPuan:true tekBoyut:true turkceKalinti:true"
+    },
+    {
+      "ad": "S16h İngilizcede engel sebebi de çevrilmiş",
+      "durum": "PASS",
+      "not": "sayiYok:true sebep:true"
+    },
+    {
+      "ad": "S17a-tr kart dosya YÜKLENMEDEN görünüyor ve dört cümleyi yazıyor",
+      "durum": "PASS",
+      "not": "cumleler:true dropzone:1"
+    },
+    {
+      "ad": "S17b-tr en az madde sayıları yazılı, ω garanti edilmiyor",
+      "durum": "PASS",
+      "not": "enAz:true garantiDegil:true"
+    },
+    {
+      "ad": "S17c-tr örnek tablo başlıkları ve kurgusal satırlar",
+      "durum": "PASS",
+      "not": "basliklar:Katılımcı|Madde 1|Madde 2|Madde 3 satir:true"
+    },
+    {
+      "ad": "S17d-tr boş şablonda YALNIZCA sütun başlıkları var",
+      "durum": "PASS",
+      "not": "ad:true satir:1 baslik:Katılımcı,Madde 1,Madde 2,Madde 3"
+    },
+    {
+      "ad": "S17e-tr doldurulan şablon yükleniyor, madde sütunları seçilebiliyor",
+      "durum": "PASS",
+      "not": "kartKalkti:true maddeler:true katilimciYok:true satir:60"
+    },
+    {
+      "ad": "S17f-tr şablondan gelen veride α ve ω referansla aynı",
+      "durum": "PASS",
+      "not": "alfa:true omega:true N:true"
+    },
+    {
+      "ad": "S17a-en kart dosya YÜKLENMEDEN görünüyor ve dört cümleyi yazıyor",
+      "durum": "PASS",
+      "not": "cumleler:true dropzone:1"
+    },
+    {
+      "ad": "S17b-en en az madde sayıları yazılı, ω garanti edilmiyor",
+      "durum": "PASS",
+      "not": "enAz:true garantiDegil:true"
+    },
+    {
+      "ad": "S17c-en örnek tablo başlıkları ve kurgusal satırlar",
+      "durum": "PASS",
+      "not": "basliklar:Participant|Item 1|Item 2|Item 3 satir:true"
+    },
+    {
+      "ad": "S17d-en boş şablonda YALNIZCA sütun başlıkları var",
+      "durum": "PASS",
+      "not": "ad:true satir:1 baslik:Participant,Item 1,Item 2,Item 3"
+    },
+    {
+      "ad": "S17e-en doldurulan şablon yükleniyor, madde sütunları seçilebiliyor",
+      "durum": "PASS",
+      "not": "kartKalkti:true maddeler:true katilimciYok:true satir:60"
+    },
+    {
+      "ad": "S17f-en şablondan gelen veride α ve ω referansla aynı",
+      "durum": "PASS",
+      "not": "alfa:true omega:true N:true"
     },
     {
       "ad": "S10a-1440 yatay kaydırma yok",

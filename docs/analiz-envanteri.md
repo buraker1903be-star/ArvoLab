@@ -173,8 +173,25 @@ Dunn post hoc, Friedman sonrası ikili karşılaştırma yok.
 
 ## 21–23. Güvenilirlik / Faktör analizi
 
-### Güvenilirlik (Cronbach Alpha)
-`cronbachAlpha` (`stats-tests-core.ts`) · madde sütunları · **α**, madde sayısı, madde-toplam korelasyonları (düzeltilmiş), "madde silinirse α", 0,30 altı ve negatif değer uyarısı · doğrulama: SPSS (8 çağrı). **Eksik: McDonald ω yok; α'nın güven aralığı yok.**
+### Güvenilirlik (Cronbach α ve McDonald ω)
+`cronbachAlpha` (`stats-tests-core.ts`) + `mcdonaldOmega` (`stats-omega.ts`) · madde sütunları ·
+**α** ve **ω** tek tabloda, AYNI maddeler ve AYNI eksiksiz satırlar üzerinden; kullanılan N ve
+eksik veri yüzünden düşen satır yazılı. Ayrıca madde sayısı, düzeltilmiş madde-toplam
+korelasyonları, "madde silinirse α", 0,30 altı ve negatif değer uyarısı ·
+doğrulama: α SPSS (8 çağrı), ω R `lavaan` + `semTools` (`scripts/referans/omega-referans.R`).
+
+ω tek faktörlü DFA'dan (`stats-dfa.ts`, en çok olabilirlik, faktör varyansı 1) gelir:
+ω = (Σλ)² / ((Σλ)² + Σθ), **standartlaştırılmamış** yükler ve maddenin kendi ölçeğindeki
+hata varyanslarıyla — yani **ham madde toplam puanı** için. Madde varyansları farklı
+olduğunda standartlaştırılmış puanın ω'sı başka bir sayıdır; bu sürüm onu vermiyor.
+İki maddede α çalışır, ω için model tanımlanamaz ve sebebi yazılır; kestirim
+yakınsamazsa ya da sıfır/negatif hata varyansı çıkarsa yine sayı yerine sebep görünür.
+Ters maddeler **kendiliğinden çevrilmez**; diğerlerinin tersine yüklenen madde
+bildirilir. Tek faktörlü modelin kurulabilmesi tek boyutluluğun kanıtı olarak
+sunulmaz; ekran bunu açıkça yazar.
+
+**Eksik:** standartlaştırılmış puan için ω, hiyerarşik/çok boyutlu ω (ω_h, ω_t),
+α ve ω'nın güven aralıkları, sıralı göstergeler için kategorik ω (WLSMV).
 
 ### Açımlayıcı Faktör Analizi
 `aciklayiciFaktorAnalizi` (`stats-faktor.ts`: `ozAyristir` + `varimax`) · madde sütunları + istenen faktör sayısı (isteğe bağlı) · öz değerler, **KMO** ve yorumu, Bartlett, döndürülmüş yükler, açıklanan varyans yüzdeleri, düşük (<0,30) ve binişik (<0,10 fark) madde uyarıları; hata durumları ayrı · doğrulama: SciPy (ham yükler). **Eksik: yalnızca varimax; eğik döndürme (promax/oblimin) ve paralel analiz yok.**

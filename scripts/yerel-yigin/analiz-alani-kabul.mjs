@@ -147,6 +147,8 @@ const BUYUK_YOLU = path.join(KOK, `.tmp-analiz-buyuk-${ek}.csv`);
     D: hiç ikili sütun yok (boş durum)
 */
 const S11 = {};
+/* Omega'nın bağımsız referansı (lavaan + semTools); S16 bunu kullanıyor. */
+const OMEGA_REF = { setler: [], veri: {} };
 {
   const yaz = (ad, basliklar, satirUret) => {
     const satirlar = [basliklar.join(",")];
@@ -285,6 +287,27 @@ const S11 = {};
     const p = path.join(KOK, `.tmp-s15genis-${ek}.csv`);
     fs.writeFileSync(p, satirlar.join("\n"), "utf8");
     S11.karmaGenis = p;
+  }
+  /*
+    S16: GÜVENİLİRLİK (α ve ω). Dosyalar, omega'nın BAĞIMSIZ referansını
+    üreten R betiğinin veri setlerinden okunuyor
+    (scripts/referans/omega-referans.R → tests/fixtures/omega-referans.json).
+    Böylece ekrandaki sayı, ArvoLab'ın kendi kodundan değil lavaan +
+    semTools'tan gelen beklenen değerle karşılaştırılıyor.
+  */
+  {
+    const ref = JSON.parse(fs.readFileSync(path.join(KOK, "tests/fixtures/omega-referans.json"), "utf8"));
+    OMEGA_REF.setler = ref.setler;
+    OMEGA_REF.veri = ref.veri;
+    for (const set of ref.setler) {
+      const sutunlar = ref.veri[set.ad];
+      const n = sutunlar[0].length;
+      const satirlar = [set.adlar.join(",")];
+      for (let i = 0; i < n; i += 1) satirlar.push(sutunlar.map((c) => (c[i] === null ? "" : c[i])).join(","));
+      const p2 = path.join(KOK, `.tmp-s16-${set.ad}-${ek}.csv`);
+      fs.writeFileSync(p2, satirlar.join("\n"), "utf8");
+      S11[`omega_${set.ad}`] = p2;
+    }
   }
 }
 /* Bozuk dosya: başlık var, sayısal sütun yok, satırlar eksik sütunlu. */
@@ -720,7 +743,7 @@ try {
   const veriyiDegistir = async () => {
     const kabul = async (dl) => { await dl.accept().catch(() => {}); };
     sayfa.on("dialog", kabul);
-    await sayfa.getByRole("button", { name: "Veriyi değiştir" }).click();
+    await sayfa.getByRole("button", { name: /^(Veriyi değiştir|Change data)$/ }).click();
     await sayfa.waitForTimeout(600);
     sayfa.off("dialog", kabul);
   };
@@ -1207,6 +1230,266 @@ try {
   }
   await sayfa.setViewportSize({ width: 1440, height: 900 });
   await sayfa.waitForTimeout(250);
+
+  /* ================= S16: güvenilirlik — Cronbach α ve McDonald ω =================
+     İki katsayı TEK tabloda, AYNI maddeler ve AYNI eksiksiz satırlar
+     üzerinden. Beklenen sayılar ArvoLab'ın kodundan değil, R + lavaan +
+     semTools'tan geliyor (tests/fixtures/omega-referans.json). Tablo
+     Türkçe ve İngilizce ayrı ayrı okunuyor. */
+  const omegaSeti = (ad) => OMEGA_REF.setler.find((x) => x.ad === ad);
+  /* Ekranda üç ondalık yazılıyor; referans da öyle yuvarlanıp karşılaştırılıyor. */
+  const ucOndalik = (x) => Number(x.toFixed(3));
+  const sayiOku = (m) => (m === null || m === undefined ? null : Number(String(m).trim().replace(",", ".").replace(/^\./, "0.")));
+  /* Katsayı tablosu: başlıkları iki dilde arıyoruz, satırlar sekmeyle ayrılıyor. */
+  const katsayiTablosu = async () =>
+    await sayfa.evaluate(() => {
+      const kap = [...document.querySelectorAll(".analiz-sonuc .table-scroll")].find((el) =>
+        /Güvenilirlik katsayıları|Reliability coefficients/.test(el.getAttribute("aria-label") || ""),
+      );
+      if (!kap) return null;
+      const satirlar = [...kap.querySelectorAll("tbody tr")].map((tr) => [...tr.querySelectorAll("td")].map((td) => td.innerText.trim()));
+      const bul = (ad) => satirlar.find((r) => r[0].includes(ad));
+      const alfa = bul("α");
+      const omega = bul("ω");
+      return {
+        alfaAd: alfa?.[0] ?? null, alfaDeger: alfa?.[1] ?? null, alfaYorum: alfa?.[2] ?? null,
+        omegaAd: omega?.[0] ?? null, omegaDeger: omega?.[1] ?? null, omegaYorum: omega?.[2] ?? null,
+        satirSayisi: satirlar.length,
+        govde: document.querySelector(".analiz-sonuc").innerText,
+      };
+    });
+  const maddeSecVeCalistir = async (maddeler) => {
+    const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
+    const kutular = alan.locator('.sutun-secimi-liste input[type="checkbox"]');
+    const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
+    for (const kutu of await kutular.all()) if (await kutu.isChecked()) await kutu.uncheck();
+    for (const ad of maddeler) {
+      const i = etiketler.indexOf(ad);
+      if (i < 0) throw new Error(`madde listesinde ${ad} yok: ${etiketler.join(",")}`);
+      await kutular.nth(i).check();
+    }
+    await sayfa.waitForTimeout(150);
+    await sayfa.getByRole("button", { name: /Analizi Çalıştır|Run analysis/ }).click();
+    await sayfa.waitForSelector(".analiz-sonuc", { timeout: 25000 });
+    await sayfa.waitForTimeout(250);
+    return await katsayiTablosu();
+  };
+  const guvenilirlikCalistir = async (setAdi, maddeler) => {
+    /* İlk çağrıda henüz veri yok: "Veriyi değiştir" düğmesi de yok. */
+    if (await sayfa.getByRole("button", { name: /^(Veriyi değiştir|Change data)$/ }).count()) await veriyiDegistir();
+    await yukle(S11[`omega_${setAdi}`]);
+    return await maddeSecVeCalistir(maddeler);
+  };
+  const dilSec = async (ad) => {
+    await sayfa.locator("details.ust-dil > summary").click();
+    await sayfa.locator(".ust-dil-menu button", { hasText: ad }).click();
+    await sayfa.waitForTimeout(1200);
+  };
+
+  await git(sayfa, ANALIZ_YOLU);
+  await analizSec("betimsel", "Güvenilirlik");
+  await esit("S16a α ve ω TEK tabloda, ikisi de referansla aynı", async () => {
+    const r = omegaSeti("esitVaryans");
+    const k = await guvenilirlikCalistir("esitVaryans", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `satir:${k.satirSayisi}`,
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+      `N:${/N = 200/.test(k.govde)}`,
+    ].join(" ");
+  }, "satir:2 alfa:true omega:true N:true");
+  await esit("S16b model ve kestirim yöntemi ekranda yazılı", async () => {
+    const k = await katsayiTablosu();
+    return [
+      `tekFaktor:${/tek faktörlü doğrulayıcı faktör analizi/.test(k.govde)}`,
+      `ml:${/en çok olabilirlik/.test(k.govde)}`,
+      `hamPuan:${/HAM madde toplam puanı/.test(k.govde)}`,
+      `standartlastirilmamis:${/standartlaştırılmamış yükler/.test(k.govde)}`,
+      `tekBoyutUyarisi:${/TEK BOYUTLU olduğunun kanıtı değildir/.test(k.govde)}`,
+    ].join(" ");
+  }, "tekFaktor:true ml:true hamPuan:true standartlastirilmamis:true tekBoyutUyarisi:true");
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "26-guvenilirlik-tr");
+
+  await esit("S16c eksik veri: kullanılan N ve düşen satır yazılı, iki katsayı aynı satırlardan", async () => {
+    const r = omegaSeti("eksikVeri");
+    const k = await guvenilirlikCalistir("eksikVeri", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+      `N:${new RegExp(`N = ${r.n}`).test(k.govde)}`,
+      `dusen:${new RegExp(`${r.dusen} satır eksik veri`).test(k.govde)}`,
+    ].join(" ");
+  }, "alfa:true omega:true N:true dusen:true");
+
+  await esit("S16d ters madde çevrilmiyor: sebep yazılı, ω ham puanın değeri", async () => {
+    const r = omegaSeti("tersMadde");
+    const k = await guvenilirlikCalistir("tersMadde", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `uyari:${/KENDİLİĞİNDEN ÇEVİRMEZ/.test(k.govde)}`,
+      `madde:${/m3/.test(k.govde)}`,
+    ].join(" ");
+  }, "omega:true alfa:true uyari:true madde:true");
+
+  await esit("S16e iki maddede α çalışıyor, ω için sebep yazılı", async () => {
+    const r = omegaSeti("ikiMadde");
+    const k = await guvenilirlikCalistir("ikiMadde", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `omegaSayiYok:${k.omegaDeger === "—"}`,
+      `sebep:${/en az 3 madde gerekir/.test(k.omegaYorum || "")}`,
+    ].join(" ");
+  }, "alfa:true omegaSayiYok:true sebep:true");
+
+  await esit("S16f tekil veride ω üretilmiyor, sebebi yazılı; α duruyor", async () => {
+    const r = omegaSeti("tekil");
+    const k = await guvenilirlikCalistir("tekil", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `omegaSayiYok:${k.omegaDeger === "—"}`,
+      `sebep:${/kestirilemedi/.test(k.omegaYorum || "")}`,
+    ].join(" ");
+  }, "alfa:true omegaSayiYok:true sebep:true");
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "27-guvenilirlik-engel");
+
+  /* ---- İngilizce: aynı sayılar, çevrilmiş başlıklar ---- */
+  await dilSec("English");
+  await esit("S16g İngilizcede tablo çevrilmiş, sayılar aynı", async () => {
+    const r = omegaSeti("esitVaryans");
+    const k = await guvenilirlikCalistir("esitVaryans", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return [
+      `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+      `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+      `model:${/one-factor confirmatory factor analysis/.test(k.govde)}`,
+      `ml:${/maximum likelihood/.test(k.govde)}`,
+      `hamPuan:${/RAW item total score/.test(k.govde)}`,
+      `tekBoyut:${/NOT evidence that the scale is unidimensional/.test(k.govde)}`,
+      `turkceKalinti:${!/Yorum|Katsayı|kanıtı/.test(k.govde)}`,
+    ].join(" ");
+  }, "alfa:true omega:true model:true ml:true hamPuan:true tekBoyut:true turkceKalinti:true");
+  await esit("S16h İngilizcede engel sebebi de çevrilmiş", async () => {
+    const r = omegaSeti("ikiMadde");
+    const k = await guvenilirlikCalistir("ikiMadde", r.adlar);
+    if (!k) return "katsayı tablosu yok";
+    return `sayiYok:${k.omegaDeger === "—"} sebep:${/requires at least 3 items/.test(k.omegaYorum || "")}`;
+  }, "sayiYok:true sebep:true");
+  await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+  await cek(sayfa, "28-guvenilirlik-en");
+  await dilSec("Türkçe");
+
+  /* ================= S17: "Bu analiz için hangi veriler gerekli?" kartı =================
+     Öğrenciler ölçek güvenilirliği için sık sık TEK bir toplam puan
+     sütunu yüklüyor; α ve ω madde düzeyinde yanıt ister. Kart dosya
+     SEÇİLMEDEN önce görünmeli. Burada indirilen şablon gerçekten
+     doldurulup GERÇEK yükleme akışından geçiriliyor ve çıkan α/ω
+     lavaan referansıyla karşılaştırılıyor. */
+  const SABLON = {
+    tr: { ad: "Güvenilirlik", basliklar: ["Katılımcı", "Madde 1", "Madde 2", "Madde 3"], ornek: "Örnek tabloyu gör", indir: "Boş şablonu indir" },
+    en: { ad: "Reliability", basliklar: ["Participant", "Item 1", "Item 2", "Item 3"], ornek: "See an example table", indir: "Download the blank template" },
+  };
+  const kartMetni = async () => {
+    const k = sayfa.locator(".analiz-veri-karti");
+    return (await k.count()) ? await k.innerText() : null;
+  };
+
+  for (const dil of ["tr", "en"]) {
+    const S = SABLON[dil];
+    if (dil === "en") await dilSec("English");
+    await git(sayfa, ANALIZ_YOLU);
+    await analizSec("betimsel", S.ad);
+
+    await esit(`S17a-${dil} kart dosya YÜKLENMEDEN görünüyor ve dört cümleyi yazıyor`, async () => {
+      const m = await kartMetni();
+      if (m === null) return "kart yok";
+      const cumleler = dil === "tr"
+        ? ["Her satır bir katılımcı, her sütun bir anket maddesi.", "Hücrelere verilen yanıtları yazın.", "Yalnızca toplam puan yeterli değildir.", "Katılımcı sütunu isteğe bağlıdır ve analize seçilmez."]
+        : ["Each row is one participant, each column is one questionnaire item.", "Write the given answers in the cells.", "A total score on its own is not enough.", "A participant column is optional and is not selected for the analysis."];
+      /* Dosya seçme alanı hâlâ ekranda: kart onun yerine geçmiyor, onu açıklıyor. */
+      const dropzone = await sayfa.locator(".dropzone").count();
+      return `cumleler:${cumleler.every((c) => m.includes(c))} dropzone:${dropzone}`;
+    }, "cumleler:true dropzone:1");
+
+    await esit(`S17b-${dil} en az madde sayıları yazılı, ω garanti edilmiyor`, async () => {
+      const m = (await kartMetni()) ?? "";
+      return dil === "tr"
+        ? `enAz:${/en az 2 madde, McDonald ω için en az 3 madde/.test(m)} garantiDegil:${/GARANTİ ETMEZ/.test(m)}`
+        : `enAz:${/at least 2 items and McDonald's ω at least 3/.test(m)} garantiDegil:${/does NOT guarantee/.test(m)}`;
+    }, "enAz:true garantiDegil:true");
+
+    await esit(`S17c-${dil} örnek tablo başlıkları ve kurgusal satırlar`, async () => {
+      await sayfa.getByRole("button", { name: S.ornek }).click();
+      await sayfa.waitForTimeout(250);
+      const tablo = sayfa.locator('.analiz-veri-karti [role="region"] table');
+      const basliklar = await tablo.locator("thead th").allInnerTexts();
+      const satir = await tablo.locator("tbody tr").count();
+      return `basliklar:${basliklar.map((x) => x.trim()).join("|")} satir:${satir >= 3}`;
+    }, `basliklar:${SABLON[dil].basliklar.join("|")} satir:true`);
+    /* Kartın kendisi: örnek tablo açıkken, dosya henüz seçilmeden. */
+    await sayfa.locator(".analiz-veri-karti").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `29-veri-karti-${dil}`);
+
+    await esit(`S17d-${dil} boş şablonda YALNIZCA sütun başlıkları var`, async () => {
+      const [indirme] = await Promise.all([
+        sayfa.waitForEvent("download", { timeout: 20000 }),
+        sayfa.getByRole("button", { name: S.indir }).click(),
+      ]);
+      const yol = path.join(KOK, `.tmp-s17-${dil}-${ek}.csv`);
+      await indirme.saveAs(yol);
+      S11[`sablon_${dil}`] = yol;
+      const icerik = fs.readFileSync(yol, "utf8");
+      const satirlar = icerik.split("\n").filter((x) => x.trim() !== "");
+      return `ad:${/\.csv$/.test(indirme.suggestedFilename())} satir:${satirlar.length} baslik:${satirlar[0]}`;
+    }, `ad:true satir:1 baslik:${SABLON[dil].basliklar.join(",")}`);
+
+    /* İndirilen şablon DOLDURULUP gerçek yükleme akışından geçiyor. */
+    await esit(`S17e-${dil} doldurulan şablon yükleniyor, madde sütunları seçilebiliyor`, async () => {
+      const r = omegaSeti("sablon");
+      const sutunlar = OMEGA_REF.veri.sablon;
+      const sablon = fs.readFileSync(S11[`sablon_${dil}`], "utf8").trim();
+      const satirlar = [sablon];
+      for (let i = 0; i < sutunlar[0].length; i += 1) {
+        satirlar.push([`${dil === "en" ? "P" : "K"}${i + 1}`, ...sutunlar.map((c) => c[i])].join(","));
+      }
+      const dolu = path.join(KOK, `.tmp-s17-dolu-${dil}-${ek}.csv`);
+      fs.writeFileSync(dolu, `${satirlar.join("\n")}\n`, "utf8");
+      S11[`sablonDolu_${dil}`] = dolu;
+      await yukle(dolu);
+      /* Veri gelince kart kayboluyor: sorusu yanıtlanmış oluyor. */
+      const kartKalkti = (await sayfa.locator(".analiz-veri-karti").count()) === 0;
+      const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
+      const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
+      /* Katılımcı sütunu metin: madde listesine düşmüyor. */
+      return [
+        `kartKalkti:${kartKalkti}`,
+        `maddeler:${S.basliklar.slice(1).every((b) => etiketler.includes(b))}`,
+        `katilimciYok:${!etiketler.includes(S.basliklar[0])}`,
+        `satir:${r.n}`,
+      ].join(" ");
+    }, (v) => v === `kartKalkti:true maddeler:true katilimciYok:true satir:60`);
+
+    await esit(`S17f-${dil} şablondan gelen veride α ve ω referansla aynı`, async () => {
+      const r = omegaSeti("sablon");
+      const k = await maddeSecVeCalistir(S.basliklar.slice(1));
+      if (!k) return "katsayı tablosu yok";
+      return [
+        `alfa:${sayiOku(k.alfaDeger) === ucOndalik(r.alpha)}`,
+        `omega:${sayiOku(k.omegaDeger) === ucOndalik(r.omega)}`,
+        `N:${new RegExp(`N = ${r.n}`).test(k.govde)}`,
+      ].join(" ");
+    }, "alfa:true omega:true N:true");
+    await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `30-sablondan-sonuc-${dil}`);
+  }
+  await dilSec("Türkçe");
 
   /* ================= S10: ölçüler, tema, klavye ================= */
   await git(sayfa, ANALIZ_YOLU);

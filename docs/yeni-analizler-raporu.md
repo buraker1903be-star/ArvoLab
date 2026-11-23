@@ -23,7 +23,7 @@ kaybı olur.
 | **Games–Howell** | **VAR.** Varyanslar ayrışınca Tukey yerine | `gamesHowell`, `stats-tukey.ts` |
 | **Çoklu karşılaştırma** | **VAR (kısmen).** Bonferroni ve Welch-Bonferroni ikili karşılaştırmaları; tekrarlı ölçümlerde de ikili karşılaştırma | `bonferroniKarsilastirmalari`, `welchBonferroniKarsilastirmalari`, `tekrarliIkiliKarsilastirmalar` |
 | **Fisher kesin testi** | **VAR.** 2×2 tabloda beklenen değer 5'in altına düşünce ki-karenin yanında | `fisherKesinTesti`, `stats-tests-core.ts` |
-| **McDonald ω** | **YOK** | — |
+| **McDonald ω** | **VAR (23.11.2026).** Güvenilirlik analizinde α ile aynı tabloda; tek faktörlü model, ham madde toplam puanı | `mcdonaldOmega`, `stats-omega.ts` (kestirim `stats-dfa.ts`) |
 | **Güç ve örneklem büyüklüğü** | **YOK** | — |
 
 Çoklu karşılaştırmada **gerçek boşluk** şudur: Bonferroni ve
@@ -55,7 +55,23 @@ boşluğu**.
 - **Sırada ne var:** Bu madde listeden düştü; öncelik sırası A2
   (McDonald ω) ile başlıyor.
 
-### A2. McDonald ω (omega)
+### A2. McDonald ω (omega) — EKLENDİ (23.11.2026)
+
+- **Var mı:** **Var.** Güvenilirlik analizinde Cronbach α ile AYNI
+  tabloda, aynı maddeler ve aynı eksiksiz satırlar üzerinden
+  (`lib/stats-omega.ts`). İlk sürüm **tek faktörlü model** ve **ham
+  madde toplam puanı** ile sınırlı: standartlaştırılmamış yükler ve
+  maddenin kendi ölçeğindeki hata varyansları. Model ve kestirim
+  ekranda yazılı. İki maddede α çalışmaya devam ediyor, ω için sebep
+  görünüyor; yakınsamama ve geçersiz hata varyansı da sebebiyle
+  bildiriliyor. Ters maddeler kendiliğinden çevrilmiyor. Tek faktörlü
+  modelin kurulabilmesi tek boyutluluğun kanıtı olarak sunulmuyor.
+  Doğrulama: R `lavaan` + `semTools`
+  (`scripts/referans/omega-referans.R`, altı veri seti).
+- **Sırada ne var:** standartlaştırılmış puan için ω, faktör başına ω
+  (çok boyutlu ölçek), ω_h/ω_t, güven aralıkları, kategorik ω (WLSMV).
+
+#### Eklenmeden önceki değerlendirme
 
 - **Var mı:** Yok. Yalnızca Cronbach α var.
 - **İhtiyaç / öncelik:** **Yüksek.** Ölçek geliştirme ve uyarlama

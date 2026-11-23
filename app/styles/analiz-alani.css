@@ -466,3 +466,17 @@
    bütün ekran yana kayıyordu. min-width: 0 ile sarmalayıcı sütuna
    sığıyor, .table-scroll yeniden gerçekten yatay kaydırılabiliyor. */
 .analiz-sonuc > * { min-width: 0; }
+
+/* ---------- "Bu analiz için hangi veriler gerekli?" kartı ----------
+   Dosya SEÇİLMEDEN önce görünür. Dropzone ile aynı sütunda, ondan
+   sonra: önce "nasıl bir dosya" sorusu yanıtlanıyor, sonra dosya
+   seçiliyor. Veri yüklenince kart kendiliğinden kayboluyor (koşul
+   TSX'te), çünkü sorusu artık yanıtlanmış oluyor. */
+.analiz-veri-karti {
+  display: grid; gap: var(--s-2); margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2);
+}
+.analiz-veri-karti > h4 { margin: 0; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
+.analiz-veri-karti > ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.analiz-veri-karti li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
+.analiz-veri-karti > p { margin: 0; }
