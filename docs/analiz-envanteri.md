@@ -207,6 +207,33 @@ sunulmaz; ekran bunu açıkça yazar.
 ### Düzenleyicilik
 `duzenleyicilik` (`stats-aracilik.ts`) · X + W + Y + isteğe bağlı kontrol değişkenleri · etkileşim katsayısı, merkezlenmiş değişkenler, koşullu etkiler (W'nin düzeylerinde), **bootstrap GA** · doğrulama: `statsmodels` t-testleriyle. **Eksik: Johnson–Neyman aralığı yok.**
 
+## 26. Güç ve örneklem (veri dosyası istemeyen ayrı akış)
+
+`ornekemBuyuklugu` (`stats-guc.ts`) + `guc-yontemleri.ts` · Analiz Merkezi'nin üçüncü
+sekmesi · girdi: yöntem, etki büyüklüğü, alfa, hedef güç, (yönteme göre) test yönü,
+grup sayısı, yordayıcı sayısı, dağılım oranı, beklenen kayıp oranı · çıktı: analize
+gereken en düşük toplam örneklem, grup başına sayı, yuvarlamadan sonra ulaşılan güç,
+bir küçük örneklemin gücü, kayıp payıyla başlangıçta alınacak sayı ve yöntem metni.
+
+Beş yöntem ve G*Power karşılıkları:
+
+| Yöntem | Etki | G*Power: Test family → Statistical test |
+|---|---|---|
+| Bağımsız iki grup t-testi | d | t tests → Means: Difference between two independent means (two groups) |
+| Eşleştirilmiş t-testi | dz | t tests → Means: Difference between two dependent means (matched pairs) |
+| Tek yönlü ANOVA (eşit grup) | f | F tests → ANOVA: Fixed effects, omnibus, one-way |
+| Pearson korelasyonu | r | Exact → Correlation: Bivariate normal model |
+| Çoklu regresyon, genel F | f² | F tests → Linear multiple regression: Fixed model, R² deviation from zero |
+
+Hepsinde "Type of power analysis: A priori". Hesap merkezi olmayan dağılımlarla
+(noncentral t / noncentral F), korelasyonda r'nin tam yoğunluğuyla.
+Doğrulama: R `pwr` + `pt`/`pf` ve Python `statsmodels`; korelasyonda ayrıca
+Monte-Carlo (`scripts/referans/guc-referans.R`, `.py`).
+
+**Eksik:** ki-kare ve lojistik regresyon gücü, tekrarlı ölçümler ve karma desenler,
+eşit olmayan gruplu ANOVA, duyarlılık çözümlemesi. **Post hoc güç bilerek yok:**
+toplanmış veriden hesaplanan güç p değerinin yeniden yazımıdır ve yanıltıcıdır.
+
 ## Boşluklar — doğrulanmış özet
 
 1. ~~`tekrarliIkiliKarsilastirmalar` hiç test edilmiyor.~~ **Kapatıldı

@@ -24,7 +24,7 @@ kaybı olur.
 | **Çoklu karşılaştırma** | **VAR (kısmen).** Bonferroni ve Welch-Bonferroni ikili karşılaştırmaları; tekrarlı ölçümlerde de ikili karşılaştırma | `bonferroniKarsilastirmalari`, `welchBonferroniKarsilastirmalari`, `tekrarliIkiliKarsilastirmalar` |
 | **Fisher kesin testi** | **VAR.** 2×2 tabloda beklenen değer 5'in altına düşünce ki-karenin yanında | `fisherKesinTesti`, `stats-tests-core.ts` |
 | **McDonald ω** | **VAR (23.11.2026).** Güvenilirlik analizinde α ile aynı tabloda; tek faktörlü model, ham madde toplam puanı | `mcdonaldOmega`, `stats-omega.ts` (kestirim `stats-dfa.ts`) |
-| **Güç ve örneklem büyüklüğü** | **YOK** | — |
+| **Güç ve örneklem büyüklüğü** | **VAR (23.11.2026).** Analiz Merkezi'nin üçüncü sekmesi; veri dosyası istemez. Beş yöntem | `stats-guc.ts`, `guc-yontemleri.ts`, `guc-paneli.tsx` |
 
 Çoklu karşılaştırmada **gerçek boşluk** şudur: Bonferroni ve
 Games–Howell var, ama **Kruskal-Wallis sonrası Dunn**, **Friedman
@@ -116,7 +116,42 @@ boşluğu**.
   bağlı sıra içeren ve içermeyen iki veri seti.
 - **Tarayıcı:** Uygun.
 
-### A4. Güç ve örneklem büyüklüğü planlaması
+### A4. Güç ve örneklem büyüklüğü planlaması — EKLENDİ (23.11.2026)
+
+- **Var mı:** **Var.** Analiz Merkezi'nin üçüncü sekmesi ("Güç ve
+  örneklem"), veri dosyası istemeyen ayrı bir akış. İlk sürüm beş
+  yöntem: bağımsız iki grup t-testi, eşleştirilmiş t-testi, eşit
+  gruplu tek yönlü ANOVA, Pearson korelasyonu ve sabit modelli çoklu
+  doğrusal regresyonun genel F testi (R² deviation from zero).
+  Yöntemler araştırma sorusuyla listeleniyor; "Hangi bilgiler
+  gerekli?" kartı etki büyüklüğünü, alfayı ve hedef gücü sade dille
+  anlatıyor ve etki büyüklüğünün önceki araştırma, pilot çalışma ya da
+  saptanmak istenen en küçük anlamlı farkla gerekçelendirilmesini
+  istiyor. "Örneği doldur" değerleri açıkça ÖRNEK diye işaretleniyor.
+  Sonuçta analize gereken en düşük toplam örneklem, uygunsa grup
+  başına sayı, yuvarlamadan sonra ulaşılan güç ve bir küçük örneklemin
+  hedefi karşılamadığı yazılı; kayıp oranı girilirse analize gereken
+  ile başlangıçta alınacak sayı AYRI gösteriliyor. Tez önerisine ya da
+  etik kurul başvurusuna eklenebilecek, varsayımları da yazan bir
+  yöntem metni üretiliyor.
+- **Hesap:** merkezi olmayan t ve F dağılımları `lib/stats-guc.ts`
+  içinde yazıldı (noncentral t sayısal integral, noncentral F
+  Poisson–beta karışımı); korelasyonda r'nin TAM örnekleme yoğunluğu
+  (Hotelling, 2F1 serisi) — G*Power'ın "Exact" seçeneğiyle aynı model.
+  Yaygın Fisher z yaklaşıklığı kullanılmadı: r = .30, α = .05, çift
+  yönlü, hedef .80 için bir katılımcı fazla istiyor.
+- **Doğrulama:** R 4.3.3 + `pwr` 1.3.0 (`scripts/referans/guc-referans.R`)
+  ve Python + `statsmodels` (`scripts/referans/guc-referans.py`); ayrıca
+  korelasyonda 400.000 turluk Monte-Carlo. G*Power masaüstü uygulaması
+  bu ortamda çalıştırılamadığı için sayısal karşılaştırma bu iki
+  bağımsız uygulamayla yapıldı; her yöntemin G*Power'daki aile, model
+  ve ayarları `lib/guc-yontemleri.ts` içinde yazılı.
+- **Sırada ne var:** ki-kare ve lojistik regresyon için güç, tekrarlı
+  ölçümler/karma desenler, eşit olmayan gruplu ANOVA, duyarlılık
+  (sensitivity) ve post hoc güç — post hoc güç bilerek yok (aşağıdaki
+  uyarı).
+
+#### Eklenmeden önceki değerlendirme
 
 - **Var mı:** Yok.
 - **İhtiyaç / öncelik:** **Yüksek ama ayrı bir ekran.** Etik kurul

@@ -10,6 +10,7 @@ import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici"
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import DataAnalyzer from "./data-analyzer";
 import AnalizGezgini from "./analiz-gezgini";
+import GucPaneli from "./guc-paneli";
 
 /*
   Analiz penceresinin içi (analiz-penceresi.tsx). İki kart, tek yer:
@@ -46,7 +47,7 @@ export default function AnalizSecici({
 }) {
   const t = useCeviri();
   /* Sekme yalnızca görünümü değiştirir: açmak hiçbir şey kaydetmez. */
-  const [sekme, setSekme] = useState<"alan" | "kayitli">("alan");
+  const [sekme, setSekme] = useState<"alan" | "guc" | "kayitli">("alan");
   const sirada = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const eklenen = analizler.filter((a) => a.teze_eklendi);
   const digerleri = analizler.filter((a) => !a.teze_eklenecek && !a.teze_eklendi);
@@ -148,8 +149,15 @@ export default function AnalizSecici({
     );
   }
 
+  /*
+    ÜÇÜNCÜ SEKME: GÜÇ ve ÖRNEKLEM (23.11.2026). Örneklem kararı veri
+    TOPLANMADAN önce verilir; bu yüzden dosya yükleme akışının içinde
+    değil, ayrı bir sekme. Çalışma alanındaki veri ve seçimler
+    etkilenmiyor.
+  */
   const sekmeler = [
     { anahtar: "alan" as const, ad: t({ tr: "Çalışma alanı", en: "Workspace" }), sayi: null as number | null },
+    { anahtar: "guc" as const, ad: t({ tr: "Güç ve örneklem", en: "Power and sample size" }), sayi: null as number | null },
     { anahtar: "kayitli" as const, ad: t({ tr: "Kaydedilen analizler", en: "Saved analyses" }), sayi: analizler.length },
   ];
 
@@ -175,6 +183,9 @@ export default function AnalizSecici({
 
       <div role="tabpanel" id="analiz-panel-alan" aria-labelledby="analiz-sekme-alan" hidden={sekme !== "alan"}>
         {calismaAlani}
+      </div>
+      <div role="tabpanel" id="analiz-panel-guc" aria-labelledby="analiz-sekme-guc" hidden={sekme !== "guc"}>
+        <GucPaneli />
       </div>
       <div role="tabpanel" id="analiz-panel-kayitli" aria-labelledby="analiz-sekme-kayitli" hidden={sekme !== "kayitli"}>
         {kayitliKart}

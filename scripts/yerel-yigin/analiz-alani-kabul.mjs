@@ -1396,8 +1396,10 @@ try {
     tr: { ad: "Güvenilirlik", basliklar: ["Katılımcı", "Madde 1", "Madde 2", "Madde 3"], ornek: "Örnek tabloyu gör", indir: "Boş şablonu indir" },
     en: { ad: "Reliability", basliklar: ["Participant", "Item 1", "Item 2", "Item 3"], ornek: "See an example table", indir: "Download the blank template" },
   };
+  /* Kart iki panelde birden var (güç bölümü de aynı sınıfı kullanıyor);
+     burada YALNIZCA çalışma alanı paneli okunuyor. */
   const kartMetni = async () => {
-    const k = sayfa.locator(".analiz-veri-karti");
+    const k = sayfa.locator("#analiz-panel-alan .analiz-veri-karti");
     return (await k.count()) ? await k.innerText() : null;
   };
 
@@ -1464,7 +1466,7 @@ try {
       S11[`sablonDolu_${dil}`] = dolu;
       await yukle(dolu);
       /* Veri gelince kart kayboluyor: sorusu yanıtlanmış oluyor. */
-      const kartKalkti = (await sayfa.locator(".analiz-veri-karti").count()) === 0;
+      const kartKalkti = (await sayfa.locator("#analiz-panel-alan .analiz-veri-karti").count()) === 0;
       const alan = sayfa.locator("fieldset.sutun-secimi", { hasText: /Maddeler|Items/ });
       const etiketler = (await alan.locator(".sutun-secimi-liste label span").allInnerTexts()).map((x) => x.trim());
       /* Katılımcı sütunu metin: madde listesine düşmüyor. */
@@ -1489,6 +1491,183 @@ try {
     await sayfa.locator(".analiz-sonuc").scrollIntoViewIfNeeded().catch(() => {});
     await cek(sayfa, `30-sablondan-sonuc-${dil}`);
   }
+  await dilSec("Türkçe");
+
+  /* ================= S18: Güç ve Örneklem =================
+     Örneklem kararı veri TOPLANMADAN önce verilir: bu sekme dosya
+     istemiyor. Beklenen sayılar ArvoLab'ın kodundan değil, R (pwr +
+     noncentral dağılımlar) ve Python (statsmodels) referanslarından
+     geliyor: tests/fixtures/guc-referans.json. */
+  const GUCREF = JSON.parse(fs.readFileSync(path.join(KOK, "tests/fixtures/guc-referans.json"), "utf8"));
+  const gucSeti = (ad) => GUCREF.senaryolar.find((x) => x.ad === ad);
+  const gucSekmesi = async () => {
+    await sayfa.getByRole("tab", { name: /Güç ve örneklem|Power and sample size/ }).click();
+    await sayfa.waitForTimeout(250);
+  };
+  const gucAlan = (etiket) => sayfa.locator(".analiz-guc label").filter({ hasText: etiket }).first();
+  const gucYaz = async (etiket, deger) => {
+    const alan = gucAlan(etiket).locator("input");
+    await alan.fill(String(deger));
+    await sayfa.waitForTimeout(200);
+  };
+  const gucYontemSec = async (soru) => {
+    await sayfa.locator(".analiz-guc-secenek", { hasText: soru }).locator("input").check();
+    await sayfa.waitForTimeout(200);
+  };
+  /* Sonuç tablosu satır adı → değer. */
+  const gucSonucu = async () =>
+    await sayfa.evaluate(() => {
+      const kap = document.querySelector(".analiz-guc-sonuc");
+      if (!kap) return null;
+      const satirlar = {};
+      for (const tr of kap.querySelectorAll("tbody tr")) {
+        const th = tr.querySelector("th");
+        const td = tr.querySelector("td");
+        if (th && td) satirlar[th.innerText.trim()] = td.innerText.trim();
+      }
+      return { satirlar, govde: kap.innerText, metin: kap.querySelector(".analiz-guc-metin p")?.innerText ?? null };
+    });
+  const kartMetniGuc = async () => {
+    const k = sayfa.locator(".analiz-guc .analiz-veri-karti");
+    return (await k.count()) ? await k.innerText() : null;
+  };
+
+  for (const [dil, olcu] of [["tr", "masaüstü"], ["tr", "telefon"], ["en", "masaüstü"], ["en", "telefon"]]) {
+    const telefon = olcu === "telefon";
+    /* Dil, MASAÜSTÜ ölçüsünde değiştiriliyor: üst çubuktaki dil menüsü
+       telefonda dar ve tıklama zaman aşımına uğruyordu. */
+    await sayfa.setViewportSize({ width: 1440, height: 900 });
+    await sayfa.waitForTimeout(250);
+    await dilSec(dil === "en" ? "English" : "Türkçe");
+    await sayfa.setViewportSize(telefon ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    await git(sayfa, ANALIZ_YOLU);
+    await gucSekmesi();
+    const etiketEtki = dil === "tr" ? "Etki büyüklüğü" : "Effect size";
+    const etiketAlfa = dil === "tr" ? "Alfa" : "Alpha";
+    const etiketKayip = dil === "tr" ? "Beklenen kayıp" : "Expected dropout";
+    const sorular = {
+      bagimsiz: dil === "tr" ? "İki ayrı grubun puanlarını karşılaştıracağım" : "I will compare the scores of two separate groups",
+      esl: dil === "tr" ? "Aynı kişileri önce ve sonra ölçeceğim" : "I will measure the same people before and after",
+      anova: dil === "tr" ? "Üç ya da daha çok grubun" : "I will compare the means of three or more groups",
+    };
+
+    await esit(`S18a-${dil}-${olcu} bölüm dosya YÜKLEMEDEN açılıyor, beş yöntem araştırma sorusuyla`, async () => {
+      const secenek = await sayfa.locator(".analiz-guc-secenek").count();
+      const dosyaGerekmiyor = (await sayfa.locator(".analiz-guc .dropzone").count()) === 0;
+      const soruVar = (await sayfa.locator(".analiz-guc-secenek", { hasText: sorular.bagimsiz }).count()) === 1;
+      const yatay = await sayfa.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+      return `secenek:${secenek} dosyaGerekmiyor:${dosyaGerekmiyor} soru:${soruVar} yatayTasmaYok:${yatay}`;
+    }, "secenek:5 dosyaGerekmiyor:true soru:true yatayTasmaYok:true");
+
+    await esit(`S18b-${dil}-${olcu} "Hangi bilgiler gerekli?" kartı üç kavramı ve gerekçelendirmeyi anlatıyor`, async () => {
+      const m = (await kartMetniGuc()) ?? "";
+      const anahtarlar = dil === "tr"
+        ? ["Etki büyüklüğü", "yanlış alarm", "YAKALAMA olasılığınız", "ÖNCEKİ ARAŞTIRMALARIN", "PİLOT", "EN KÜÇÜK FARK"]
+        : ["Effect size", "false alarm", "DETECTING", "PREVIOUS RESEARCH", "PILOT", "SMALLEST DIFFERENCE"];
+      return `kavramlar:${anahtarlar.every((a) => m.includes(a))}`;
+    }, "kavramlar:true");
+
+    await esit(`S18c-${dil}-${olcu} "Örneği doldur" alanları dolduruyor ve ÖRNEK olduğunu yazıyor`, async () => {
+      await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
+      await sayfa.waitForTimeout(300);
+      const etki = await gucAlan(etiketEtki).locator("input").inputValue();
+      const m = (await kartMetniGuc()) ?? "";
+      return `etki:${etki} uyari:${/ÖRNEK DEĞERLER|EXAMPLE VALUES/.test(m)} gerekce:${/gerekçelendirin|Justify your own/.test(m)}`;
+    }, "etki:0.5 uyari:true gerekce:true");
+
+    await esit(`S18d-${dil}-${olcu} bağımsız t: N, grup başına ve ulaşılan güç referansla aynı`, async () => {
+      const ref = gucSeti("bagimsizT-d05");
+      const s = await gucSonucu();
+      if (!s) return "sonuç yok";
+      const n = Object.entries(s.satirlar).find(([k]) => /en düşük toplam örneklem|Minimum total sample/.test(k))?.[1];
+      const grup = Object.entries(s.satirlar).find(([k]) => /Grup başına|Per group/.test(k))?.[1];
+      const guc = Object.entries(s.satirlar).find(([k]) => /ulaşılan güç|Power achieved/.test(k))?.[1];
+      return `n:${n} grup:${grup} guc:${guc} refN:${ref.enKucukN}`;
+    }, (v) => /^n:128 grup:64 \+ 64 guc:0[.,]801 refN:128$/.test(v));
+
+    await esit(`S18e-${dil}-${olcu} bir küçük örneklemin hedefi KARŞILAMADIĞI yazılı`, async () => {
+      const s = await gucSonucu();
+      const satir = Object.entries(s.satirlar).find(([k]) => /Bir küçük örneklemde|next smaller sample/.test(k));
+      if (!satir) return "satır yok";
+      const ref = gucSeti("bagimsizT-d05");
+      const beklenen = ref.birKucukGuc.toFixed(3);
+      return `baslik127:${/\(127\)/.test(satir[0])} deger:${satir[1].replace(",", ".").startsWith(beklenen)} altinda:${/hedefin altında|below the target/.test(satir[1])}`;
+    }, "baslik127:true deger:true altinda:true");
+
+    await esit(`S18f-${dil}-${olcu} kayıp oranı: analize gereken ile başlangıçta alınacak AYRI`, async () => {
+      await gucYaz(etiketKayip, "0.2");
+      const s = await gucSonucu();
+      const n = Object.entries(s.satirlar).find(([k]) => /en düşük toplam örneklem|Minimum total sample/.test(k))?.[1];
+      const bas = Object.entries(s.satirlar).find(([k]) => /Başlangıçta|To recruit at the start/.test(k))?.[1];
+      await gucYaz(etiketKayip, "");
+      return `analiz:${n} baslangic:${bas}`;
+    }, "analiz:128 baslangic:160");
+
+    await esit(`S18g-${dil}-${olcu} eşleştirilmiş testte birim KATILIMCI`, async () => {
+      await gucYontemSec(sorular.esl);
+      await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
+      await sayfa.waitForTimeout(300);
+      const ref = gucSeti("eslestirilmisT-dz04");
+      const s = await gucSonucu();
+      const satir = Object.entries(s.satirlar).find(([k]) => /katılımcı sayısı|Participants needed/.test(k));
+      return `katilimci:${Boolean(satir)} n:${satir?.[1]} refN:${ref.enKucukN}`;
+    }, "katilimci:true n:52 refN:52");
+
+    await esit(`S18h-${dil}-${olcu} ANOVA: N grup sayısına bölünüyor, yön seçeneği YOK`, async () => {
+      await gucYontemSec(sorular.anova);
+      await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
+      await sayfa.waitForTimeout(300);
+      const ref = gucSeti("anova-k3-f025");
+      const s = await gucSonucu();
+      const n = Number(Object.entries(s.satirlar).find(([k]) => /en düşük toplam örneklem|Minimum total sample/.test(k))?.[1]);
+      const grup = Object.entries(s.satirlar).find(([k]) => /Grup başına|Per group/.test(k))?.[1];
+      const yonYok = (await gucAlan(dil === "tr" ? "Test yönü" : "Test direction").count()) === 0;
+      return `n:${n === ref.enKucukN} bolunuyor:${n % 3 === 0} grup:${grup} yonYok:${yonYok}`;
+    }, "n:true bolunuyor:true grup:53 + 53 + 53 yonYok:true");
+
+    await esit(`S18i-${dil}-${olcu} geçersiz giriş sebebiyle bildiriliyor`, async () => {
+      await gucYaz(etiketEtki, "0");
+      const hata = await sayfa.locator('.analiz-guc .alert[data-tone="danger"]').innerText().catch(() => "");
+      await gucYaz(etiketEtki, "-1");
+      const hata2 = await sayfa.locator('.analiz-guc .alert[data-tone="danger"]').innerText().catch(() => "");
+      /* Etki geçerli olmalı: engeller sırayla denetleniyor, etki hatası alfayı gölgeliyordu. */
+      await gucYaz(etiketEtki, "0.25");
+      await gucYaz(etiketAlfa, "1");
+      const hata3 = await sayfa.locator('.analiz-guc .alert[data-tone="danger"]').innerText().catch(() => "");
+      await gucYaz(etiketEtki, "0.25");
+      await gucYaz(etiketAlfa, "0.05");
+      const sifir = dil === "tr" ? /Etki büyüklüğü sıfırdan büyük/ : /effect size must be a number greater than zero/;
+      const alfa = dil === "tr" ? /Alfa 0 ile 1 arasında/ : /Alpha must be between 0 and 1/;
+      return `sifir:${sifir.test(hata)} negatif:${sifir.test(hata2)} alfa:${alfa.test(hata3)}`;
+    }, "sifir:true negatif:true alfa:true");
+
+    await esit(`S18j-${dil}-${olcu} yöntem metni varsayımlarla birlikte üretiliyor`, async () => {
+      await gucYontemSec(sorular.bagimsiz);
+      await sayfa.getByRole("button", { name: dil === "tr" ? "Örneği doldur" : "Fill in the example" }).click();
+      await sayfa.waitForTimeout(300);
+      const s = await gucSonucu();
+      const m = s.metin ?? "";
+      const beklenen = dil === "tr"
+        ? [/öncül \(a priori\) güç çözümlemesi/, /d = 0,5/, /128 gözlemdir/, /Varsayımlar:/, /G\*Power/]
+        : [/a priori power analysis/, /d = 0.5/, /128 observations/, /Assumptions:/, /G\*Power/];
+      return `metin:${beklenen.every((r) => r.test(m))} kopyala:${await sayfa.getByRole("button", { name: dil === "tr" ? "Kopyala" : "Copy" }).count()}`;
+    }, "metin:true kopyala:1");
+
+    if (telefon) {
+      await esit(`S18k-${dil} telefonda dokunma hedefleri 44 px ve yatay taşma yok`, async () => {
+        const kucuk = await sayfa.evaluate(() =>
+          [...document.querySelectorAll(".analiz-guc-secenek, .analiz-guc button")].filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.height > 0 && r.height < 43.5;
+          }).length);
+        const yatay = await sayfa.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+        return `kucuk:${kucuk} yatayTasmaYok:${yatay}`;
+      }, (v) => /yatayTasmaYok:true/.test(v) && /^kucuk:0 /.test(v));
+    }
+    await sayfa.locator(".analiz-guc-sonuc").scrollIntoViewIfNeeded().catch(() => {});
+    await cek(sayfa, `31-guc-${dil}-${telefon ? 390 : 1440}`);
+  }
+  await sayfa.setViewportSize({ width: 1440, height: 900 });
   await dilSec("Türkçe");
 
   /* ================= S10: ölçüler, tema, klavye ================= */

@@ -480,3 +480,27 @@
 .analiz-veri-karti > ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
 .analiz-veri-karti li { color: var(--ink-soft); font-size: var(--os5-fs-govde); }
 .analiz-veri-karti > p { margin: 0; }
+
+/* ---------- Güç ve örneklem (üçüncü sekme) ----------
+   Veri dosyası istemeyen ayrı akış; yöntemler araştırma sorusuyla
+   listeleniyor, test adı altta küçük yazıyla. */
+.analiz-guc { display: grid; gap: var(--s-4); }
+.analiz-guc-yontem { display: grid; gap: var(--s-2); margin: 0; padding: 0; border: 0; }
+.analiz-guc-yontem > legend { padding: 0; color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
+.analiz-guc-secenek {
+  display: flex; align-items: flex-start; gap: var(--s-2); min-height: 44px; padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); cursor: pointer;
+}
+.analiz-guc-secenek:has(input:checked) { border-color: var(--primary-ink); background: var(--primary-soft); }
+.analiz-guc-secenek:has(input:focus-visible) { outline: none; box-shadow: var(--os5-odak-halka); }
+.analiz-guc-secenek > input { margin-top: 3px; }
+.analiz-guc-secenek > span { display: grid; gap: 1px; }
+.analiz-guc-secenek b { color: var(--ink); font-size: var(--os5-fs-govde); font-weight: 600; }
+.analiz-guc-secenek small { color: var(--muted); font-size: var(--os5-fs-meta); }
+.analiz-guc-sonuc { display: grid; gap: var(--s-2); }
+.analiz-guc-sonuc th[scope="row"] { text-align: left; font-weight: 500; }
+.analiz-guc-metin {
+  display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2);
+}
+.analiz-guc-metin > p { margin: 0; color: var(--ink-soft); font-size: var(--os5-fs-govde); line-height: 1.55; }

@@ -1,0 +1,106 @@
+{
+  "uretim": {
+    "python": "3.13.18",
+    "statsmodels": "0.15.0",
+    "scipy": "1.18.1",
+    "numpy": "2.5.3",
+    "yol": "statsmodels TTestIndPower / TTestPower / FTestAnovaPower / FTestPower; korelasyon Fisher z (SciPy)",
+    "not": "Korelasyonda ayrıca Monte-Carlo: Fisher z yaklaşıklığının gerçek güçten sapması ölçülüyor."
+  },
+  "senaryolar": [
+    {
+      "ad": "bagimsizT-d05",
+      "N": 128,
+      "guc": 0.8014595579222542,
+      "birKucukGuc": 0.7983105512198861
+    },
+    {
+      "ad": "bagimsizT-d08-tek",
+      "N": 55,
+      "guc": 0.9002427995674152,
+      "birKucukGuc": 0.8954326432491345
+    },
+    {
+      "ad": "eslestirilmisT-dz04",
+      "N": 52,
+      "guc": 0.8077878088760595,
+      "birKucukGuc": 0.7999244343362051
+    },
+    {
+      "ad": "eslestirilmisT-dz025-tek",
+      "N": 211,
+      "guc": 0.9000186178256105,
+      "birKucukGuc": 0.8984884728591562
+    },
+    {
+      "ad": "anova-k3-f025",
+      "N": 159,
+      "guc": 0.8048872853010696,
+      "birKucukGuc": 0.8021998373584265
+    },
+    {
+      "ad": "anova-k4-f040",
+      "N": 112,
+      "guc": 0.9513018688338054,
+      "birKucukGuc": 0.9493999743582164
+    },
+    {
+      "ad": "korelasyon-r03",
+      "N": 84,
+      "guc": 0.7955174261087984,
+      "birKucukGuc": 0.7905892315121921
+    },
+    {
+      "ad": "korelasyon-r05-tek",
+      "N": 31,
+      "guc": 0.8964898485595867,
+      "birKucukGuc": 0.8867501621295304
+    },
+    {
+      "ad": "regresyon-p3-f2015",
+      "N": 77,
+      "guc": 0.8017655209357087,
+      "birKucukGuc": 0.7957117726946324
+    },
+    {
+      "ad": "regresyon-p5-f2035",
+      "N": 71,
+      "guc": 0.9017048418354445,
+      "birKucukGuc": 0.8954247548325648
+    }
+  ],
+  "korelasyonBenzetimi": [
+    {
+      "ad": "korelasyon-r03",
+      "N": 83,
+      "fisherZ": 0.7905892315121921,
+      "guc": 0.79608,
+      "standartHata": 0.0006370569707647818,
+      "tur": 400000
+    },
+    {
+      "ad": "korelasyon-r03",
+      "N": 84,
+      "fisherZ": 0.7955174261087984,
+      "guc": 0.7998025,
+      "standartHata": 0.0006326896178098508,
+      "tur": 400000
+    },
+    {
+      "ad": "korelasyon-r05-tek",
+      "N": 30,
+      "fisherZ": 0.8867501621295304,
+      "guc": 0.89696,
+      "standartHata": 0.0004806837796306424,
+      "tur": 400000
+    },
+    {
+      "ad": "korelasyon-r05-tek",
+      "N": 31,
+      "fisherZ": 0.8964898485595867,
+      "guc": 0.906615,
+      "standartHata": 0.00046006586967248513,
+      "tur": 400000
+    }
+  ]
+}
