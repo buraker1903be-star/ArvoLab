@@ -1,15 +1,30 @@
 {
-  "tarih": "2026-11-23T16:33:49.508Z",
-  "head": "8845355a64a5017ee2f8e4ac9c3eb4fb2472aba8",
-  "buildId": "d_8nOlfgK6WPWXIFzAmW0",
+  "tarih": "2026-11-23T18:48:15.167Z",
+  "head": "90418f4c6bc5473ea1f7e3deaf008588ea5f7322",
+  "buildId": "NIjbuAayzY_uHPkBSZSVY",
   "uygulama": "http://localhost:3141",
-  "gecen": 16,
+  "gecen": 19,
   "dusen": 0,
   "sonuclar": [
     {
       "ad": "H1a sol gezinmede Ayarlar yok, hesap menüsünde var",
       "durum": "PASS",
       "not": "gezinme:0 menu:1"
+    },
+    {
+      "ad": "H1a2 menüde komut paleti satırı ve Ctrl K rozeti yok",
+      "durum": "PASS",
+      "not": "satir:0 metin:false"
+    },
+    {
+      "ad": "H1a3 Destek ile Çıkış yap arasında fazladan boşluk yok",
+      "durum": "PASS",
+      "not": "destekCikis:9 satirArasi:0 fark:9"
+    },
+    {
+      "ad": "H1a4 Ctrl+K ve ⌘K paleti açıyor",
+      "durum": "PASS",
+      "not": "ctrl:true meta:true palet:1"
     },
     {
       "ad": "H1b menüde dil seçici yok; dil sağ üstte ve çalışıyor",
@@ -29,7 +44,7 @@
     {
       "ad": "H1e menü ekran dışına taşmıyor",
       "durum": "PASS",
-      "not": "icinde:true kutu:413-832/900"
+      "not": "icinde:true kutu:453-832/900"
     },
     {
       "ad": "H1f klavye: menü, Kullanım ve Ayarlar klavyeyle kullanılabiliyor",
@@ -64,7 +79,7 @@
     {
       "ad": "H3a-390-light-tr telefonda menü dokunmayla açılıyor, Kullanım ve Ayarlar erişilebilir",
       "durum": "PASS",
-      "not": "kullanimAcik:true hak:true ayar:true icinde:true"
+      "not": "kullanimAcik:true hak:true ayar:true icinde:true komutSatiri:0"
     },
     {
       "ad": "H3b-390-light-tr telefonda dil seçici üst çubukta ve dokunulabilir",
@@ -74,7 +89,7 @@
     {
       "ad": "H3a-390-dark-en telefonda menü dokunmayla açılıyor, Kullanım ve Ayarlar erişilebilir",
       "durum": "PASS",
-      "not": "kullanimAcik:true hak:true ayar:true icinde:true"
+      "not": "kullanimAcik:true hak:true ayar:true icinde:true komutSatiri:0"
     },
     {
       "ad": "H3b-390-dark-en telefonda dil seçici üst çubukta ve dokunulabilir",

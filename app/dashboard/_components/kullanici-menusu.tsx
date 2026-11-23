@@ -5,7 +5,6 @@ import type { OsIkon } from "@/lib/os/uygulamalar";
 import { ceviri, tarihler } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 import { kisaOzet, type HakDurumu, type KullanimHakki } from "@/lib/kullanim-ozeti";
-import { KomutPaletiAcOgesi } from "./os-komut-paleti";
 
 /*
   KULLANICI MENÜSÜ (ArvoOS'taki OsKullaniciMenusu).
@@ -150,8 +149,11 @@ export default async function KullaniciMenusu({
             <LifeBuoy size={16} aria-hidden="true" />
             {t({ tr: "Destek", en: "Support" })}
           </Link>
-          {/* Üst çubuktaki arama kutusu kalktı (20.11.2026); palete buradan ve Ctrl+K ile ulaşılır. */}
-          <KomutPaletiAcOgesi className="os-kullanici-komut" />
+          {/*
+            KOMUT PALETİ SATIRI KALKTI (23.11.2026). Menü kişinin kendi
+            hesabı için; palet Ctrl+K / ⌘K ile ve gezinmedeki "Daha
+            fazla" penceresinden açılıyor (os-komut-paleti.tsx).
+          */}
         </nav>
         {/*
           "Teknik araçlar" (Asistan Kayıtları) 23.11.2026'da menüden

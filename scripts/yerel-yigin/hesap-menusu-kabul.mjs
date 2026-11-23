@@ -145,6 +145,24 @@ const menuOku = async (s) =>
         const ayar = [...menu.querySelectorAll("a")].find((a) => /Ayarlar|Settings/.test(a.innerText));
         return Boolean(kullanim && ayar && kullanim.getBoundingClientRect().bottom <= ayar.getBoundingClientRect().top + 1);
       })(),
+      /* Komut paleti satırı 23.11.2026'da menüden kalktı. */
+      komutPaleti: menu.querySelectorAll(".os-kullanici-komut, kbd").length,
+      komutMetni: /Komut paleti|Command palette|Ctrl K/.test(menu.innerText),
+      /* Destek ile "Çıkış yap" arasında FAZLADAN boşluk kalmamalı:
+         satırlar arası açıklık, menünün öteki satır aralığıyla aynı. */
+      destekCikisAcikligi: (() => {
+        const baglantilar = [...menu.querySelectorAll(".os-kullanici-baglantilar a")];
+        const destek = baglantilar[baglantilar.length - 1];
+        const cikis = menu.querySelector(".os-kullanici-cikis button");
+        const ayarAbonelik = baglantilar.length > 1
+          ? Math.round(baglantilar[1].getBoundingClientRect().top - baglantilar[0].getBoundingClientRect().bottom)
+          : null;
+        if (!destek || !cikis) return null;
+        return {
+          destekCikis: Math.round(cikis.getBoundingClientRect().top - destek.getBoundingClientRect().bottom),
+          satirArasi: ayarAbonelik,
+        };
+      })(),
       ekranIcinde: kutu.top >= -1 && kutu.left >= -1 && kutu.bottom <= window.innerHeight + 1 && kutu.right <= window.innerWidth + 1,
       kutu: `${Math.round(kutu.top)}-${Math.round(kutu.bottom)}/${window.innerHeight}`,
     };
@@ -161,7 +179,37 @@ try {
       return `gezinme:${gezinmede} menu:${menude}`;
     }, "gezinme:0 menu:1");
 
+    await esit("H1a2 menüde komut paleti satırı ve Ctrl K rozeti yok", async () => {
+      const k = await menuOku(s);
+      return `satir:${k.komutPaleti} metin:${k.komutMetni}`;
+    }, "satir:0 metin:false");
+
+    await esit("H1a3 Destek ile Çıkış yap arasında fazladan boşluk yok", async () => {
+      const k = await menuOku(s);
+      const a2 = k.destekCikisAcikligi;
+      /* Çıkış bölümünün kendi üst çizgisi ve 4+4 px dolgusu var; satır
+         arasından en çok 12 px fazla olabilir. */
+      return `destekCikis:${a2?.destekCikis} satirArasi:${a2?.satirArasi} fark:${(a2?.destekCikis ?? 0) - (a2?.satirArasi ?? 0)}`;
+    }, (v) => Number(v.match(/fark:(-?\d+)/)?.[1] ?? 99) <= 12);
+
+    await esit("H1a4 Ctrl+K ve ⌘K paleti açıyor", async () => {
+      await s.keyboard.press("Escape");
+      await s.goto(`${UYG}/dashboard`, { waitUntil: "domcontentloaded" });
+      const palet = () => s.locator(".os-palette").first();
+      await s.keyboard.press("Control+k");
+      await s.waitForTimeout(500);
+      const ctrl = await s.evaluate(() => Boolean(document.querySelector(".os-palette")));
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(300);
+      await s.keyboard.press("Meta+k");
+      await s.waitForTimeout(500);
+      const meta = await s.evaluate(() => Boolean(document.querySelector(".os-palette")));
+      await s.keyboard.press("Escape");
+      return `ctrl:${ctrl} meta:${meta} palet:${await palet().count()}`;
+    }, (v) => /ctrl:true meta:true/.test(v));
+
     await esit("H1b menüde dil seçici yok; dil sağ üstte ve çalışıyor", async () => {
+      await menuAc(s);
       const k = await menuOku(s);
       const ustte = await s.locator(".ust-dil:visible").count();
       await s.keyboard.press("Escape");
@@ -305,8 +353,9 @@ try {
         `hak:${k.haklar.length > 0}`,
         `ayar:${Boolean(ayarKutu && ayarKutu.height >= 36)}`,
         `icinde:${k.ekranIcinde}`,
+        `komutSatiri:${k.komutPaleti}`,
       ].join(" ");
-    }, (v) => /kullanimAcik:true hak:true ayar:true icinde:true/.test(v));
+    }, (v) => /kullanimAcik:true hak:true ayar:true icinde:true komutSatiri:0/.test(v));
 
     await esit(`H3b-${ad} telefonda dil seçici üst çubukta ve dokunulabilir`, async () => {
       await s.keyboard.press("Escape");
