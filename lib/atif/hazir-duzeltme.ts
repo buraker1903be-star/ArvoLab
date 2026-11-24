@@ -31,6 +31,7 @@ import { eksikAlanAnahtarlari, formatReferenceParts, kunyeAlanAdi, type CitableS
 /* Kütüphane kaydı: biçimleyicinin istediği alanlar + kaydın kimliği. */
 export type KutuphaneKaynagi = CitableSource & { id: string };
 import { kunyeAnahtari } from "@/lib/kaynak-pdf";
+import { onerilenOrnek, ornekKurali, type OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 import { stilTanimi } from "./stiller";
 
 export type DenetlenenKunye = { raw: string; issues?: { message: string; severity?: string }[] | null };
@@ -66,6 +67,38 @@ export type HazirDuzeltme = {
     uydurmaz.
   */
   eksikNotu: string[];
+  /*
+    KILAVUZDAKİ ÖRNEKLER (24.11.2026). Yalnızca özel kuralı
+    doğrulanamayan kaynaklarda (internet) ve kılavuzda örnek VARSA
+    dolu. `oneri` null ise tür güvenle belirlenemedi: ekran
+    "Kılavuzdaki örnekleri karşılaştır" diyor ve karar öğrencinin —
+    bir örneği "uygun" diye işaretlemek, doğrulamadığımız bir kurala
+    yönlendirmek olurdu. Örnek SEÇMEK künyenin biçimini değiştirmez;
+    öğrencinin "bu kuralı okudum" onayıdır ve önizleme aynı kalır.
+  */
+  ornekDurumu?: OrnekDurumu;
+};
+
+/** Bir örneğe göre bu künyenin ne olacağı. */
+export type OrnekSecenegi = {
+  ornek: OrnekKunye;
+  /*
+    Kılavuzun kuralı bu örnekten OKUNABİLDİ ve künyeye uygulandı mı.
+    false ise `yeni` null olur ve önizleme çalışmanın GENEL stilinde
+    kalır — örnek yalnızca karşılaştırma içindir.
+  */
+  kuralUygulandi: boolean;
+  /** Kuralın istediği ama kayıtta olmayan bilgi (ör. erişim tarihi); uydurulmaz. */
+  gerekenBilgi: string[];
+  /** Bu örneğe göre künye; kural okunamadıysa null. */
+  yeni: string | null;
+  parcalar: { text: string; italic?: boolean }[] | null;
+};
+
+export type OrnekDurumu = {
+  /** Önerilen örneğin metni (anahtar); tür güvenle belirlenemediyse null. */
+  oneri: string | null;
+  secenekler: OrnekSecenegi[];
 };
 
 export type EksikBilgili = {
@@ -162,6 +195,62 @@ const eslesirMi = (hamSade: string, kaynak: KutuphaneKaynagi) => {
   return yil ? hamSade.includes(sade(yil)) : true;
 };
 
+/*
+  KURALI ÖNİZLEMEYE UYGULAMA. Değişen tek şey adresin önündeki etiket:
+  örnekten güvenle okunabilen başka bir biçim farkı yok (bkz.
+  ornekKurali). Künyenin geri kalanı çalışmanın stilinden geliyor ve
+  örnekteki yazar/yıl/adres KOPYALANMIYOR.
+*/
+function kuralaGoreParcalar(
+  parcalar: { text: string; italic?: boolean }[],
+  adres: string,
+  adresOneki: string,
+): { text: string; italic?: boolean }[] {
+  if (!adresOneki) return parcalar;
+  return parcalar.map((p) =>
+    p.text.includes(adres) ? { ...p, text: p.text.replace(adres, `${adresOneki} ${adres}`) } : p,
+  );
+}
+
+function ornekSecenekleri(
+  ornekler: OrnekKunye[],
+  kaynak: KutuphaneKaynagi,
+  parcalar: { text: string; italic?: boolean }[],
+  erisimTarihi: string | null,
+  dil: Dil,
+): OrnekSecenegi[] {
+  const adres = (kaynak.doi_or_url ?? "").trim();
+  return ornekler.map((ornek) => {
+    const kural = ornekKurali(ornek);
+    /* Kural okunamadıysa örnek yalnızca karşılaştırma içindir. */
+    if (!kural.cikarilabilir || !adres) {
+      return { ornek, kuralUygulandi: false, gerekenBilgi: [], yeni: null, parcalar: null };
+    }
+    /*
+      Kural erişim tarihi istiyor ama ArvoLab'da KAYITLI erişim bilgisi
+      yok: tarih uydurulmaz, gereken bilgi söylenir ve künye bu örneğe
+      göre yazılmaz.
+    */
+    if (kural.erisimTarihiIstiyor && !erisimTarihi) {
+      return {
+        ornek,
+        kuralUygulandi: false,
+        gerekenBilgi: [dil === "en" ? "access date" : "erişim tarihi"],
+        yeni: null,
+        parcalar: null,
+      };
+    }
+    const yeniParcalar = kuralaGoreParcalar(parcalar, adres, kural.adresOneki);
+    return {
+      ornek,
+      kuralUygulandi: true,
+      gerekenBilgi: [],
+      yeni: yeniParcalar.map((p) => p.text).join("").trim(),
+      parcalar: yeniParcalar,
+    };
+  });
+}
+
 export function hazirDuzeltmeler({
   kunyeler,
   kaynaklar,
@@ -169,6 +258,7 @@ export function hazirDuzeltmeler({
   dil = "tr",
   erisimTarihi = null,
   kilavuzZorunlulari = [],
+  internetOrnekleri = [],
 }: {
   kunyeler: DenetlenenKunye[];
   kaynaklar: KutuphaneKaynagi[];
@@ -177,6 +267,8 @@ export function hazirDuzeltmeler({
   erisimTarihi?: string | null;
   /** Kılavuzdan DOĞRULANMIŞ ek zorunluluklar; bugün boş (bkz. engelleyenEksikler). */
   kilavuzZorunlulari?: KunyeAlani[];
+  /** Kılavuzun internet kaynağı örnekleri (lib/kilavuz-ornek-kunyeler.ts). */
+  internetOrnekleri?: OrnekKunye[];
 }): DuzeltmeOzeti {
   const duzeltmeler: HazirDuzeltme[] = [];
   const eksikler: EksikBilgili[] = [];
@@ -204,22 +296,40 @@ export function hazirDuzeltmeler({
       return;
     }
     /* Engellemeyen eksikler künyeye yazılmıyor, NOT olarak söyleniyor. */
-    const eksikNotu = eksikAlanAnahtarlari(kaynak)
+    const eksikNotu: string[] = eksikAlanAnahtarlari(kaynak)
       .filter((alan) => !engel.includes(alan))
       .map((alan) => kunyeAlanAdi(alan, dil));
+    /*
+      ERİŞİM TARİHİ KAYITLI DEĞİL. literature_sources'ta erişim tarihi
+      sütunu yok; künyeye "bugün"ü yazmak, kaynağa o gün bakıldığını
+      iddia etmek olurdu ve düzeltmeyi hangi gün çalıştırdığına göre
+      değişirdi. Yazılmıyor, eksik olduğu söyleniyor.
+    */
+    if (kaynak.source_type === "website" && !erisimTarihi) {
+      eksikNotu.push(dil === "en" ? "access date" : "erişim tarihi");
+    }
     const parcalar = formatReferenceParts(kaynak, stil as CitationStyle, numarali ? indeks + 1 : 1, { erisimTarihi }, dil);
     const yeni = parcalar.map((p) => p.text).join("").trim();
     /* Zaten doğruysa düzeltme sunulmaz: "6 düzeltme hazır" derken
        dokunulacak bir şeyi olmayan satırları saymak sayıyı şişirirdi. */
     if (!yeni || yeni.replace(/\s+/g, " ") === ham.replace(/\s+/g, " ")) return;
+    const ozelKural = kaynak.source_type === "website";
     duzeltmeler.push({
       anahtar,
       ham,
       yeni,
       parcalar,
       kaynakId: kaynak.id,
-      ozelKural: kaynak.source_type === "website",
+      ozelKural,
       eksikNotu,
+      ...(ozelKural && internetOrnekleri.length
+        ? {
+            ornekDurumu: {
+              oneri: onerilenOrnek(internetOrnekleri, kaynak)?.metin ?? null,
+              secenekler: ornekSecenekleri(internetOrnekleri, kaynak, parcalar, erisimTarihi, dil),
+            },
+          }
+        : {}),
       sebepler: (kunye.issues ?? []).map((s) => s.message).filter(Boolean),
     });
   });

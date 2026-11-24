@@ -106,13 +106,21 @@ const cumleler = (metin: string): { metin: string; indeks: number }[] => {
   return parcalar;
 };
 
+/*
+  YÜKLEMİ OLAN SATIR BAŞLIK DEĞİLDİR. "İnternet kaynakları aşağıdaki
+  biçimde yazılır:" satırı yalnızca harf ve boşluk taşıdığı, iki
+  noktayla bittiği için başlık deseniyle eşleşiyor ve örneklerin bölümü
+  diye gösteriliyordu — oysa o, kuralı anlatan cümlenin kendisi.
+*/
+const YUKLEMLI = /\b(yazılır|yazilir|gösterilir|gosterilir|kullanılır|kullanilir|belirtilir|verilir|eklenir|düzenlenir|duzenlenir|sıralanır|siralanir|yapılır|yapilir|olmalıdır|olmalidir|gerekir|is written|are written|should be|must be)\b/i;
+
 /** Alıntının üstündeki en yakın başlık satırı. */
-const ustBaslik = (metin: string, indeks: number): string | null => {
+export const ustBaslik = (metin: string, indeks: number): string | null => {
   const satirlar = metin.slice(0, indeks).split("\n");
   /* En fazla 40 satır geriye bakılıyor: daha uzağı "ilgili bölüm" sayılmaz. */
   for (const satir of satirlar.slice(-40).reverse()) {
     const temiz = satir.trim();
-    if (!temiz) continue;
+    if (!temiz || YUKLEMLI.test(temiz)) continue;
     const eslesme = BASLIK.exec(temiz);
     if (eslesme) return temizle(eslesme[1]);
   }
@@ -120,7 +128,7 @@ const ustBaslik = (metin: string, indeks: number): string | null => {
 };
 
 /** Sayfa ayracı (\f) taşıyan metinlerde alıntının sayfası; yoksa null. */
-const sayfaNo = (metin: string, indeks: number): number | null => {
+export const sayfaNo = (metin: string, indeks: number): number | null => {
   if (!metin.includes("\f")) return null;
   return metin.slice(0, indeks).split("\f").length;
 };

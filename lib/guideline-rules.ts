@@ -2,6 +2,7 @@ import type { KilavuzSayiKurali, OndalikAyirici } from "@/lib/sayi-bicimi";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeGuidelineEditorSettings, type GuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 import { kilavuzAdi, surumEtiketiMi } from "@/lib/kilavuz-dogrulama";
+import type { OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 
 // Bir çalışmaya uygulanan kılavuzun SON ONAYLI sürümü. Editör, kontrol ve
 // Word çıktısı hep buradan okur; böylece üçü aynı kuralları kullanır.
@@ -27,6 +28,13 @@ export interface AppliedGuideline {
   requiredSections: string[];
   minPages: number | null;
   maxPages: number | null;
+  /*
+    Kılavuzun internet kaynağı ÖRNEK KÜNYELERİ (24.11.2026). Hazır
+    kaynakça düzeltmesi bu tür kaynaklarda kendi kuralını okuyamıyor;
+    öğrenciye kılavuzunun kendi cümlelerini gösterip karşılaştırmasını
+    istiyor. Kılavuzda örnek yoksa boş dizi — örnek uydurulmaz.
+  */
+  internetOrnekleri: OrnekKunye[];
   settings: GuidelineEditorSettings;
   lastCheckedAt: string | null;
   /** Kaynakta yeni bir sürüm algılandı ya da kurallar yeniden inceleniyor */
@@ -136,6 +144,8 @@ export function appliedGuidelineFromRow(g: GuidelineRow): AppliedGuideline | nul
       bastakiSifir: snapshot.number_leading_zero ?? g.number_leading_zero ?? null,
     },
     requiredSections: snapshot.required_sections ?? [],
+    /* Katalog kılavuzlarında örnek çıkarımı yok; boş dizi "bakılmadı" değil, "yok". */
+    internetOrnekleri: ornekleriOku(snapshot.extracted_rules),
     minPages: snapshot.min_pages ?? null,
     maxPages: snapshot.max_pages ?? null,
     settings: normalizeGuidelineEditorSettings(snapshot.extracted_rules),
@@ -210,6 +220,17 @@ export function kilavuzGorunenAdi(ad: string, dil: "tr" | "en"): string {
 
 const OKUYUCU_SURUMU = "#2";
 
+/*
+  Örnekler ham çıkarımın içinde duruyor; eski kayıtlarda alan hiç yok ve
+  orada boş dizi dönüyor ("örnek bulunamadı" ile "bakılmadı" aynı
+  görünmemeli diye ekran bunu ayrıca söylüyor).
+*/
+function ornekleriOku(ham: unknown): OrnekKunye[] {
+  if (!ham || typeof ham !== "object") return [];
+  const liste = (ham as { internetOrnekleri?: unknown }).internetOrnekleri;
+  return Array.isArray(liste) ? (liste as OrnekKunye[]) : [];
+}
+
 export function kuralKumesi(ham: unknown): unknown {
   if (ham && typeof ham === "object" && "suggestedRules" in ham) return (ham as { suggestedRules: unknown }).suggestedRules;
   return ham;
@@ -252,6 +273,8 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
     requiredSections: kurallar.required_sections ?? [],
     minPages: kurallar.min_pages ?? null,
     maxPages: kurallar.max_pages ?? null,
+    /* Ham çıkarımın içinde saklanıyor (kurallariKur: extracted_rules). */
+    internetOrnekleri: ornekleriOku(kurallar.extracted_rules),
     settings: normalizeGuidelineEditorSettings(kuralKumesi(kurallar.extracted_rules)),
     lastCheckedAt: row.guncellendi ?? row.olusturuldu ?? null,
     updatePending: false,

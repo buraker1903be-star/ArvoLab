@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test, describe } from "node:test";
 import { duzeltmeOzetCumlesi, eksikKaynakcaGirdileri, hazirDuzeltmeler, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
+import type { OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 
 /*
   Hazır düzeltmenin tek kuralı: KÜNYE UYDURULMAZ. Bu dosya üç şeyi
@@ -276,5 +277,128 @@ describe("kılavuzun özel kuralı doğrulanamayan künye işaretleniyor", () =>
     assert.equal(makale?.ozelKural, false, "makale işaretlenmemeli");
     /* İşaret düzeltmeyi ENGELLEMİYOR: öğrenci yine uygulayabilmeli. */
     assert.ok(site_?.yeni && site_.yeni.length > 10);
+  });
+});
+
+describe("kılavuzdaki internet örnekleri düzeltmeye bağlanıyor", () => {
+  const ORNEKLER = [
+    { metin: "Türkiye İstatistik Kurumu. (2023). Nüfus verileri. https://www.tuik.gov.tr/x", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET KAYNAKLARI", sayfa: 12 },
+    { metin: "Sağlık Bakanlığı. (2022). Yıllık sağlık raporu. https://saglik.gov.tr/rapor", tur: "cevrimici-rapor" as const, kesin: true, bolum: "İNTERNET KAYNAKLARI", sayfa: 12 },
+  ];
+  const site = (ek: Partial<KutuphaneKaynagi> & { id: string; title: string }) =>
+    kaynak({ source_type: "website", container_title: null, volume: null, issue: null, pages: null, doi_or_url: "https://ornek.gov.tr/x", ...ek });
+
+  test("türü kesin olan kaynağa uygun örnek ÖNERİLİYOR", () => {
+    const kurumsal = site({ id: "w1", title: "Nufus istatistikleri sayfasi", authors: "Türkiye İstatistik Kurumu" });
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [{ raw: "TUIK 2020 Nufus istatistikleri sayfasi" }],
+      kaynaklar: [kurumsal],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    });
+    const d = ozet.duzeltmeler[0];
+    const oneri = d.ornekDurumu?.secenekler.find((x) => x.ornek.metin === d.ornekDurumu?.oneri);
+    assert.equal(oneri?.ornek.tur, "kurumsal-sayfa");
+    assert.equal(oneri?.ornek.bolum, "İNTERNET KAYNAKLARI");
+    assert.equal(d.ornekDurumu?.secenekler.length, 2);
+  });
+
+  test("türü belirsizse öneri YOK, iki seçenek de sunuluyor", () => {
+    const belirsiz = site({ id: "w2", title: "Bir blog yazisi", authors: "Yılmaz, A." });
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [belirsiz],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    }).duzeltmeler[0];
+    assert.equal(d.ornekDurumu?.oneri, null);
+    assert.equal(d.ornekDurumu?.secenekler.length, 2);
+  });
+
+  test("kılavuzda örnek yoksa ornekDurumu hiç yok (bugünkü uyarı kalır)", () => {
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [site({ id: "w3", title: "Bir blog yazisi" })],
+      stil: "apa7",
+    }).duzeltmeler[0];
+    assert.equal(d.ozelKural, true);
+    assert.equal(d.ornekDurumu, undefined);
+  });
+
+  test("internet dışı kaynakta örnek sorulmuyor", () => {
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" }],
+      kaynaklar: [OGRENME],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    }).duzeltmeler[0];
+    assert.equal(d.ozelKural, false);
+    assert.equal(d.ornekDurumu, undefined);
+  });
+
+  /* Seçim bekleyen künye ötekileri ENGELLEMEZ: ikisi de listede. */
+  test("seçim bekleyen künye öteki düzeltmeleri engellemiyor", () => {
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [
+        { raw: "Yilmaz A 2020 Bir blog yazisi" },
+        { raw: "Yilmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" },
+      ],
+      kaynaklar: [site({ id: "w2", title: "Bir blog yazisi" }), OGRENME],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    });
+    assert.equal(ozet.duzeltmeler.length, 2);
+    assert.equal(ozet.duzeltmeler.filter((d) => d.ornekDurumu && !d.ornekDurumu.oneri).length, 1);
+    assert.equal(ozet.duzeltmeler.filter((d) => !d.ozelKural).length, 1);
+  });
+});
+
+describe("örneğin kuralı yalnızca o künyenin önizlemesine uygulanıyor", () => {
+  const ONEKLI = { metin: "Sağlık Bakanlığı. (2022). Yıllık rapor. Erişim adresi: https://saglik.gov.tr/r", tur: "cevrimici-rapor" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const CIPLAK = { metin: "Türkiye İstatistik Kurumu. (2023). Nüfus verileri. https://www.tuik.gov.tr/x", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const OKUNAMAZ = { metin: "Millî Eğitim Bakanlığı. (2021). Veriler, https://meb.gov.tr/v adresinden alınmıştır.", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const site = kaynak({ id: "w5", title: "Bir blog yazisi", source_type: "website", container_title: null, volume: null, issue: null, pages: null, doi_or_url: "https://ornek.com/yazi" });
+  const ozet = (ornekler: OrnekKunye[]) =>
+    hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [site],
+      stil: "apa7",
+      internetOrnekleri: ornekler,
+    }).duzeltmeler[0];
+
+  test("önekli örnek künyeye uygulanıyor; örnekten BİLGİ taşınmıyor", () => {
+    const secenek = ozet([ONEKLI, CIPLAK]).ornekDurumu!.secenekler.find((x) => x.ornek === ONEKLI)!;
+    assert.equal(secenek.kuralUygulandi, true);
+    assert.match(secenek.yeni!, /Erişim adresi: https:\/\/ornek\.com\/yazi/);
+    /* Örneğin kendi yazarı, yılı ve adresi künyeye GİRMEMELİ. */
+    assert.ok(!/Sağlık Bakanlığı|saglik\.gov\.tr|2022/.test(secenek.yeni!), secenek.yeni!);
+  });
+
+  test("çıplak adres kuralı künyeyi değiştirmiyor ama kural uygulanmış sayılıyor", () => {
+    const secenek = ozet([ONEKLI, CIPLAK]).ornekDurumu!.secenekler.find((x) => x.ornek === CIPLAK)!;
+    assert.equal(secenek.kuralUygulandi, true);
+    assert.ok(!/Erişim adresi:/.test(secenek.yeni!), secenek.yeni!);
+  });
+
+  test("kuralı okunamayan örnek yalnızca karşılaştırma: yeni künye YOK", () => {
+    const secenek = ozet([OKUNAMAZ]).ornekDurumu!.secenekler[0];
+    assert.equal(secenek.kuralUygulandi, false);
+    assert.equal(secenek.yeni, null);
+    assert.deepEqual(secenek.gerekenBilgi, []);
+  });
+
+  test("erişim tarihi isteyen kural, kayıt yoksa uygulanmıyor ve gereken bilgi söyleniyor", () => {
+    const tarihli = { ...ONEKLI, metin: `${ONEKLI.metin} (Erişim tarihi: 01.02.2022)` };
+    const secenek = ozet([tarihli]).ornekDurumu!.secenekler[0];
+    assert.equal(secenek.kuralUygulandi, false);
+    assert.equal(secenek.yeni, null);
+    assert.deepEqual(secenek.gerekenBilgi, ["erişim tarihi"]);
+  });
+
+  /* Erişim tarihi kayıtlı değil: künyeye "bugün" yazılmaz, eksik olduğu söylenir. */
+  test("internet künyesine uydurma erişim tarihi yazılmıyor", () => {
+    const d = ozet([CIPLAK]);
+    assert.ok(!/Erişim tarihi/.test(d.yeni), d.yeni);
+    assert.ok(d.eksikNotu.includes("erişim tarihi"), JSON.stringify(d.eksikNotu));
   });
 });

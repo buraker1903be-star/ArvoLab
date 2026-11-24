@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UploadCloud, Link2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -32,9 +33,23 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
     ve bunun resmî bir onay OLMADIĞI yazıyor.
 */
 
-type Adim = "secim" | "tarama" | "dogrulama";
+type Adim = "secim" | "tarama" | "dogrulama" | "okunamadi";
 
-export default function KilavuzYukle({ projectId, onKapat }: { projectId: string; onKapat?: () => void }) {
+export default function KilavuzYukle({
+  projectId,
+  onKapat,
+  kilavuzsuz = false,
+}: {
+  projectId: string;
+  onKapat?: () => void;
+  /*
+    Çalışmada henüz kılavuz YOK. "Kılavuz zorunlu değil" cümlesi ve
+    "Kılavuz eklemeden devam et" bağlantısı buradan çiziliyor: eskiden
+    pencere de ayrıca çiziyordu ve okunamayan PDF ekranında bağlantı
+    İKİ KEZ görünüyordu (ekran görüntüsünde görüldü).
+  */
+  kilavuzsuz?: boolean;
+}) {
   const t = useCeviri();
   const dil = useDil();
   const [adim, setAdim] = useState<Adim>("secim");
@@ -49,6 +64,15 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const router = useRouter();
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
+    /*
+      Metni çıkarılamayan belge: toast gösterip seçim ekranına dönmek
+      öğrenciyi "ne oldu, ne yapacağım?" sorusuyla bırakıyordu. Kalıcı
+      bir ekran, sebebi ve İKİ çıkış yolunu birlikte veriyor.
+    */
+    if (cevap.okunamadi) {
+      setAdim("okunamadi");
+      return;
+    }
     if (cevap.error || !cevap.form) {
       showToast("error", cevap.error ?? t({ tr: "Kılavuz okunamadı.", en: "The guideline could not be read." }));
       setAdim("secim");
@@ -147,6 +171,33 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     router.refresh();
     onKapat?.();
   };
+
+  /* Kılavuz isteğe bağlı: kaynak toplamak, atıf yapmak ve denetlemek kılavuzsuz da çalışıyor. */
+  const devamBaglantisi = (
+    <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${projectId}`}>
+      {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
+    </Link>
+  );
+
+  if (adim === "okunamadi") {
+    return (
+      <div className="stack">
+        <p className="alert" data-tone="warning" role="status">
+          {t({
+            tr: "Bu PDF'den metin çıkaramadık. Başka bir dosya seçebilir veya kılavuz eklemeden devam edebilirsiniz.",
+            en: "We couldn't extract text from this PDF. You can choose another file or carry on without a guideline.",
+          })}
+        </p>
+        {/* İki eylem, BİRER KEZ: hata mesajının hemen altında. */}
+        <div className="cluster">
+          <button type="button" className="projects-primary-button button-compact" onClick={() => setAdim("secim")}>
+            {t({ tr: "Başka bir dosya seç", en: "Choose another file" })}
+          </button>
+          {kilavuzsuz ? devamBaglantisi : null}
+        </div>
+      </div>
+    );
+  }
 
   if (adim === "tarama") {
     return (
@@ -502,6 +553,24 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           </button>
         </div>
       </details>
+
+      {/*
+        KILAVUZ İSTEĞE BAĞLI. Bu cümle ve bağlantı eskiden kılavuz
+        penceresinde çiziliyordu; okunamayan PDF ekranı da kendi
+        bağlantısını çizince "Kılavuz eklemeden devam et" iki kez
+        görünüyordu. Tek yer burası.
+      */}
+      {kilavuzsuz ? (
+        <>
+          <p className="muted text-sm">
+            {t({
+              tr: "Kılavuz zorunlu değil. Eklemeden de kaynak toplayabilir, atıf yapabilir ve kaynakçanızı denetleyebilirsiniz; çalışmanızın kayıtlı atıf stili kullanılır.",
+              en: "A guideline is optional. You can collect sources, cite and check your reference list without one; your work's saved citation style is used.",
+            })}
+          </p>
+          {devamBaglantisi}
+        </>
+      ) : null}
     </div>
   );
 }

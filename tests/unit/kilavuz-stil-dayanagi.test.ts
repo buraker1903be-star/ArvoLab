@@ -84,6 +84,16 @@ describe("kuralın kapsamı (hangi program)", () => {
     assert.equal(stilDayanagi(metin, "vancouver")?.kapsam, "SAĞLIK BİLİMLERİ PROGRAMLARI");
   });
 
+  /* "… yazılır:" satırı kuralı anlatan cümledir, bölüm başlığı değil. */
+  test("yüklemi olan satır başlık sayılmıyor", () => {
+    const metin = [
+      "4.3 İNTERNET KAYNAKLARI",
+      "Kaynak gösterimi aşağıdaki biçimde yazılır:",
+      "Sağlık bilimleri programlarında Vancouver sistemi kullanılacaktır.",
+    ].join("\n");
+    assert.equal(stilDayanagi(metin, "vancouver")?.bolum, "İNTERNET KAYNAKLARI");
+  });
+
   test("kapsam yoksa null; uydurulmuyor", () => {
     const metin = "2. KAYNAK GÖSTERME\nKaynak gösterimi APA 7 sistemine göre yapılır.";
     const d = stilDayanagi(metin, "apa7");

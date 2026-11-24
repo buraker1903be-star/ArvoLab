@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Wand2, Undo2 } from "lucide-react";
 import { hazirKaynakcaDuzeltmeleri } from "@/app/actions/kaynakca-duzeltme";
 import { duzeltmeOzetCumlesi, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
+import { ORNEK_TURU_ADI } from "@/lib/kilavuz-ornek-kunyeler";
 import { stilAdiMetni } from "@/lib/atif/stiller";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -52,6 +53,13 @@ export default function KaynakcaDuzeltmePaneli({
   const [uygulandi, setUygulandi] = useState<number | null>(null);
   const [eklenecekler, setEklenecekler] = useState<KutuphaneKaynagi[]>([]);
   const [calismaStili, setCalismaStili] = useState("");
+  /*
+    Öğrencinin seçtiği örnek, KÜNYE BAŞINA. Seçim yalnızca o künyeyi
+    ilgilendiriyor: biri için yapılan seçim ötekileri bağlamaz ve
+    seçim bekleyen künye ötekilerin uygulanmasını ENGELLEMEZ (yalnızca
+    kendisi işaretli gelmez).
+  */
+  const [secilenOrnek, setSecilenOrnek] = useState<Record<string, string>>({});
 
   const getir = async () => {
     setYukleniyor(true);
@@ -67,8 +75,17 @@ export default function KaynakcaDuzeltmePaneli({
       setCalismaStili(cevap.calismaStili);
       setEklenecekler(cevap.eklenecekler);
       setDenetimYok(Boolean(cevap.denetimYok));
-      /* Özel kuralı doğrulanamayan künye varsayılan olarak SEÇİLİ DEĞİL. */
-      setSecili(new Set(cevap.ozet.duzeltmeler.filter((d) => !d.ozelKural).map((d) => d.anahtar)));
+      /*
+        Özel kuralı doğrulanamayan künye varsayılan olarak SEÇİLİ DEĞİL —
+        ama kılavuzdaki örneklerden biri türüne göre GÜVENLE eşleşiyorsa
+        o künye de işaretli gelir ve önerilen örnek yanında yazılır.
+      */
+      setSecili(new Set(cevap.ozet.duzeltmeler.filter((d) => !d.ozelKural || d.ornekDurumu?.oneri).map((d) => d.anahtar)));
+      setSecilenOrnek(
+        Object.fromEntries(
+          cevap.ozet.duzeltmeler.filter((d) => d.ornekDurumu?.oneri).map((d) => [d.anahtar, d.ornekDurumu!.oneri!]),
+        ),
+      );
     } catch {
       showToast("error", t({ tr: "Düzeltmeler hazırlanamadı; tekrar deneyin.", en: "The fixes couldn't be prepared; please try again." }));
     } finally {
@@ -76,10 +93,16 @@ export default function KaynakcaDuzeltmePaneli({
     }
   };
 
+  /* Bu künye için seçili örneğin seçeneği; seçim yoksa ya da örnek yoksa null. */
+  const secilenSecenek = (d: DuzeltmeOzeti["duzeltmeler"][number]) =>
+    d.ornekDurumu?.secenekler.find((x) => x.ornek.metin === secilenOrnek[d.anahtar]) ?? null;
+
   const uygula = () => {
     if (!ozet) return;
     const secilenler = ozet.duzeltmeler.filter((d) => secili.has(d.anahtar));
-    const sayi = onUygula(secilenler.map((d) => ({ anahtar: d.anahtar, parcalar: d.parcalar })));
+    /* Belgeye YAZILAN, ekranda önizlenen künyedir: seçilen örneğe göre
+       üretilmişse o, yoksa çalışmanın genel stilindeki. */
+    const sayi = onUygula(secilenler.map((d) => ({ anahtar: d.anahtar, parcalar: secilenSecenek(d)?.parcalar ?? d.parcalar })));
     setUygulandi(sayi);
     if (sayi === 0) {
       /* Eşleşen satır bulunamadı: denetimden sonra kaynakça değişmiş
@@ -144,8 +167,14 @@ export default function KaynakcaDuzeltmePaneli({
                       />
                       <span className="kaynakca-duzeltme-ad">{t({ tr: "Bu künyeyi düzelt", en: "Fix this reference" })}</span>
                     </label>
+                    {/*
+                      ÖNİZLEME SEÇİLEN ÖRNEĞE GÖRE. Kılavuzun kuralı o
+                      örnekten güvenle okunabiliyorsa künye ona göre
+                      yazılıyor; okunamıyorsa çalışmanın GENEL stilindeki
+                      künye kalıyor ve bu ekranda söyleniyor.
+                    */}
                     <p className="kaynakca-duzeltme-eski">{d.ham}</p>
-                    <p className="kaynakca-duzeltme-yeni">{d.yeni}</p>
+                    <p className="kaynakca-duzeltme-yeni">{secilenSecenek(d)?.yeni ?? d.yeni}</p>
                     {d.sebepler.length ? <small className="muted">{d.sebepler.join(" · ")}</small> : null}
                     {/*
                       Künyeye GİRMEYEN eksikler: düzeltme engellenmiyor
@@ -161,13 +190,123 @@ export default function KaynakcaDuzeltmePaneli({
                         })}
                       </small>
                     ) : null}
-                    {d.ozelKural ? (
+                    {/*
+                      İNTERNET KAYNAĞI: kılavuzun bu tür için kendi
+                      kuralı olabiliyor ve ArvoLab onu okumuyor.
+                      Kılavuzda örnek VARSA öğrenciye kılavuzun KENDİ
+                      cümleleri gösteriliyor (bölümüyle); türü güvenle
+                      belirlenebiliyorsa uygun örnek önerilip künye
+                      işaretli geliyor, belirsizse karar öğrencinin ve
+                      künye seçilene kadar işaretlenmiyor.
+                    */}
+                    {d.ozelKural && d.ornekDurumu ? (
+                      <div className="kaynakca-ornek">
+                        {d.ornekDurumu.oneri ? (
+                          <small className="muted">
+                            {t({ tr: "Kılavuzunuzdaki uygun örnek:", en: "Matching example from your guideline:" })}
+                          </small>
+                        ) : secilenOrnek[d.anahtar] ? (
+                          /* Seçim yapıldı: "seçene kadar" uyarısı artık doğru değil. */
+                          <small className="muted">
+                            {t({ tr: "Kılavuzdaki örnekler:", en: "Examples from your guideline:" })}
+                          </small>
+                        ) : (
+                          <small className="tone-text" data-tone="warning">
+                            {t({
+                              tr: "Bu kaynağın türü kılavuzdaki örneklerden hangisine uyuyor, güvenle söyleyemiyorum. Karşılaştırıp seçin; seçene kadar bu künye uygulanacaklara eklenmez, ötekiler etkilenmez.",
+                              en: "I can't tell with confidence which of your guideline's examples fits this source. Compare and pick one; until you do, this reference isn't included in what will be applied, and the others are unaffected.",
+                            })}
+                          </small>
+                        )}
+                        <ul className="kaynakca-ornek-liste">
+                          {(d.ornekDurumu.oneri
+                            ? d.ornekDurumu.secenekler.filter((x) => x.ornek.metin === d.ornekDurumu!.oneri)
+                            : d.ornekDurumu.secenekler
+                          ).map(({ ornek, kuralUygulandi, gerekenBilgi }) => (
+                            <li key={ornek.metin} data-secili={secilenOrnek[d.anahtar] === ornek.metin || undefined}>
+                              <label className="cluster">
+                                <input
+                                  type="radio"
+                                  name={`ornek-${d.anahtar}`}
+                                  checked={secilenOrnek[d.anahtar] === ornek.metin}
+                                  onChange={() => {
+                                    /* Seçim YALNIZCA bu künye için; öteki künyeler değişmez. */
+                                    setSecilenOrnek({ ...secilenOrnek, [d.anahtar]: ornek.metin });
+                                    setSecili(new Set([...secili, d.anahtar]));
+                                  }}
+                                />
+                                <b>{t(ORNEK_TURU_ADI[ornek.tur])}</b>
+                              </label>
+                              {/* Kılavuzun KENDİ metni; değiştirilmiyor. */}
+                              <q>{ornek.metin}</q>
+                              <small className="muted">
+                                {[
+                                  ornek.bolum ? t({ tr: `“${ornek.bolum}” bölümü`, en: `section “${ornek.bolum}”` }) : null,
+                                  ornek.sayfa ? t({ tr: `${ornek.sayfa}. sayfa`, en: `page ${ornek.sayfa}` }) : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ") || t({ tr: "Kılavuzdan", en: "From the guideline" })}
+                              </small>
+                              {/*
+                                Bu örnek ne SAĞLIYOR: kural okunabildiyse
+                                künye ona göre yazılıyor; okunamadıysa
+                                örnek yalnızca karşılaştırma içindir ve
+                                önizleme çalışmanın genel stilinde kalır.
+                              */}
+                              {/*
+                                "UYGULANDI" YALNIZCA SEÇİLİ ÖRNEKTE.
+                                Önizlemeye yansıyan tek şey seçilen
+                                örneğin kuralı; aynı cümleyi seçili
+                                olmayan seçeneğin altında da yazmak,
+                                uygulanmamış bir biçimi uygulanmış gibi
+                                göstermekti (ekran görüntüsünde görüldü).
+                              */}
+                              {kuralUygulandi && secilenOrnek[d.anahtar] === ornek.metin ? (
+                                <small className="tone-text" data-tone="success">
+                                  {t({
+                                    tr: "Kılavuzun bu örnekteki adres yazımı künyeye uygulandı.",
+                                    en: "The address style from this example was applied to the reference.",
+                                  })}
+                                </small>
+                              ) : kuralUygulandi ? (
+                                <small className="muted">
+                                  {t({
+                                    tr: "Seçerseniz bu örnekteki adres yazımı künyeye uygulanır.",
+                                    en: "If you pick this one, its address style will be applied to the reference.",
+                                  })}
+                                </small>
+                              ) : gerekenBilgi.length ? (
+                                <small className="tone-text" data-tone="warning">
+                                  {t({
+                                    tr: `Bu örnek ${gerekenBilgi.join(", ")} istiyor; kaydınızda yok ve uydurulmuyor. Künye çalışmanızın genel stilinde kalır.`,
+                                    en: `This example requires ${gerekenBilgi.join(", ")}; it isn't in your record and is not made up. The reference stays in your work's general style.`,
+                                  })}
+                                </small>
+                              ) : (
+                                <small className="muted">
+                                  {t({
+                                    tr: "Bu örnekten güvenle bir biçim kuralı çıkaramadım; yalnızca karşılaştırma için. Sunulan düzeltme çalışmanızın genel stiline göre hazırlandı.",
+                                    en: "I couldn't derive a format rule from this example with confidence; it's for comparison only. The offered fix follows your work's general style.",
+                                  })}
+                                </small>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <small className="muted">
+                          {t({
+                            tr: "Örnekteki yazar, tarih ve adres sizin künyenize taşınmaz; yalnızca kılavuzun biçim kalıbı uygulanır ve eksik bilgi tamamlanmaz.",
+                            en: "The author, date and address in the example are never carried into your reference; only the guideline's format pattern is applied, and missing details are not filled in.",
+                          })}
+                        </small>
+                      </div>
+                    ) : d.ozelKural ? (
                       <small className="tone-text" data-tone="warning">
                         {t({
-                          tr: "İnternet kaynağı: kılavuzunuzun bu kaynak türü için özel bir kuralı olabilir ve ArvoLab onu kılavuzdan okumuyor. Aşağıdaki düzeltme stilin genel kuralına göre; uygulamadan önce kılavuzunuzdaki örnekle karşılaştırın.",
-                          en: "Website source: your guideline may have its own rule for this source type and ArvoLab does not read it from the guideline. The fix below follows the style's general rule; compare it with the example in your guideline before applying.",
+                          tr: "İnternet kaynağı: kılavuzunuzun bu kaynak türü için özel bir kuralı olabilir ve ArvoLab onu kılavuzdan okumuyor. Kılavuzunuzda örnek künye bulamadım; aşağıdaki düzeltme stilin genel kuralına göre.",
+                          en: "Website source: your guideline may have its own rule for this source type and ArvoLab does not read it from the guideline. I found no example reference in your guideline; the fix below follows the style's general rule.",
                         })}
-                        {ornekAtif ? t({ tr: ` Kılavuzunuzdaki örnek: “${ornekAtif}”`, en: ` Example from your guideline: “${ornekAtif}”` }) : ""}
+                        {ornekAtif ? t({ tr: ` Kılavuzunuzdaki örnek atıf: “${ornekAtif}”`, en: ` Example citation from your guideline: “${ornekAtif}”` }) : ""}
                       </small>
                     ) : null}
                   </li>

@@ -18,6 +18,7 @@ const kilavuz = (uzerine: Partial<AppliedGuideline> = {}): AppliedGuideline => (
   id: "k1",
   version: "2026-09-01T00:00:00Z",
   label: "X Üniversitesi",
+  internetOrnekleri: [],
   universityName: "X Üniversitesi",
   instituteName: null,
   versionLabel: null,

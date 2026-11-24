@@ -3,6 +3,7 @@ import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifGecisleri, atifSistemiSec, atifYontemiUyarisi, atifYontemleri, yontemdenSistem, type AtifSistemi } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
+import { internetOrnekKunyeleri, type OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
@@ -324,6 +325,14 @@ export interface GuidelineScanResult {
     görünmemeli.
   */
   sayiBicimiOnerisi?: SayiOnerisi;
+  /*
+    KILAVUZDAKİ İNTERNET KAYNAĞI ÖRNEKLERİ (24.11.2026,
+    lib/kilavuz-ornek-kunyeler.ts). Kılavuzun KENDİ cümleleri; hazır
+    kaynakça düzeltmesi internet kaynaklarında öğrenciye bunları
+    gösterip karşılaştırmasını istiyor. Bulunamazsa boş dizi — örnek
+    uydurulmaz.
+  */
+  internetOrnekleri?: OrnekKunye[];
   sourceChecksum: string;
   sourceContentType: string;
   /* Koşullu istek için saklanır; sunucudan geldiği gibi geri gönderilir. */
@@ -861,6 +870,7 @@ async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ son
     detectedCitationStyle: citationStyleId,
     citationMentions,
     sayiBicimiOnerisi,
+    internetOrnekleri: internetOrnekKunyeleri(text),
     sourceChecksum: await sha256(sourceBytes),
     sourceContentType: contentType || "application/octet-stream",
     sourceEtag: res.headers.get("etag"),

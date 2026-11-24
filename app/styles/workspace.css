@@ -1904,6 +1904,17 @@
 .kaynakca-duzeltme-yeni { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 600; }
 .kaynakca-duzeltme-eksik { display: grid; gap: var(--s-1); padding: var(--s-2); border-left: 3px solid var(--warning); border-radius: var(--r-sm); background: var(--surface-2); }
 .kaynakca-duzeltme-eksik > strong { font-size: var(--fs-sm); }
+
+/*
+  KILAVUZDAKİ ÖRNEK KÜNYELER (24.11.2026). Kılavuzun KENDİ metni tırnak
+  içinde ve italik: öğrencinin kendi künyesinden ve bizim ürettiğimiz
+  önizlemeden ayrılsın. Seçilen örnek sol çizgiyle işaretli.
+*/
+.kaynakca-ornek { display: grid; gap: var(--s-1); margin-top: var(--s-1); }
+.kaynakca-ornek-liste { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.kaynakca-ornek-liste > li { display: grid; gap: 2px; padding: var(--s-1) var(--s-2); border-left: 3px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-sm); }
+.kaynakca-ornek-liste > li[data-secili] { border-left-color: var(--primary); }
+.kaynakca-ornek-liste q { color: var(--ink); font-style: italic; }
 .sol-arac-satir { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--os5-fs-meta); }
 .sol-arac-satir span { color: var(--muted); }
 .sol-arac-satir b { color: var(--ink); font-weight: 600; text-align: right; }
