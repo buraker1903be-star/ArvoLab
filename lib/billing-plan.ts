@@ -16,6 +16,15 @@ export interface BillingPlan {
   interval: BillingInterval | null;
   /** Kuruş cinsinden tutar (ArvoOS'un bildirdiği) */
   price: number | null;
+  /*
+    GÖRÜNEN AD ve PLANA DAHİL KREDİ (24.11.2026, plan karşılaştırma
+    penceresi). İkisi de ArvoOS'un bildirdiği alanlar; köprü göndermezse
+    null kalır ve ekran "—" yazar. ArvoLab bir ad ya da kredi miktarı
+    UYDURMAZ: "Standart / Plus / Pro" ayrımı ve plana dahil kredi
+    ArvoOS'un kararı, burada kopyası tutulursa iki taraf ayrışır.
+  */
+  ad?: string | null;
+  kredi?: number | null;
 }
 
 const MONTH_WORDS = ["month", "monthly", "aylik", "ay"];
@@ -74,11 +83,30 @@ const priceOf = (...values: unknown[]) => {
    çıkıyordu. */
 const kod = (deger: unknown) => (typeof deger === "string" && deger.trim() ? deger.trim() : null);
 
+/** Görünen ad: boş ya da aşırı uzun değer yok sayılır. */
+const ad = (...values: unknown[]): string | null => {
+  for (const item of values) {
+    if (typeof item === "string" && item.trim()) return item.trim().slice(0, 60);
+  }
+  return null;
+};
+
+/** Plana dahil aylık kredi: yalnızca pozitif tamsayı. */
+const krediSayisi = (...values: unknown[]): number | null => {
+  for (const item of values) {
+    const sayi = typeof item === "string" && /^\d+$/.test(item.trim()) ? Number(item.trim()) : item;
+    if (typeof sayi === "number" && Number.isInteger(sayi) && sayi > 0) return sayi;
+  }
+  return null;
+};
+
 const planFrom = (raw: Record<string, unknown>): BillingPlan => ({
   code: kod(raw.code) ?? kod(raw.planCode),
   // Eski yanıtlarda dönem yazmaz, tutar "monthlyFee" adıyla gelir: aylık sayılır.
   interval: normalizeInterval(raw.interval ?? raw.period ?? raw.billingInterval) ?? (raw.monthlyFee != null ? "month" : null),
   price: priceOf(raw.price, raw.amount, raw.monthlyFee),
+  ad: ad(raw.ad, raw.name, raw.label, raw.title),
+  kredi: krediSayisi(raw.kredi, raw.credits, raw.monthlyCredits, raw.aylikKredi),
 });
 
 const isPlan = (plan: BillingPlan) => plan.price !== null || plan.code !== null;

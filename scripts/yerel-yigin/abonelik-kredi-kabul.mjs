@@ -1,0 +1,295 @@
+// ABONELİK VE KREDİ SAYFASI KABULÜ (24.11.2026).
+//
+// Dört durum: bireysel (veri var), kurum yönetimli, iç ekip ve abonelik
+// verisi alınamayan. Ölçtükleri: iki kompakt kart, kullanım çubuğunun
+// yalnızca doğrulanabilen veride çizilmesi, ek kredi alanının yetkiye
+// göre görünmesi, Faturalar/Kredi hareketleri sekmeleri, iki karşılaştırma
+// penceresi (Esc, odak dönüşü, mobil kaydırma) ve Ayarlar'dan gelen bağlantı.
+//
+// Kullanım: node scripts/yerel-yigin/abonelik-kredi-kabul.mjs <uygulama> [görüntü-dizini]
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+
+const KOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const require = createRequire(`${KOK}/package.json`);
+const { chromium } = require("playwright");
+const UYG = process.argv[2] ?? "http://localhost:3141";
+const GORSEL = process.argv[3] ?? null;
+if (GORSEL) fs.mkdirSync(GORSEL, { recursive: true });
+const GECIT = "http://127.0.0.1:54401";
+const SIR = "yerel-yigin-jwt-gizli-degil-yalnizca-yerel-0123456789";
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const g = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ iss: "yerel", iat: 1763200000, exp: 2079000000, role: "service_role" })}`;
+const SERVIS = `${g}.${crypto.createHmac("sha256", SIR).update(g).digest("base64url")}`;
+const psql = (sql) =>
+  execFileSync("psql", ["-h", "127.0.0.1", "-p", "56432", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], {
+    env: { ...process.env, PGPASSWORD: "yerel-yigin" }, encoding: "utf8",
+  }).trim();
+const q = (x) => `'${String(x).replace(/'/g, "''")}'`;
+const auth = async (yol, gv, m = "POST") => {
+  const r = await fetch(`${GECIT}/auth/v1${yol}`, {
+    method: m, headers: { apikey: SERVIS, Authorization: `Bearer ${SERVIS}`, "Content-Type": "application/json" },
+    body: JSON.stringify(gv),
+  });
+  return { d: r.status, j: await r.json().catch(() => ({})) };
+};
+
+const BUILD_ID = fs.existsSync(`${KOK}/.next/BUILD_ID`) ? fs.readFileSync(`${KOK}/.next/BUILD_ID`, "utf8").trim() : null;
+const HEAD = execFileSync("git", ["rev-parse", "HEAD"], { cwd: KOK, encoding: "utf8" }).trim();
+try {
+  const html = await (await fetch(`${UYG}/`)).text();
+  if (!BUILD_ID || !html.includes(BUILD_ID)) throw new Error(`BUILD_ID (${BUILD_ID ?? "yok"}) sunulan sayfada yok`);
+  if ((await fetch(`${GECIT}/auth/v1/health`)).status !== 200) throw new Error("geçit yanıt vermiyor");
+} catch (e) { console.error("Ön koşul yok:", e.message); process.exit(2); }
+
+const SOZLESME = fs.readFileSync(`${KOK}/lib/sozlesme/kullanim-sozlesmesi.ts`, "utf8").match(/SOZLESME_SURUMU = "([^"]+)"/)[1];
+const ek = crypto.randomBytes(3).toString("hex");
+
+async function kullaniciKur({ etiket, tamAd, kurum, rol }) {
+  const adres = `${etiket}-${ek}@yerel.test`;
+  const parola = `Ab7!${crypto.randomBytes(9).toString("base64url")}`;
+  const y = await auth("/admin/users", { email: adres, email_confirm: true, user_metadata: { full_name: tamAd } });
+  if (y.d >= 300) throw new Error(`kullanıcı kurulamadı: ${JSON.stringify(y.j)}`);
+  const id = y.j.id;
+  await auth(`/admin/users/${id}`, { password: parola }, "PUT");
+  psql(`insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi)
+        values (${q(id)}, 'kullanim_sozlesmesi', ${q(SOZLESME)}, 'tr', ${q("0".repeat(64))}, 'giris', true)`);
+  psql(`update public.profiles set full_name = ${q(tamAd)}${kurum ? `, organization_id = ${q(kurum)}` : ""}${rol ? `, role = ${q(rol)}::public.user_role` : ""} where id = ${q(id)}`);
+  return { adres, parola, id, tamAd };
+}
+
+const KURUM = psql(`insert into public.organizations (name, license_status, synced_at, current_period_end, ai_credit_limit)
+  values (${q(`Abonelik Universitesi ${ek}`)}, 'active', now(), now() + interval '200 days', 5000) returning id`).split("\n")[0];
+
+const BIREYSEL = await kullaniciKur({ etiket: "ab-birey", tamAd: "Deniz Yilmaz", kurum: null });
+const KOPUK = await kullaniciKur({ etiket: "ayar-kopuk", tamAd: "Kopuk Denegi", kurum: null });
+const KURUMLU = await kullaniciKur({ etiket: "ab-kurum", tamAd: "Kurum Uyesi", kurum: KURUM });
+const ICEKIP = await kullaniciKur({ etiket: "ab-icekip", tamAd: "Ic Ekip", kurum: null, rol: "founder" });
+
+/* Bireysel aboneye kredi durumu ve hareket: kart ve sekme dolu görünsün.
+   Dönem, aylık kalan ve satın alınan bakiye ai_kredi_durumum'un okuduğu
+   tablodan geliyor; kullanım çubuğunun paydası buradan doğrulanıyor. */
+psql(`insert into public.ai_bireysel_kredi_hesabi (user_id, donem, aylik_kalan, ek_bakiye)
+      values (${q(BIREYSEL.id)}, date_trunc('month', now())::date, 640, 0)
+      on conflict (user_id) do update set donem = excluded.donem, aylik_kalan = excluded.aylik_kalan, ek_bakiye = excluded.ek_bakiye`);
+psql(`insert into public.ai_bireysel_kredi_hareketleri (user_id, tur, kredi, kaynak)
+      values (${q(BIREYSEL.id)}, 'yenileme', 1000, ${q(`kabul-${ek}-y`)}), (${q(BIREYSEL.id)}, 'tuketim', 360, ${q(`kabul-${ek}-t`)})`);
+
+const sonuclar = [];
+const yaz = (ad, ekran, tema, gecti, ayrinti) => {
+  sonuclar.push({ ad, ekran, tema, gecti, ayrinti });
+  console.log(`${gecti ? "GEÇTİ " : "KALDI "} ${String(ekran).padEnd(4)} ${tema.padEnd(5)} ${ad.padEnd(50)} ${ayrinti}`);
+};
+const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
+const odak = (s) => s.evaluate(() => {
+  const a = document.activeElement;
+  if (!a || a === document.body) return "BODY (kayıp)";
+  return `${a.tagName}${a.className ? "." + String(a.className).split(" ")[0] : ""}[${(a.textContent ?? "").trim().slice(0, 24)}]`;
+});
+
+for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [390, 844, "light"], [390, 844, "dark"]]) {
+  const mobil = EKRAN < 500;
+  const ctx = await tarayici.newContext({ viewport: { width: EKRAN, height: YUK }, colorScheme: TEMA, locale: "tr-TR",
+    ...(mobil ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {}) });
+  await ctx.addCookies([{ name: "arvolab_dil", value: "tr", url: UYG }]);
+  const s = await ctx.newPage();
+  const giris = async (k) => {
+    await ctx.clearCookies();
+    await ctx.addCookies([{ name: "arvolab_dil", value: "tr", url: UYG }]);
+    await s.goto(`${UYG}/`, { waitUntil: "domcontentloaded" });
+    await s.fill('input[name="email"]', k.adres);
+    await s.fill('input[name="password"]', k.parola);
+    await Promise.all([s.waitForURL(/dashboard/, { timeout: 60000 }), s.press('input[name="password"]', "Enter")]);
+  };
+  const git = async (yol) => { await s.goto(`${UYG}${yol}`, { waitUntil: "domcontentloaded" }); await s.waitForLoadState("networkidle").catch(() => {}); };
+  const resim = async (ad) => { if (GORSEL) await s.screenshot({ path: `${GORSEL}/${ad}-${EKRAN}-${TEMA}.png`, fullPage: !mobil }); };
+
+  /* ---- B · Bireysel (veri var) ---- */
+  await giris(BIREYSEL);
+  await git("/dashboard/abonelik");
+  try {
+    const sayfa = await s.evaluate(() => {
+      const kartlar = [...document.querySelectorAll(".abonelik-kart")];
+      const kap = document.querySelector(".abonelik-kartlar");
+      return {
+        kartSayisi: kartlar.length,
+        sutunlar: kap ? getComputedStyle(kap).gridTemplateColumns.split(" ").length : 0,
+        cubuk: Boolean(document.querySelector(".abonelik-cubuk")),
+        ekKredi: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
+        sekmeler: [...document.querySelectorAll(".abonelik-sekmeler .ayarlar-sekme")].map((x) => x.textContent.trim()),
+        planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet/.test(b.textContent))),
+        sayfaTasmasi: document.documentElement.scrollWidth - document.documentElement.clientWidth > 2,
+      };
+    });
+    yaz("B1 · İki kompakt kart", EKRAN, TEMA, sayfa.kartSayisi === 2 && sayfa.sutunlar === (mobil ? 1 : 2),
+        `kart=${sayfa.kartSayisi} sütun=${sayfa.sutunlar}`);
+    yaz("B2 · Kullanım çubuğu doğrulanabilen veride", EKRAN, TEMA, sayfa.cubuk, `çubuk=${sayfa.cubuk}`);
+    yaz("B3 · Ek kredi alanı ve Planı yönet var", EKRAN, TEMA, sayfa.ekKredi && sayfa.planYonet, `ekKredi=${sayfa.ekKredi} plan=${sayfa.planYonet}`);
+    yaz("B4 · Faturalar ve Kredi hareketleri sekmeleri", EKRAN, TEMA,
+        JSON.stringify(sayfa.sekmeler) === JSON.stringify(["Faturalar", "Kredi hareketleri"]), JSON.stringify(sayfa.sekmeler));
+    yaz("B5 · Sayfa yatay taşmıyor", EKRAN, TEMA, !sayfa.sayfaTasmasi, `taşma=${sayfa.sayfaTasmasi}`);
+    await resim("B1-abonelik-sayfasi");
+
+    /* Sekme geçişi */
+    await s.locator(".abonelik-sekmeler .ayarlar-sekme", { hasText: /^Kredi hareketleri$/ }).click();
+    await s.waitForTimeout(250);
+    const hareketGorunur = await s.evaluate(() => {
+      const paneller = [...document.querySelectorAll(".abonelik-sekmeler .ayarlar-panel")];
+      return paneller[1] && !paneller[1].hidden && paneller[0].hidden;
+    });
+    yaz("B6 · Sekme değişiyor", EKRAN, TEMA, Boolean(hareketGorunur), `görünür=${hareketGorunur}`);
+
+    /* ---- K · Kredileri karşılaştır penceresi ---- */
+    await s.locator("button", { hasText: /Kredi paketlerini incele/ }).first().click();
+    await s.waitForSelector(".drawer-root.open .karsilastir", { timeout: 15000 });
+    await s.waitForTimeout(400);
+    const kredi = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      const sutunlar = [...kok.querySelectorAll(".karsilastir-sutun")];
+      const govde = kok.querySelector(".drawer-body");
+      return {
+        sutun: sutunlar.length,
+        yogun: Boolean(kok.querySelector('.karsilastir-rozet[data-tur="one-cikan"]')),
+        yuzKredi: Boolean([...kok.querySelectorAll("dt")].find((d) => /100 kredi başına/.test(d.textContent))),
+        tekSeferlik: /tek seferlik|Tek seferlik/i.test(kok.innerText),
+        gonderPasif: kok.querySelector('button[type="submit"]')?.disabled ?? null,
+        icKaydirma: govde ? govde.scrollHeight - govde.clientHeight > 2 : null,
+        yatayTasma: kok.querySelector("section.drawer").scrollWidth - kok.querySelector("section.drawer").clientWidth > 2,
+      };
+    });
+    yaz("K1 · Paketler gerçek katalogdan", EKRAN, TEMA, kredi.sutun > 0, `sütun=${kredi.sutun}`);
+    yaz("K2 · Yoğun kullanım etiketi ve 100 kredi başına", EKRAN, TEMA, kredi.yogun && kredi.yuzKredi, `yoğun=${kredi.yogun} yüz=${kredi.yuzKredi}`);
+    yaz("K3 · Tek seferlik olduğu yazıyor", EKRAN, TEMA, kredi.tekSeferlik, "");
+    yaz("K4 · Seçim yapılmadan gönderilemiyor", EKRAN, TEMA, kredi.gonderPasif === true, `pasif=${kredi.gonderPasif}`);
+    yaz("K5 · Pencere yatay taşmıyor", EKRAN, TEMA, !kredi.yatayTasma, `taşma=${kredi.yatayTasma} içKaydırma=${kredi.icKaydirma}`);
+    await resim("K1-kredileri-karsilastir");
+    /* Seçince özet çıkıyor */
+    await s.locator('.drawer-root.open .karsilastir-sec input').first().check();
+    await s.waitForTimeout(250);
+    const ozet = await s.evaluate(() => document.querySelector(".drawer-root.open .karsilastir-ozet")?.innerText.replace(/\s+/g, " ") ?? null);
+    yaz("K6 · Seçimde toplam tahsilat okunuyor", EKRAN, TEMA, Boolean(ozet && /Toplam tahsilat/.test(ozet)), `"${(ozet ?? "").slice(0, 60)}…"`);
+    if (!mobil && TEMA === "light") {
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(500);
+      const o = await odak(s);
+      yaz("K7 · Esc kapatıyor, odak açan düğmeye dönüyor", EKRAN, TEMA,
+          (await s.locator(".drawer-root.open").count()) === 0 && /Kredi paketlerini incele/.test(o), `odak=${o}`);
+    } else {
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(400);
+    }
+
+    /* ---- P · Planı yönet → Planları karşılaştır (iç içe) ---- */
+    await s.locator("button", { hasText: /Planı yönet/ }).first().click();
+    await s.waitForSelector(".drawer-root.open .plan-yonet", { timeout: 15000 });
+    await s.waitForTimeout(350);
+    const yonet = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return {
+        mevcut: kok.querySelector(".plan-yonet-mevcut")?.innerText.replace(/\s+/g, " ").trim() ?? null,
+        karsilastirVar: Boolean([...kok.querySelectorAll("button")].find((b) => /Planları karşılaştır/.test(b.textContent))),
+      };
+    });
+    yaz("P1 · Planı yönet: mevcut plan ve yenileme", EKRAN, TEMA, Boolean(yonet.mevcut), `"${(yonet.mevcut ?? "").slice(0, 50)}"`);
+    await resim("P1-plani-yonet");
+    if (yonet.karsilastirVar) {
+      await s.locator(".drawer-root.open button", { hasText: /Planları karşılaştır/ }).click();
+      await s.waitForFunction(() => document.querySelectorAll(".drawer-root.open").length === 2, null, { timeout: 15000 });
+      await s.waitForTimeout(400);
+      const plan = await s.evaluate(() => {
+        const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-satirlar"));
+        return {
+          sutun: kok.querySelectorAll(".karsilastir-sutun").length,
+          krediSatiri: Boolean([...kok.querySelectorAll("dt")].find((d) => /Asistan kredisi/.test(d.textContent))),
+          donemSatiri: Boolean([...kok.querySelectorAll("dt")].find((d) => /Faturalama dönemi/.test(d.textContent))),
+        };
+      });
+      yaz("P2 · Plan karşılaştırma: kredi ve dönem satırları", EKRAN, TEMA, plan.krediSatiri && plan.donemSatiri,
+          `sütun=${plan.sutun} kredi=${plan.krediSatiri} dönem=${plan.donemSatiri}`);
+      await resim("P2-planlari-karsilastir");
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(500);
+      const kalan = await s.locator(".drawer-root.open").count();
+      const kilit = await s.evaluate(() => document.documentElement.classList.contains("drawer-open"));
+      yaz("P3 · İç içe: ilk Esc üsttekini kapatıyor", EKRAN, TEMA, kalan === 1 && kilit, `kalan=${kalan} kilit=${kilit}`);
+    }
+    await s.keyboard.press("Escape");
+    await s.waitForTimeout(400);
+  } catch (e) {
+    yaz("B/K/P · bireysel akış", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
+  }
+
+  /* ---- A · Ayarlar'dan bağlantı bu sayfaya açılıyor ---- */
+  try {
+    await git("/dashboard/settings");
+    await s.locator(".ayarlar-sekme", { hasText: /^Abonelik$/ }).click();
+    await s.waitForTimeout(250);
+    await s.locator('.ayarlar-sayfa a[href="/dashboard/abonelik"]').first().click();
+    await s.waitForURL(/\/dashboard\/abonelik/, { timeout: 20000 });
+    await s.waitForSelector(".abonelik-kart", { timeout: 20000 });
+    yaz("A1 · Ayarlar'daki bağlantı bu sayfaya açılıyor", EKRAN, TEMA,
+        (await s.locator(".abonelik-kart").count()) === 2, s.url().replace(UYG, ""));
+  } catch (e) { yaz("A1 · Ayarlar'daki bağlantı bu sayfaya açılıyor", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`); }
+
+  /* ---- U · Abonelik verisi alınamıyor ---- */
+  try {
+    await giris(KOPUK);
+    await git("/dashboard/abonelik");
+    const u = await s.evaluate(() => {
+      const metin = document.querySelector(".abonelik-kartlar").innerText.replace(/\s+/g, " ");
+      return { metin, planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet/.test(b.textContent))) };
+    });
+    yaz("U1 · Bilgi alınamıyorsa açıkça söyleniyor", EKRAN, TEMA, /alınamıyor/.test(u.metin), `"${u.metin.slice(0, 70)}…"`);
+    await resim("U1-abonelik-alinamadi");
+  } catch (e) { yaz("U1 · Bilgi alınamıyorsa açıkça söyleniyor", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`); }
+
+  /* ---- O · Kurum yönetimli ---- */
+  try {
+    await giris(KURUMLU);
+    await git("/dashboard/abonelik");
+    const o = await s.evaluate(() => ({
+      metin: document.querySelector(".abonelik-kartlar").innerText.replace(/\s+/g, " "),
+      ekKrediEylem: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
+      ekKrediBilgi: Boolean(document.querySelector('.abonelik-ek-kredi[data-bilgi="true"]')),
+      planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet/.test(b.textContent))),
+      sekmeler: [...document.querySelectorAll(".abonelik-sekmeler .ayarlar-sekme")].length,
+    }));
+    yaz("O1 · Kurum yönetimli olduğu yazıyor", EKRAN, TEMA, /kurum/i.test(o.metin), `"${o.metin.slice(0, 60)}…"`);
+    yaz("O2 · Kurum üyesine satın alma sunulmuyor", EKRAN, TEMA, !o.ekKrediEylem && o.ekKrediBilgi && !o.planYonet,
+        `eylem=${o.ekKrediEylem} bilgi=${o.ekKrediBilgi} planYönet=${o.planYonet}`);
+    yaz("O3 · Kullanım geçmişi görünür kalıyor", EKRAN, TEMA, o.sekmeler === 2, `sekme=${o.sekmeler}`);
+    await resim("O1-abonelik-kurum");
+  } catch (e) {
+    for (const n of ["O1 · Kurum yönetimli olduğu yazıyor", "O2 · Kurum üyesine satın alma sunulmuyor", "O3 · Kullanım geçmişi görünür kalıyor"])
+      yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`);
+  }
+
+  /* ---- I · İç ekip ---- */
+  try {
+    await giris(ICEKIP);
+    await git("/dashboard/abonelik");
+    const i = await s.evaluate(() => ({
+      metin: document.querySelector(".abonelik-kartlar").innerText.replace(/\s+/g, " "),
+      ekKrediEylem: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
+      sekmeler: [...document.querySelectorAll(".abonelik-sekmeler .ayarlar-sekme")].length,
+    }));
+    yaz("I1 · İç ekip durumu yazıyor, satın alma yok", EKRAN, TEMA,
+        /İç ekip/i.test(i.metin) && !i.ekKrediEylem, `"${i.metin.slice(0, 60)}…" eylem=${i.ekKrediEylem}`);
+    yaz("I2 · Kayıtlar görünür kalıyor", EKRAN, TEMA, i.sekmeler === 2, `sekme=${i.sekmeler}`);
+    await resim("I1-abonelik-icekip");
+  } catch (e) {
+    for (const n of ["I1 · İç ekip durumu yazıyor, satın alma yok", "I2 · Kayıtlar görünür kalıyor"])
+      yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`);
+  }
+
+  await ctx.close();
+}
+await tarayici.close();
+const kaldi = sonuclar.filter((r) => !r.gecti);
+if (GORSEL) fs.writeFileSync(`${GORSEL}/abonelik-kabul.json`, JSON.stringify({ head: HEAD, buildId: BUILD_ID, sonuclar }, null, 1));
+console.log(`\n${sonuclar.length} kontrol · ${sonuclar.length - kaldi.length} geçti · ${kaldi.length} kaldı · HEAD ${HEAD.slice(0, 7)}`);
+process.exit(kaldi.length ? 1 : 0);

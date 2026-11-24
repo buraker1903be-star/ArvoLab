@@ -11,8 +11,24 @@ describe("ArvoOS sözleşmesi", () => {
   */
   test("gerçek yanıt aylık plana çevriliyor", () => {
     const [plan] = normalizePlans({ status: "trialing", trialEndsAt: null, monthlyFee: 14900 });
-    assert.deepEqual(plan, { code: null, interval: "month", price: 14900 });
+    /* ad ve kredi 24.11.2026'da eklendi: ArvoOS göndermiyorsa NULL, ekran
+       "—" yazıyor. Uydurma bir plan adı ya da kredi miktarı yok. */
+    assert.deepEqual(plan, { code: null, interval: "month", price: 14900, ad: null, kredi: null });
     assert.equal(describePlan(plan), "Aylık 149,00 ₺");
+  });
+
+  test("plan adı ve dahil kredi KATALOGDAN okunuyor, uydurulmuyor", () => {
+    const [zengin] = normalizePlans({ plans: [{ code: "pro", price: 29900, interval: "month", ad: "Pro", kredi: 5000 }] });
+    assert.equal(zengin.ad, "Pro");
+    assert.equal(zengin.kredi, 5000);
+    /* İngilizce alan adları da okunuyor (köprü sürümleri ayrışabiliyor). */
+    const [ing] = normalizePlans({ plans: [{ code: "plus", price: 19900, name: "Plus", monthlyCredits: "2500" }] });
+    assert.equal(ing.ad, "Plus");
+    assert.equal(ing.kredi, 2500);
+    /* Boş ad ve sıfır/negatif kredi YOK sayılıyor: "" bir ad değil. */
+    const [bos] = normalizePlans({ plans: [{ code: "x", price: 100, ad: "   ", kredi: 0 }] });
+    assert.equal(bos.ad, null);
+    assert.equal(bos.kredi, null);
   });
 
   test("ücret tanımsızsa plan gösterilmiyor", () => {

@@ -1,0 +1,114 @@
+/* ============================================================
+   ABONELİK VE KREDİ (24.11.2026, onaylı mockup)
+   Sayfa: app/dashboard/abonelik/page.tsx
+   Pencereler: plani-yonet.tsx, planlari-karsilastir.tsx,
+   kredileri-karsilastir.tsx — ortak pencere kabı (Dialog) kullanıyor.
+   ============================================================ */
+
+/* ---------- Üstteki iki kompakt kart ----------
+   Eskiden iki uzun sütun vardı ve kredisine bakmaya gelen kullanıcı
+   faturaların, kart bölümünün ve paket ızgarasının arasından
+   kaydırıyordu. Telefonda alt alta. */
+.abonelik-kartlar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+@media (max-width: 860px) { .abonelik-kartlar { grid-template-columns: 1fr; } }
+.abonelik-kart {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.abonelik-kart-etiket { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.abonelik-plan-ad { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.abonelik-plan-ad b { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -.01em; }
+.abonelik-kart-satir { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: var(--fs-sm); color: var(--muted); }
+.abonelik-kart-satir b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.abonelik-kart p { margin: 0; }
+/* "Planı yönet" kompakt ve solda: kartın tamamını kaplayan bir düğme,
+   kartın asıl bilgisi olan plan ve tarihten daha ağır görünüyordu. */
+.abonelik-kart > button { justify-self: start; }
+
+/* Kullanılabilir bakiye öne çıkıyor; çubuk yalnızca hak bildirilmişse. */
+.abonelik-kredi-sayi { display: flex; align-items: baseline; gap: 8px; }
+.abonelik-kredi-sayi b { font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.abonelik-kredi-sayi span { color: var(--muted); font-size: var(--fs-sm); }
+.abonelik-cubuk { width: 100%; height: 8px; border: 0; border-radius: var(--r-pill); background: var(--surface-sunken); overflow: hidden; appearance: none; }
+.abonelik-cubuk::-webkit-progress-bar { background: var(--surface-sunken); border-radius: var(--r-pill); }
+.abonelik-cubuk::-webkit-progress-value { background: var(--primary-ink); border-radius: var(--r-pill); }
+.abonelik-cubuk::-moz-progress-bar { background: var(--primary-ink); border-radius: var(--r-pill); }
+
+/* ---------- Ek kredi şeridi ---------- */
+.abonelik-ek-kredi {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+  margin-top: 16px; padding: 18px 20px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-xl); background: var(--surface);
+}
+.abonelik-ek-kredi[data-bilgi="true"] { background: var(--surface-2); }
+.abonelik-ek-kredi h2 { margin: 0; font-size: var(--fs-md); font-weight: 700; letter-spacing: -.01em; }
+.abonelik-ek-kredi p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); }
+@media (max-width: 560px) {
+  .abonelik-ek-kredi { flex-direction: column; align-items: stretch; }
+  .abonelik-ek-kredi button { width: 100%; justify-content: center; min-height: 44px; }
+}
+
+.abonelik-sekmeler { margin-top: 22px; }
+.abonelik-kart-bolumu { margin-top: 22px; }
+
+/* ---------- Karşılaştırma pencereleri ----------
+   Plan ve kredi pencereleri AYNI görsel dili kullanıyor: sütun başlıkları
+   üstte, karşılaştırma satırları altta tek ızgarada. */
+.karsilastir { display: grid; gap: 16px; }
+.karsilastir-donem { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line-soft); border-radius: var(--r-pill); justify-self: end; }
+.karsilastir-donem-dugme {
+  min-height: 34px; padding: 0 16px; border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.karsilastir-donem-dugme[data-etkin] { background: var(--primary-ink); color: var(--on-primary); }
+.karsilastir-donem-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+.karsilastir-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 12px; }
+.karsilastir-sutun {
+  display: grid; align-content: start; gap: 8px;
+  padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
+}
+/* Öne çıkan sütun: ölçülü lacivert çerçeve, dolu bir blok değil. */
+.karsilastir-sutun[data-one-cikan] { border-color: var(--primary-ink); box-shadow: 0 0 0 1px var(--primary-ink) inset; }
+.karsilastir-sutun[data-secili] { background: var(--primary-soft); }
+.karsilastir-sutun h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
+.karsilastir-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.karsilastir-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
+.karsilastir-rozet { justify-self: start; padding: 3px 9px; border-radius: var(--r-pill); font-size: var(--fs-micro); font-weight: 700; }
+.karsilastir-rozet[data-tur="mevcut"] { background: var(--success-soft); color: var(--success); }
+.karsilastir-rozet[data-tur="one-cikan"] { background: var(--primary-soft); color: var(--primary-ink); }
+.karsilastir-sec { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; }
+.karsilastir-sec input { width: 18px; height: 18px; accent-color: var(--primary-ink); }
+
+.karsilastir-satirlar { display: grid; gap: 0; margin: 0; border: 1px solid var(--line-soft); border-radius: var(--r-lg); overflow: hidden; }
+.karsilastir-satirlar > div { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(auto-fit, minmax(0, 1fr)); align-items: center; gap: 12px; padding: 11px 14px; }
+.karsilastir-satirlar > div + div { border-top: 1px solid var(--line-soft); }
+.karsilastir-satirlar dt { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.karsilastir-satirlar dd { margin: 0; text-align: center; font-size: var(--fs-base); font-variant-numeric: tabular-nums; }
+
+.karsilastir-ozet { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-sunken); font-size: var(--fs-sm); }
+.karsilastir-ozet span { color: var(--muted); }
+
+/* Dar ekranda sütunlar alt alta; satır ızgarası da tek sütuna iniyor. */
+@media (max-width: 760px) {
+  .karsilastir-izgara { grid-template-columns: 1fr; }
+  .karsilastir-donem { justify-self: stretch; }
+  .karsilastir-donem-dugme { flex: 1; }
+  .karsilastir-satirlar > div { grid-template-columns: 1fr; gap: 4px; text-align: left; }
+  .karsilastir-satirlar dd { text-align: left; }
+}
+
+/* ---------- Planı yönet ---------- */
+.plan-yonet { display: grid; gap: 14px; }
+.plan-yonet-mevcut { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); }
+.plan-yonet-mevcut b { font-size: var(--fs-md); }
+.plan-yonet-satir { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+@media (max-width: 560px) {
+  .plan-yonet-satir { flex-direction: column; align-items: stretch; }
+  .plan-yonet-satir button { width: 100%; justify-content: center; min-height: 44px; }
+}

@@ -45,8 +45,22 @@ const sunucu = http.createServer((istek, yanit) => {
             access: true,
             trialEndsAt: null,
             currentPeriodEnd: DONEM_BITISI,
-            plans: [{ code: "yillik", label: "Yıllık", amount: 4800, currency: "TRY", interval: "year" }],
-            krediPaketleri: [],
+            /* Plan listesi: iki dönem ve üç kademe; ad ve dahil kredi de
+               bildiriliyor ki karşılaştırma penceresinin DOLU hâli de
+               ölçülebilsin. Gerçek ArvoOS bugün ad/kredi göndermiyor. */
+            plans: [
+              { code: "standart-ay", ad: "Standart", interval: "month", price: 14900, kredi: 1000 },
+              { code: "plus-ay", ad: "Plus", interval: "month", price: 24900, kredi: 2500 },
+              { code: "pro-ay", ad: "Pro", interval: "month", price: 39900, kredi: 6000 },
+              { code: "standart-yil", ad: "Standart", interval: "year", price: 149000, kredi: 1000 },
+              { code: "pro-yil", ad: "Pro", interval: "year", price: 399000, kredi: 6000 },
+            ],
+            /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
+            creditPackages: [
+              { kod: "k250", ad: "250 kredi", kredi: 250, fiyat: 12500 },
+              { kod: "k500", ad: "500 kredi", kredi: 500, fiyat: 22500 },
+              { kod: "k1000", ad: "1.000 kredi", kredi: 1000, fiyat: 40000 },
+            ],
             cardStorage: false,
           };
     yanit.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(cevap));
