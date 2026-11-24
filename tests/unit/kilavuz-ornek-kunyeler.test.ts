@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { internetOrnekKunyeleri, kaynakInternetTuru, onerilenOrnek, ornekTuru } from "@/lib/kilavuz-ornek-kunyeler";
+import { internetOrnekKunyeleri, kaynakInternetTuru, onerilenOrnek, ornekKurali, ornekTuru } from "@/lib/kilavuz-ornek-kunyeler";
 
 /*
   Örnek UYDURULMAZ, TÜR EMİN DEĞİLSE SÖYLENMEZ. Bu dosya ikisini
@@ -121,5 +121,42 @@ describe("öneri yalnızca EMİN olunduğunda", () => {
 
   test("örnek yoksa null", () => {
     assert.equal(onerilenOrnek([], { title: "Herhangi" }), null);
+  });
+});
+
+/*
+  ÖRNEKTEN ÇIKARILAN KURAL. Tek satırdan künyenin tamamı türetilemez;
+  yalnızca adresin önündeki etiket ve erişim tarihinin istenip
+  istenmediği okunuyor. Tanımadığımız bir yapı varsa kural
+  ÇIKARILAMADI sayılır — örnekten metin kopyalamak, kılavuzun kendi
+  cümlesini öğrencinin künyesine taşımak olurdu.
+*/
+describe("ornekKurali", () => {
+  const kural = (metin: string) => ornekKurali({ metin, tur: "genel-internet", kesin: false, bolum: null, sayfa: null });
+
+  test("çıplak adres bir kuraldır", () => {
+    const k = kural("Türkiye İstatistik Kurumu. (2023). Nüfus verileri. https://www.tuik.gov.tr/x");
+    assert.deepEqual(k, { adresOneki: "", erisimTarihiIstiyor: false, cikarilabilir: true });
+  });
+
+  test("tanınan etiket okunuyor", () => {
+    const k = kural("Sağlık Bakanlığı. (2022). Yıllık rapor. Erişim adresi: https://saglik.gov.tr/r");
+    assert.equal(k.adresOneki, "Erişim adresi:");
+    assert.equal(k.cikarilabilir, true);
+  });
+
+  test("erişim tarihi isteyen örnek işaretleniyor", () => {
+    const k = kural("Dünya Bankası. (2020). Rapor. Erişim adresi: https://wb.org/r (Erişim tarihi: 01.02.2021)");
+    assert.equal(k.erisimTarihiIstiyor, true);
+    assert.equal(k.cikarilabilir, true);
+  });
+
+  test("adresten sonra tanınmayan yapı varsa kural ÇIKARILAMAZ", () => {
+    const k = kural("Millî Eğitim Bakanlığı. (2021). Veriler, https://meb.gov.tr/veri adresinden alınmıştır.");
+    assert.equal(k.cikarilabilir, false);
+  });
+
+  test("adres yoksa kural çıkarılamaz", () => {
+    assert.equal(kural("Yılmaz, A. (2020). Bir kitap. İstanbul: Yayınevi.").cikarilabilir, false);
   });
 });

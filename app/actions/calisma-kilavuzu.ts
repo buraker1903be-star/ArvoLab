@@ -80,6 +80,14 @@ const taramaKapsami = (kullaniciId: string, projectId: string) => `${kullaniciId
 
 export interface TaramaSonucu {
   error?: string;
+  /*
+    BELGEDEN METİN ÇIKARILAMADI (24.11.2026). Taranmış ya da metin
+    katmanı olmayan PDF'te çıkarım boş dönüyordu ve ekran doğrulama
+    formunu "hiçbir şey bulamadım" hâlinde açıyordu: okunamamış bir
+    belge, okunmuş ama boş çıkmış gibi görünüyordu. Artık ayrı bir
+    durum; öğrenciye ne olduğu ve iki çıkış yolu söyleniyor.
+  */
+  okunamadi?: boolean;
   /** Öğrenciye onaylatılacak alanlar. */
   form?: DogrulamaFormu;
   /*
@@ -219,12 +227,32 @@ export async function kilavuzuTara(
         console.error("[calisma-kilavuzu] dosya depodan okunamadı:", error?.message);
         return { error: t({ tr: "Yüklenen dosya okunamadı. Tekrar yükleyin.", en: "The uploaded file could not be read. Upload it again." }) };
       }
-      tarama = await scanGuidelineBytesMetinli(dosya, dosya.type || "application/pdf", girdi.depoYolu);
+      /*
+        YÜKLENEN DOSYADAN METİN ÇIKARILAMADI. Taranmış PDF'te OCR da
+        düşebiliyor (ağ, bellek) ve hata buraya kadar geliyordu: ekran
+        toast gösterip seçim adımına dönüyor, öğrenci "ne oldu, ne
+        yapacağım?" sorusuyla kalıyordu. Dosya bizde olduğu için
+        sebebi biliyoruz: bu PDF'ten metin çıkaramadık. Adres yolunda
+        aynı şey DEĞİL — orada indirme de başarısız olabilir ve mesajı
+        ayrı (aşağıdaki catch).
+      */
+      try {
+        tarama = await scanGuidelineBytesMetinli(dosya, dosya.type || "application/pdf", girdi.depoYolu);
+      } catch (hata) {
+        console.error("[calisma-kilavuzu] yüklenen dosyadan metin çıkarılamadı:", hata instanceof Error ? hata.message : hata);
+        return { okunamadi: true };
+      }
     } else if (girdi.adres?.trim()) {
       tarama = await scanGuidelineUrlMetinli(girdi.adres.trim());
     } else {
       return { error: t({ tr: "Kılavuz dosyası yükleyin ya da adresini girin.", en: "Upload a guideline file or enter its address." }) };
     }
+    /*
+      Eşik, yapay zekâ okumasının eşiğiyle aynı (200 karakter): bunun
+      altında kalan bir çıkarımdan kural okunamaz. Kılavuz KAYDEDİLMEZ.
+    */
+    if (tarama.metin.trim().length < 200) return { okunamadi: true };
+
     let sonuc = tarama.sonuc;
 
     /*

@@ -150,6 +150,92 @@ export function onerilenOrnek(ornekler: OrnekKunye[], kaynak: InternetKaynagi): 
   return uyanlar.length === 1 ? uyanlar[0] : null;
 }
 
+/* ---------------------------------------------------------------- */
+
+/*
+  ÖRNEKTEN GÜVENLE ÇIKARILABİLEN KURAL.
+
+  Bir örnek satırından künyenin TAMAMINI yeniden türetmek mümkün değil
+  (yazar biçimi, italikler, noktalama sırası tek satırdan okunmaz) ve
+  denemek, doğrulamadığımız bir biçimi öğrencinin kaynakçasına yazmak
+  olurdu. Buradan yalnızca İKİ şey okunuyor, çünkü yalnızca bu ikisi
+  kılavuzdan kılavuza gerçekten değişiyor ve tek satırdan kesin olarak
+  görülüyor:
+
+    - ADRESİN ÖNÜNDEKİ ETİKET: "Erişim adresi: https://…" mi, çıplak
+      "https://…" mi. Etiket TANINAN bir listeden seçiliyor; örnekte
+      tanınmayan bir yapı varsa ("… adresinden alınmıştır") kural
+      ÇIKARILAMADI sayılır — etiketi örnekten kopyalamak, kılavuzun
+      kendi metnini öğrencinin künyesine taşımak olurdu.
+    - ERİŞİM TARİHİ İSTENİYOR MU: örnekte erişim tarihi varsa kural onu
+      ister; ArvoLab'da kayıtlı erişim bilgisi olmadığı için o künye
+      "eksik bilgi" listesine düşer, tarih UYDURULMAZ.
+
+  Örnekteki yazar, yıl ve adres hiçbir koşulda öğrencinin künyesine
+  taşınmaz; buradan çıkan şey yalnızca KALIP.
+*/
+
+export type OrnekKurali = {
+  /** Adresin önüne yazılan etiket; çıplak adres için boş dize. */
+  adresOneki: string;
+  /** Örnek erişim tarihi gösteriyor mu. */
+  erisimTarihiIstiyor: boolean;
+  /** Kural güvenle okunabildi mi; false ise örnek yalnızca karşılaştırma içindir. */
+  cikarilabilir: boolean;
+};
+
+/* Adresin önünde geçebilen TANINAN etiketler; başkası varsa kural okunamaz. */
+const ADRES_ONEKLERI = [
+  "Erişim adresi:",
+  "Erisim adresi:",
+  "Erişim adresi",
+  "Erişim:",
+  "Adres:",
+  "Available at:",
+  "Available from:",
+  "Retrieved from",
+  "URL:",
+];
+/* Erişim tarihi etiketleri: varlığını anlamak için; tarih DEĞERİ okunmaz. */
+const ERISIM_TARIHI = /(erişim tarihi|erisim tarihi|son erişim|son erisim|accessed|date accessed|erişildi|erisildi)/i;
+/*
+  Adresten SONRA gelebilecek, kalıbı bozmayan tek şey: noktalama ve
+  erişim tarihi eki. Başka bir sözcük varsa ("… adresinden alınmıştır")
+  kalıbı okuduğumuzu söyleyemeyiz.
+*/
+const sonrasiTaninir = (sonrasi: string) => {
+  const kalan = sonrasi.replace(/^[\s.,;:)\]]*/, "").trim();
+  if (!kalan) return true;
+  return new RegExp(`^[([]?\\s*(?:${ERISIM_TARIHI.source})`, "i").test(kalan);
+};
+
+const ADRES_YERI = /(https?:\/\/|www\.)\S+/i;
+
+export function ornekKurali(ornek: OrnekKunye): OrnekKurali {
+  const metin = ornek.metin;
+  const adres = ADRES_YERI.exec(metin);
+  const okunamadi: OrnekKurali = { adresOneki: "", erisimTarihiIstiyor: false, cikarilabilir: false };
+  if (!adres) return okunamadi;
+  const once = metin.slice(0, adres.index);
+  const sonrasi = metin.slice(adres.index + adres[0].length);
+  const etiket = ADRES_ONEKLERI.find((e) => once.trimEnd().toLocaleLowerCase("tr").endsWith(e.toLocaleLowerCase("tr")));
+  if (etiket) {
+    return sonrasiTaninir(sonrasi)
+      ? { adresOneki: etiket.endsWith(":") ? etiket : `${etiket}:`, erisimTarihiIstiyor: ERISIM_TARIHI.test(metin), cikarilabilir: true }
+      : okunamadi;
+  }
+  /*
+    Etiket yok: adres ÇIPLAK yazılmışsa bu da bir kuraldır — ama
+    yalnızca adres künyenin SONUNDAYSA. "… verileri, https://… adresinden
+    alınmıştır." yapısında adresin ardından gelen sözcükler kalıbın
+    parçası ve biz onu okuyamıyoruz; "çıplak adres" demek, kılavuzun
+    söylemediği bir kuralı uygulamak olurdu.
+  */
+  return sonrasiTaninir(metin.slice(adres.index + adres[0].length))
+    ? { adresOneki: "", erisimTarihiIstiyor: ERISIM_TARIHI.test(metin), cikarilabilir: true }
+    : okunamadi;
+}
+
 export const ORNEK_TURU_ADI: Record<OrnekTuru, { tr: string; en: string }> = {
   "kurumsal-sayfa": { tr: "Kurumsal web sayfası", en: "Institutional web page" },
   "cevrimici-rapor": { tr: "Çevrimiçi rapor", en: "Online report" },

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Wand2, Undo2 } from "lucide-react";
 import { hazirKaynakcaDuzeltmeleri } from "@/app/actions/kaynakca-duzeltme";
 import { duzeltmeOzetCumlesi, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
-import { ORNEK_TURU_ADI, type OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
+import { ORNEK_TURU_ADI } from "@/lib/kilavuz-ornek-kunyeler";
 import { stilAdiMetni } from "@/lib/atif/stiller";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -83,7 +83,7 @@ export default function KaynakcaDuzeltmePaneli({
       setSecili(new Set(cevap.ozet.duzeltmeler.filter((d) => !d.ozelKural || d.ornekDurumu?.oneri).map((d) => d.anahtar)));
       setSecilenOrnek(
         Object.fromEntries(
-          cevap.ozet.duzeltmeler.filter((d) => d.ornekDurumu?.oneri).map((d) => [d.anahtar, d.ornekDurumu!.oneri!.metin]),
+          cevap.ozet.duzeltmeler.filter((d) => d.ornekDurumu?.oneri).map((d) => [d.anahtar, d.ornekDurumu!.oneri!]),
         ),
       );
     } catch {
@@ -93,10 +93,16 @@ export default function KaynakcaDuzeltmePaneli({
     }
   };
 
+  /* Bu künye için seçili örneğin seçeneği; seçim yoksa ya da örnek yoksa null. */
+  const secilenSecenek = (d: DuzeltmeOzeti["duzeltmeler"][number]) =>
+    d.ornekDurumu?.secenekler.find((x) => x.ornek.metin === secilenOrnek[d.anahtar]) ?? null;
+
   const uygula = () => {
     if (!ozet) return;
     const secilenler = ozet.duzeltmeler.filter((d) => secili.has(d.anahtar));
-    const sayi = onUygula(secilenler.map((d) => ({ anahtar: d.anahtar, parcalar: d.parcalar })));
+    /* Belgeye YAZILAN, ekranda önizlenen künyedir: seçilen örneğe göre
+       üretilmişse o, yoksa çalışmanın genel stilindeki. */
+    const sayi = onUygula(secilenler.map((d) => ({ anahtar: d.anahtar, parcalar: secilenSecenek(d)?.parcalar ?? d.parcalar })));
     setUygulandi(sayi);
     if (sayi === 0) {
       /* Eşleşen satır bulunamadı: denetimden sonra kaynakça değişmiş
@@ -161,8 +167,14 @@ export default function KaynakcaDuzeltmePaneli({
                       />
                       <span className="kaynakca-duzeltme-ad">{t({ tr: "Bu künyeyi düzelt", en: "Fix this reference" })}</span>
                     </label>
+                    {/*
+                      ÖNİZLEME SEÇİLEN ÖRNEĞE GÖRE. Kılavuzun kuralı o
+                      örnekten güvenle okunabiliyorsa künye ona göre
+                      yazılıyor; okunamıyorsa çalışmanın GENEL stilindeki
+                      künye kalıyor ve bu ekranda söyleniyor.
+                    */}
                     <p className="kaynakca-duzeltme-eski">{d.ham}</p>
-                    <p className="kaynakca-duzeltme-yeni">{d.yeni}</p>
+                    <p className="kaynakca-duzeltme-yeni">{secilenSecenek(d)?.yeni ?? d.yeni}</p>
                     {d.sebepler.length ? <small className="muted">{d.sebepler.join(" · ")}</small> : null}
                     {/*
                       Künyeye GİRMEYEN eksikler: düzeltme engellenmiyor
@@ -202,7 +214,10 @@ export default function KaynakcaDuzeltmePaneli({
                           </small>
                         )}
                         <ul className="kaynakca-ornek-liste">
-                          {(d.ornekDurumu.oneri ? [d.ornekDurumu.oneri] : d.ornekDurumu.secenekler).map((ornek: OrnekKunye) => (
+                          {(d.ornekDurumu.oneri
+                            ? d.ornekDurumu.secenekler.filter((x) => x.ornek.metin === d.ornekDurumu!.oneri)
+                            : d.ornekDurumu.secenekler
+                          ).map(({ ornek, kuralUygulandi, gerekenBilgi }) => (
                             <li key={ornek.metin} data-secili={secilenOrnek[d.anahtar] === ornek.metin || undefined}>
                               <label className="cluster">
                                 <input
@@ -227,13 +242,41 @@ export default function KaynakcaDuzeltmePaneli({
                                   .filter(Boolean)
                                   .join(" · ") || t({ tr: "Kılavuzdan", en: "From the guideline" })}
                               </small>
+                              {/*
+                                Bu örnek ne SAĞLIYOR: kural okunabildiyse
+                                künye ona göre yazılıyor; okunamadıysa
+                                örnek yalnızca karşılaştırma içindir ve
+                                önizleme çalışmanın genel stilinde kalır.
+                              */}
+                              {kuralUygulandi ? (
+                                <small className="tone-text" data-tone="success">
+                                  {t({
+                                    tr: "Kılavuzun bu örnekteki adres yazımı künyeye uygulandı.",
+                                    en: "The address style from this example was applied to the reference.",
+                                  })}
+                                </small>
+                              ) : gerekenBilgi.length ? (
+                                <small className="tone-text" data-tone="warning">
+                                  {t({
+                                    tr: `Bu örnek ${gerekenBilgi.join(", ")} istiyor; kaydınızda yok ve uydurulmuyor. Künye çalışmanızın genel stilinde kalır.`,
+                                    en: `This example requires ${gerekenBilgi.join(", ")}; it isn't in your record and is not made up. The reference stays in your work's general style.`,
+                                  })}
+                                </small>
+                              ) : (
+                                <small className="muted">
+                                  {t({
+                                    tr: "Bu örnekten güvenle bir biçim kuralı çıkaramadım; yalnızca karşılaştırma için. Sunulan düzeltme çalışmanızın genel stiline göre hazırlandı.",
+                                    en: "I couldn't derive a format rule from this example with confidence; it's for comparison only. The offered fix follows your work's general style.",
+                                  })}
+                                </small>
+                              )}
                             </li>
                           ))}
                         </ul>
                         <small className="muted">
                           {t({
-                            tr: "Örnek seçmek künyenin yazımını değiştirmez: yukarıdaki önizleme aynı kalır, eksik bilgi tamamlanmaz.",
-                            en: "Picking an example doesn't change how the reference is written: the preview above stays the same and missing details are not filled in.",
+                            tr: "Örnekteki yazar, tarih ve adres sizin künyenize taşınmaz; yalnızca kılavuzun biçim kalıbı uygulanır ve eksik bilgi tamamlanmaz.",
+                            en: "The author, date and address in the example are never carried into your reference; only the guideline's format pattern is applied, and missing details are not filled in.",
                           })}
                         </small>
                       </div>

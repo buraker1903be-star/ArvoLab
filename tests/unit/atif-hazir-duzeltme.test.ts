@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test, describe } from "node:test";
 import { duzeltmeOzetCumlesi, eksikKaynakcaGirdileri, hazirDuzeltmeler, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
+import type { OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 
 /*
   Hazır düzeltmenin tek kuralı: KÜNYE UYDURULMAZ. Bu dosya üç şeyi
@@ -296,8 +297,9 @@ describe("kılavuzdaki internet örnekleri düzeltmeye bağlanıyor", () => {
       internetOrnekleri: ORNEKLER,
     });
     const d = ozet.duzeltmeler[0];
-    assert.equal(d.ornekDurumu?.oneri?.tur, "kurumsal-sayfa");
-    assert.equal(d.ornekDurumu?.oneri?.bolum, "İNTERNET KAYNAKLARI");
+    const oneri = d.ornekDurumu?.secenekler.find((x) => x.ornek.metin === d.ornekDurumu?.oneri);
+    assert.equal(oneri?.ornek.tur, "kurumsal-sayfa");
+    assert.equal(oneri?.ornek.bolum, "İNTERNET KAYNAKLARI");
     assert.equal(d.ornekDurumu?.secenekler.length, 2);
   });
 
@@ -348,5 +350,55 @@ describe("kılavuzdaki internet örnekleri düzeltmeye bağlanıyor", () => {
     assert.equal(ozet.duzeltmeler.length, 2);
     assert.equal(ozet.duzeltmeler.filter((d) => d.ornekDurumu && !d.ornekDurumu.oneri).length, 1);
     assert.equal(ozet.duzeltmeler.filter((d) => !d.ozelKural).length, 1);
+  });
+});
+
+describe("örneğin kuralı yalnızca o künyenin önizlemesine uygulanıyor", () => {
+  const ONEKLI = { metin: "Sağlık Bakanlığı. (2022). Yıllık rapor. Erişim adresi: https://saglik.gov.tr/r", tur: "cevrimici-rapor" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const CIPLAK = { metin: "Türkiye İstatistik Kurumu. (2023). Nüfus verileri. https://www.tuik.gov.tr/x", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const OKUNAMAZ = { metin: "Millî Eğitim Bakanlığı. (2021). Veriler, https://meb.gov.tr/v adresinden alınmıştır.", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET", sayfa: null };
+  const site = kaynak({ id: "w5", title: "Bir blog yazisi", source_type: "website", container_title: null, volume: null, issue: null, pages: null, doi_or_url: "https://ornek.com/yazi" });
+  const ozet = (ornekler: OrnekKunye[]) =>
+    hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [site],
+      stil: "apa7",
+      internetOrnekleri: ornekler,
+    }).duzeltmeler[0];
+
+  test("önekli örnek künyeye uygulanıyor; örnekten BİLGİ taşınmıyor", () => {
+    const secenek = ozet([ONEKLI, CIPLAK]).ornekDurumu!.secenekler.find((x) => x.ornek === ONEKLI)!;
+    assert.equal(secenek.kuralUygulandi, true);
+    assert.match(secenek.yeni!, /Erişim adresi: https:\/\/ornek\.com\/yazi/);
+    /* Örneğin kendi yazarı, yılı ve adresi künyeye GİRMEMELİ. */
+    assert.ok(!/Sağlık Bakanlığı|saglik\.gov\.tr|2022/.test(secenek.yeni!), secenek.yeni!);
+  });
+
+  test("çıplak adres kuralı künyeyi değiştirmiyor ama kural uygulanmış sayılıyor", () => {
+    const secenek = ozet([ONEKLI, CIPLAK]).ornekDurumu!.secenekler.find((x) => x.ornek === CIPLAK)!;
+    assert.equal(secenek.kuralUygulandi, true);
+    assert.ok(!/Erişim adresi:/.test(secenek.yeni!), secenek.yeni!);
+  });
+
+  test("kuralı okunamayan örnek yalnızca karşılaştırma: yeni künye YOK", () => {
+    const secenek = ozet([OKUNAMAZ]).ornekDurumu!.secenekler[0];
+    assert.equal(secenek.kuralUygulandi, false);
+    assert.equal(secenek.yeni, null);
+    assert.deepEqual(secenek.gerekenBilgi, []);
+  });
+
+  test("erişim tarihi isteyen kural, kayıt yoksa uygulanmıyor ve gereken bilgi söyleniyor", () => {
+    const tarihli = { ...ONEKLI, metin: `${ONEKLI.metin} (Erişim tarihi: 01.02.2022)` };
+    const secenek = ozet([tarihli]).ornekDurumu!.secenekler[0];
+    assert.equal(secenek.kuralUygulandi, false);
+    assert.equal(secenek.yeni, null);
+    assert.deepEqual(secenek.gerekenBilgi, ["erişim tarihi"]);
+  });
+
+  /* Erişim tarihi kayıtlı değil: künyeye "bugün" yazılmaz, eksik olduğu söylenir. */
+  test("internet künyesine uydurma erişim tarihi yazılmıyor", () => {
+    const d = ozet([CIPLAK]);
+    assert.ok(!/Erişim tarihi/.test(d.yeni), d.yeni);
+    assert.ok(d.eksikNotu.includes("erişim tarihi"), JSON.stringify(d.eksikNotu));
   });
 });

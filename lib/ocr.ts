@@ -212,18 +212,39 @@ export async function pdfMetniniOcrIleOku(veri: Buffer, sayfaSayisi: number, dil
       üretimde yazma hatasıyla düşerdi. /tmp sıcak örnekte kalıcı olduğu
       için indirme her istekte tekrarlanmaz.
     */
-    // Türkçe + İngilizce: kılavuzlarda İngilizce özet ve terimler yaygın.
-    const isci = await createWorker(["tur", "eng"], undefined, { cachePath: tmpdir() });
+    /*
+      OCR SÜRE SINIRI (24.11.2026). İşçi kurulurken dil verisi ağdan
+      iniyor; ağ kapalıysa ya da çok yavaşsa `createWorker` HİÇ
+      dönmüyordu ve kılavuz taraması sonsuza kadar askıda kalıyordu:
+      öğrencinin ekranında "Kılavuz okunuyor…" sonsuza kadar duruyor,
+      sunucu isteği hiç kapanmıyordu (ölçüldü: boş bir PDF'te 180 sn
+      sonunda hâlâ dönmemişti). Deneme artık sınırlı; süre dolarsa OCR
+      yapılmamış sayılıyor ve sebebi kayda giriyor — yarım kalan bir
+      okumayı beklemek, okunamadığını söylemekten kötü.
+    */
+    const SINIR_MS = 90_000;
+    let isci: Awaited<ReturnType<typeof createWorker>> | null = null;
+    const zamanAsimi = new Promise<never>((_, reddet) =>
+      setTimeout(() => reddet(new Error(`OCR ${SINIR_MS / 1000} saniyede tamamlanamadı`)), SINIR_MS).unref?.(),
+    );
     const parcalar: string[] = [];
     const guvenler: number[] = [];
     try {
-      for (const goruntu of goruntuler) {
-        const { data } = await isci.recognize(goruntu);
-        parcalar.push(data.text ?? "");
-        if (typeof data.confidence === "number") guvenler.push(data.confidence);
-      }
+      await Promise.race([
+        (async () => {
+          // Türkçe + İngilizce: kılavuzlarda İngilizce özet ve terimler yaygın.
+          isci = await createWorker(["tur", "eng"], undefined, { cachePath: tmpdir() });
+          for (const goruntu of goruntuler) {
+            const { data } = await isci.recognize(goruntu);
+            parcalar.push(data.text ?? "");
+            if (typeof data.confidence === "number") guvenler.push(data.confidence);
+          }
+        })(),
+        zamanAsimi,
+      ]);
     } finally {
-      await isci.terminate();
+      /* Süre dolduğunda da kapatılıyor; kapanmazsa işçi arkada çalışmaya devam eder. */
+      await (isci as { terminate?: () => Promise<unknown> } | null)?.terminate?.().catch(() => {});
     }
 
     return {

@@ -3,7 +3,6 @@
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { eksikKaynakcaGirdileri, hazirDuzeltmeler, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
-import { YEREL } from "@/lib/dil";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { belgeDili } from "@/lib/belge-dili";
 
@@ -102,10 +101,6 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
   */
   const kilavuz = await calismaKilavuzuOku(ctx.supabase, projectId, (calisma.guideline_id as string | null) ?? null).catch(() => null);
   const internetOrnekleri = kilavuz?.kilavuz?.internetOrnekleri ?? [];
-  const bugun = new Date().toLocaleDateString(YEREL[kunyeDili], {
-    timeZone: "Europe/Istanbul",
-    ...(kunyeDili === "en" ? { day: "numeric", month: "long", year: "numeric" } : { day: "2-digit", month: "2-digit", year: "numeric" }),
-  });
 
   /* Düzeltmeler DENETİMİN stiline göre: kullanıcı o denetimde başka bir
      stil seçtiyse düzeltme de o stilde olmalı, yoksa önizlediği biçimden
@@ -116,7 +111,15 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
     kaynaklar: (kaynaklar ?? []) as unknown as KutuphaneKaynagi[],
     stil,
     dil: kunyeDili,
-    erisimTarihi: bugun,
+    /*
+      ERİŞİM TARİHİ UYDURULMUYOR (24.11.2026). Eskiden buraya BUGÜNÜN
+      tarihi geçiyordu ve künyeye "(Erişim tarihi: …)" diye yazılıyordu:
+      kaynağa o gün bakıldığı iddiası, üstelik düzeltmeyi hangi gün
+      çalıştırdığına göre değişen bir değer. literature_sources'ta
+      kayıtlı erişim tarihi sütunu YOK; değer olmadığı için yazılmıyor,
+      eksik olduğu panelde söyleniyor.
+    */
+    erisimTarihi: null,
     internetOrnekleri,
   });
   const kutuphane = (kaynaklar ?? []) as unknown as KutuphaneKaynagi[];

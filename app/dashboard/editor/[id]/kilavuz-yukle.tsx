@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UploadCloud, Link2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -32,7 +33,7 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
     ve bunun resmî bir onay OLMADIĞI yazıyor.
 */
 
-type Adim = "secim" | "tarama" | "dogrulama";
+type Adim = "secim" | "tarama" | "dogrulama" | "okunamadi";
 
 export default function KilavuzYukle({ projectId, onKapat }: { projectId: string; onKapat?: () => void }) {
   const t = useCeviri();
@@ -49,6 +50,15 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const router = useRouter();
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
+    /*
+      Metni çıkarılamayan belge: toast gösterip seçim ekranına dönmek
+      öğrenciyi "ne oldu, ne yapacağım?" sorusuyla bırakıyordu. Kalıcı
+      bir ekran, sebebi ve İKİ çıkış yolunu birlikte veriyor.
+    */
+    if (cevap.okunamadi) {
+      setAdim("okunamadi");
+      return;
+    }
     if (cevap.error || !cevap.form) {
       showToast("error", cevap.error ?? t({ tr: "Kılavuz okunamadı.", en: "The guideline could not be read." }));
       setAdim("secim");
@@ -147,6 +157,28 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     router.refresh();
     onKapat?.();
   };
+
+  if (adim === "okunamadi") {
+    return (
+      <div className="stack">
+        <p className="alert" data-tone="warning" role="status">
+          {t({
+            tr: "Bu PDF'den metin çıkaramadık. Başka bir dosya seçebilir veya kılavuz eklemeden devam edebilirsiniz.",
+            en: "We couldn't extract text from this PDF. You can choose another file or carry on without a guideline.",
+          })}
+        </p>
+        <div className="cluster">
+          <button type="button" className="projects-primary-button button-compact" onClick={() => setAdim("secim")}>
+            {t({ tr: "Başka bir dosya seç", en: "Choose another file" })}
+          </button>
+          {/* Kılavuz isteğe bağlı: kaynak toplamak, atıf yapmak ve denetlemek kılavuzsuz da çalışıyor. */}
+          <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${projectId}`}>
+            {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (adim === "tarama") {
     return (

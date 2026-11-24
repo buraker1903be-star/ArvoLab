@@ -94,6 +94,8 @@ const P_IKI = proje("Iki ornekli kilavuz calismasi");
 const P_KILAVUZSUZ = proje("Kilavuzsuz calisma");
 const P_ORNEKSIZ = proje("Orneksiz kilavuz calismasi");
 const P_OKUNAMAYAN = proje("Okunamayan kilavuz calismasi");
+/* Tek örnekli, kuralı güvenle çıkarılamayan kılavuz (karşılaştırma amaçlı gösterim). */
+const P_TEK_ORNEK = proje("Tek ornekli kilavuz calismasi");
 
 /* ---------- Kılavuz PDF'leri (ASCII) ---------- */
 const IKI_ORNEKLI = sentetikPdf([[
@@ -118,6 +120,22 @@ const ORNEKSIZ = sentetikPdf([[
   "Kaynaklar APA sistemine gore yazilir.",
   "APA sisteminde yazar ve yil metin icinde verilir.",
   "Kaynakca APA kurallarina gore duzenlenir ve alfabetik siralanir.",
+]]);
+/*
+  TEK ÖRNEK, KURAL OKUNAMIYOR: adresten sonra tanımadığımız bir yapı
+  var ("… adresinden alınmıştır"), yani kalıbı okuduğumuzu söyleyemeyiz.
+*/
+const TEK_ORNEKLI = sentetikPdf([[
+  "T.C. ORNEK UNIVERSITESI",
+  "TEZ YAZIM KILAVUZU",
+  "",
+  "4. KAYNAK GOSTERME",
+  "Kaynaklar APA sistemine gore yazilir.",
+  "APA sisteminde yazar ve yil metin icinde verilir.",
+  "Kaynakca APA kurallarina gore duzenlenir.",
+  "",
+  "4.3 INTERNET KAYNAKLARI",
+  "Milli Egitim Bakanligi. (2021). Uzaktan egitim verileri, https://meb.gov.tr/veri adresinden alinmistir.",
 ]]);
 /* Metin katmanı olmayan PDF: taranmış sayfanın yerel karşılığı. */
 const OKUNAMAYAN = sentetikPdf([[]]);
@@ -154,7 +172,7 @@ const kur = (projeId) => {
     values (${q(projeId)}, 'Ornek', ${q([SITE_KURUMSAL, SITE_BELIRSIZ, MAKALE_BOZUK].join("\n"))},
       ${q(JSON.stringify(ayristirilan))}::jsonb, '[]'::jsonb, '{}'::jsonb, 60, 'apa7', ${q(KULLANICI)})`);
 };
-[P_IKI, P_KILAVUZSUZ, P_ORNEKSIZ].forEach(kur);
+[P_IKI, P_KILAVUZSUZ, P_ORNEKSIZ, P_TEK_ORNEK].forEach(kur);
 
 const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
 const oturum = async () => {
@@ -229,65 +247,86 @@ await dene("Ö1", "İki örnekli kılavuz: her örnek dayanağıyla, belirsiz ka
   } finally { await ctx.close(); }
 });
 
-await dene("Ö2", "Seçim doğru künyeye uygulanıyor; öteki düzeltmeler bağımsız", async () => {
+await dene("Ö2a", "Açık kılavuz kuralı SEÇİLEN künyenin önizlemesini değiştiriyor", async () => {
   const { ctx, s } = await oturum();
   try {
     const panel = await paneliAc(s, P_IKI);
     const once = await belgeMetni(s);
-    /* Üç düzeltme var; biri seçim bekliyor, ikisi işaretli. */
-    const kutular = panel.locator('.kaynakca-duzeltme-liste > li input[type="checkbox"]');
-    dogru((await kutular.count()) === 3, `üç düzeltme beklenirdi: ${await kutular.count()}`);
-    const isaretliOnce = await panel.locator('.kaynakca-duzeltme-liste > li input[type="checkbox"]:checked').count();
-    dogru(isaretliOnce === 2, `seçim bekleyen künye işaretli gelmemeli: ${isaretliOnce}`);
-
-    /* Seçim öncesi önizlemeler: seçimden sonra ÖTEKİNİN değişmediği ölçülecek. */
     const onizleme = async (desen) =>
       (await panel.locator(".kaynakca-duzeltme-liste > li").filter({ hasText: desen }).first()
         .locator(".kaynakca-duzeltme-yeni").first().innerText()).trim();
     const kurumsalOnce = await onizleme(/nufus kayit sistemi/);
     const makaleOnce = await onizleme(/Motivasyonun sinif ici rolu/);
     const belirsizOnce = await onizleme(/Bir blog yazisi/);
+    /* Erişim tarihi KAYITLI DEĞİL: künyeye yazılmıyor, eksik olduğu söyleniyor. */
+    dogru(!/Erişim tarihi/.test(belirsizOnce), `künyeye uydurma erişim tarihi yazılmış: ${belirsizOnce}`);
+    dogru(/künyeye de yazılmadı: .*erişim tarihi/.test(await panel.innerText()), "eksik erişim tarihi notu yok");
 
-    /* Seçim bekleyen künyede çevrimiçi rapor örneği seçiliyor. */
+    /* Kuralı AÇIK olan örnek ("Erisim adresi:" önekli) seçiliyor. */
     const belirsizSatir = panel.locator(".kaynakca-duzeltme-liste > li").filter({ hasText: /Bir blog yazisi/ }).first();
-    await belirsizSatir.locator('.kaynakca-ornek-liste input[type="radio"]').nth(1).click();
-    if (GORSEL) await s.screenshot({ path: `${GORSEL}/O2-secim.png`, fullPage: true });
+    const raporSecenegi = belirsizSatir.locator(".kaynakca-ornek-liste > li").filter({ hasText: /Erisim adresi/ }).first();
+    await raporSecenegi.locator('input[type="radio"]').click();
+    await s.waitForTimeout(400);
+    if (GORSEL) await s.screenshot({ path: `${GORSEL}/O2a-kural-uygulandi.png`, fullPage: true });
 
-    /*
-      SEÇİM YALNIZCA İLGİLİ KÜNYEYE. Öteki künyelerin önizlemesi
-      DEĞİŞMEMELİ; seçilen künyenin önizlemesi de aynı kalır (örnek
-      seçmek yazımı değiştirmez, eksik bilgi tamamlanmaz).
-    */
+    const belirsizSonra = await onizleme(/Bir blog yazisi/);
+    dogru(belirsizSonra !== belirsizOnce, `seçilen künyenin önizlemesi değişmedi: ${belirsizSonra}`);
+    dogru(/Erisim adresi: https:\/\/ornek\.com\/yazi/.test(belirsizSonra), `kılavuzun adres yazımı uygulanmadı: ${belirsizSonra}`);
+    /* Kılavuz örneğinin KENDİ yazarı/yılı/adresi künyeye TAŞINMAMIŞ olmalı. */
+    dogru(!/Saglik Bakanligi|saglik\.gov\.tr|2022/.test(belirsizSonra), `örnekten bilgi taşınmış: ${belirsizSonra}`);
+    dogru(/Kılavuzun bu örnekteki adres yazımı künyeye uygulandı/.test(await raporSecenegi.innerText()), "kuralın uygulandığı söylenmiyor");
+
+    /* ÖTEKİ künyeler etkilenmiyor, belge hâlâ değişmemiş. */
     dogru((await onizleme(/nufus kayit sistemi/)) === kurumsalOnce, "kurumsal künyenin önizlemesi değişti");
     dogru((await onizleme(/Motivasyonun sinif ici rolu/)) === makaleOnce, "makale künyesinin önizlemesi değişti");
-    dogru((await onizleme(/Bir blog yazisi/)) === belirsizOnce, "seçim künyenin yazımını değiştirdi (eksik bilgi uydurulmuş olabilir)");
-    /* BELGE henüz değişmemeli: yazan tek şey "Seçilenleri uygula". */
     dogru((await belgeMetni(s)) === once, "seçim belgeyi değiştirdi");
-    dogru((await panel.locator('.kaynakca-duzeltme-liste > li input[type="checkbox"]:checked').count()) === 3,
-      "seçimden sonra künye işaretli gelmedi");
-    /* Seçim YALNIZCA o künyede: öteki internet kaynağının seçimi değişmedi. */
-    const kurumsalSatir = panel.locator(".kaynakca-duzeltme-liste > li").filter({ hasText: /nufus kayit sistemi/ }).first();
-    dogru((await kurumsalSatir.locator('.kaynakca-ornek-liste input[type="radio"]:checked').count()) === 1,
-      "kurumsal künyenin seçimi bozuldu");
+
+    /* Toplu uygulama ve TEK adımda geri alma. */
+    await panel.locator("button", { hasText: /Seçilenleri uygula/ }).click();
+    await s.waitForTimeout(1500);
+    const sonra = await belgeMetni(s);
+    dogru(/Erisim adresi: https:\/\/ornek\.com\/yazi/.test(sonra), `seçilen biçim belgeye yazılmadı: ${sonra.slice(0, 400)}`);
+    dogru(/Demir, B\. \(2019\)\./.test(sonra), "öteki düzeltme uygulanmadı");
+    await panel.locator("button", { hasText: /Geri al/ }).click();
+    await s.waitForTimeout(1200);
+    dogru((await belgeMetni(s)) === once, "tek geri alma başlangıç durumunu vermedi");
+    return { ayrinti: `seçim önizlemeyi değiştirdi ("Erisim adresi:" öneki), ötekiler sabit, uygulama ve tek geri alma çalıştı` };
+  } finally { await ctx.close(); }
+});
+
+await dene("Ö2b", "Kuralı çıkarılamayan tek örnek yalnızca karşılaştırma için", async () => {
+  const { ctx, s } = await oturum();
+  try {
+    await kilavuzUygula(s, P_TEK_ORNEK, TEK_ORNEKLI, `tek-ornek-${ek}.pdf`);
+    const kayitli = JSON.parse(psql(`select coalesce(kurallar->'extracted_rules'->'internetOrnekleri', '[]') from public.calisma_kilavuzu where project_id = ${q(P_TEK_ORNEK)}`));
+    dogru(kayitli.length === 1, `tek örnek beklenirdi: ${JSON.stringify(kayitli).slice(0, 200)}`);
+
+    const panel = await paneliAc(s, P_TEK_ORNEK);
+    const once = await belgeMetni(s);
+    const satir = panel.locator(".kaynakca-duzeltme-liste > li").filter({ hasText: /Bir blog yazisi/ }).first();
+    const onizlemeOnce = (await satir.locator(".kaynakca-duzeltme-yeni").first().innerText()).trim();
+    const secenek = satir.locator(".kaynakca-ornek-liste > li").first();
+    if (GORSEL) await s.screenshot({ path: `${GORSEL}/O2b-karsilastirma.png`, fullPage: true });
+    /* Örnek kendi metni ve dayanağıyla, ama kural olarak DEĞİL. */
+    dogru(/Uzaktan egitim verileri/.test(await secenek.innerText()), `örnek metni yok: ${await secenek.innerText()}`);
+    dogru(/güvenle bir biçim kuralı çıkaramadım/.test(await secenek.innerText()), `karşılaştırma olduğu söylenmiyor: ${await secenek.innerText()}`);
+    dogru(/çalışmanızın genel stiline göre hazırlandı/.test(await secenek.innerText()), "genel stil uyarısı yok");
+
+    await secenek.locator('input[type="radio"]').click();
+    await s.waitForTimeout(400);
+    const onizlemeSonra = (await satir.locator(".kaynakca-duzeltme-yeni").first().innerText()).trim();
+    dogru(onizlemeSonra === onizlemeOnce, `karşılaştırma amaçlı örnek önizlemeyi değiştirdi: ${onizlemeSonra}`);
+    dogru((await belgeMetni(s)) === once, "seçim belgeyi değiştirdi");
 
     await panel.locator("button", { hasText: /Seçilenleri uygula/ }).click();
     await s.waitForTimeout(1500);
     const sonra = await belgeMetni(s);
-    if (GORSEL) await s.screenshot({ path: `${GORSEL}/O2-uygulandi.png`, fullPage: true });
-    /* Üçü de düzeldi: makale (örnek sorulmayan) da yazıldı. */
-    dogru(/Demir, B\. \(2019\)\./.test(sonra), `öteki düzeltme uygulanmadı: ${sonra.slice(0, 400)}`);
-    dogru(!sonra.includes(MAKALE_BOZUK), "eski makale künyesi duruyor");
-    dogru(!sonra.includes(SITE_BELIRSIZ), "seçilen künye uygulanmadı");
-    dogru(!sonra.includes(SITE_KURUMSAL), "önerilen künye uygulanmadı");
-
-    /* TEK geri alma hepsini kaldırıyor. */
+    dogru(/Demir, B\. \(2019\)\./.test(sonra), "öteki düzeltme uygulanmadı");
+    dogru(sonra !== once, "hiçbir şey uygulanmadı");
     await panel.locator("button", { hasText: /Geri al/ }).click();
     await s.waitForTimeout(1200);
-    const geri = await belgeMetni(s);
-    dogru(geri.includes(MAKALE_BOZUK) && geri.includes(SITE_BELIRSIZ) && geri.includes(SITE_KURUMSAL),
-      `tek geri alma üçünü birden kaldırmadı: ${geri.slice(0, 400)}`);
-    dogru(geri === once, "geri alma başlangıç durumunu vermedi");
-    return { ayrinti: "3 düzeltme, 2 işaretli geldi; seçim yalnızca ilgili künyeyi işaretledi; toplu uygulama ve tek geri alma çalıştı" };
+    dogru((await belgeMetni(s)) === once, "tek geri alma başlangıç durumunu vermedi");
+    return { ayrinti: "örnek karşılaştırma için gösterildi, önizleme genel stilde kaldı, ötekiler uygulandı ve tek geri alma çalıştı" };
   } finally { await ctx.close(); }
 });
 
@@ -325,7 +364,7 @@ await dene("Ö4", "Örneksiz kılavuzda bugünkü uyarı kalıyor, düzeltme eng
   } finally { await ctx.close(); }
 });
 
-await dene("Ö5", "Okunamayan PDF akışı kırmıyor, sebebini söylüyor", async () => {
+await dene("Ö5", "Okunamayan PDF: sebep ve iki eylem, kılavuzsuz devam edilebiliyor", async () => {
   const { ctx, s } = await oturum();
   try {
     await s.goto(`${UYG}/dashboard/editor/${P_OKUNAMAYAN}?kilavuz=1`, { waitUntil: "domcontentloaded" });
@@ -333,17 +372,34 @@ await dene("Ö5", "Okunamayan PDF akışı kırmıyor, sebebini söylüyor", asy
     const pencere = s.locator(".drawer-root.open section.drawer").first();
     await pencere.waitFor({ state: "visible", timeout: 20000 });
     await pencere.locator('input[type="file"]').first().setInputFiles({ name: `bos-${ek}.pdf`, mimeType: "application/pdf", buffer: OKUNAMAYAN });
-    /* Ya hata söylenir ya da doğrulama adımı açılır; ikisi de akışı kırmaz. */
-    await s.waitForTimeout(20000);
-    const metin = await pencere.innerText();
+
+    /* İŞLEM BİTTİKTEN SONRAKİ SON EKRAN. */
+    const uyari = pencere.locator('[role="status"]', { hasText: /metin çıkaramadık/ });
+    await uyari.waitFor({ state: "visible", timeout: 180000 });
+    await s.waitForTimeout(500);
     if (GORSEL) await s.screenshot({ path: `${GORSEL}/O5-okunamayan.png`, fullPage: true });
-    const kilavuzSayisi = Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(P_OKUNAMAYAN)}`));
-    dogru(kilavuzSayisi === 0, "okunamayan PDF'ten kılavuz kaydedilmiş");
-    /* Ekran donmuş olmamalı: ya yükleme ekranı ya da doğrulama formu görünür. */
-    const yasiyor = /Kılavuzunuzu yükleyin|Kılavuzunuzdan şunları okudum|okunamadı|Kılavuz okunamadı/.test(metin);
-    dogru(yasiyor, `ekran kullanılabilir durumda değil: ${metin.slice(0, 400)}`);
-    dogru(!/Kılavuzunuzdaki uygun örnek/.test(metin), "metinsiz PDF'ten örnek çıkarılmış");
-    return { ayrinti: `kılavuz kaydı yok, ekran kullanılabilir (${metin.replace(/\n/g, " ").slice(0, 90)}…)` };
+    const metin = await pencere.innerText();
+    dogru(
+      /Bu PDF'den metin çıkaramadık\. Başka bir dosya seçebilir veya kılavuz eklemeden devam edebilirsiniz\./.test(metin),
+      `beklenen mesaj yok: ${metin.slice(0, 400)}`,
+    );
+    /* İKİ EYLEM. */
+    dogru(await pencere.locator("button", { hasText: /^Başka bir dosya seç$/ }).count(), "«Başka bir dosya seç» yok");
+    const devam = pencere.locator("a", { hasText: /Kılavuz eklemeden devam et/ });
+    dogru(await devam.count(), "«Kılavuz eklemeden devam et» yok");
+    /* Kılavuz KAYDI oluşmadı. */
+    dogru(Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(P_OKUNAMAYAN)}`)) === 0, "okunamayan PDF'ten kılavuz kaydedilmiş");
+    dogru(!/uygun örnek|örnekleri karşılaştır/.test(metin), "metinsiz PDF'ten örnek çıkarılmış");
+
+    /* KILAVUZSUZ DEVAM edilebiliyor. */
+    await devam.first().click();
+    await s.waitForURL(/dashboard\/literature/, { timeout: 30000 });
+    await s.waitForLoadState("networkidle").catch(() => {});
+    /* Kaynaklar ekranı açıldı ve kullanılabilir: sekmeler ya da kaynak ekleme yolu var. */
+    const kullanilabilir = s.locator("details.kaynak-ekle > summary, .kaynakca-serit-eylem, a, button").filter({ hasText: /Kaynak ekle|Kütüphanem|Kaynakça/ }).first();
+    await kullanilabilir.waitFor({ state: "visible", timeout: 30000 });
+    dogru(Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(P_OKUNAMAYAN)}`)) === 0, "devam ederken kılavuz kaydı oluştu");
+    return { ayrinti: "mesaj ve iki eylem göründü, kılavuz kaydı yok, Kaynaklar'a geçilip kılavuzsuz devam edildi" };
   } finally { await ctx.close(); }
 });
 
