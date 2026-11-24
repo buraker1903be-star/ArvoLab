@@ -207,6 +207,16 @@ const kilavuzUygula = async (s, projeId, pdf, ad) => {
   dogru(Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(projeId)}`)) > 0, "kılavuz kaydedilmedi");
 };
 
+/*
+  Kılavuz zaten uygulanmışsa yeniden yüklemez. Senaryolar tek tek de
+  koşturulabilmeli: Ö2a, Ö1'in yüklediği kılavuza bağımlı olduğu için
+  filtreli koşuda düşüyordu.
+*/
+const kilavuzHazirla = async (s, projeId, pdf, ad) => {
+  if (Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(projeId)}`)) > 0) return;
+  await kilavuzUygula(s, projeId, pdf, ad);
+};
+
 /** Editördeki düzeltme panelini açar ve listeyi getirir. */
 const paneliAc = async (s, projeId) => {
   await s.goto(`${UYG}/dashboard/editor/${projeId}/write?sol=kaynakca`, { waitUntil: "domcontentloaded" });
@@ -224,7 +234,7 @@ const belgeMetni = async (s) => (await s.locator(".ProseMirror").first().innerTe
 await dene("Ö1", "İki örnekli kılavuz: her örnek dayanağıyla, belirsiz kaynakta öneri yok", async () => {
   const { ctx, s } = await oturum();
   try {
-    await kilavuzUygula(s, P_IKI, IKI_ORNEKLI, `iki-ornek-${ek}.pdf`);
+    await kilavuzHazirla(s, P_IKI, IKI_ORNEKLI, `iki-ornek-${ek}.pdf`);
     /* Örnekler kılavuz KAYDINDAN geri okunabiliyor mu. */
     const kayitli = JSON.parse(psql(`select coalesce(kurallar->'extracted_rules'->'internetOrnekleri', '[]') from public.calisma_kilavuzu where project_id = ${q(P_IKI)}`));
     dogru(kayitli.length === 2, `kılavuz kaydında iki örnek yok: ${JSON.stringify(kayitli).slice(0, 300)}`);
@@ -250,6 +260,7 @@ await dene("Ö1", "İki örnekli kılavuz: her örnek dayanağıyla, belirsiz ka
 await dene("Ö2a", "Açık kılavuz kuralı SEÇİLEN künyenin önizlemesini değiştiriyor", async () => {
   const { ctx, s } = await oturum();
   try {
+    await kilavuzHazirla(s, P_IKI, IKI_ORNEKLI, `iki-ornek-${ek}.pdf`);
     const panel = await paneliAc(s, P_IKI);
     const once = await belgeMetni(s);
     const onizleme = async (desen) =>
@@ -258,6 +269,8 @@ await dene("Ö2a", "Açık kılavuz kuralı SEÇİLEN künyenin önizlemesini de
     const kurumsalOnce = await onizleme(/nufus kayit sistemi/);
     const makaleOnce = await onizleme(/Motivasyonun sinif ici rolu/);
     const belirsizOnce = await onizleme(/Bir blog yazisi/);
+    const belirsizSatirOnce = await panel.locator(".kaynakca-duzeltme-liste > li").filter({ hasText: /Bir blog yazisi/ }).first().innerText();
+    dogru(!/adres yazımı künyeye uygulandı/.test(belirsizSatirOnce), `seçim yokken "uygulandı" yazıyor: ${belirsizSatirOnce.slice(0, 300)}`);
     /* Erişim tarihi KAYITLI DEĞİL: künyeye yazılmıyor, eksik olduğu söyleniyor. */
     dogru(!/Erişim tarihi/.test(belirsizOnce), `künyeye uydurma erişim tarihi yazılmış: ${belirsizOnce}`);
     dogru(/künyeye de yazılmadı: .*erişim tarihi/.test(await panel.innerText()), "eksik erişim tarihi notu yok");
@@ -269,7 +282,20 @@ await dene("Ö2a", "Açık kılavuz kuralı SEÇİLEN künyenin önizlemesini de
     await s.waitForTimeout(400);
     if (GORSEL) await s.screenshot({ path: `${GORSEL}/O2a-kural-uygulandi.png`, fullPage: true });
 
+    const belirsizSatirMetni = async () => belirsizSatir.innerText();
     const belirsizSonra = await onizleme(/Bir blog yazisi/);
+    /*
+      "UYGULANDI" YALNIZCA SEÇİLİ ÖRNEKTE: seçili olmayan seçeneğin
+      altında da yazmak, uygulanmamış bir biçimi uygulanmış göstermekti.
+    */
+    const uygulandiSayisi = async () =>
+      (((await belirsizSatirMetni()).match(/adres yazımı künyeye uygulandı/g) ?? []).length);
+    dogru((await uygulandiSayisi()) === 1, `"uygulandı" mesajı ${await uygulandiSayisi()} kez görünüyor`);
+    const secili = belirsizSatir.locator('.kaynakca-ornek-liste > li[data-secili]');
+    dogru((await secili.count()) === 1, `seçili örnek sayısı: ${await secili.count()}`);
+    dogru(/adres yazımı künyeye uygulandı/.test(await secili.first().innerText()), "mesaj seçili örnekte değil");
+    /* Seçim yapıldı: "seçene kadar" uyarısı artık doğru değil. */
+    dogru(!/seçene kadar/.test(await belirsizSatirMetni()), `seçimden sonra "seçene kadar" uyarısı duruyor`);
     dogru(belirsizSonra !== belirsizOnce, `seçilen künyenin önizlemesi değişmedi: ${belirsizSonra}`);
     dogru(/Erisim adresi: https:\/\/ornek\.com\/yazi/.test(belirsizSonra), `kılavuzun adres yazımı uygulanmadı: ${belirsizSonra}`);
     /* Kılavuz örneğinin KENDİ yazarı/yılı/adresi künyeye TAŞINMAMIŞ olmalı. */
@@ -297,7 +323,7 @@ await dene("Ö2a", "Açık kılavuz kuralı SEÇİLEN künyenin önizlemesini de
 await dene("Ö2b", "Kuralı çıkarılamayan tek örnek yalnızca karşılaştırma için", async () => {
   const { ctx, s } = await oturum();
   try {
-    await kilavuzUygula(s, P_TEK_ORNEK, TEK_ORNEKLI, `tek-ornek-${ek}.pdf`);
+    await kilavuzHazirla(s, P_TEK_ORNEK, TEK_ORNEKLI, `tek-ornek-${ek}.pdf`);
     const kayitli = JSON.parse(psql(`select coalesce(kurallar->'extracted_rules'->'internetOrnekleri', '[]') from public.calisma_kilavuzu where project_id = ${q(P_TEK_ORNEK)}`));
     dogru(kayitli.length === 1, `tek örnek beklenirdi: ${JSON.stringify(kayitli).slice(0, 200)}`);
 
@@ -349,7 +375,7 @@ await dene("Ö3", "Kılavuzsuz çalışmada örnek sorulmuyor, düzeltmeler çal
 await dene("Ö4", "Örneksiz kılavuzda bugünkü uyarı kalıyor, düzeltme engellenmiyor", async () => {
   const { ctx, s } = await oturum();
   try {
-    await kilavuzUygula(s, P_ORNEKSIZ, ORNEKSIZ, `orneksiz-${ek}.pdf`);
+    await kilavuzHazirla(s, P_ORNEKSIZ, ORNEKSIZ, `orneksiz-${ek}.pdf`);
     const kayitli = JSON.parse(psql(`select coalesce(kurallar->'extracted_rules'->'internetOrnekleri', '[]') from public.calisma_kilavuzu where project_id = ${q(P_ORNEKSIZ)}`));
     dogru(kayitli.length === 0, `örneksiz kılavuzda örnek uyduruldu: ${JSON.stringify(kayitli).slice(0, 200)}`);
     const panel = await paneliAc(s, P_ORNEKSIZ);
@@ -384,9 +410,11 @@ await dene("Ö5", "Okunamayan PDF: sebep ve iki eylem, kılavuzsuz devam edilebi
       `beklenen mesaj yok: ${metin.slice(0, 400)}`,
     );
     /* İKİ EYLEM. */
-    dogru(await pencere.locator("button", { hasText: /^Başka bir dosya seç$/ }).count(), "«Başka bir dosya seç» yok");
+    /* İki eylem de BİRER kez: eskiden "Kılavuz eklemeden devam et" iki kez çiziliyordu. */
+    const baskaDosya = pencere.locator("button", { hasText: /^Başka bir dosya seç$/ });
+    dogru((await baskaDosya.count()) === 1, `«Başka bir dosya seç» ${await baskaDosya.count()} kez`);
     const devam = pencere.locator("a", { hasText: /Kılavuz eklemeden devam et/ });
-    dogru(await devam.count(), "«Kılavuz eklemeden devam et» yok");
+    dogru((await devam.count()) === 1, `«Kılavuz eklemeden devam et» ${await devam.count()} kez`);
     /* Kılavuz KAYDI oluşmadı. */
     dogru(Number(psql(`select count(*) from public.calisma_kilavuzu where project_id = ${q(P_OKUNAMAYAN)}`)) === 0, "okunamayan PDF'ten kılavuz kaydedilmiş");
     dogru(!/uygun örnek|örnekleri karşılaştır/.test(metin), "metinsiz PDF'ten örnek çıkarılmış");

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BookOpenCheck } from "lucide-react";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import ActionForm from "@/app/dashboard/action-form";
@@ -192,29 +191,13 @@ export default async function KilavuzPenceresi({
             </>
           ) : null}
 
-          {!uygulanan && !kilavuzOkunamadi ? (
-            <>
-              <KilavuzYukle projectId={calisma.id} />
-              {/*
-                KILAVUZ İSTEĞE BAĞLI (23.11.2026). Ekran yalnızca
-                "yükleyin" diyordu ve kılavuzsuz çalışmaya başlamak bir
-                eksiklik gibi duruyordu; oysa hiçbir yer kılavuz
-                istemiyor — kaynak eklemek, atıf yapmak ve kaynakça
-                denetlemek kılavuzsuz da çalışıyor. Çalışmada kayıtlı
-                stil kullanılıyor; stil gerektiren bir iş çıkınca
-                (denetim, biçimlendirme) stil orada soruluyor.
-              */}
-              <p className="muted text-sm mt-sm">
-                {t({
-                  tr: "Kılavuz zorunlu değil. Eklemeden de kaynak toplayabilir, atıf yapabilir ve kaynakçanızı denetleyebilirsiniz; çalışmanızın kayıtlı atıf stili kullanılır.",
-                  en: "A guideline is optional. You can collect sources, cite and check your reference list without one; your work's saved citation style is used.",
-                })}
-              </p>
-              <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${calisma.id}`}>
-                {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
-              </Link>
-            </>
-          ) : null}
+          {/*
+            KILAVUZ İSTEĞE BAĞLI (23.11.2026). "Kılavuz zorunlu değil"
+            cümlesi ve "Kılavuz eklemeden devam et" bağlantısı artık
+            KilavuzYukle'nin içinde (kilavuzsuz): burada da çizilince
+            okunamayan PDF ekranında bağlantı iki kez görünüyordu.
+          */}
+          {!uygulanan && !kilavuzOkunamadi ? <KilavuzYukle projectId={calisma.id} kilavuzsuz /> : null}
           {!uygulanan && kilavuzOkunamadi ? (
             <p className="muted text-sm">
               {t({

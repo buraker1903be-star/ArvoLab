@@ -35,7 +35,21 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 type Adim = "secim" | "tarama" | "dogrulama" | "okunamadi";
 
-export default function KilavuzYukle({ projectId, onKapat }: { projectId: string; onKapat?: () => void }) {
+export default function KilavuzYukle({
+  projectId,
+  onKapat,
+  kilavuzsuz = false,
+}: {
+  projectId: string;
+  onKapat?: () => void;
+  /*
+    Çalışmada henüz kılavuz YOK. "Kılavuz zorunlu değil" cümlesi ve
+    "Kılavuz eklemeden devam et" bağlantısı buradan çiziliyor: eskiden
+    pencere de ayrıca çiziyordu ve okunamayan PDF ekranında bağlantı
+    İKİ KEZ görünüyordu (ekran görüntüsünde görüldü).
+  */
+  kilavuzsuz?: boolean;
+}) {
   const t = useCeviri();
   const dil = useDil();
   const [adim, setAdim] = useState<Adim>("secim");
@@ -158,6 +172,13 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     onKapat?.();
   };
 
+  /* Kılavuz isteğe bağlı: kaynak toplamak, atıf yapmak ve denetlemek kılavuzsuz da çalışıyor. */
+  const devamBaglantisi = (
+    <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${projectId}`}>
+      {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
+    </Link>
+  );
+
   if (adim === "okunamadi") {
     return (
       <div className="stack">
@@ -167,14 +188,12 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             en: "We couldn't extract text from this PDF. You can choose another file or carry on without a guideline.",
           })}
         </p>
+        {/* İki eylem, BİRER KEZ: hata mesajının hemen altında. */}
         <div className="cluster">
           <button type="button" className="projects-primary-button button-compact" onClick={() => setAdim("secim")}>
             {t({ tr: "Başka bir dosya seç", en: "Choose another file" })}
           </button>
-          {/* Kılavuz isteğe bağlı: kaynak toplamak, atıf yapmak ve denetlemek kılavuzsuz da çalışıyor. */}
-          <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${projectId}`}>
-            {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
-          </Link>
+          {kilavuzsuz ? devamBaglantisi : null}
         </div>
       </div>
     );
@@ -534,6 +553,24 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           </button>
         </div>
       </details>
+
+      {/*
+        KILAVUZ İSTEĞE BAĞLI. Bu cümle ve bağlantı eskiden kılavuz
+        penceresinde çiziliyordu; okunamayan PDF ekranı da kendi
+        bağlantısını çizince "Kılavuz eklemeden devam et" iki kez
+        görünüyordu. Tek yer burası.
+      */}
+      {kilavuzsuz ? (
+        <>
+          <p className="muted text-sm">
+            {t({
+              tr: "Kılavuz zorunlu değil. Eklemeden de kaynak toplayabilir, atıf yapabilir ve kaynakçanızı denetleyebilirsiniz; çalışmanızın kayıtlı atıf stili kullanılır.",
+              en: "A guideline is optional. You can collect sources, cite and check your reference list without one; your work's saved citation style is used.",
+            })}
+          </p>
+          {devamBaglantisi}
+        </>
+      ) : null}
     </div>
   );
 }

@@ -205,6 +205,11 @@ export default function KaynakcaDuzeltmePaneli({
                           <small className="muted">
                             {t({ tr: "Kılavuzunuzdaki uygun örnek:", en: "Matching example from your guideline:" })}
                           </small>
+                        ) : secilenOrnek[d.anahtar] ? (
+                          /* Seçim yapıldı: "seçene kadar" uyarısı artık doğru değil. */
+                          <small className="muted">
+                            {t({ tr: "Kılavuzdaki örnekler:", en: "Examples from your guideline:" })}
+                          </small>
                         ) : (
                           <small className="tone-text" data-tone="warning">
                             {t({
@@ -248,11 +253,26 @@ export default function KaynakcaDuzeltmePaneli({
                                 örnek yalnızca karşılaştırma içindir ve
                                 önizleme çalışmanın genel stilinde kalır.
                               */}
-                              {kuralUygulandi ? (
+                              {/*
+                                "UYGULANDI" YALNIZCA SEÇİLİ ÖRNEKTE.
+                                Önizlemeye yansıyan tek şey seçilen
+                                örneğin kuralı; aynı cümleyi seçili
+                                olmayan seçeneğin altında da yazmak,
+                                uygulanmamış bir biçimi uygulanmış gibi
+                                göstermekti (ekran görüntüsünde görüldü).
+                              */}
+                              {kuralUygulandi && secilenOrnek[d.anahtar] === ornek.metin ? (
                                 <small className="tone-text" data-tone="success">
                                   {t({
                                     tr: "Kılavuzun bu örnekteki adres yazımı künyeye uygulandı.",
                                     en: "The address style from this example was applied to the reference.",
+                                  })}
+                                </small>
+                              ) : kuralUygulandi ? (
+                                <small className="muted">
+                                  {t({
+                                    tr: "Seçerseniz bu örnekteki adres yazımı künyeye uygulanır.",
+                                    en: "If you pick this one, its address style will be applied to the reference.",
                                   })}
                                 </small>
                               ) : gerekenBilgi.length ? (
