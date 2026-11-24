@@ -84,3 +84,23 @@ export function katalogEksikleri(planlar: BillingPlan[]): {
     fiyatYok: planlar.length > 0 && planlar.every((p) => p.price == null),
   };
 }
+
+/*
+  KARŞILAŞTIRMA HAZIR MI? (24.11.2026)
+
+  Plan karşılaştırma penceresi ancak katalog gerçekten KARŞILAŞTIRILACAK
+  bir şey bildiriyorsa açılır: en az iki ayrı plan, her birinin kodu,
+  görünen adı ve tutarı. Bugün ArvoOS yalnızca kod, dönem ve tutar
+  bildiriyor (lib/billing-plan.ts; ArvoOS ücreti tek bir
+  `individual_monthly_fee` sütununda tutuyor), yani kapı KAPALI ve
+  müşteriye mevcut abonelik yönetimi yolu sunuluyor.
+
+  Adsız sütunlarla bir "Standart / Plus / Pro" ekranı çizmek,
+  müşteriye var olmayan bir plan seçimi sunmak olurdu: seçtiği planın
+  adını, neyi kapsadığını ve halihazırda hangisinde olduğunu
+  bilemezdi. Kapı, katalog dolduğu gün kendiliğinden açılır.
+*/
+export function karsilastirmaHazir(planlar: BillingPlan[]): boolean {
+  const kullanilir = planlar.filter((p) => p.code && p.ad && p.price !== null);
+  return new Set(kullanilir.map((p) => p.code)).size >= 2;
+}

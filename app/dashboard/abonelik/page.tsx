@@ -16,6 +16,7 @@ import { faturalamaKapsami } from "@/lib/faturalama";
 import { faturalamaVePaketler, kartDurumum } from "@/lib/subscription";
 import { KART_HATALARI } from "@/lib/kart-odeme";
 import { licenseSummary } from "@/lib/license-summary";
+import { karsilastirmaHazir } from "@/lib/plan-karsilastirma";
 import PlaniYonet from "./plani-yonet";
 import KredileriIncele from "./kredileri-incele";
 import AbonelikSekmeleri from "./abonelik-sekmeleri";
@@ -176,8 +177,20 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const platformKurumu = Boolean(faturalamaVeri?.platformKurumu);
   /* Denemede paket SATILMAZ (02.11.2026): deneme kilidi kullanım sayısına bakıyor, satın alınan
      kredi onu açmazdı — kullanıcı parasını hiçbir şey almadan ödemiş olurdu. */
-  const satis = access.kind === "individual" ? (deneme.denemede ? null : ("bireysel" as const)) : kurumKredisi && !platformKurumu ? ("kurum" as const) : null;
-  const paketler = satis === "bireysel" ? access.krediPaketleri : satis === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
+  /*
+    YETKİ ile VERİ ayrı (24.11.2026). "Yetkisi var" ile "satılacak paket
+    biliniyor" iki ayrı şey: paket listesi de köprünün ensure/org_billing
+    yanıtından geliyor, ArvoOS'a ulaşılamadığında BOŞ. Eskiden yalnızca
+    yetkiye bakılıyordu ve köprü kopukken "Kredi paketlerini incele"
+    düğmesi boş bir pencere açıyordu. Şimdi eylem yalnızca paket
+    okunabildiğinde çiziliyor; okunamadığında nedeni yazılıyor
+    (`paketOkunamadi`), "bu hesapta kapalı" denmiyor — kapalı değil,
+    şimdilik bilinmiyor.
+  */
+  const satisYetkisi = access.kind === "individual" ? (deneme.denemede ? null : ("bireysel" as const)) : kurumKredisi && !platformKurumu ? ("kurum" as const) : null;
+  const paketler = satisYetkisi === "bireysel" ? access.krediPaketleri : satisYetkisi === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
+  const satis = paketler.length > 0 ? satisYetkisi : null;
+  const paketOkunamadi = satisYetkisi !== null && paketler.length === 0;
   /*
     Öne çıkan paket: birim fiyatı EN DÜŞÜK olan ("En avantajlı"). Eskiden
     listenin ilk paketi birincil düğmeyi alıyordu — en pahalı birim
@@ -206,11 +219,29 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     planı ödüyormuş gibi göstermek olurdu.
   */
   const mevcutPlanKodu: string | null = null;
-  /* Plan değiştirme yetkisi: kendi aboneliğini ödeyen bireysel kullanıcı.
-     Aynı kural sunucudaki ödeme eyleminde de var (payArvolabSubscription:
-     kurum üyesi reddediliyor). */
-  const planDegistirebilir = access.kind === "individual" && access.plans.length > 0;
-  const planYonetilebilir = access.kind === "individual";
+  /*
+    İKİ EYLEM, İKİ AYRI KARAR (24.11.2026).
+
+    Plan yönetimi ve kredi satın alma eskiden tek koşula bağlıydı
+    ("bireysel kullanıcı"). Abonelik verisi alınamadığında ikisi de
+    görünüyor, açılan pencerede yönetilecek ya da satın alınacak hiçbir
+    şey olmuyordu: "Planı yönet" boş bir pencere, "Kredi paketlerini
+    incele" boş bir liste açıyordu. Artık her eylem KENDİ yetkisi VE
+    kendi verisi doğrulandığında çiziliyor; biri kapalıyken öteki
+    çalışmaya devam ediyor.
+
+    Plan karşılaştırması ayrıca KATALOG kapısından geçiyor
+    (karsilastirmaHazir): katalog en az iki adlı, fiyatlı plan
+    bildirmediği sürece müşteriye MEVCUT abonelik yönetimi yolu
+    sunuluyor — adsız sütunlarla bir plan seçimi çizmek, müşteriye var
+    olmayan bir seçim sunmak olurdu.
+  */
+  const planDegistirebilir = access.kind === "individual" && karsilastirmaHazir(access.plans);
+  /* Yönetilecek bir şey var mı: durum/dönem okunabildi, ya da ödenecek
+     bir yenileme var, ya da katalog karşılaştırmaya hazır. Üçü de yoksa
+     düğme boş bir pencere açardı. */
+  const planYonetilebilir =
+    access.kind === "individual" && (ozet !== null || kartlaOdenebilir || planDegistirebilir);
 
   /*
     ÖDEMEDEN SONRA SÖZLEŞME ONAYI (29.10.2026, kurum sahibinin isteği):
@@ -268,6 +299,20 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               <b>{yenilemeMetni}</b>
             </div>
           ) : null}
+          {/*
+            PLANA DAHİL AYLIK KREDİ (24.11.2026). Katalogdan DEĞİL:
+            ArvoOS plan başına kredi bildirmiyor. Bu sayı ArvoLab'ın
+            kendi sayacından geliyor (ai_kredi_durumum → aylık hak;
+            bireyselde ai_bireysel_aylik_hak(), kurumda
+            organizations.ai_credit_limit). Hak bildirilmemişse satır
+            çizilmiyor.
+          */}
+          {kredi.goster && kredi.aylikLimit > 0 ? (
+            <div className="abonelik-kart-satir">
+              <span>{t({ tr: "Aylık asistan kredisi", en: "Monthly assistant credits" })}</span>
+              <b>{sayi(kredi.aylikLimit)}</b>
+            </div>
+          ) : null}
           {ozet === null ? (
             <p className="muted text-sm">
               {access.kind === "staff"
@@ -288,6 +333,11 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               planAdi={planAdi}
               durum={ozet?.statusLabel ?? null}
               yenileme={yenilemeMetni ? t({ tr: `Sonraki yenileme: ${yenilemeMetni}`, en: `Next renewal: ${yenilemeMetni}` }) : null}
+              dahilKredi={
+                kredi.goster && kredi.aylikLimit > 0
+                  ? t({ tr: `Aylık ${sayi(kredi.aylikLimit)} asistan kredisi dahil`, en: `${sayi(kredi.aylikLimit)} assistant credits included each month` })
+                  : null
+              }
               planlar={access.plans}
               mevcutKod={mevcutPlanKodu}
               karsilastirilabilir={planDegistirebilir}
@@ -384,7 +434,12 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           <div>
             <h2>{t({ tr: "Ek asistan kredisi", en: "Extra assistant credits" })}</h2>
             <p>
-              {platformKurumu
+              {paketOkunamadi
+                ? t({
+                    tr: "Kredi paketleri şu anda alınamıyor; ödeme sistemine ulaşılamıyor olabilir. Biraz sonra tekrar deneyin — mevcut krediniz ve kayıtlarınız aşağıda görünmeye devam ediyor.",
+                    en: "Credit packages are unavailable right now; the payment system may be unreachable. Try again shortly — your current credits and records remain visible below.",
+                  })
+                : platformKurumu
                 ? t({ tr: "Kurumunuz ArvoOS'un kendisi; kendi kredisi satılmaz.", en: "Your institution is ArvoOS itself; its own credits are not sold." })
                 : access.kind === "organization"
                   ? t({ tr: "Kurumunuzun kredisini kurum yöneticiniz bu sayfadan alır.", en: "Your institution administrator buys your institution's credits on this page." })

@@ -21,6 +21,7 @@ export default function PlaniYonet({
   planAdi,
   durum,
   yenileme,
+  dahilKredi,
   planlar,
   mevcutKod,
   karsilastirilabilir,
@@ -30,9 +31,11 @@ export default function PlaniYonet({
   durum: string | null;
   /** "Sonraki yenileme" ya da dönem bitişi; yoksa null. */
   yenileme: string | null;
+  /** Plana dahil aylık asistan kredisi (ai_kredi_durumum); bildirilmezse null. */
+  dahilKredi: string | null;
   planlar: BillingPlan[];
   mevcutKod: string | null;
-  /** Plan değiştirme yetkisi sunucuda doğrulandı mı? */
+  /** Katalog karşılaştırmaya hazır VE yetki doğrulandı mı? */
   karsilastirilabilir: boolean;
   /** Mevcut yenileme akışı (kartla ödeme formu); yoksa null. */
   yenilemeAlani: ReactNode;
@@ -60,6 +63,10 @@ export default function PlaniYonet({
             <b>{planAdi}</b>
             {durum ? <span className="karsilastir-rozet" data-tur="mevcut">{durum}</span> : null}
             {yenileme ? <small className="muted">{yenileme}</small> : null}
+            {/* Dahil kredi ArvoOS'tan DEĞİL, ArvoLab'ın kendi
+                sayacından (ai_kredi_durumum → aylık hak): doğrulanabilen
+                tek "plana dahil" rakam bu. */}
+            {dahilKredi ? <small className="muted">{dahilKredi}</small> : null}
           </div>
 
           {karsilastirilabilir ? (
@@ -83,10 +90,37 @@ export default function PlaniYonet({
             <div className="plan-yonet-satir">
               <span className="ayar-govde">
                 <b>{t({ tr: "Mevcut aboneliğiniz", en: "Your current subscription" })}</b>
-                <small>{t({ tr: "Ödeme ve yenileme işlemleri.", en: "Payment and renewal." })}</small>
+                <small>
+                  {/* Doğrulanan davranış: ArvoOS yeni dönemi
+                      greatest(now(), mevcut bitiş) ile başlatıyor
+                      (arvo_activate_license_period), erken ödeme gün
+                      yakmıyor. Plan DEĞİŞİKLİĞİ için böyle bir doğrulama
+                      yok; orada bir yürürlük sözü verilmiyor. */}
+                  {t({
+                    tr: "Ödeme ve yenileme işlemleri. Dönem bitmeden yenilerseniz yeni dönem mevcut dönemin sonuna eklenir.",
+                    en: "Payment and renewal. If you renew before the period ends, the new period is added to the end of the current one.",
+                  })}
+                </small>
               </span>
               {yenilemeAlani}
             </div>
+          ) : null}
+
+          {/*
+            KARŞILAŞTIRMA HAZIR DEĞİLSE MEVCUT YOL (24.11.2026). Plan
+            seçenekleri ödeme sisteminden gelmiyor (ne ad ne de plana
+            dahil kredi). Boş bir karşılaştırma penceresi açmak ya da
+            hiçbir şey söylememek yerine, müşteriye bugün yürüyen yol
+            söyleniyor: aboneliği buradan yönetiyor, plan seçenekleri
+            geldiğinde bu pencereye düşecek.
+          */}
+          {!karsilastirilabilir ? (
+            <p className="muted text-sm">
+              {t({
+                tr: "Plan seçenekleri şu anda ödeme sisteminden gelmiyor; aboneliğinizi bu pencereden yönetebilirsiniz. Farklı bir plana geçmek isterseniz Destek'ten yazın.",
+                en: "Plan options are not reported by the payment system right now; you can manage your subscription from this window. If you want to move to a different plan, write to Support.",
+              })}
+            </p>
           ) : null}
 
           <div className="project-form-actions">

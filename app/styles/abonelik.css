@@ -75,7 +75,7 @@
 }
 /* Öne çıkan sütun: ölçülü lacivert çerçeve, dolu bir blok değil. */
 .karsilastir-sutun[data-one-cikan] { border-color: var(--primary-ink); box-shadow: 0 0 0 1px var(--primary-ink) inset; }
-.karsilastir-sutun[data-secili] { background: var(--primary-soft); }
+.karsilastir-sutun[data-secili] { background: var(--primary-soft); border-color: var(--primary-ink); }
 .karsilastir-sutun h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
 .karsilastir-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .karsilastir-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
@@ -85,11 +85,26 @@
 .karsilastir-sec { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; }
 .karsilastir-sec input { width: 18px; height: 18px; accent-color: var(--primary-ink); }
 
-.karsilastir-satirlar { display: grid; gap: 0; margin: 0; border: 1px solid var(--line-soft); border-radius: var(--r-lg); overflow: hidden; }
-.karsilastir-satirlar > div { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(auto-fit, minmax(0, 1fr)); align-items: center; gap: 12px; padding: 11px 14px; }
-.karsilastir-satirlar > div + div { border-top: 1px solid var(--line-soft); }
-.karsilastir-satirlar dt { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
-.karsilastir-satirlar dd { margin: 0; text-align: center; font-size: var(--fs-base); font-variant-numeric: tabular-nums; }
+/*
+  KART İÇİ SATIRLAR (24.11.2026). Eskiden kredi/dönem ve "100 kredi
+  başına" kartların ALTINDA ortak bir tabloydu; telefonda kartlar alt
+  alta inince seçeneğin adı bir yerde, avantajı başka yerde kalıyordu.
+  Şimdi her ölçü kendi kartının içinde, aynı hizada.
+*/
+.karsilastir-kart-satirlar { display: grid; gap: 6px; margin: 0; padding: 10px 0 0; list-style: none; border-top: 1px solid var(--line-soft); }
+.karsilastir-kart-satirlar li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.karsilastir-kart-satirlar li > span { color: var(--muted); }
+.karsilastir-kart-satirlar li > b { font-variant-numeric: tabular-nums; }
+.karsilastir-kart-satirlar svg { color: var(--muted); }
+/* Simgesi olmayan satır ilk sütunu atlıyor: etiketler aynı hizada kalsın. */
+.karsilastir-kart-olcu { grid-column: 1 / 3; }
+
+/* Seçili kart METİNLE de: kenarlık rengi tek başına renk körlüğünde ve
+   parlak ekranda ayırt edilmiyor. */
+.karsilastir-secildi {
+  display: inline-flex; align-items: center; gap: 5px; justify-self: start;
+  color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 700;
+}
 
 .karsilastir-ozet { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-sunken); font-size: var(--fs-sm); }
 .karsilastir-ozet span { color: var(--muted); }
@@ -99,8 +114,6 @@
   .karsilastir-izgara { grid-template-columns: 1fr; }
   .karsilastir-donem { justify-self: stretch; }
   .karsilastir-donem-dugme { flex: 1; }
-  .karsilastir-satirlar > div { grid-template-columns: 1fr; gap: 4px; text-align: left; }
-  .karsilastir-satirlar dd { text-align: left; }
 }
 
 /* ---------- Planı yönet ---------- */

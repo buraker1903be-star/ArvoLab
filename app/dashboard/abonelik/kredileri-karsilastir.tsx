@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL } from "@/lib/dil";
 import { formatTry } from "@/lib/billing-plan";
@@ -74,6 +74,25 @@ export default function KredileriKarsilastir({
                   {paket.kod === yogun && paketler.length > 1 ? (
                     <span className="karsilastir-rozet" data-tur="one-cikan">{t({ tr: "Yoğun kullanım için", en: "For intensive use" })}</span>
                   ) : null}
+                  {/*
+                    TOPLAM FİYAT VE BİRİM MALİYET AYNI KARTTA
+                    (24.11.2026). "100 kredi başına" eskiden ortak bir dl
+                    satırındaydı; telefonda kartlar alt alta inince
+                    avantaj bilgisi kartından KOPUYOR, müşteri hangi
+                    seçeneğin neden avantajlı olduğunu kendi kartından
+                    göremiyordu. Karşılaştırmanın bütün değeri bu ölçüde.
+                  */}
+                  <ul className="karsilastir-kart-satirlar">
+                    <li>
+                      <Zap size={14} aria-hidden="true" />
+                      <span>{t({ tr: "Eklenen kredi", en: "Credits added" })}</span>
+                      <b>{sayi(paket.kredi)}</b>
+                    </li>
+                    <li>
+                      <span className="karsilastir-kart-olcu">{t({ tr: "100 kredi başına", en: "Per 100 credits" })}</span>
+                      <b>{fiyat(yuzKrediFiyati(paket))}</b>
+                    </li>
+                  </ul>
                   <label className="karsilastir-sec">
                     <input
                       type="radio"
@@ -84,26 +103,15 @@ export default function KredileriKarsilastir({
                     />
                     <span className="sr-only">{t({ tr: `${sayi(paket.kredi)} kredi`, en: `${sayi(paket.kredi)} credits` })}</span>
                   </label>
+                  {/* Seçili durum METİNLE de belirtiliyor. */}
+                  {secili === paket.kod ? (
+                    <span className="karsilastir-secildi">
+                      <Check size={14} aria-hidden="true" /> {t({ tr: "Seçildi", en: "Selected" })}
+                    </span>
+                  ) : null}
                 </div>
               ))}
             </div>
-
-            <dl className="karsilastir-satirlar">
-              <div>
-                <dt>
-                  <Zap size={15} aria-hidden="true" /> {t({ tr: "Eklenen kredi", en: "Credits added" })}
-                </dt>
-                {paketler.map((p) => (
-                  <dd key={p.kod}>{sayi(p.kredi)}</dd>
-                ))}
-              </div>
-              <div>
-                <dt>{t({ tr: "100 kredi başına", en: "Per 100 credits" })}</dt>
-                {paketler.map((p) => (
-                  <dd key={p.kod}>{fiyat(yuzKrediFiyati(p))}</dd>
-                ))}
-              </div>
-            </dl>
 
             <p className="muted text-sm">
               {t({

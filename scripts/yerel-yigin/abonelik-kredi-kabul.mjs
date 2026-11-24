@@ -69,6 +69,15 @@ const BIREYSEL = await kullaniciKur({ etiket: "ab-birey", tamAd: "Deniz Yilmaz",
 const KOPUK = await kullaniciKur({ etiket: "ayar-kopuk", tamAd: "Kopuk Denegi", kurum: null });
 const KURUMLU = await kullaniciKur({ etiket: "ab-kurum", tamAd: "Kurum Uyesi", kurum: KURUM });
 const ICEKIP = await kullaniciKur({ etiket: "ab-icekip", tamAd: "Ic Ekip", kurum: null, rol: "founder" });
+/*
+  DOLU KATALOG AYRI BİR KULLANICI (24.11.2026). Taklit, e-postası
+  "ayar-katalog" ile başlayana ArvoOS'un adı ve krediyi bildirmeye
+  BAŞLADIĞINDA oluşacak plan listesini veriyor. BIREYSEL ise bugünkü
+  gerçek biçimi (yalnızca kod/dönem/tutar) alıyor; böylece hem müşterinin
+  ÜRETİMDE gördüğü ekran hem de katalog dolduğunda açılacak pencere aynı
+  koşuda ölçülüyor.
+*/
+const KATALOGLU = await kullaniciKur({ etiket: "ayar-katalog", tamAd: "Katalog Denegi", kurum: null });
 
 /* Bireysel aboneye kredi durumu ve hareket: kart ve sekme dolu görünsün.
    Dönem, aylık kalan ve satın alınan bakiye ai_kredi_durumum'un okuduğu
@@ -85,6 +94,26 @@ const yaz = (ad, ekran, tema, gecti, ayrinti) => {
   console.log(`${gecti ? "GEÇTİ " : "KALDI "} ${String(ekran).padEnd(4)} ${tema.padEnd(5)} ${ad.padEnd(50)} ${ayrinti}`);
 };
 const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
+/*
+  İKİ EYLEM AYRI AYRI (24.11.2026). Plan yönetimi ve kredi satın alma
+  birbirinden bağımsız: her biri KENDİ yetkisi ve kendi verisi
+  doğrulandığında görünmeli. Eskiden ikisi de "bireysel kullanıcı"
+  koşuluna bağlıydı; abonelik verisi alınamadığında "Planı yönet" ve
+  "Kredi paketlerini incele" yine çıkıyor, açılan pencerede yönetilecek
+  ya da satın alınacak hiçbir şey olmuyordu.
+*/
+const eylemler = (s) => s.evaluate(() => {
+  const dugmeler = [...document.querySelectorAll("button")].map((b) => b.textContent ?? "");
+  return {
+    planYonet: dugmeler.some((m) => /Planı yönet/.test(m)),
+    krediIncele: dugmeler.some((m) => /Kredi paketlerini incele/.test(m)),
+    ekKrediEylem: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
+    ekKrediBilgi: Boolean(document.querySelector('.abonelik-ek-kredi[data-bilgi="true"]')),
+    ekKrediMetin: (document.querySelector(".abonelik-ek-kredi")?.innerText ?? "").replace(/\s+/g, " "),
+    planMetin: (document.querySelector(".abonelik-kartlar")?.innerText ?? "").replace(/\s+/g, " "),
+  };
+});
+
 const odak = (s) => s.evaluate(() => {
   const a = document.activeElement;
   if (!a || a === document.body) return "BODY (kayıp)";
@@ -142,6 +171,12 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       return paneller[1] && !paneller[1].hidden && paneller[0].hidden;
     });
     yaz("B6 · Sekme değişiyor", EKRAN, TEMA, Boolean(hareketGorunur), `görünür=${hareketGorunur}`);
+    /* Matrisin diğer ucu: verisi ve yetkisi olan bireysel abonede İKİ
+       eylem de sunuluyor. U2/U3 ile birlikte okununca hangi eylemin
+       hangi durumda göründüğü kabulde sabitlenmiş oluyor. */
+    const be = await eylemler(s);
+    yaz("B7 · Bireysel (veri var): iki eylem de sunuluyor", EKRAN, TEMA, be.planYonet && be.krediIncele,
+        `planYönet=${be.planYonet} krediİncele=${be.krediIncele}`);
 
     /* ---- K · Kredileri karşılaştır penceresi ---- */
     await s.locator("button", { hasText: /Kredi paketlerini incele/ }).first().click();
@@ -154,7 +189,9 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       return {
         sutun: sutunlar.length,
         yogun: Boolean(kok.querySelector('.karsilastir-rozet[data-tur="one-cikan"]')),
-        yuzKredi: Boolean([...kok.querySelectorAll("dt")].find((d) => /100 kredi başına/.test(d.textContent))),
+        /* "100 kredi başına" artık her KARTIN içinde (K9); eskiden
+           kartların altındaki ortak dl satırındaydı. */
+        yuzKredi: [...kok.querySelectorAll(".karsilastir-sutun")].every((k) => /100 kredi/.test(k.innerText)),
         tekSeferlik: /tek seferlik|Tek seferlik/i.test(kok.innerText),
         gonderPasif: kok.querySelector('button[type="submit"]')?.disabled ?? null,
         icKaydirma: govde ? govde.scrollHeight - govde.clientHeight > 2 : null,
@@ -166,12 +203,42 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     yaz("K3 · Tek seferlik olduğu yazıyor", EKRAN, TEMA, kredi.tekSeferlik, "");
     yaz("K4 · Seçim yapılmadan gönderilemiyor", EKRAN, TEMA, kredi.gonderPasif === true, `pasif=${kredi.gonderPasif}`);
     yaz("K5 · Pencere yatay taşmıyor", EKRAN, TEMA, !kredi.yatayTasma, `taşma=${kredi.yatayTasma} içKaydırma=${kredi.icKaydirma}`);
+    /*
+      HER SEÇENEK KENDİ KARTINDA TAM (24.11.2026). Eskiden "100 kredi
+      başına" ortak bir dl satırındaydı: mobilde kartlar alt alta
+      inince avantaj bilgisi kartından KOPUYOR, müşteri bir seçeneğin
+      neden avantajlı olduğunu kendi kartından göremiyordu.
+    */
+    const kartlar = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return [...kok.querySelectorAll(".karsilastir-sutun")].map((k) => {
+        const m = k.innerText.replace(/\s+/g, " ");
+        return { fiyat: /(TL|₺)/.test(m), yuz: /100 kredi/.test(m), kredi: /kredi/.test(m) };
+      });
+    });
+    yaz("K9 · Her kredi kartında toplam fiyat ve 100 kredi başına maliyet", EKRAN, TEMA,
+        kartlar.length > 0 && kartlar.every((k) => k.fiyat && k.yuz && k.kredi),
+        `kart=${kartlar.length} eksik=${kartlar.filter((k) => !(k.fiyat && k.yuz)).length}`);
     await resim("K1-kredileri-karsilastir");
     /* Seçince özet çıkıyor */
     await s.locator('.drawer-root.open .karsilastir-sec input').first().check();
     await s.waitForTimeout(250);
     const ozet = await s.evaluate(() => document.querySelector(".drawer-root.open .karsilastir-ozet")?.innerText.replace(/\s+/g, " ") ?? null);
     yaz("K6 · Seçimde toplam tahsilat okunuyor", EKRAN, TEMA, Boolean(ozet && /Toplam tahsilat/.test(ozet)), `"${(ozet ?? "").slice(0, 60)}…"`);
+    /* Seçili kart AYRI belirtilsin: yalnızca kenarlık rengi, renk
+       körlüğünde ve yüksek parlaklıkta ayırt edilmiyor. */
+    const secim = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      const secili = kok.querySelector('.karsilastir-sutun[data-secili]');
+      return {
+        var: Boolean(secili),
+        metin: secili ? secili.innerText.replace(/\s+/g, " ") : null,
+        isaretli: secili ? Boolean(secili.querySelector(".karsilastir-secildi")) : false,
+        tek: kok.querySelectorAll(".karsilastir-sutun[data-secili]").length === 1,
+      };
+    });
+    yaz("K10 · Seçili kart metinle de belirtiliyor", EKRAN, TEMA, secim.var && secim.tek && secim.isaretli,
+        `seçili=${secim.var} tek=${secim.tek} işaret=${secim.isaretli}`);
     /* MOBİL KAYDIRMA GERÇEKTEN ÖLÇÜLÜYOR (24.11.2026). Eskiden içKaydırma
        yalnızca K5'in notuna yazılıyordu, geçti/kaldı kontrolü değildi:
        390 px'te gövde kaydırılamasa ya da yapışkan eylem satırı son
@@ -218,7 +285,38 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       await s.waitForTimeout(400);
     }
 
-    /* ---- P · Planı yönet → Planları karşılaştır (iç içe) ---- */
+    /* ---- G · BUGÜNKÜ katalog: karşılaştırma sunulmuyor ---- */
+    /*
+      ArvoOS bugün plan ADI bildirmiyor. Adsız sütunlarla bir
+      "Standart / Plus / Pro" ekranı çizmek, müşteriye var olmayan bir
+      seçim sunmak olurdu: seçtiği planın adını, kapsamını ve
+      halihazırda hangisinde olduğunu bilemezdi. Pencere mevcut
+      abonelik yönetimi yolunu gösteriyor.
+    */
+    await s.locator("button", { hasText: /Planı yönet/ }).first().click();
+    await s.waitForSelector(".drawer-root.open .plan-yonet", { timeout: 15000 });
+    await s.waitForTimeout(350);
+    const bugun = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return {
+        karsilastirVar: [...kok.querySelectorAll("button")].some((b) => /Planları karşılaştır/.test(b.textContent)),
+        metin: kok.innerText.replace(/\s+/g, " "),
+      };
+    });
+    yaz("G1 · Bugünkü katalogda karşılaştırma sunulmuyor, mevcut yol yazıyor", EKRAN, TEMA,
+        !bugun.karsilastirVar && /gelmiyor/.test(bugun.metin),
+        `karşılaştır=${bugun.karsilastirVar} "${bugun.metin.slice(0, 70)}"`);
+    await resim("G1-plani-yonet-katalog-bos");
+    await s.keyboard.press("Escape");
+    await s.waitForTimeout(400);
+  } catch (e) {
+    yaz("B/K/G · bireysel akış", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
+  }
+
+  /* ---- P · Katalog dolu: Planı yönet → Planları karşılaştır (iç içe) ---- */
+  try {
+    await giris(KATALOGLU);
+    await git("/dashboard/abonelik");
     await s.locator("button", { hasText: /Planı yönet/ }).first().click();
     await s.waitForSelector(".drawer-root.open .plan-yonet", { timeout: 15000 });
     await s.waitForTimeout(350);
@@ -236,22 +334,37 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       await s.waitForFunction(() => document.querySelectorAll(".drawer-root.open").length === 2, null, { timeout: 15000 });
       await s.waitForTimeout(400);
       const plan = await s.evaluate(() => {
-        const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-satirlar"));
+        /* Kredi ve dönem artık her KARTIN içinde; ortak dl satırı
+           kaldırıldı (mobilde karttan kopuyordu). */
+        const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-sutun"));
+        const kartlar = [...kok.querySelectorAll(".karsilastir-sutun")];
         return {
-          sutun: kok.querySelectorAll(".karsilastir-sutun").length,
-          krediSatiri: Boolean([...kok.querySelectorAll("dt")].find((d) => /Asistan kredisi/.test(d.textContent))),
-          donemSatiri: Boolean([...kok.querySelectorAll("dt")].find((d) => /Faturalama dönemi/.test(d.textContent))),
+          sutun: kartlar.length,
+          krediSatiri: kartlar.length > 0 && kartlar.every((k) => /Asistan kredisi/.test(k.innerText)),
+          donemSatiri: kartlar.length > 0 && kartlar.every((k) => /Faturalama dönemi/.test(k.innerText)),
         };
       });
       yaz("P2 · Plan karşılaştırma: kredi ve dönem satırları", EKRAN, TEMA, plan.krediSatiri && plan.donemSatiri,
           `sütun=${plan.sutun} kredi=${plan.krediSatiri} dönem=${plan.donemSatiri}`);
+      /* Dahil asistan kredisi PLANIN KARTINDA: ortak dl satırı mobilde
+         karttan kopuyordu (K9 ile aynı sınıf). */
+      const planKart = await s.evaluate(() => {
+        const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-sutun"));
+        return [...kok.querySelectorAll(".karsilastir-sutun")].map((k) => {
+          const m = k.innerText.replace(/\s+/g, " ");
+          return { kredi: /kredi/i.test(m), fiyat: /(TL|₺|—)/.test(m) };
+        });
+      });
+      yaz("P7 · Her plan kartında dahil asistan kredisi", EKRAN, TEMA,
+          planKart.length > 0 && planKart.every((k) => k.kredi && k.fiyat),
+          `kart=${planKart.length} eksik=${planKart.filter((k) => !k.kredi).length}`);
       await resim("P2-planlari-karsilastir");
       /* Mobilde üst pencere de kaydırılabiliyor mu? Plan karşılaştırması
          390 px'te en uzun içerik; kaydırılamazsa alttaki planlar hiç
          görülmez. */
       if (mobil) {
         const pk = await s.evaluate(() => {
-          const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-satirlar"));
+          const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-sutun"));
           const govde = kok.querySelector(".drawer-body");
           const once = govde.scrollTop;
           govde.scrollTop = govde.scrollHeight;
@@ -287,7 +400,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     yaz("P6 · Son pencere kapanınca odak Planı yönet'e, kaydırma serbest", EKRAN, TEMA,
         /Planı yönet/.test(sonOdak) && kilitKalkti, `odak=${sonOdak} kilitKalktı=${kilitKalkti}`);
   } catch (e) {
-    yaz("B/K/P · bireysel akış", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
+    yaz("P · katalog dolu akışı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
   }
 
   /* ---- A · Ayarlar'dan bağlantı bu sayfaya açılıyor ---- */
@@ -311,8 +424,20 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       return { metin, planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet/.test(b.textContent))) };
     });
     yaz("U1 · Bilgi alınamıyorsa açıkça söyleniyor", EKRAN, TEMA, /alınamıyor/.test(u.metin), `"${u.metin.slice(0, 70)}…"`);
+    const ue = await eylemler(s);
+    /* Yönetilecek veri yok: durum, dönem ve plan listesi boş. Düğme
+       açılsa pencerede hiçbir şey olmazdı. */
+    yaz("U2 · Veri alınamıyorsa plan yönetimi SUNULMUYOR", EKRAN, TEMA, !ue.planYonet, `planYönet=${ue.planYonet}`);
+    /* Paket listesi de ensure yanıtından gelir: köprü kopukken boş. */
+    yaz("U3 · Veri alınamıyorsa kredi satın alma SUNULMUYOR, nedeni yazıyor", EKRAN, TEMA,
+        !ue.krediIncele && ue.ekKrediBilgi && /alınamıyor|ulaşılamıyor/.test(ue.ekKrediMetin),
+        `krediİncele=${ue.krediIncele} bilgi=${ue.ekKrediBilgi} "${ue.ekKrediMetin.slice(0, 60)}"`);
     await resim("U1-abonelik-alinamadi");
-  } catch (e) { yaz("U1 · Bilgi alınamıyorsa açıkça söyleniyor", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`); }
+  } catch (e) {
+    for (const n of ["U1 · Bilgi alınamıyorsa açıkça söyleniyor", "U2 · Veri alınamıyorsa plan yönetimi SUNULMUYOR",
+                     "U3 · Veri alınamıyorsa kredi satın alma SUNULMUYOR, nedeni yazıyor"])
+      yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`);
+  }
 
   /* ---- O · Kurum yönetimli ---- */
   try {

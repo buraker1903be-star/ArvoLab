@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Zap } from "lucide-react";
+import { Calendar, Check, Zap } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL } from "@/lib/dil";
 import { formatTry, type BillingInterval, type BillingPlan } from "@/lib/billing-plan";
@@ -115,6 +115,25 @@ export default function PlanlariKarsilastir({
                     {oneCikan && !s.mevcut ? (
                       <span className="karsilastir-rozet" data-tur="one-cikan">{t({ tr: "Yoğun araştırmalar için", en: "For intensive research" })}</span>
                     ) : null}
+                    {/*
+                      DAHİL KREDİ VE DÖNEM KARTIN İÇİNDE (24.11.2026).
+                      Eskiden ortak bir dl satırındaydı; telefonda kartlar
+                      alt alta inince plan adı bir yerde, kapsadığı kredi
+                      başka yerde kalıyordu ve müşteri bir planın
+                      avantajını kendi kartından okuyamıyordu.
+                    */}
+                    <ul className="karsilastir-kart-satirlar">
+                      <li>
+                        <Zap size={14} aria-hidden="true" />
+                        <span>{t({ tr: "Asistan kredisi", en: "Assistant credits" })}</span>
+                        <b>{s.kredi !== null ? sayi(s.kredi) : "—"}</b>
+                      </li>
+                      <li>
+                        <Calendar size={14} aria-hidden="true" />
+                        <span>{t({ tr: "Faturalama dönemi", en: "Billing period" })}</span>
+                        <b>{s.plan.interval ? DONEM_ADI[s.plan.interval] : "—"}</b>
+                      </li>
+                    </ul>
                     <label className="karsilastir-sec">
                       <input
                         type="radio"
@@ -128,29 +147,17 @@ export default function PlanlariKarsilastir({
                         {s.ad ?? (s.plan.interval ? DONEM_ADI[s.plan.interval] : t({ tr: "Plan", en: "Plan" }))}
                       </span>
                     </label>
+                    {/* Seçili durum METİNLE de: yalnızca kenarlık rengi
+                        renk körlüğünde ve parlak ekranda ayırt edilmiyor. */}
+                    {secili === kod ? (
+                      <span className="karsilastir-secildi">
+                        <Check size={14} aria-hidden="true" /> {t({ tr: "Seçildi", en: "Selected" })}
+                      </span>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
-
-            <dl className="karsilastir-satirlar">
-              <div>
-                <dt>
-                  <Zap size={15} aria-hidden="true" /> {t({ tr: "Asistan kredisi", en: "Assistant credits" })}
-                </dt>
-                {satirlar.map((s, i) => (
-                  <dd key={s.plan.code ?? i}>{s.kredi !== null ? sayi(s.kredi) : "—"}</dd>
-                ))}
-              </div>
-              <div>
-                <dt>
-                  <Calendar size={15} aria-hidden="true" /> {t({ tr: "Faturalama dönemi", en: "Billing period" })}
-                </dt>
-                {satirlar.map((s, i) => (
-                  <dd key={s.plan.code ?? i}>{s.plan.interval ? DONEM_ADI[s.plan.interval] : "—"}</dd>
-                ))}
-              </div>
-            </dl>
 
             {/* Katalogda olmayanı ekranda da söylüyoruz. */}
             {eksik.adYok || eksik.krediYok ? (
@@ -169,9 +176,18 @@ export default function PlanlariKarsilastir({
               </p>
             ) : null}
 
-            {/* Onaydan ÖNCE okunabilenler: tutar ve dönem. Değişikliğin
-                geçerli olacağı tarihi ödeme sistemi bildirmiyor, bu yüzden
-                tarih YAZMIYORUZ; ne zaman geçerli olacağı söyleniyor. */}
+            {/*
+              Onaydan ÖNCE okunabilenler: tutar ve dönem.
+
+              NE ZAMAN GEÇERLİ OLACAĞI YAZILMIYOR (24.11.2026). Eskiden
+              "Değişiklik ödeme onaylandığında geçerli olur" deniyordu;
+              bunu ödeme akışı DOĞRULAMIYOR. Köprünün doğruladığı tek şey
+              YENİLEME: ArvoOS yeni dönemi greatest(now(), mevcut bitiş)
+              ile başlatıyor (arvo_activate_license_period), yani erken
+              ödeme gün yakmıyor. Plan DEĞİŞİKLİĞİNİN ne zaman ve hangi
+              oranla yürürlüğe gireceğini bildiren bir alan yok; yazmak
+              müşteriye doğrulanmamış bir söz vermek olurdu.
+            */}
             {seciliPlan ? (
               <div className="karsilastir-ozet" role="status">
                 <b>
@@ -183,8 +199,8 @@ export default function PlanlariKarsilastir({
                 <span>
                   {seciliPlan.plan.price !== null
                     ? t({
-                        tr: `Toplam tahsilat ${formatTry(seciliPlan.plan.price, dil)}${seciliPlan.plan.interval ? ` · ${DONEM_ADI[seciliPlan.plan.interval].toLocaleLowerCase("tr-TR")} dönem` : ""}. Değişiklik ödeme onaylandığında geçerli olur.`,
-                        en: `Total charge ${formatTry(seciliPlan.plan.price, dil)}${seciliPlan.plan.interval ? ` · ${DONEM_ADI[seciliPlan.plan.interval].toLocaleLowerCase("en-US")} period` : ""}. The change takes effect once the payment is approved.`,
+                        tr: `Toplam tahsilat ${formatTry(seciliPlan.plan.price, dil)}${seciliPlan.plan.interval ? ` · ${DONEM_ADI[seciliPlan.plan.interval].toLocaleLowerCase("tr-TR")} dönem` : ""}. Ödemeyi ArvoOS'un güvenli sayfasında tamamlayacaksınız.`,
+                        en: `Total charge ${formatTry(seciliPlan.plan.price, dil)}${seciliPlan.plan.interval ? ` · ${DONEM_ADI[seciliPlan.plan.interval].toLocaleLowerCase("en-US")} period` : ""}. You will complete the payment on ArvoOS's secure page.`,
                       })
                     : t({
                         tr: "Bu planın tutarı ödeme sisteminden gelmiyor; tutarı ödeme ekranında göreceksiniz.",

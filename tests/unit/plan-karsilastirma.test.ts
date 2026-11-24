@@ -6,6 +6,7 @@ import {
   donemler,
   donemPlanlari,
   enYuksekPaket,
+  karsilastirmaHazir,
   katalogEksikleri,
   planSatirlari,
   yuzKrediFiyati,
@@ -107,5 +108,52 @@ describe("katalogEksikleri: ekranın '—' yazdığı yerler", () => {
 
   test("fiyatı olmayan katalog işaretlenir", () => {
     assert.equal(katalogEksikleri([plan({ code: "a", interval: "month" })]).fiyatYok, true);
+  });
+});
+
+describe("karsilastirmaHazir: pencere ancak katalog doluysa açılır", () => {
+  test("iki adlı, fiyatlı ve kodlu plan → hazır", () => {
+    assert.equal(
+      karsilastirmaHazir([
+        plan({ code: "standart", ad: "Standart", price: 14900, interval: "month" }),
+        plan({ code: "plus", ad: "Plus", price: 24900, interval: "month" }),
+      ]),
+      true,
+    );
+  });
+
+  test("ADSIZ plan listesi hazır DEĞİL (bugünkü ArvoOS)", () => {
+    /* Adsız sütunlarla karşılaştırma çizmek, müşteriye var olmayan bir
+       plan seçimi sunmaktı: hangi planda olduğunu ve neyi kapsadığını
+       bilemezdi. */
+    assert.equal(
+      karsilastirmaHazir([
+        plan({ code: "aylik", price: 14900, interval: "month" }),
+        plan({ code: "yillik", price: 149000, interval: "year" }),
+      ]),
+      false,
+    );
+  });
+
+  test("tek plan hazır değil, fiyatsız plan sayılmaz", () => {
+    assert.equal(karsilastirmaHazir([plan({ code: "a", ad: "Standart", price: 14900 })]), false);
+    assert.equal(
+      karsilastirmaHazir([plan({ code: "a", ad: "Standart" }), plan({ code: "b", ad: "Plus" })]),
+      false,
+    );
+  });
+
+  test("aynı kod iki kez sayılmaz", () => {
+    assert.equal(
+      karsilastirmaHazir([
+        plan({ code: "a", ad: "Standart", price: 14900, interval: "month" }),
+        plan({ code: "a", ad: "Standart", price: 149000, interval: "year" }),
+      ]),
+      false,
+    );
+  });
+
+  test("boş katalog hazır değil", () => {
+    assert.equal(karsilastirmaHazir([]), false);
   });
 });
