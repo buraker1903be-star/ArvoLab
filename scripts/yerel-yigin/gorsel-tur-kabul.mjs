@@ -125,9 +125,12 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`);
   }
 
-  /* ---- H · Hesap silme ---- */
+  /* ---- H · Hesap silme ----
+     Ayarlar 24.11.2026'dan beri sekmeli; silme satırı "Veriler"de. */
   await git("/dashboard/settings");
   try {
+    await s.locator(".ayarlar-sekme", { hasText: /^Veriler$/ }).first().click();
+    await s.waitForTimeout(250);
     await s.locator('li.ayar-satir:has(b:text-is("Hesabımı sil"))').locator("button").first().click();
     await s.waitForSelector(".drawer-root.open section.drawer", { timeout: 20000 });
     await s.waitForTimeout(400);

@@ -22,6 +22,7 @@ import NotificationBell from "./_components/notification-bell";
 import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
 import KullaniciMenusu from "./_components/kullanici-menusu";
+import AyarlarPenceresi from "./_components/ayarlar-penceresi";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsKomutPaleti } from "./_components/os-komut-paleti";
@@ -167,6 +168,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
         </>
       )}
+      {/*
+        AYARLAR PENCERESİ panelde bir kez çiziliyor ve her sayfadan
+        açılabiliyor. İçeriği açılınca okunuyor; kapalıyken hiçbir sorgu
+        yapmıyor. Sözleşme onayı beklenirken çizilmiyor: o ekran kapıdır,
+        üstüne başka pencere açılmamalı.
+      */}
+      {sozlesmeGerekli ? null : <AyarlarPenceresi />}
       {/* Kullanıcı menüsü ve kart menüleri dışarı tıklayınca kapansın. */}
       <AcilirKapatici />
       {/* Başka cihazdan girişle kapatılan oturumu bekleyen sekmede de fark eder (lib/tek-oturum.ts). */}

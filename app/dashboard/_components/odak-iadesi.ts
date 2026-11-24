@@ -37,6 +37,19 @@ function gorunur(oge: Element | null | undefined): oge is HTMLElement {
   if (!(oge instanceof HTMLElement) || !oge.isConnected) return false;
   /* inert bir ağaçtaki öğe odak alamaz: açık pencerenin arkasındaki sayfa. */
   if (oge.closest("[inert]")) return false;
+  /*
+    KAPALI BİR <details> İÇİ GİZLİDİR (24.11.2026). Yalnızca çizim
+    kutusuna bakmak yetmiyordu: hesap menüsünün paneli CSS'te konumlanmış
+    olduğu için <details> kapalıyken de yerleşimde kalıyor ve
+    getClientRects() dolu dönüyordu. Pencere kapanınca odak o gizli
+    bağlantıya "iade ediliyor", focus() sessizce düşüyor ve klavye odağı
+    sayfanın gövdesine kalıyordu — düzeltmeye çalıştığımız hatanın
+    aynısı, başka bir kapıdan.
+  */
+  const kapsayici = oge.closest("details");
+  if (kapsayici && !kapsayici.open && !oge.matches(":scope > summary, details > summary")) return false;
+  /* checkVisibility görünürlük/opaklık/content-visibility'yi de sayar. */
+  if (typeof oge.checkVisibility === "function" && !oge.checkVisibility()) return false;
   /* Gizli öğenin çizim kutusu yoktur; focus() çağrısı sessizce düşer. */
   return oge.getClientRects().length > 0;
 }

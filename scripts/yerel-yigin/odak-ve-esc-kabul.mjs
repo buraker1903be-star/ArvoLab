@@ -105,6 +105,12 @@ const git = async (s, yol) => {
   await s.goto(`${UYG}${yol}`, { waitUntil: "domcontentloaded" });
   await s.waitForLoadState("networkidle").catch(() => {});
 };
+/* Ayarlar 24.11.2026'dan beri sekmeli: satırlar ilgili sekmenin
+   içinde. Sayfa hâlinde de pencerede de aynı şerit. */
+const ayarSekmesi = async (s, ad) => {
+  await s.locator(".ayarlar-sekme", { hasText: new RegExp(`^${ad}$`) }).first().click();
+  await s.waitForTimeout(250);
+};
 const pencereBekle = async (s, sayi = 1) => {
   await s.waitForFunction((n) => document.querySelectorAll(".drawer-root.open").length === n, sayi, { timeout: 20000 });
   await s.waitForTimeout(350);
@@ -171,6 +177,7 @@ for (const [EKRAN, YUK] of [[1440, 900], [390, 844]]) {
   /* ---- B2 · Tetiksiz onay penceresi (ActionForm) ---- */
   await git(s, "/dashboard/settings");
   try {
+    await ayarSekmesi(s, "Güvenlik");
     await s.locator('li.ayar-satir:has(b:text-is("Diğer cihazlar"))').locator("button").first().click();
     await pencereBekle(s);
     await s.keyboard.press("Escape");
@@ -217,8 +224,14 @@ for (const [EKRAN, YUK] of [[1440, 900], [390, 844]]) {
 
   /* ---- R · Regresyon: odak iadesi zaten çalışan yedi PanelDrawer ---- */
   const REGRESYON = [
-    ["Hesabımı sil", "/dashboard/settings", async (p) => p.locator('li.ayar-satir:has(b:text-is("Hesabımı sil"))').locator("button").first().click()],
-    ["Şifre değiştirme", "/dashboard/settings", async (p) => p.locator('li.ayar-satir:has(b:text-is("Şifre"))').locator("button").first().click()],
+    ["Hesabımı sil", "/dashboard/settings", async (p) => {
+      await ayarSekmesi(p, "Veriler");
+      await p.locator('li.ayar-satir:has(b:text-is("Hesabımı sil"))').locator("button").first().click();
+    }],
+    ["Şifre değiştirme", "/dashboard/settings", async (p) => {
+      await ayarSekmesi(p, "Güvenlik");
+      await p.locator('li.ayar-satir:has(b:text-is("Şifre"))').locator("button").first().click();
+    }],
     ["Kaynak dışa aktarma", `/dashboard/literature?calisma=${PROJE}`, async (p) => p.locator("button", { hasText: /Dışa aktar/ }).first().click()],
     ["Kaynakça denetimi", `/dashboard/literature?calisma=${PROJE}&sekme=kaynakca`, async (p) => p.locator(".kaynakca-serit-eylem").first().click()],
     ["Belge yükle", `/dashboard/documents?calisma=${PROJE}`, async (p) => p.locator("button", { hasText: /Belge yükle/ }).first().click()],

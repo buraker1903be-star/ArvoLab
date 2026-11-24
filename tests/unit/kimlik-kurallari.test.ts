@@ -155,7 +155,9 @@ test("sunucu, form ve metinler aynı kuralı kullanır; elle yazılmış sayı y
   assert.match(form, /sifreKuraliHatasi\(kutu\.value\)/);
   assert.match(form, /setCustomValidity/);
 
-  for (const yol of ["app/reset-password/page.tsx", "app/dashboard/settings/page.tsx"]) {
+  /* Ayarlar ekranı 24.11.2026'da pencereye taşındı; şifre satırı artık
+     ortak içerik bileşeninde. Sözleşme değişmedi: aynı kural, aynı form. */
+  for (const yol of ["app/reset-password/page.tsx", "app/dashboard/_components/ayarlar-icerik.tsx"]) {
     const kaynak = oku(yol);
     assert.doesNotMatch(kaynak, /\b(8|12|64) karakter|\b(8|12|64) characters/, yol);
     assert.match(kaynak, /\$\{EN_KISA_SIFRE\}–\$\{EN_UZUN_SIFRE\}/, yol);
@@ -365,8 +367,9 @@ test("üç ekran da aynı şifre kuralından geçer: ilk şifre, kurtarma, Ayarl
   assert.match(sifirlama, /<PasswordForm action=\{resetPassword\} variant="login"/);
   assert.equal((sifirlama.match(/<PasswordForm /g) ?? []).length, 1);
   assert.doesNotMatch(sifirlama, /type="password"/);
-  // Ayarlar: tek şifre formu, sunucu işlemi changePassword.
-  const ayarlar = oku("app/dashboard/settings/page.tsx");
+  // Ayarlar: tek şifre formu, sunucu işlemi changePassword. Ekran
+  // 24.11.2026'da pencereye taşındı; form ortak içerik bileşeninde.
+  const ayarlar = oku("app/dashboard/_components/ayarlar-icerik.tsx");
   assert.match(ayarlar, /<PasswordForm action=\{changePassword\} variant="panel"/);
   assert.equal((ayarlar.match(/<PasswordForm /g) ?? []).length, 1);
   assert.doesNotMatch(ayarlar, /type="password"/);
