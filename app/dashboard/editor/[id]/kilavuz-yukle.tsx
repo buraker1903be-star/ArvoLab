@@ -8,6 +8,7 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import { kilavuzuKaydet, kilavuzuTara, type TaramaSonucu } from "@/app/actions/calisma-kilavuzu";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { dogrulamaMesaji, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
+import { stilAdiMetni } from "@/lib/atif/stiller";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 /*
@@ -204,6 +205,122 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             üstteki uyarı satırında "(+N not)" arkasında kalıyordu ve
             "Kurallarımı uygula" hata veriyordu (02.11.2026).
           */}
+          {/*
+            DAYANAK (23.11.2026): stilin kılavuzun HANGİ cümlesinden
+            okunduğu. Eskiden yalnızca adı yazıyordu; öğrenci doğrulamak
+            için kılavuzu açmak zorundaydı ve çoğu açmıyordu. Alıntı
+            bulunamazsa hiçbir şey yazılmıyor — uydurma alıntı,
+            alıntısızlıktan kötüdür.
+          */}
+          {sonuc?.stilDayanagi ? (
+            <small className="kilavuz-dayanak">
+              {sonuc.stilDayanagi.bolum || sonuc.stilDayanagi.sayfa
+                ? t({
+                    tr: `Kılavuzda ${[sonuc.stilDayanagi.bolum && `“${sonuc.stilDayanagi.bolum}” bölümünde`, sonuc.stilDayanagi.sayfa && `${sonuc.stilDayanagi.sayfa}. sayfada`].filter(Boolean).join(", ")}: `,
+                    en: `In the guideline${[sonuc.stilDayanagi.bolum && `, section “${sonuc.stilDayanagi.bolum}”`, sonuc.stilDayanagi.sayfa && `, page ${sonuc.stilDayanagi.sayfa}`].filter(Boolean).join("")}: `,
+                  })
+                : t({ tr: "Kılavuzda: ", en: "In the guideline: " })}
+              <q>{sonuc.stilDayanagi.alinti}</q>
+            </small>
+          ) : null}
+
+          {/*
+            ÇELİŞKİ: kılavuz BİRDEN ÇOK sistem söylüyor ve hangisinin
+            geçerli olduğu PROGRAMA bağlı. Üç şey ayrı ayrı yazılıyor:
+            çalışmanın şu anki stili, kılavuzun hangi program için neyi
+            önerdiği ve her birinin kılavuzdaki cümlesi. Seçim yapılmadan
+            kutudaki değer DEĞİŞMİYOR — "Kurallarımı uygula" o zaman
+            çalışmanın kendi stilini yeniden yazar, yani stil değişmez.
+
+            Eskiden burada "Kılavuz bir kaynakça sistemi belirtmiyor"
+            yazıyor ve bir varsayılan seçili geliyordu: kılavuz açıkça iki
+            sistem söylerken yanlış bir cümle ve öğrencinin hiç seçmediği
+            bir stil.
+          */}
+          {sonuc?.stilAdaylari?.length ? (
+            <div className="kilavuz-celiski">
+              {sonuc.calismaStili ? (
+                <p className="kilavuz-celiski-mevcut">
+                  {t({
+                    tr: `Çalışmanız şu anda ${t(stilAdiMetni(sonuc.calismaStili))} kullanıyor.`,
+                    en: `Your work currently uses ${t(stilAdiMetni(sonuc.calismaStili))}.`,
+                  })}
+                </p>
+              ) : null}
+              <strong>
+                {t({
+                  tr: `Kılavuz ${sonuc.stilAdaylari.map((a) => `${a.dayanak?.kapsam ?? t({ tr: "bir bölüm", en: "one section" })} için ${a.etiket}`).join(", ")} öneriyor.`,
+                  en: `The guideline recommends ${sonuc.stilAdaylari.map((a) => `${a.etiket} for ${a.dayanak?.kapsam ?? "one section"}`).join(", ")}.`,
+                })}
+              </strong>
+              <p className="muted text-sm">
+                {t({
+                  tr: "Programınıza uygun stili seçebilir ya da mevcut stilinizle devam edebilirsiniz; seçmezseniz çalışmanızın stili değişmez.",
+                  en: "You can pick the style that matches your programme or carry on with your current one; if you don't pick, your work's style stays as it is.",
+                })}
+              </p>
+              <ul>
+                {sonuc.stilAdaylari.map((aday) => (
+                  <li key={aday.sistem}>
+                    <button
+                      type="button"
+                      className={form.atifStili === aday.sistem ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
+                      onClick={() => {
+                        setStilEksik(false);
+                        setForm({ ...form, atifStili: aday.sistem });
+                      }}
+                    >
+                      {aday.dayanak?.kapsam
+                        ? t({ tr: `${aday.dayanak.kapsam}: ${aday.etiket}`, en: `${aday.dayanak.kapsam}: ${aday.etiket}` })
+                        : aday.etiket}
+                    </button>
+                    {aday.dayanak ? (
+                      <small>
+                        {aday.dayanak.bolum ? t({ tr: `“${aday.dayanak.bolum}” bölümü: `, en: `Section “${aday.dayanak.bolum}”: ` }) : ""}
+                        <q>{aday.dayanak.alinti}</q>
+                      </small>
+                    ) : (
+                      <small className="muted">
+                        {t({ tr: `Kılavuzda ${aday.sayim} kez geçiyor; kuralı söyleyen cümlesini bulamadım.`, en: `Mentioned ${aday.sayim} times in the guideline; I couldn't find the sentence that states the rule.` })}
+                      </small>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/*
+            KILAVUZDA YAZAN İFADE ile SEÇİLİ SÜRÜM ayrı satırlarda.
+            Kılavuz yalnızca "APA" diyorsa ürün bunu "APA 7" diye
+            kesinleştiremez: 6. baskıyı kastediyor olabilir ve söylemediği
+            bir şeyi söylemiş gibi göstermek öğrenciyi yanlış sürüme
+            bağlar. Saklanan değer yine katalog kimliği — denetim bir
+            kurallar kümesi olmadan çalışamaz — ama fark söyleniyor.
+          */}
+          {sonuc?.kilavuzIfadesi && form.atifStili && sonuc.kilavuzIfadesi !== t(stilAdiMetni(form.atifStili)) ? (
+            <small className="kilavuz-ifade">
+              {t({
+                tr: `Kılavuzda yazan ifade: “${sonuc.kilavuzIfadesi}”. Seçili sürüm: ${t(stilAdiMetni(form.atifStili))}${sonuc.calismaStili ? ` (çalışmanızda kayıtlı: ${t(stilAdiMetni(sonuc.calismaStili))})` : ""}. Kılavuzunuz başka bir sürümü işaret ediyorsa yukarıdan değiştirin.`,
+                en: `The guideline says “${sonuc.kilavuzIfadesi}”. Selected edition: ${t(stilAdiMetni(form.atifStili))}${sonuc.calismaStili ? ` (saved in your work: ${t(stilAdiMetni(sonuc.calismaStili))})` : ""}. If your guideline points to another edition, change it above.`,
+              })}
+            </small>
+          ) : null}
+
+          {/*
+            İLK GÖNDERİMDE SERBEST BİÇİM: kılavuz bir stil adı geçirse de
+            ilk gönderimde biçim serbestse, o adı zorunluymuş gibi
+            göstermek yanlış alarmdır.
+          */}
+          {sonuc?.serbestBicim ? (
+            <small className="kilavuz-serbest">
+              {t({
+                tr: "Kılavuzunuz ilk gönderimde serbest biçime izin veriyor; aşağıdaki stil zorunlu değil, denetim için kullanılır. Kabulden sonra istenen stile geçebilirsiniz.",
+                en: "Your guideline allows a free format for the first submission; the style below isn't mandatory, it's used for checking. You can switch to the required style after acceptance.",
+              })}
+            </small>
+          ) : null}
+
           {stilUyarisi ? (
             <small>{stilUyarisi}</small>
           ) : !sonuc?.form?.atifStili ? (

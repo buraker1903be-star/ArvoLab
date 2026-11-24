@@ -11,7 +11,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
   arıyordu. Yükleme artık kartın üstünde; bitince sonuçların okunduğu
   Belge Kontrol'e geçilir (o çalışma seçili).
 */
-export default function BelgeYuklePenceresi({ calisma }: { calisma: { id: string; title: string; university: string | null } }) {
+export default function BelgeYuklePenceresi({ calisma }: { calisma: { id: string; title: string; university: string | null; citation_style?: string | null } }) {
   const t = useCeviri();
   return (
     <PanelDrawer

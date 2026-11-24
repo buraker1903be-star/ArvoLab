@@ -39,6 +39,16 @@ export type AtifSecimi = {
   sistem: AtifSistemi;
   /** Panelde gösterilen ad. */
   etiket: string;
+  /*
+    KILAVUZDA GEÇEN İFADE, olduğu gibi ("APA", "APA 6", "Vancouver").
+    Etiket katalogdaki addır ("APA 7") ve ikisi aynı şey değil: kılavuz
+    yalnızca "APA" diyorsa ürün bunu "APA 7" diye KESİNLEŞTİREMEZ —
+    kılavuz 6. baskıyı da kastediyor olabilir, söylemediği bir şeyi
+    söylemiş gibi göstermek öğrenciyi yanlış sürüme bağlar. Ekran ikisini
+    ayrı yazıyor; saklanan değer yine katalog kimliğidir, çünkü denetim
+    bir kurallar kümesi olmadan çalışamaz.
+  */
+  kilavuzIfadesi: string;
   sayim: number;
   /** İkinci sıradaki sistemin geçiş sayısı; kararın ne kadar net olduğunu gösterir. */
   ikinciSayim: number;
@@ -63,6 +73,31 @@ const EN_AZ_GECIS = 3;
 const BASKINLIK = 2;
 
 const say = (metin: string, desen: RegExp) => metin.match(desen)?.length ?? 0;
+
+/*
+  Sürüm numarası ADIN YANINDA yazılıysa ifadeye katılıyor ("APA 6",
+  "MLA 8"). Sürümü olmayan geçiş olduğu gibi kalır ("APA"): eksik olanı
+  tamamlamak, kılavuzun söylemediğini söyletmektir.
+*/
+const SURUMLU: Partial<Record<AtifSistemi, RegExp>> = {
+  apa7: /\bapa\s*-?\s*(\d{1,2})\b/i,
+  mla: /\bmla\s*-?\s*(\d{1,2})\b/i,
+  chicago: /\bchicago\s*-?\s*(\d{1,2})\b/i,
+};
+
+/** Kılavuzda geçen ifadeyi olduğu gibi okur; bulunamazsa katalog etiketi. */
+export function kilavuzIfadesi(metin: string, sistem: AtifSistemi, etiket: string): string {
+  const surumlu = SURUMLU[sistem]?.exec(metin);
+  if (surumlu) {
+    /* "apa-7", "APA  7" → "APA 7": ayraç normalleşir, SÜRÜM değişmez. */
+    const ad = surumlu[0].replace(/[\s-]+/g, " ").trim();
+    const [tur, surum] = ad.split(" ");
+    return `${tur.toLowerCase() === "chicago" ? "Chicago" : tur.toUpperCase()} ${surum}`;
+  }
+  const desen = DESENLER.find((d) => d.sistem === sistem)?.desen;
+  const duz = desen ? new RegExp(desen.source, "i").exec(metin) : null;
+  return duz ? duz[0].trim() : etiket;
+}
 
 /**
  * Kılavuz metninden atıf sistemini seçer; net bir kazanan yoksa null.
@@ -115,7 +150,14 @@ export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | nul
     );
   }
 
-  return { sistem: kazanan.sistem, etiket: kazanan.etiket, sayim: kazanan.sayim, ikinciSayim, uyarilar };
+  return {
+    sistem: kazanan.sistem,
+    etiket: kazanan.etiket,
+    kilavuzIfadesi: kilavuzIfadesi(metin, kazanan.sistem, kazanan.etiket),
+    sayim: kazanan.sayim,
+    ikinciSayim,
+    uyarilar,
+  };
 }
 
 /*
@@ -132,6 +174,38 @@ export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | nul
   yanlış sistem hiç sistem olmamasından kötü (dosya başındaki not). Kılavuzun
   ne dediği söylenir, seçim öğrencide kalır.
 */
+/*
+  İLK GÖNDERİMDE SERBEST BİÇİM (23.11.2026).
+
+  Dergi yazar rehberlerinin ve bazı enstitü kılavuzlarının yaygın kuralı:
+  ilk gönderimde biçim serbest, kabul sonrası derginin stiline çevriliyor
+  ("format-free submission"). Bu kılavuzlarda metin bir stil ADI da
+  geçirir (kabul sonrası için) ve çıkarım onu "zorunlu stil" sanıyordu:
+  öğrenci daha ilk taslağında, aslında serbest olan bir şey için
+  "çalışmanız kılavuza uymuyor" uyarısı alıyordu. Yanlış alarm,
+  kaçırılan kuraldan sinsidir — kullanıcı bir süre sonra bütün
+  uyarıları görmezden gelmeyi öğrenir.
+
+  Ölçüt dar tutuldu: hem SERBESTLİĞİ hem İLK GÖNDERİMİ söyleyen bir
+  cümle aranıyor. Yalnızca "serbest" geçen bir cümle (ör. "serbest
+  kürsü") kuralı değiştirmemeli.
+*/
+const SERBEST = /(serbest\s*bi[çc]im|bi[çc]im(?:i)?\s+serbest|format[-\s]?free|herhangi\s+bir\s+(?:atıf|kaynak\s*g[öo]sterme|referans)\s+(?:sistemi|bi[çc]imi)|any\s+(?:citation|reference)\s+(?:style|format))/iu;
+const ILK_GONDERIM = /(ilk\s+(?:g[öo]nderim|teslim|ba[şs]vuru|sunum)|initial\s+submission|first\s+submission|at\s+submission|submission\s+stage)/iu;
+
+/**
+ * Kılavuz İLK GÖNDERİMDE serbest biçime izin veriyor mu.
+ *
+ * İki işaret de AYNI cümlede aranıyor: "Tezler ilk gönderimde serbest
+ * biçimde hazırlanabilir." evet; "Biçim serbesttir." ile başka bir
+ * yerdeki "ilk gönderim" cümlesi hayır.
+ */
+export function ilkGonderimdeSerbestMi(metin: string): boolean {
+  return (metin || "")
+    .split(/[.!?\n]+/)
+    .some((cumle) => SERBEST.test(cumle) && ILK_GONDERIM.test(cumle));
+}
+
 export type AtifYontemleri = { dipnot: boolean; metinIci: boolean };
 
 export function atifYontemleri(metin: string): AtifYontemleri {

@@ -7,7 +7,8 @@ import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { atifYontemleri, otomatikAtifSistemi } from "@/lib/atif-sistemi";
+import { atifSistemiSec, atifYontemleri, ilkGonderimdeSerbestMi, otomatikAtifSistemi } from "@/lib/atif-sistemi";
+import { celiskiliAdaylar, stilDayanagi, type StilDayanagi } from "@/lib/kilavuz-stil-dayanagi";
 import { stilAdi } from "@/lib/atif/stiller";
 import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
@@ -93,6 +94,34 @@ export interface TaramaSonucu {
   uyarilar?: string[];
   /** Atıf yönteminin neden öğrenciye bırakıldığı; seçim kutusunun altında gösterilir. */
   atifUyarisi?: string | null;
+  /*
+    STİLİN DAYANAĞI (23.11.2026): kılavuzun hangi cümlesinden okundu.
+    Eskiden yalnızca adı yazıyordu ve öğrenci doğrulamak için kılavuzu
+    açmak zorundaydı; çoğu açmıyor, yanlış bir çıkarım sessizce
+    çalışmaya yerleşiyordu. Bulunamazsa null — alıntı uydurulmaz.
+  */
+  stilDayanagi?: StilDayanagi | null;
+  /*
+    ÇELİŞKİ: iki sistem birden geçiyor ve biri ötekini açık ara
+    geçmiyorsa karar öğrencinin. Adaylar kendi cümleleriyle geliyor:
+    soruyu cevaplanabilir kılan tek şey o.
+  */
+  stilAdaylari?: { sistem: string; etiket: string; sayim: number; dayanak: StilDayanagi | null }[];
+  /** Çalışmanın ŞU ANKİ stili; ekran onu ayrı bir cümleyle söylüyor. */
+  calismaStili?: string | null;
+  /*
+    Kılavuzda GEÇEN ifade, olduğu gibi ("APA", "APA 6"). Katalog
+    etiketinden ("APA 7") ayrı tutuluyor: kılavuz yalnızca "APA" diyorsa
+    ürün bunu 7. baskı diye kesinleştiremez. Ekran ikisini ayrı yazıyor.
+  */
+  kilavuzIfadesi?: string | null;
+  /*
+    Kılavuz ilk gönderimde serbest biçime izin veriyor mu
+    (lib/atif-sistemi.ts). Veriyorsa ekran "şu stil zorunlu" demiyor:
+    öğrenci daha ilk taslağında, aslında serbest olan bir şey için
+    uyarı almamalı.
+  */
+  serbestBicim?: boolean;
   /*
     Onaylatılmayan ama UYGULANACAK biçim kuralları, okunur cümleler
     hâlinde. Düzenlenmiyor, söyleniyor: on alanlık bir form okunmadan
@@ -235,8 +264,25 @@ export async function kilavuzuTara(
       kılavuzun yöntemiyle uyuşuyorsa korunur. Eskiden boş geliyordu ve
       "Kurallarımı uygula" hata veriyordu (02.11.2026).
     */
+    /*
+      ÇELİŞKİ ÖNCE SORULUR (23.11.2026). Kılavuzda iki sistem birden
+      geçip biri ötekini açık ara geçmiyorsa (atifSistemiSec null) artık
+      BİR STİL TAHMİN EDİLMİYOR. Eskiden otomatikAtifSistemi bir
+      varsayılan seçiyor, form onu seçili getiriyordu: öğrenci
+      "Kurallarımı uygula"ya bastığında, hiç seçmediği bir stil
+      çalışmasına yazılabiliyordu. Artık kutuda çalışmanın KENDİ stili
+      duruyor; adaylar kapsamları ve kılavuzdaki cümleleriyle ayrıca
+      soruluyor, seçim olmadan hiçbir şey değişmiyor.
+    */
+    const adaylar = atifSistemiSec(tarama.metin, dil) ? [] : celiskiliAdaylar(tarama.metin, sonuc.citationMentions ?? []);
+    const celiskiVar = adaylar.length >= 2;
+    const serbestBicim = ilkGonderimdeSerbestMi(tarama.metin);
+    if (celiskiVar && !sonuc.detectedCitationStyle) {
+      sonuc = { ...sonuc, detectedCitationStyle: (calisma.citation_style as AtifSistemi | null) ?? null };
+    }
+
     let atifNotu: string | null = null;
-    if (!sonuc.detectedCitationStyle) {
+    if (!sonuc.detectedCitationStyle && !celiskiVar) {
       const yontem = atifYontemleri(tarama.metin);
       const secim = otomatikAtifSistemi(yontem, calisma.citation_style as string | null);
       sonuc = { ...sonuc, detectedCitationStyle: secim.sistem };
@@ -296,7 +342,24 @@ export async function kilavuzuTara(
       ],
       /* Ayrı alan: eskiden genel uyarı satırında "(+3 not)" arkasında
          kalıyordu ve kutunun yanında yalnızca "bulamadım" yazıyordu. */
-      atifUyarisi: atifNotu,
+      /*
+        ÇELİŞKİDE PUŞKU NOT YOK: "Kılavuz bir kaynakça sistemi
+        belirtmiyor" cümlesi, kılavuz AÇIKÇA iki sistem söylerken
+        yanlıştı — belirtiyor, yalnızca programa göre.
+      */
+      atifUyarisi: celiskiVar ? null : atifNotu,
+      stilDayanagi: celiskiVar ? null : stilDayanagi(tarama.metin, sonuc.detectedCitationStyle),
+      /*
+        Adaylar YALNIZCA karar verilemediğinde: tek kazanan varken ikinci
+        bir seçenek göstermek, net bir çıkarımı tartışmalı gibi
+        gösterirdi. atifSistemiSec'in ölçütü (sayım ve baskınlık)
+        burada da geçerli.
+      */
+      stilAdaylari: celiskiVar ? adaylar : undefined,
+      /* Ekran "Çalışmanız şu anda X kullanıyor" diyebilsin. */
+      calismaStili: (calisma.citation_style as string | null) ?? null,
+      kilavuzIfadesi: atifSistemiSec(tarama.metin, dil)?.kilavuzIfadesi ?? null,
+      serbestBicim,
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
       kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],
       okuyan: yz.okuma ? "yapay-zeka" : "kalip",

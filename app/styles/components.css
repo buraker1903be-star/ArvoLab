@@ -2026,6 +2026,24 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 /* Bölümler etiket olarak: çıkarımın bulduğu on beş bölümü elle
    yeniden yazmak kimsenin işi değil, silmek bir tık. */
 .kilavuz-etiketler { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/*
+  STİLİN DAYANAĞI VE ÇELİŞKİ SORUSU (23.11.2026). Alıntı kılavuzdan
+  birebir geliyor; tırnakla ve soluk tonla, öğrencinin kendi yazdığı
+  değerlerden ayrılsın diye.
+*/
+.kilavuz-dayanak { display: block; margin-top: 4px; color: var(--ink-soft); }
+.kilavuz-dayanak q { color: var(--ink); font-style: italic; }
+.kilavuz-celiski { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border-left: 3px solid var(--warning); border-radius: var(--r-sm); background: var(--surface-2); }
+.kilavuz-celiski > strong { font-size: var(--fs-sm); }
+.kilavuz-celiski ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.kilavuz-celiski li { display: grid; gap: 2px; justify-items: start; font-size: var(--fs-sm); }
+.kilavuz-celiski q { color: var(--ink); font-style: italic; }
+.kilavuz-celiski-mevcut { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 650; }
+/* Kılavuzun ifadesi ile seçili sürüm farkı: bilgi satırı. */
+.kilavuz-ifade { display: block; margin-top: 4px; color: var(--ink-soft); }
+/* İlk gönderimde serbest biçim notu: uyarı değil bilgi, bu yüzden nötr. */
+.kilavuz-serbest { display: block; margin-top: 4px; color: var(--ink-soft); }
 .kilavuz-etiketler .chip { display: inline-flex; align-items: center; gap: 4px; }
 .kilavuz-etiketler .chip button {
   display: inline-flex; padding: 0; border: 0; background: none;

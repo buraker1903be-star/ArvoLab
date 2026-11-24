@@ -8,6 +8,7 @@ import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
 import { onSayfaDugumleri, onSayfaYerlesimi, taslakDugumleri, type OnSayfaKimligi, type OnSayfaVerisi } from "@/lib/on-sayfalar";
 import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
+import { kunyeAnahtari } from "@/lib/kaynak-pdf";
 import type { Dil } from "@/lib/dil";
 import { indentCmOf, type ParagraphFormatRules, hangingIndentCmOf } from "@/lib/paragraph-format";
 
@@ -389,6 +390,93 @@ export function kaynakcaGirdisiIslemi(
     else tr.insert(current.end, paragraph);
   }
   return true;
+}
+
+/*
+  HAZIR KAYNAKÇA DÜZELTMELERİNİ UYGULAMA (23.11.2026).
+
+  Düzeltmeler lib/atif/hazir-duzeltme.ts'te üretiliyor ("şu satır şu hâle
+  gelir"); buradaki iş yalnızca belgeye yazmak. Üç kural:
+
+  - TEK İŞLEM, TEK GERİ ALMA. Altı künye düzeltilince Ctrl+Z altısını
+    birden kaldırır. Satır satır uygulamak, öğrenciyi altı kez geri
+    almaya zorlardı ve yarısı uygulanmış bir kaynakça bırakabilirdi.
+  - SATIR EŞLEŞMESİ METNİN KENDİSİNDEN. Konum (indeks) güvenilmez:
+    denetimden sonra öğrenci kaynakça ekleyip silmiş olabilir. Künye
+    anahtarı (kunyeAnahtari) ile eşleşen paragraf değiştirilir; eşleşmeyen
+    düzeltme ATLANIR ve sayıya girmez — bulunamayan satırı "uygulandı"
+    saymak, yapılmamış bir değişikliği bildirmek olurdu.
+  - BİÇİM YAZILMAZ, METİN YAZILIR. Künyenin italik parçaları çağıranda
+    hazırlanıp `parcalar` olarak verilir (kaynakçanın asılı girintisi
+    paragrafın kendi özniteliği; dokunulmuyor).
+*/
+export type KaynakcaDuzeltmesi = { anahtar: string; parcalar: Parca[] };
+
+/**
+ * Düzeltmeleri VERİLEN işlemde uygular; değişen satır sayısını döner.
+ * İşlem tabanlı olması test edilebilmesi için de gerekli: tarayıcı
+ * olmadan gerçek bir ProseMirror belgesi üzerinde çalıştırılabiliyor
+ * (tests/editor/kaynakca-duzeltme.test.ts).
+ */
+export function kaynakcaDuzeltmeIslemi(tr: Transaction, duzeltmeler: KaynakcaDuzeltmesi[]): number {
+  if (!duzeltmeler.length) return 0;
+  const bolum = findReferencesSection(tr.doc);
+  if (!bolum) return 0;
+  const hedefler = new Map(duzeltmeler.map((d) => [d.anahtar, d.parcalar]));
+  /*
+    Paragraflar SONDAN başa değiştiriliyor: baştan gidince ilk değişiklik
+    sonraki paragrafların konumunu kaydırıyor ve ikinci replaceWith
+    yanlış yere düşüyordu.
+  */
+  const sirali = [...bolum.paragraphs].sort((a, b) => b.pos - a.pos);
+  const schema = tr.doc.type.schema;
+  let uygulanan = 0;
+  for (const { pos, node } of sirali) {
+    const metin = node.textContent.trim();
+    if (!metin) continue;
+    const parcalar = hedefler.get(kunyeAnahtari(metin));
+    if (!parcalar) continue;
+    const paragraf = schema.nodeFromJSON({
+      type: "paragraph",
+      /* Asılı girinti gibi öznitelikler korunuyor: biçim kuralı künyenin
+         içeriğiyle değil paragrafla taşınıyor (lib/tiptap-paragraph-formatting.ts). */
+      attrs: node.attrs,
+      content: metinDugumleri(parcalar),
+    });
+    tr.replaceWith(pos, pos + node.nodeSize, paragraf);
+    uygulanan += 1;
+  }
+  return uygulanan;
+}
+
+/**
+ * Denetimde eksik çıkan kaynakların künyelerini Kaynakça'ya yazar.
+ *
+ * Atıf eklerken kullanılan AYNI yol (kaynakcaGirdisiIslemi): biçim
+ * çalışmanın stilinde, numara stillerinde sıra numarası kaynakçadan,
+ * ve zaten duran kaynak YENİDEN EKLENMEZ (atifSirasi existingIndex).
+ * İkinci bir kopya yazmak, kaynakçayı sessizce bozar ve öğrenci bunu
+ * ancak teslimde fark ederdi.
+ *
+ * Hepsi tek işlemde: tek geri alma adımı.
+ */
+export function kaynaklariKaynakcayaEkle(editor: Editor, kaynaklar: CitableSource[], style: CitationStyle, secenek: { dil?: Dil; erisimTarihi?: string | null } = {}): number {
+  if (!kaynaklar.length) return 0;
+  const tr = editor.state.tr;
+  let eklenen = 0;
+  for (const kaynak of kaynaklar) {
+    if (kaynakcaGirdisiIslemi(tr, kaynak, style, { dil: secenek.dil, erisimTarihi: secenek.erisimTarihi })) eklenen += 1;
+  }
+  if (eklenen) editor.view.dispatch(tr);
+  return eklenen;
+}
+
+/** Editördeki kısayol: tek işlem, tek geri alma adımı. */
+export function kaynakcaDuzeltmeleriniUygula(editor: Editor, duzeltmeler: KaynakcaDuzeltmesi[]): number {
+  const tr = editor.state.tr;
+  const uygulanan = kaynakcaDuzeltmeIslemi(tr, duzeltmeler);
+  if (uygulanan) editor.view.dispatch(tr);
+  return uygulanan;
 }
 
 /*

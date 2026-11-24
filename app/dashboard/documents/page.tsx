@@ -18,6 +18,9 @@ import { BOS_METIN_MESAJI_METIN, KISMI_METIN_UYARISI_METIN, sayfaDenetimi, surum
 import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import DocumentUploadForm from "./document-upload-form";
+import DenetlenenStil from "@/app/dashboard/citations/denetlenen-stil";
+import type { KapsamAnahtari, KapsamSatiri } from "@/lib/atif/denetim-kapsami";
+import { stilAdiMetni } from "@/lib/atif/stiller";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
@@ -68,6 +71,15 @@ const CIKARMA_HATASI: Metin = {
   en: "An error occurred while extracting text from the file.",
 };
 const bilinenMetin = (kayitli: string, adaylar: Metin[]) => adaylar.find((m) => m.tr === kayitli || m.en === kayitli) ?? null;
+
+/*
+  Bir kontrol bu denetimde gerçekten uygulandı mı. Kapsam bilgisi
+  olmayan (23.11.2026 öncesi) kayıtlarda satır eskisi gibi çiziliyor:
+  o kayıtlar için neyin ölçüldüğü bilinmiyor ve geriye dönük bir hüküm
+  üretmek, olmayan bir bilgiyi uydurmak olurdu.
+*/
+const olculduMu = (kapsam: KapsamSatiri[] | null | undefined, anahtar: KapsamAnahtari) =>
+  !kapsam ? true : kapsam.find((x) => x.anahtar === anahtar)?.durum !== "uygulanamadi";
 
 const puanTonu = (puan: number | null | undefined) =>
   puan == null ? "neutral" : puan >= 85 ? "success" : puan >= 60 ? "warning" : "danger";
@@ -201,10 +213,37 @@ export default async function DocumentsPage({
               </>
             ) : null}
 
+            {/*
+              DENETLENEN STİL VE KAPSAM (23.11.2026). Puanın hemen üstünde:
+              eskiden bu akış kaynakçayı her zaman APA sanıyordu ve puan
+              hangi stile göre verildiğini söylemiyordu. Eski kayıtlarda
+              stil yok — "APA" varsayılmıyor, bilinmediği yazılıyor.
+            */}
+            <DenetlenenStil
+              stil={a.denetlenenStil ? { id: a.denetlenenStil, ad: stilAdiMetni(a.denetlenenStil).tr, adEn: stilAdiMetni(a.denetlenenStil).en } : null}
+              kapsam={a.kapsam ?? null}
+              olasiStil={a.olasiStil ?? null}
+            />
             {a.referenceSectionFound ? (
               <div className="kaynakca-puan" data-tone={puanTonu(a.complianceScore)}>
                 <b>{a.complianceScore ?? "—"}</b>
-                <span>{t({ tr: "/100 kaynakça uyumu", en: "/100 reference list compliance" })}</span>
+                <span>
+                  {t({ tr: "/100 kaynakça uyumu", en: "/100 reference list compliance" })}
+                  {/*
+                    Puan yalnızca UYGULANABİLEN kontrollerden geliyor.
+                    Kısmi kapsamda 100 yazmak, bakılmamış alanları da
+                    temiz göstermek olurdu; üstteki kutu neyin
+                    uygulanamadığını sebebiyle yazıyor.
+                  */}
+                  {(a.kapsam ?? []).some((x) => x.durum === "uygulanamadi") ? (
+                    <small className="muted">
+                      {t({
+                        tr: " — yalnızca uygulanabilen kontrollerden",
+                        en: " — from the applicable checks only",
+                      })}
+                    </small>
+                  ) : null}
+                </span>
               </div>
             ) : (
               <p className="tone-text text-sm" data-tone="warning">
@@ -278,17 +317,38 @@ export default async function DocumentsPage({
               <>
                 <h4 className="calisma-durum-alt">{t({ tr: "Kaynakça", en: "Reference list" })}</h4>
                 <ul className="gb-liste">
+                  {/*
+                    ÖLÇÜLMEYEN KATEGORİ "YOK" DEMEZ (23.11.2026). Künye
+                    biçimi CSL stillerinde hiç denetlenmiyor; satır yine de
+                    yeşil "Yok" yazıyordu — yapılmamış denetim temiz rapor
+                    gibi görünüyordu. Kapsam (lib/atif/denetim-kapsami.ts)
+                    uygulanamadı diyorsa satır nötr "bakılmadı" yazar.
+                  */}
                   {[
-                    { ad: t({ tr: "Biçim sorunu olan künye", en: "References with formatting issues" }), sayi: sorunluKunyeler.length },
-                    { ad: t({ tr: "Metinde atfı olmayan kaynak", en: "Sources not cited in the text" }), sayi: a.crossCheck.referencesWithoutCitation.length },
-                    { ad: t({ tr: "Kaynakçada karşılığı olmayan atıf", en: "Citations missing from the reference list" }), sayi: a.crossCheck.citationsWithoutReference.length },
+                    {
+                      ad: t({ tr: "Biçim sorunu olan künye", en: "References with formatting issues" }),
+                      sayi: sorunluKunyeler.length,
+                      olculdu: olculduMu(a.kapsam, "yazarBicimi"),
+                    },
+                    {
+                      ad: t({ tr: "Metinde atfı olmayan kaynak", en: "Sources not cited in the text" }),
+                      sayi: a.crossCheck.referencesWithoutCitation.length,
+                      olculdu: olculduMu(a.kapsam, "atifEslesmesi"),
+                    },
+                    {
+                      ad: t({ tr: "Kaynakçada karşılığı olmayan atıf", en: "Citations missing from the reference list" }),
+                      sayi: a.crossCheck.citationsWithoutReference.length,
+                      olculdu: olculduMu(a.kapsam, "atifEslesmesi"),
+                    },
                   ].map((satir) => (
                     <li key={satir.ad} className="gb-satir">
                       <span className="gb-satir-govde">
                         <b>{satir.ad}</b>
                       </span>
-                      <span className="status-pill" data-tone={satir.sayi ? "warning" : "success"}>
-                        {satir.sayi || t({ tr: "Yok", en: "None" })}
+                      <span className="status-pill" data-tone={!satir.olculdu ? "neutral" : satir.sayi ? "warning" : "success"}>
+                        {!satir.olculdu
+                          ? t({ tr: "bakılmadı", en: "not checked" })
+                          : satir.sayi || t({ tr: "Yok", en: "None" })}
                       </span>
                     </li>
                   ))}

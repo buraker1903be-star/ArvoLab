@@ -14,6 +14,8 @@ import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { kalibaUymayanlar, ornekKalibi, yilsizAtiflar, type TykBulgusu } from "@/lib/atif/tyk";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
+import { denetimKapsami, type KapsamSatiri } from "@/lib/atif/denetim-kapsami";
+import { olasiStiller } from "@/lib/atif/olasi-stil";
 import { dipnotAtiflari, metindekiDipnotlar } from "@/lib/atif/dipnot";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
@@ -301,6 +303,14 @@ export async function runCitationCheck(input: {
 
   const score = computeComplianceScore(references, cross);
   /*
+    KAPSAM KAYITLA BİRLİKTE SAKLANIYOR. Sonradan yeniden türetilemez:
+    kayıtta "metin verilmiş miydi" bilgisi yok (atıf listesi boş olması
+    metnin verilmediğini değil, metinde atıf bulunmadığını da anlatabilir)
+    ve kapsamı tahminle yeniden kurmak, yapılmamış bir kontrolü yapılmış
+    göstermeye açık kapı bırakırdı.
+  */
+  const kapsam = denetimKapsami(stil, { metinVar: govdeVar });
+  /*
     Sınır artık AĞA GİDEN künye sayısı; önbellekten karşılananlar ondan
     düşmüyor. Eskiden ilk 25'in ötesine hiç bakılamıyordu — 120 kaynaklı
     bir tezde 95 künye kalıcı olarak "bakılmadı" kalıyordu. Artık her
@@ -341,8 +351,18 @@ export async function runCitationCheck(input: {
     body_text: input.useProjectBody ? null : (input.bodyText || null),
     parsed_references: references,
     in_text_citations: citations,
-    cross_check: { ...cross, academicVerification, verificationSummary, tyk, ornekAtif: kalip ? kalip.ornek : null },
+    cross_check: { ...cross, academicVerification, verificationSummary, tyk, ornekAtif: kalip ? kalip.ornek : null, kapsam },
     compliance_score: score,
+    /*
+      DENETLENEN STİL KAYDIN KENDİSİNDE (23.11.2026). Eskiden
+      saklanmıyordu ve kayıtlı bir sonuç yeniden açılırken stil
+      ÇALIŞMANIN O ANKİ stilinden okunuyordu (denetimOku): Vancouver'la
+      denetleyip sonra çalışmayı APA 7'ye çeviren biri, eski sonucunu
+      "APA 7 biçimi" diye etiketlenmiş görüyordu — hiç verilmemiş bir
+      hüküm. Kullanıcının o denetim için seçtiği stil burada kalır;
+      çalışmanın ayarını değiştirmez.
+    */
+    citation_style: stil.id,
     created_by: user.id,
   });
 
@@ -361,7 +381,17 @@ export async function runCitationCheck(input: {
     /* Ekran hangi stile göre denetlendiğini ve kaç kaynağın ağ üzerinden
        doğrulanabildiğini yazsın: "doğrulanamadı" ile "bakılmadı" aynı
        şey değil. */
-    stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
+    stil: { id: stil.id, ad: stil.ad, adEn: stil.adEn ?? stil.ad, tur: stil.tur },
+    /*
+      HANGİ KONTROLLER UYGULANABİLDİ (lib/atif/denetim-kapsami.ts).
+      "Sorun bulunmadı" iki ayrı şeyin aynı cümlesiydi: yerleşik stilde
+      biçim gerçekten denetlenmiş oluyor, CSL deposundan seçilen bir
+      dergi stilinde künye biçimine HİÇ bakılmıyor. Kullanıcı ikisini
+      sonuçtan ayırt edemiyordu.
+    */
+    kapsam,
+    /* Biçimin işaret ettiği stil(ler); yalnızca ÖNERİ, seçimi değiştirmez. */
+    olasiStil: olasiStiller({ kunyeler: references.map((k) => k.raw), govde }),
     dogrulananSayisi: academicVerification.length,
     toplamKaynak: references.length,
     tyk,
@@ -433,7 +463,7 @@ async function denetimOku({ id, projectId }: { id?: string; projectId: string })
   const supabase = await createClient();
   const sorgu = supabase
     .from("citation_checks")
-    .select("parsed_references, in_text_citations, cross_check, compliance_score, created_at, academic_projects(citation_style)")
+    .select("parsed_references, in_text_citations, cross_check, compliance_score, created_at, citation_style")
     .eq("project_id", projectId);
   const { data, error } = await (id ? sorgu.eq("id", id) : sorgu.order("created_at", { ascending: false }))
     .limit(1)
@@ -451,9 +481,17 @@ async function denetimOku({ id, projectId }: { id?: string; projectId: string })
     verificationSummary?: { verified: number; possible: number; notFound: number; insufficientData: number; unreachable?: number };
     tyk?: TykBulgusu[];
     ornekAtif?: string | null;
+    kapsam?: KapsamSatiri[];
   };
-  const proje = data.academic_projects as { citation_style?: string | null } | { citation_style?: string | null }[] | null;
-  const stil = stilTanimi((Array.isArray(proje) ? proje[0] : proje)?.citation_style);
+  /*
+    DENETLENEN STİL KAYDIN KENDİSİNDEN. Eskiden çalışmanın O ANKİ
+    stilinden okunuyordu: stilini sonradan değiştiren kullanıcı, eski
+    denetimini yeni stilin kurallarıyla etiketlenmiş görüyordu. Eski
+    kayıtlarda sütun NULL; stil UYDURULMAZ, "kaydedilmedi" denir
+    (ekran: kaynakca-penceresi / citation-check-form).
+  */
+  const kayitliStil = (data.citation_style ?? null) as string | null;
+  const stil = kayitliStil ? stilTanimi(kayitliStil) : null;
   const references = (data.parsed_references ?? []) as ReturnType<typeof kunyeleriAyristir>;
   const academicVerification = (capraz.academicVerification ?? []) as Awaited<ReturnType<typeof verifyAcademicReferences>>;
 
@@ -467,7 +505,9 @@ async function denetimOku({ id, projectId }: { id?: string; projectId: string })
     complianceScore: Number(data.compliance_score ?? 0),
     academicVerification,
     verificationSummary: capraz.verificationSummary ?? { verified: 0, possible: 0, notFound: 0, insufficientData: 0 },
-    stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
+    stil: stil ? { id: stil.id, ad: stil.ad, adEn: stil.adEn ?? stil.ad, tur: stil.tur } : null,
+    /* Eski kayıtlarda yok: null, "hepsi uygulandı" demek değil — bilinmiyor. */
+    kapsam: capraz.kapsam ?? null,
     dogrulananSayisi: academicVerification.length,
     toplamKaynak: references.length,
     // Bu özellikten önceki kayıtlarda yok: boş liste "sorun yok" demek değil, ölçülmemiş.

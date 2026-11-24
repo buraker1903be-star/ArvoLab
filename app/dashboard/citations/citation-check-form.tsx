@@ -27,8 +27,11 @@ import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-chec
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
-import { stilAdi, type AtifTuru } from "@/lib/atif/stiller";
+import { stilAdiMetni, type AtifTuru } from "@/lib/atif/stiller";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
+import DenetlenenStil from "./denetlenen-stil";
+import type { KapsamSatiri } from "@/lib/atif/denetim-kapsami";
+import type { OlasiStilSonucu } from "@/lib/atif/olasi-stil";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
 import { bulguAnahtari } from "@/lib/kaynakca-bulgulari";
@@ -91,7 +94,12 @@ export interface CheckResult {
     /* Bu alan 12.11.2026'dan önceki kayıtlarda yok. */
     unreachable?: number;
   };
-  stil: { id: string; ad: string; tur: AtifTuru };
+  /* Denetlenen stil kaydın kendisinden gelir; 23.11.2026 öncesi kayıtlarda null. */
+  stil: { id: string; ad: string; adEn?: string; tur: AtifTuru } | null;
+  /* Hangi kontroller uygulanabildi (lib/atif/denetim-kapsami.ts); eski kayıtta null. */
+  kapsam?: KapsamSatiri[] | null;
+  /* Biçimin işaret ettiği stil(ler); yalnızca öneri. */
+  olasiStil?: OlasiStilSonucu | null;
   dogrulananSayisi: number;
   toplamKaynak: number;
   /* Kılavuz atıf kuralları (lib/atif/tyk.ts); metin yoksa ya da eski kayıtta null. */
@@ -526,6 +534,11 @@ export default function CitationCheckForm({
     Sonuç bloğu iki yerde çiziliyor: sayfada formun altında, Çalışmalarım
     penceresinde sağdaki kartta (yan yana iki kart: denetim + sonuç).
   */
+  /* Denetlenen stilin adı iki dilde; eski kayıtta stil YOK ve uydurulmuyor. */
+  const stilEtiketi: Metin = result?.stil
+    ? { tr: result.stil.ad, en: result.stil.adEn ?? result.stil.ad }
+    : { tr: "stil kaydedilmemiş", en: "style not recorded" };
+
   const sonucIcerik = (
     <>
       {error && (
@@ -548,8 +561,8 @@ export default function CitationCheckForm({
                 <small>{t({ tr: "açık sorun", en: ozet.acikSorun === 1 ? "open issue" : "open issues" })}</small>
                 <small>
                   {t({
-                    tr: `${ozet.kunye} künye · biçim (${result.stil.ad}), metin içi atıf eşleşmesi${ozet.dizindeBakilan != null ? `, dizin doğrulaması (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
-                    en: `${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"} · format (${result.stil.ad}), in-text citation matching${ozet.dizindeBakilan != null ? `, index verification (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
+                    tr: `${ozet.kunye} künye · biçim (${stilEtiketi.tr}), metin içi atıf eşleşmesi${ozet.dizindeBakilan != null ? `, dizin doğrulaması (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
+                    en: `${ozet.kunye} ${ozet.kunye === 1 ? "reference" : "references"} · format (${stilEtiketi.en}), in-text citation matching${ozet.dizindeBakilan != null ? `, index verification (${ozet.dizindeBakilan}/${ozet.kunye})` : ""}`,
                   })}
                 </small>
               </span>
@@ -566,6 +579,23 @@ export default function CitationCheckForm({
                 })}
               </li>
             </ul>
+            {/*
+              DENETLENEN STİL VE KAPSAM puanın hemen altında: "kaç açık
+              sorun" sayısının neyi kapsadığı aynı bakışta okunsun. Stil
+              uygulanamayan kontroller varken sayı tek başına yanıltıcı.
+            */}
+            <DenetlenenStil
+              stil={result.stil}
+              kapsam={result.kapsam ?? null}
+              olasiStil={result.olasiStil ?? null}
+              onStilSec={(deger) => {
+                setCitationStyle(deger);
+                showToast("success", t({
+                  tr: "Stil yalnızca bu denetim için seçildi; “Denetle” ile yeniden çalıştırın.",
+                  en: "The style was selected for this check only; run “Check” again.",
+                }));
+              }}
+            />
             <dl className="kaynakca-skor-sayilar">
               <div data-tone="success">
                 <dt>{t({ tr: "Dizinde bulundu", en: "Found in index" })}</dt>
@@ -918,9 +948,30 @@ export default function CitationCheckForm({
                 tr: "Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili: ",
                 en: "Your reference list and text are taken from the last saved version in the editor. Citation style: ",
               })}
-              <b>{stilAdi(citationStyle)}</b>
+              <b>{t(stilAdiMetni(citationStyle))}</b>
               {t({ tr: " (çalışma ayarlarından).", en: " (from the work's settings)." })}
             </p>
+            {/*
+              DENETİM STİLİ BU PENCEREDE DE SEÇİLEBİLİR (23.11.2026), ama
+              KATLI: tek düğmelik akış bozulmasın. Stil çalışmanın
+              ayarından geliyor; danışmanın gönderdiği metni ya da dergiye
+              göndereceği sürümü BAŞKA bir stille denetlemek isteyen
+              buradan değiştiriyor ve seçim yalnızca o denetime geçiyor —
+              çalışmanın ayarı değişmiyor.
+            */}
+            <details className="denetim-stili-sec">
+              <summary>{t({ tr: "Bu denetimde başka bir stil kullan", en: "Use a different style for this check" })}</summary>
+              <label>
+                <span>{t({ tr: "Denetim stili", en: "Check style" })}</span>
+                <StilSecici value={citationStyle} onChange={setCitationStyle} />
+                <small className="muted">
+                  {t({
+                    tr: "Yalnızca bu denetimde geçerli; çalışmanızın ayarı değişmez ve sonuçta “Denetlenen stil” olarak saklanır.",
+                    en: "Applies to this check only; your work's setting stays as it is and the choice is stored as the “Checked style” of the result.",
+                  })}
+                </small>
+              </label>
+            </details>
             <div className="pencere-dugmeler">
               <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
                 {loading ? t({ tr: "Kaynaklar dizinlerde aranıyor…", en: "Searching the indexes for sources…" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}

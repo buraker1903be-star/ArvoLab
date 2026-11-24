@@ -209,8 +209,11 @@ import {
   convertReferenceListsToParagraphs,
   applyHangingIndent,
   clearManualTextFormat,
+  kaynakcaDuzeltmeleriniUygula,
+  kaynaklariKaynakcayaEkle,
   type OutlineHeading,
 } from "./editor-navigation";
+import KaynakcaDuzeltmePaneli from "./kaynakca-duzeltme-paneli";
 
 /*
   SEYREK AÇILAN PENCERELER TEMBEL YÜKLENİR (Phase 2, 04.11.2026). Editörün
@@ -3120,6 +3123,35 @@ export default function ManuscriptEditor({
                       <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
                       <b>{stilAdi(citationStyle)}</b>
                     </p>
+                    {/*
+                      HAZIR DÜZELTMELER (23.11.2026): son denetimin
+                      bulgularından çıkarılan künyeler, önizlemeli ve tek
+                      geri alma adımıyla. Denetimin kendisi belgeyi
+                      değiştirmiyor; yazan tek şey buradaki düğme.
+                    */}
+                    {kaynakcaBasligi ? (
+                      <KaynakcaDuzeltmePaneli
+                        projectId={projectId}
+                        ornekAtif={ornekAtif}
+                        onUygula={(duzeltmeler) => (editor ? kaynakcaDuzeltmeleriniUygula(editor, duzeltmeler) : 0)}
+                        /*
+                          Künye ÇALIŞMANIN stiliyle yazılıyor (`style`),
+                          denetimin tek seferlik stiliyle değil: belgeye
+                          giren biçim denetim seçiminden etkilenmemeli.
+                        */
+                        onKaynakEkle={(kaynaklar) =>
+                          editor
+                            ? kaynaklariKaynakcayaEkle(editor, kaynaklar as unknown as Parameters<typeof kaynaklariKaynakcayaEkle>[1], style, {
+                                dil: belgeDili,
+                                erisimTarihi: new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date()),
+                              })
+                            : 0
+                        }
+                        onGeriAl={() => {
+                          editor?.chain().focus().undo().run();
+                        }}
+                      />
+                    ) : null}
                     {kaynakcaBasligi ? (
                       <button
                         type="button"

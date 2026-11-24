@@ -389,7 +389,7 @@ export default async function CalismaDurumKarti({
             {duzenleyebilir ? (
               <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
             ) : null}
-            <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
+            <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null, citation_style: calisma.citation_style ?? null }} />
             {/*
               Silme girişi YALNIZCA panel kipinde kaldırıldı (22.11.2026):
               "Çalışma ayrıntıları" panelinde çalışmayı silmek, paneli
