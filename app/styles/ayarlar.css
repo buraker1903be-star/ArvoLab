@@ -66,30 +66,48 @@
 .ayarlar-form label > span { color: var(--muted); font-weight: 600; }
 .ayarlar-form p { margin: 0; }
 
+/* Bölüm başlığı: ince, sakin; kutu açmıyor. */
+.ayarlar-baslik { margin: 0; font-size: var(--fs-md); font-weight: 700; letter-spacing: -.01em; }
+
 /* Ad ve Soyad masaüstünde yan yana, dar ekranda alt alta. */
 .ayarlar-ikili { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-/* Telefon: ülke kodu dar, numara kalanı. Dar ekranda ikisi de tam satır. */
-.ayarlar-telefon { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 560px) { .ayarlar-ikili { grid-template-columns: 1fr; } }
+
+/* Kaydet, Ad/Soyad ile AYNI grupta ve sağda. */
+.ayarlar-kaydet { display: flex; justify-content: flex-end; }
+
+/* ---------- E-posta bölümü ----------
+   Adres, bekleyen doğrulama ve değiştirme düğmesi bir arada. Telefonda
+   düğme adresin HEMEN ALTINDA: yan yana sıkıştırmak adresi kırpıyordu. */
+.ayarlar-eposta { display: grid; gap: 6px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.ayarlar-etiket { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.ayarlar-eposta-satir { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ayarlar-eposta-adres { margin: 0; min-width: 0; font-size: var(--fs-base); overflow-wrap: anywhere; }
 @media (max-width: 560px) {
-  .ayarlar-ikili,
-  .ayarlar-telefon { grid-template-columns: 1fr; }
+  .ayarlar-eposta-satir { flex-direction: column; align-items: stretch; gap: 10px; }
+  .ayarlar-eposta-satir > :last-child > button { width: 100%; justify-content: center; min-height: 44px; }
 }
 
-/* Bekleyen e-posta doğrulaması: adresin yanında, ayrı satırda. */
+/* Bekleyen e-posta doğrulaması: adresin altında, ayrı satırda. */
 .ayarlar-bekleyen {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  margin-top: 4px;
   color: var(--warning);
   font-size: var(--fs-sm);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
-.ayarlar-bekleyen svg { flex: none; }
+.ayarlar-bekleyen svg { flex: none; margin-top: 3px; }
+
+/* Salt okunur satırlar: etiket solda, değer sağda; kutu yok, ince çizgi. */
+.ayarlar-bilgiler { display: grid; gap: 0; margin: 0; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.ayarlar-bilgiler > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 9px 0; }
+.ayarlar-bilgiler > div + div { border-top: 1px solid var(--line-soft); }
+.ayarlar-bilgiler dt { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.ayarlar-bilgiler dd { margin: 0; text-align: right; font-size: var(--fs-base); overflow-wrap: anywhere; }
 
 /* Bölümler arasında İNCE ayırıcı; kutu içinde kutu yok. */
-.ayarlar-bolum > .settings-facts,
 .ayarlar-bolum > .ayar-listesi { padding-top: 18px; border-top: 1px solid var(--line-soft); }
 
 /* ---------- Telefonda tam ekran ----------

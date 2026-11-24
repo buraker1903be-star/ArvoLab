@@ -13,14 +13,12 @@ import {
   Save,
   Sparkles,
   Trash2,
-  UserRound,
 } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL } from "@/lib/dil";
 import type { AyarlarVerisi } from "@/app/actions/ayarlar";
 import { profilimiKaydet } from "@/app/actions/ayarlar";
 import { adlarGecerliMi } from "@/lib/profil-adi";
-import { telefonGecerliMi, telefonuBirlestir, ULKE_KODLARI } from "@/lib/telefon";
 import { kullanimSozlesmesi } from "@/lib/sozlesme/kullanim-sozlesmesi";
 import { changePassword, digerOturumlariKapat } from "@/app/actions/auth";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
@@ -405,61 +403,38 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
     çıkardı. Ölçüt kaydedilen SON değer; başarı olayını ActionForm
     yayıyor (toast-events.ts).
   */
-  const [temel, setTemel] = useState({
-    ad: veri.ad,
-    soyad: veri.soyad,
-    ulkeKodu: veri.telefonUlkeKodu,
-    yerel: veri.telefonYerel,
-  });
+  const [temel, setTemel] = useState({ ad: veri.ad, soyad: veri.soyad });
   const [ad, setAd] = useState(veri.ad);
   const [soyad, setSoyad] = useState(veri.soyad);
-  const [ulkeKodu, setUlkeKodu] = useState(veri.telefonUlkeKodu);
-  const [telefon, setTelefon] = useState(veri.telefonYerel);
-  /*
-    AD ALANLARINA DOKUNULDU MU. Eski hesaplarda ad/soyad sütunları boş ve
-    kutulardaki değer full_name'den üretilmiş bir TAHMİN. Yalnızca
-    telefonunu giren kullanıcı kaydettiğinde bu tahmin kalıcı olmasın
-    diye sunucuya "adları yaz" bilgisi ayrıca gidiyor.
-  */
-  const [adaDokunuldu, setAdaDokunuldu] = useState(false);
 
-  const adDegisti = ad !== temel.ad || soyad !== temel.soyad;
-  const adlariYaz = adaDokunuldu && adDegisti;
-  const yeniTelefon = telefonuBirlestir(ulkeKodu, telefon);
-  const eskiTelefon = telefonuBirlestir(temel.ulkeKodu, temel.yerel);
-  const telefonDegisti = yeniTelefon !== eskiTelefon;
+  const kirli = ad !== temel.ad || soyad !== temel.soyad;
+  const gecerli = adlarGecerliMi(ad, soyad);
 
-  const gecerli = (!adDegisti || adlarGecerliMi(ad, soyad)) && telefonGecerliMi(yeniTelefon);
-  const kirli = adDegisti || telefonDegisti;
-  /* Pencereyi kapatmaya çalışan kullanıcıya sorulacak mı. Çizim sırasında
-     bildirmek üst bileşeni çizim içinde güncellerdi; efektte. */
   useEffect(() => {
     kirliDegis?.(kirli);
   }, [kirli, kirliDegis]);
 
   useEffect(() => {
-    const basarili = () => {
-      setTemel({ ad, soyad, ulkeKodu, yerel: telefon });
-      setAdaDokunuldu(false);
-    };
+    const basarili = () => setTemel({ ad, soyad });
     window.addEventListener(ACTION_SUCCESS_EVENT, basarili);
     return () => window.removeEventListener(ACTION_SUCCESS_EVENT, basarili);
-  }, [ad, soyad, ulkeKodu, telefon]);
+  }, [ad, soyad]);
 
   return (
     <div className="ayarlar-bolum">
+      <h3 className="ayarlar-baslik">{t({ tr: "Profil", en: "Profile" })}</h3>
+
       <ActionForm
         action={profilimiKaydet}
         className="ayarlar-form"
         successMessage={t({ tr: "Profiliniz güncellendi.", en: "Your profile has been updated." })}
       >
-        <input type="hidden" name="adlariYaz" value={adlariYaz ? "1" : "0"} />
         {/*
-          AD VE SOYAD AYRI. Masaüstünde yan yana, dar ekranda alt alta
-          (app/styles/ayarlar.css). Eski hesapların tek alanda yazılı adı
-          bölünerek GÖSTERİLİYOR ama kaydedilmiyor: kullanıcı kutulara
-          dokunmadıkça sütunlar boş kalıyor ve görünen ad eskisi gibi
-          full_name'den geliyor.
+          AD VE SOYAD AYRI. Masaüstünde yan yana, dar ekranda alt alta.
+          Eski hesapların tek alanda yazılı adı bölünerek GÖSTERİLİYOR ama
+          kendiliğinden kaydedilmiyor: sütunlar ancak kullanıcı Kaydet'e
+          bastığında yazılıyor, o zamana kadar görünen ad full_name'den
+          geliyor (supabase/migrations/…_profil_ad_soyad.sql).
         */}
         <div className="ayarlar-ikili">
           <label>
@@ -471,10 +446,8 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
               autoComplete="given-name"
               maxLength={80}
               value={ad}
-              onChange={(o) => {
-                setAdaDokunuldu(true);
-                setAd(o.target.value);
-              }}
+              onChange={(o) => setAd(o.target.value)}
+              required
             />
           </label>
           <label>
@@ -486,50 +459,22 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
               autoComplete="family-name"
               maxLength={80}
               value={soyad}
-              onChange={(o) => {
-                setAdaDokunuldu(true);
-                setSoyad(o.target.value);
-              }}
+              onChange={(o) => setSoyad(o.target.value)}
+              required
             />
           </label>
         </div>
         {veri.adBolunusuBelirsiz ? (
           <p className="muted text-sm">
             {t({
-              tr: "Adınız şimdiye kadar tek alanda kayıtlıydı; buradaki bölünüş bir öneridir. Doğruysa dokunmanız gerekmez.",
-              en: "Your name was stored in a single field until now; the split shown here is a suggestion. If it is right, you don't need to change it.",
+              tr: "Adınız şimdiye kadar tek alanda kayıtlıydı; buradaki bölünüş bir öneridir ve kaydedene kadar değişmez.",
+              en: "Your name was stored in a single field until now; the split shown here is a suggestion and nothing changes until you save.",
             })}
           </p>
         ) : null}
 
-        <div className="ayarlar-telefon">
-          <label className="ayarlar-telefon-kod">
-            <span>{t({ tr: "Ülke kodu", en: "Country code" })}</span>
-            <select className="field-control" name="ulkeKodu" value={ulkeKodu} onChange={(o) => setUlkeKodu(o.target.value)}>
-              {ULKE_KODLARI.map((u) => (
-                <option key={u.kod} value={u.kod}>
-                  {u.kod} · {t(u.ad)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="ayarlar-telefon-no">
-            <span>{t({ tr: "Telefon (isteğe bağlı)", en: "Phone (optional)" })}</span>
-            <input
-              className="field-control"
-              name="telefon"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              placeholder="532 000 00 00"
-              value={telefon}
-              onChange={(o) => setTelefon(o.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="project-form-actions">
-          {/* Kaydet yalnızca GEÇERLİ bir değişiklik varsa etkin. */}
+        {/* Kaydet, Ad ve Soyad'la AYNI grupta: neyi kaydettiği belli olsun. */}
+        <div className="ayarlar-kaydet">
           <button type="submit" className="projects-primary-button button-compact" disabled={!kirli || !gecerli}>
             <Save size={15} aria-hidden="true" />
             {t({ tr: "Kaydet", en: "Save" })}
@@ -537,45 +482,21 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
         </div>
       </ActionForm>
 
-      {/* E-posta, rol ve kurum: kayıtlı değerleriyle, salt okunur. */}
-      <dl className="settings-facts">
-        <div>
-          <dt>{t({ tr: "E-posta", en: "Email" })}</dt>
-          <dd>
+      {/*
+        E-POSTA TEK BÖLÜMDE: adres, varsa bekleyen doğrulama ve değiştirme
+        düğmesi bir arada. Eskiden adres salt okunur bir bilgi satırındaydı
+        ve değiştirme düğmesi listenin altında ayrı bir satırdaydı; ikisinin
+        aynı şeye baktığı görünmüyordu. Telefonda düğme adresin HEMEN
+        ALTINDA (app/styles/ayarlar.css).
+      */}
+      <div className="ayarlar-eposta">
+        <span className="ayarlar-etiket" id="ayarlar-eposta-etiket">
+          {t({ tr: "E-posta", en: "Email" })}
+        </span>
+        <div className="ayarlar-eposta-satir">
+          <p className="ayarlar-eposta-adres" aria-labelledby="ayarlar-eposta-etiket">
             {veri.eposta || "—"}
-            {veri.bekleyenEposta ? (
-              <span className="ayarlar-bekleyen">
-                <Mail size={13} aria-hidden="true" />
-                {t({
-                  tr: `Doğrulama bekleniyor: ${veri.bekleyenEposta}`,
-                  en: `Awaiting verification: ${veri.bekleyenEposta}`,
-                })}
-              </span>
-            ) : null}
-          </dd>
-        </div>
-        <div>
-          <dt>{t({ tr: "Rol", en: "Role" })}</dt>
-          <dd>{veri.rolEtiketi}</dd>
-        </div>
-        <div>
-          <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
-          <dd>{veri.kurumAdi ?? t({ tr: "Kuruma bağlı değil", en: "Not linked to an institution" })}</dd>
-        </div>
-      </dl>
-
-      <ul className="ayar-listesi">
-        <li className="ayar-satir">
-          <UserRound size={18} aria-hidden="true" />
-          <span className="ayar-govde">
-            <b>{t({ tr: "E-posta adresi", en: "Email address" })}</b>
-            <small>
-              {t({
-                tr: "Yeni adrese bir doğrulama bağlantısı gönderilir. Siz o bağlantıyı onaylayana kadar adresiniz değişmez.",
-                en: "A verification link is sent to the new address. Your address does not change until you confirm that link.",
-              })}
-            </small>
-          </span>
+          </p>
           <PanelDrawer
             triggerLabel={t({ tr: "E-postayı değiştir", en: "Change email" })}
             triggerClassName="projects-filter-button button-compact"
@@ -585,8 +506,29 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
           >
             <EpostaDegistir mevcut={veri.eposta} bekleyen={veri.bekleyenEposta} />
           </PanelDrawer>
-        </li>
-      </ul>
+        </div>
+        {veri.bekleyenEposta ? (
+          <span className="ayarlar-bekleyen">
+            <Mail size={13} aria-hidden="true" />
+            {t({
+              tr: `Doğrulama bekleniyor: ${veri.bekleyenEposta}. Bağlantıyı onaylayana kadar adresiniz değişmez.`,
+              en: `Awaiting verification: ${veri.bekleyenEposta}. Your address does not change until you confirm the link.`,
+            })}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Rol ve kurum salt okunur: ikisini de kurum yöneticisi belirliyor. */}
+      <dl className="ayarlar-bilgiler">
+        <div>
+          <dt>{t({ tr: "Rol", en: "Role" })}</dt>
+          <dd>{veri.rolEtiketi}</dd>
+        </div>
+        <div>
+          <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
+          <dd>{veri.kurumAdi ?? "—"}</dd>
+        </div>
+      </dl>
     </div>
   );
 }
@@ -601,22 +543,78 @@ function AbonelikSekmesi({ veri, sayi }: { veri: AyarlarVerisi; sayi: (n: number
     trialing: t({ tr: "Deneme sürüyor", en: "Trial" }),
     past_due: t({ tr: "Ödeme gecikti", en: "Past due" }),
     canceled: t({ tr: "İptal edildi", en: "Canceled" }),
-    unknown: t({ tr: "Bilinmiyor", en: "Unknown" }),
+    internal: t({ tr: "İç ekip", en: "Internal team" }),
   };
+
+  /*
+    BİLGİ ALINAMADI ≠ ABONELİK YOK. Durum "unreachable" ya da "unknown"
+    olduğunda ArvoOS'a ulaşılamamış demektir; plan, durum ve tarih
+    uydurmak yerine bunu söylüyoruz. "İptal edildi" yazmak, parası ödenmiş
+    bir kullanıcıya aboneliğinin bittiğini söylemek olurdu.
+  */
+  if (a.bilinmiyor) {
+    return (
+      <div className="ayarlar-bolum">
+        <h3 className="ayarlar-baslik">{t({ tr: "Abonelik", en: "Subscription" })}</h3>
+        <p className="alert" data-tone="warning" role="status">
+          {t({
+            tr: "Abonelik bilgisi şu anda alınamıyor. Erişiminiz etkilenmez; birazdan tekrar bakabilirsiniz.",
+            en: "Subscription information is unavailable right now. Your access is not affected; please check again shortly.",
+          })}
+        </p>
+        <div className="cluster">
+          <Link className="projects-filter-button button-compact" href="/dashboard/abonelik">
+            {t({ tr: "Abonelik ve Kredi", en: "Subscription and credits" })}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* Kurum yönetimli abonelik AYRI gösteriliyor: kullanıcının yapabileceği
+     bir şey yok, plan ve ödeme kurum yöneticisinde. */
+  if (a.tur === "organization") {
+    return (
+      <div className="ayarlar-bolum">
+        <h3 className="ayarlar-baslik">{t({ tr: "Kurum aboneliği", en: "Institution subscription" })}</h3>
+        <p className="alert" data-tone="info" role="status">
+          {t({
+            tr: `Aboneliğiniz ${a.kurumAdi ?? "kurumunuz"} tarafından yönetiliyor. Plan değişikliği ve ödeme kurum yöneticinizdedir.`,
+            en: `Your subscription is managed by ${a.kurumAdi ?? "your institution"}. Plan changes and payment are handled by your institution administrator.`,
+          })}
+        </p>
+        <dl className="ayarlar-bilgiler">
+          <div>
+            <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
+            <dd>{a.kurumAdi ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>{t({ tr: "Durum", en: "Status" })}</dt>
+            <dd>{DURUM[a.durum] ?? a.durum}</dd>
+          </div>
+          {a.donemBitis ? (
+            <div>
+              <dt>{t({ tr: "Dönem bitişi", en: "Period ends" })}</dt>
+              <dd>{a.donemBitis}</dd>
+            </div>
+          ) : null}
+        </dl>
+        {veri.kredi ? <KrediSatiri kredi={veri.kredi} sayi={sayi} /> : null}
+        <div className="cluster">
+          <Link className="projects-filter-button button-compact" href="/dashboard/abonelik">
+            {t({ tr: "Abonelik ve Kredi", en: "Subscription and credits" })}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ayarlar-bolum">
-      <dl className="settings-facts">
-        <div>
-          <dt>{t({ tr: "Plan", en: "Plan" })}</dt>
-          <dd>
-            {a.tur === "organization"
-              ? t({ tr: "Kurum lisansı", en: "Institution licence" })
-              : a.tur === "individual"
-                ? t({ tr: "Bireysel abonelik", en: "Individual subscription" })
-                : t({ tr: "İç ekip", en: "Internal team" })}
-          </dd>
-        </div>
+      <h3 className="ayarlar-baslik">
+        {a.tur === "individual" ? t({ tr: "Bireysel abonelik", en: "Individual subscription" }) : t({ tr: "Abonelik", en: "Subscription" })}
+      </h3>
+      <dl className="ayarlar-bilgiler">
         <div>
           <dt>{t({ tr: "Durum", en: "Status" })}</dt>
           <dd>{DURUM[a.durum] ?? a.durum}</dd>
@@ -633,35 +631,14 @@ function AbonelikSekmesi({ veri, sayi }: { veri: AyarlarVerisi; sayi: (n: number
             <dd>{a.donemBitis}</dd>
           </div>
         ) : null}
-        {a.kurumAdi ? (
-          <div>
-            <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
-            <dd>{a.kurumAdi}</dd>
-          </div>
-        ) : null}
       </dl>
 
-      {a.tur === "organization" ? (
-        <p className="alert" data-tone="info" role="status">
-          {t({
-            tr: `Aboneliğiniz ${a.kurumAdi ?? "kurumunuz"} tarafından yönetiliyor. Plan değişikliği ve ödeme kurum yöneticinizdedir.`,
-            en: `Your subscription is managed by ${a.kurumAdi ?? "your institution"}. Plan changes and payment are handled by your institution administrator.`,
-          })}
-        </p>
-      ) : null}
-
-      {veri.kredi ? (
-        <p className="muted text-sm">
-          {t({
-            tr: `Asistan krediniz: bu ay ${sayi(veri.kredi.aylikKalan)} / ${sayi(veri.kredi.aylikLimit)} · satın alınan bakiye ${sayi(veri.kredi.ekBakiye)} · kullanılabilir ${sayi(veri.kredi.toplam)}.`,
-            en: `Assistant credits: ${sayi(veri.kredi.aylikKalan)} / ${sayi(veri.kredi.aylikLimit)} this month · purchased balance ${sayi(veri.kredi.ekBakiye)} · available ${sayi(veri.kredi.toplam)}.`,
-          })}
-        </p>
-      ) : null}
+      {veri.kredi ? <KrediSatiri kredi={veri.kredi} sayi={sayi} /> : null}
 
       <div className="cluster">
-        {/* Planı değiştir yalnızca kendi aboneliğini ödeyene; sunucu da
-            aynı kuralı uyguluyor (app/actions/ayarlar.ts, abonelik eylemi). */}
+        {/* Planı değiştir yalnızca yetkisi SUNUCUDA doğrulanan kullanıcıya:
+            kural app/actions/ayarlar.ts'te (planDegistirmeYetkisi), istemciye
+            yalnızca sonucu geliyor. */}
         {a.planDegistirebilir ? (
           <Link className="projects-primary-button button-compact" href="/dashboard/abonelik">
             <Sparkles size={15} aria-hidden="true" />
@@ -679,5 +656,23 @@ function AbonelikSekmesi({ veri, sayi }: { veri: AyarlarVerisi; sayi: (n: number
         })}
       </p>
     </div>
+  );
+}
+
+function KrediSatiri({
+  kredi,
+  sayi,
+}: {
+  kredi: NonNullable<AyarlarVerisi["kredi"]>;
+  sayi: (n: number) => string;
+}) {
+  const t = useCeviri();
+  return (
+    <p className="muted text-sm">
+      {t({
+        tr: `Asistan krediniz: bu ay ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} · satın alınan bakiye ${sayi(kredi.ekBakiye)} · kullanılabilir ${sayi(kredi.toplam)}.`,
+        en: `Assistant credits: ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} this month · purchased balance ${sayi(kredi.ekBakiye)} · available ${sayi(kredi.toplam)}.`,
+      })}
+    </p>
   );
 }

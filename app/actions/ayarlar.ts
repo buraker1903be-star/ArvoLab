@@ -8,7 +8,6 @@ import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES, ROLE_LABELS, type UserRole } from "@/lib/project-labels";
 import { adlarGecerliMi, formAdlari, tamAdiKur } from "@/lib/profil-adi";
-import { telefonGecerliMi, telefonuAyir, telefonuBirlestir } from "@/lib/telefon";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
 import { SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 import { konumYazisi } from "@/lib/sozlesme/konum";
@@ -38,17 +37,18 @@ export type AyarlarVerisi = {
   soyad: string;
   /** Ad/soyad full_name'den TAHMİN edildi ve bölünüşü belirsiz. */
   adBolunusuBelirsiz: boolean;
-  telefonUlkeKodu: string;
-  telefonYerel: string;
   rolEtiketi: string;
   kurumAdi: string | null;
   abonelik: {
     tur: "organization" | "individual" | "staff";
     durum: string;
+    /** Abonelik bilgisi okunamadı (ArvoOS'a ulaşılamadı ya da durum bilinmiyor). */
+    bilinmiyor: boolean;
+    /** Tarihler SUNUCUDA yerelleştiriliyor: "23 Mayıs 2027". */
     denemeBitis: string | null;
     donemBitis: string | null;
     kurumAdi: string | null;
-    /** Planı değiştirebilir mi? Sunucuda da aynı kural uygulanıyor. */
+    /** Planı değiştirebilir mi? Kural burada; istemciye yalnızca sonucu gidiyor. */
     planDegistirebilir: boolean;
   };
   icEkip: boolean;
@@ -76,10 +76,18 @@ export type AyarlarVerisi = {
   asistanSunucusu: { sunucu: string; model: string; durum: string } | null;
 };
 
-/** Planı yalnızca kendi aboneliğini ödeyen bireysel kullanıcı değiştirir. */
-function planDegistirmeYetkisi(tur: string, rol: UserRole | null): boolean {
+/** Abonelik durumu okunamadı mı: "yok" ile "bilemedik" aynı şey değil. */
+const durumBilinmiyor = (durum: string): boolean => durum === "unreachable" || durum === "unknown";
+
+/*
+  Planı yalnızca KENDİ aboneliğini ödeyen bireysel kullanıcı değiştirir.
+  Kurum üyesinin planını kurumu belirliyor; iç ekip plan satın almıyor.
+  Durum okunamadığında da sunulmuyor: ne satın alacağını bilmediğimiz bir
+  ekrana yönlendirmek, kullanıcıyı yarım kalmış bir ödeme akışına sokar.
+*/
+function planDegistirmeYetkisi(tur: string, rol: UserRole | null, durum: string): boolean {
   if (tur !== "individual") return false;
-  /* İç ekip bireysel yola düşse de plan satın almıyor. */
+  if (durumBilinmiyor(durum)) return false;
   return !(rol !== null && ADMIN_ROLES.includes(rol));
 }
 
@@ -100,7 +108,7 @@ export async function ayarlariOku(): Promise<{ veri: AyarlarVerisi } | { error: 
 
   const { data: profil } = await ctx.supabase
     .from("profiles")
-    .select("full_name, ad, soyad, telefon")
+    .select("full_name, ad, soyad")
     .eq("id", ctx.user.id)
     .maybeSingle();
 
@@ -116,10 +124,9 @@ export async function ayarlariOku(): Promise<{ veri: AyarlarVerisi } | { error: 
 
   const access = await getAccessState(await getCurrentProfile());
   const adlar = formAdlari(profil ?? {});
-  const telefon = telefonuAyir(profil?.telefon ?? null);
   const icEkip = ctx.role !== null && ADMIN_ROLES.includes(ctx.role);
 
-  const [onaylar, { tarihSaat }] = await Promise.all([sozlesmeOnaylarim(ctx.user.id), tarihler()]);
+  const [onaylar, { tarihSaat, uzunTarih }] = await Promise.all([sozlesmeOnaylarim(ctx.user.id), tarihler()]);
   const sozlesme = {
     okunamadi: onaylar.okunamadi,
     sonOnay: onaylar.satirlar.length
@@ -175,17 +182,20 @@ export async function ayarlariOku(): Promise<{ veri: AyarlarVerisi } | { error: 
       ad: adlar.ad,
       soyad: adlar.soyad,
       adBolunusuBelirsiz: adlar.belirsiz,
-      telefonUlkeKodu: telefon.ulkeKodu,
-      telefonYerel: telefon.yerel,
       rolEtiketi: ctx.role ? t(ROLE_LABELS[ctx.role]) : t({ tr: "Üye", en: "Member" }),
       kurumAdi,
       abonelik: {
         tur: access.kind,
         durum: access.status,
-        denemeBitis: access.trialEndsAt,
-        donemBitis: access.periodEnd,
+        bilinmiyor: durumBilinmiyor(access.status),
+        /* UZUN biçim ("23 Mayıs 2027"): kısa biçim 23.05.2027 veriyor ve
+           gün/ay sırası okuyana göre değişebiliyor. Yerelleştirme
+           SUNUCUDA: istemcide kullanıcının dil tercihi değil tarayıcının
+           yereli geçerli olurdu ve iki ekran ayrışırdı. */
+        denemeBitis: access.trialEndsAt ? uzunTarih(access.trialEndsAt) : null,
+        donemBitis: access.periodEnd ? uzunTarih(access.periodEnd) : null,
         kurumAdi: access.organizationName ?? kurumAdi,
-        planDegistirebilir: planDegistirmeYetkisi(access.kind, ctx.role),
+        planDegistirebilir: planDegistirmeYetkisi(access.kind, ctx.role, access.status),
       },
       icEkip,
       sozlesme,
@@ -209,29 +219,20 @@ export async function profilimiKaydet(formData: FormData): Promise<ActionResult>
   if (!user) return { error: await oturumYokMesaji() };
   const t = await ceviri();
 
-  const adlariYaz = String(formData.get("adlariYaz") ?? "") === "1";
   const ad = String(formData.get("ad") ?? "").trim();
   const soyad = String(formData.get("soyad") ?? "").trim();
-  const telefon = telefonuBirlestir(
-    String(formData.get("ulkeKodu") ?? ""),
-    String(formData.get("telefon") ?? ""),
-  );
-
-  if (adlariYaz && !adlarGecerliMi(ad, soyad)) {
+  if (!adlarGecerliMi(ad, soyad)) {
     return { error: t({ tr: "Ad ve soyad 1 ile 80 karakter arasında olmalı; ikisi de gerekli.", en: "First and last name must be 1–80 characters; both are required." }) };
   }
-  if (!telefonGecerliMi(telefon)) {
-    return { error: t({ tr: "Telefon numarası geçersiz görünüyor. Ülke kodunu seçip numarayı rakamlarla yazın.", en: "That phone number does not look valid. Choose the country code and type the number in digits." }) };
-  }
 
-  const guncelleme: Record<string, string | null> = { telefon };
-  if (adlariYaz) {
-    guncelleme.ad = ad;
-    guncelleme.soyad = soyad;
-    /* full_name görünen ad olmayı sürdürüyor: gezinme, hesap menüsü ve
-       paylaşım onu okuyor, hiçbiri değişmek zorunda kalmıyor. */
-    guncelleme.full_name = tamAdiKur(ad, soyad);
-  }
+  /*
+    Sütunlara yalnızca kullanıcı KAYDEDİNCE yazılıyor. Eski hesaplarda
+    ad/soyad boş ve kutulardaki değer full_name'den üretilmiş bir öneri;
+    o öneri kendiliğinden değil, kişi Kaydet'e bastığında kalıcı oluyor.
+    full_name görünen ad olmayı sürdürüyor: gezinme, hesap menüsü ve
+    paylaşım onu okuyor, hiçbiri değişmek zorunda kalmıyor.
+  */
+  const guncelleme = { ad, soyad, full_name: tamAdiKur(ad, soyad) };
 
   const { data, error } = await supabase.from("profiles").update(guncelleme).eq("id", user.id).select("id");
   if (error || !data?.length) {

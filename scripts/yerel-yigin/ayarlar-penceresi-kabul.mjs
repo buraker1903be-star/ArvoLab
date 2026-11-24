@@ -76,6 +76,8 @@ const KURUM = psql(`insert into public.organizations (name, license_status, sync
   values (${q(`Ayarlar Universitesi ${ek}`)}, 'active', now(), now() + interval '180 days') returning id`).split("\n")[0];
 
 const BIREYSEL = await kullaniciKur({ etiket: "ayar-birey", tamAd: "Ayse Nur Demir Kaya", kurum: null });
+/* ArvoOS taklidi bu e-postaya 503 veriyor: "bilgi alınamıyor" yolu. */
+const KOPUK = await kullaniciKur({ etiket: "ayar-kopuk", tamAd: "Kopuk Denegi", kurum: null });
 const KURUMLU = await kullaniciKur({ etiket: "ayar-kurum", tamAd: "Mehmet Yilmaz", kurum: KURUM });
 
 const sonuclar = [];
@@ -119,7 +121,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
   };
 
   /* Her tur aynı noktadan başlasın: önceki tur telefonu kaydediyor. */
-  psql(`update public.profiles set ad = null, soyad = null, telefon = null, full_name = ${q(BIREYSEL.tamAd)} where id = ${q(BIREYSEL.id)}`);
+  psql(`update public.profiles set ad = null, soyad = null, full_name = ${q(BIREYSEL.tamAd)} where id = ${q(BIREYSEL.id)}`);
   await giris(BIREYSEL);
 
   /* ---- E · Editörden açma ve kaldığı yere dönme ---- */
@@ -259,24 +261,26 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
         `${alanlar.ad} ${alanlar.soyad}` === BIREYSEL.tamAd && alanlar.oneriNotu,
         `"${alanlar.ad}" + "${alanlar.soyad}" öneriNotu=${alanlar.oneriNotu}`);
     yaz("P2 · Değişiklik yokken Kaydet pasif", EKRAN, TEMA, alanlar.kaydetPasif === true, `pasif=${alanlar.kaydetPasif}`);
+    const telefonVar = await s.locator('.drawer-root.open input[name="telefon"], .drawer-root.open select[name="ulkeKodu"]').count();
+    yaz("P3 · Telefon alanı yok (kapsam dışı)", EKRAN, TEMA, telefonVar === 0, `alan=${telefonVar}`);
 
-    /* Geçersiz telefon: Kaydet etkinleşmemeli. */
-    await s.locator('.drawer-root.open input[name="telefon"]').fill("12");
+    /* Soyadı boşaltmak geçersiz: Kaydet etkinleşmemeli. */
+    await s.locator('.drawer-root.open input[name="soyad"]').fill("");
     await s.waitForTimeout(200);
-    const gecersizPasif = await s.evaluate(() => document.querySelector('.drawer-root.open .ayarlar-form button[type="submit"]').disabled);
-    yaz("P3 · Geçersiz telefonda Kaydet pasif", EKRAN, TEMA, gecersizPasif === true, `pasif=${gecersizPasif}`);
+    const bosPasif = await s.evaluate(() => document.querySelector('.drawer-root.open .ayarlar-form button[type="submit"]').disabled);
+    yaz("P3b · Soyad boşken Kaydet pasif", EKRAN, TEMA, bosPasif === true, `pasif=${bosPasif}`);
 
-    await s.locator('.drawer-root.open input[name="telefon"]').fill("532 000 00 00");
+    await s.locator('.drawer-root.open input[name="soyad"]').fill("Kayalar");
     await s.waitForTimeout(200);
     const gecerliEtkin = await s.evaluate(() => !document.querySelector('.drawer-root.open .ayarlar-form button[type="submit"]').disabled);
-    yaz("P4 · Geçerli telefonda Kaydet etkin", EKRAN, TEMA, gecerliEtkin, `etkin=${gecerliEtkin}`);
+    yaz("P4 · Geçerli adda Kaydet etkin", EKRAN, TEMA, gecerliEtkin, `etkin=${gecerliEtkin}`);
     await resim("P4-hesap-sekmesi");
 
     /* Taslak: sekme değiştirip dönünce yazılan duruyor. */
     await sekmeyeGec("Güvenlik");
     await sekmeyeGec("Hesap");
-    const taslak = await s.locator('.drawer-root.open input[name="telefon"]').inputValue();
-    yaz("P5 · Sekme değişince taslak kaybolmuyor", EKRAN, TEMA, taslak === "532 000 00 00", `"${taslak}"`);
+    const taslak = await s.locator('.drawer-root.open input[name="soyad"]').inputValue();
+    yaz("P5 · Sekme değişince taslak kaybolmuyor", EKRAN, TEMA, taslak === "Kayalar", `"${taslak}"`);
 
     /* Kirliyken kapatma önce soruyor. */
     await s.keyboard.press("Escape");
@@ -314,6 +318,11 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     yaz("A1 · Bireyselde Planı değiştir var, kurum notu yok", EKRAN, TEMA,
         bireysel.planDegistir && !bireysel.kurumNotu, `plan=${bireysel.planDegistir} kurumNotu=${bireysel.kurumNotu}`);
     yaz("A2 · Abonelik ve Kredi bağlantısı var", EKRAN, TEMA, /Abonelik ve Kredi/.test(bireysel.metin), "");
+    /* Tarih YERELLEŞTİRİLMİŞ olmalı: "23 Mayıs 2027" gibi, ISO değil. */
+    const tarihler = bireysel.metin.match(/\d{1,2} [A-Za-zÇĞİÖŞÜçğıöşü]+ \d{4}/g) ?? [];
+    const isoVar = /\d{4}-\d{2}-\d{2}/.test(bireysel.metin);
+    yaz("A3 · Dönem bitişi yerelleştirilmiş biçimde", EKRAN, TEMA,
+        /23 Mayıs 2027/.test(bireysel.metin) && !isoVar, `${JSON.stringify(tarihler)} iso=${isoVar}`);
     await resim("A2-abonelik-bireysel");
     await s.keyboard.press("Escape");
     await s.waitForTimeout(500);
@@ -333,7 +342,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await git("/dashboard/editor");
     await ayarlariAc();
     await sekmeyeGec("Hesap");
-    await s.locator('.drawer-root.open .ayar-satir', { hasText: "E-posta adresi" }).locator("button").first().click();
+    await s.locator(".drawer-root.open .ayarlar-eposta button").first().click();
     await s.waitForFunction(() => document.querySelectorAll(".drawer-root.open").length === 2, null, { timeout: 15000 });
     await s.waitForTimeout(400);
     /* Üstteki pencere: e-posta kutusunu TAŞIYAN kök. Yalnızca
@@ -362,7 +371,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       const el = document.querySelector(".drawer-root.open .ayarlar-bekleyen");
       return el ? el.textContent.replace(/\s+/g, " ").trim() : null;
     });
-    const adresDegismedi = await s.evaluate((e) => document.querySelector(".drawer-root.open .settings-facts").innerText.includes(e), EPOSTALI.adres);
+    const adresDegismedi = await s.evaluate((e) => document.querySelector(".drawer-root.open .ayarlar-eposta").innerText.includes(e), EPOSTALI.adres);
     yaz("M3 · Bekleyen doğrulama gösteriliyor, adres değişmedi", EKRAN, TEMA,
         Boolean(bekleyen && bekleyen.includes(yeniAdres)) && adresDegismedi, `"${bekleyen}" eskiAdresDuruyor=${adresDegismedi}`);
     await resim("M3-bekleyen-dogrulama");
@@ -370,6 +379,33 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await s.waitForTimeout(500);
   } catch (e) {
     for (const n of ["M1 · Mevcut adres onay akışında görünüyor", "M2 · Doğrulama bağlantısı istendi", "M3 · Bekleyen doğrulama gösteriliyor, adres değişmedi"])
+      yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
+  }
+
+  /* ---- U · Abonelik bilgisi alınamıyor ---- */
+  try {
+    await ctx.clearCookies();
+    await giris(KOPUK);
+    await git("/dashboard/editor");
+    await ayarlariAc();
+    await sekmeyeGec("Abonelik");
+    const kopuk = await s.evaluate(() => {
+      const panel = document.querySelector(".drawer-root.open .ayarlar-panel:not([hidden])");
+      return {
+        metin: panel.innerText.replace(/\s+/g, " "),
+        planDegistir: Boolean([...panel.querySelectorAll("a")].find((a) => /Planı değiştir/.test(a.textContent))),
+      };
+    });
+    yaz("U1 · Bilgi alınamıyorsa açıkça söyleniyor", EKRAN, TEMA,
+        /Abonelik bilgisi şu anda alınamıyor/.test(kopuk.metin), `"${kopuk.metin.slice(0, 60)}…"`);
+    yaz("U2 · Bilinmeyen durumda Planı değiştir sunulmuyor", EKRAN, TEMA, !kopuk.planDegistir, `plan=${kopuk.planDegistir}`);
+    await resim("U1-abonelik-alinamadi");
+    await s.keyboard.press("Escape");
+    await s.waitForTimeout(400);
+    await ctx.clearCookies();
+    await giris(BIREYSEL);
+  } catch (e) {
+    for (const n of ["U1 · Bilgi alınamıyorsa açıkça söyleniyor", "U2 · Bilinmeyen durumda Planı değiştir sunulmuyor"])
       yaz(n, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
   }
 
@@ -396,12 +432,14 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     const kurum = await s.evaluate(() => {
       const kok = document.querySelector(".drawer-root.open");
       return {
+        baslik: kok.querySelector(".ayarlar-panel:not([hidden]) .ayarlar-baslik")?.textContent.trim() ?? null,
         kurumNotu: kok.querySelector('.alert[data-tone="info"]')?.textContent.replace(/\s+/g, " ").trim() ?? null,
         planDegistir: Boolean([...kok.querySelectorAll("a")].find((a) => /Planı değiştir/.test(a.textContent))),
       };
     });
-    yaz("K1 · Kurum yönetimli abonelikte durum açıkça yazıyor", EKRAN, TEMA,
-        Boolean(kurum.kurumNotu && /kurum/i.test(kurum.kurumNotu)), `"${(kurum.kurumNotu ?? "").slice(0, 60)}…"`);
+    yaz("K1 · Kurum yönetimli abonelik ayrı gösteriliyor", EKRAN, TEMA,
+        Boolean(kurum.kurumNotu && /kurum/i.test(kurum.kurumNotu)) && kurum.baslik === "Kurum aboneliği",
+        `başlık="${kurum.baslik}" not="${(kurum.kurumNotu ?? "").slice(0, 48)}…"`);
     yaz("K2 · Kurumda Planı değiştir sunulmuyor", EKRAN, TEMA, !kurum.planDegistir, `plan=${kurum.planDegistir}`);
     await resim("K1-abonelik-kurum");
     /* Ad tek kelimeli değil ama iki parçalı: öneri notu çıkmamalı. */
@@ -426,12 +464,15 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
 }
 await tarayici.close();
 
-/* ---- V · Veritabanı: telefon yazıldı, ad/soyad DOKUNULMADI ---- */
-const satir = psql(`select coalesce(ad,'<null>')||'|'||coalesce(soyad,'<null>')||'|'||coalesce(telefon,'<null>')||'|'||coalesce(full_name,'<null>') from public.profiles where id = ${q(BIREYSEL.id)}`);
-const [vAd, vSoyad, vTel, vTam] = satir.split("|");
-yaz("V1 · Yalnızca telefon kaydedildi; ad/soyad NULL kaldı", "db", "—",
-    vAd === "<null>" && vSoyad === "<null>" && vTel === "+90 532 000 00 00" && vTam === BIREYSEL.tamAd,
-    `ad=${vAd} soyad=${vSoyad} telefon=${vTel} full_name=${vTam}`);
+/* ---- V · Veritabanı: kaydedince ad/soyad yazılıyor, full_name onlardan ---- */
+const satir = psql(`select coalesce(ad,'<null>')||'|'||coalesce(soyad,'<null>')||'|'||coalesce(full_name,'<null>') from public.profiles where id = ${q(BIREYSEL.id)}`);
+const [vAd, vSoyad, vTam] = satir.split("|");
+yaz("V1 · Kaydedince ad/soyad yazıldı, full_name onlardan kuruldu", "db", "—",
+    vAd === "Ayse Nur Demir" && vSoyad === "Kayalar" && vTam === "Ayse Nur Demir Kayalar",
+    `ad=${vAd} soyad=${vSoyad} full_name=${vTam}`);
+/* Telefon sütunu kapsam dışı: hiç eklenmemiş olmalı. */
+const telefonSutunu = psql(`select count(*) from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='telefon'`);
+yaz("V2 · profiles'ta telefon sütunu yok", "db", "—", telefonSutunu === "0", `sütun sayısı=${telefonSutunu}`);
 
 const kaldi = sonuclar.filter((r) => !r.gecti);
 if (GORSEL) fs.writeFileSync(`${GORSEL}/ayarlar-kabul.json`, JSON.stringify({ head: HEAD, buildId: BUILD_ID, sonuclar }, null, 1));
