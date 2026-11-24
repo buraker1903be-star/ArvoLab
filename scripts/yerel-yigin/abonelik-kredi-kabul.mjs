@@ -172,6 +172,41 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await s.waitForTimeout(250);
     const ozet = await s.evaluate(() => document.querySelector(".drawer-root.open .karsilastir-ozet")?.innerText.replace(/\s+/g, " ") ?? null);
     yaz("K6 · Seçimde toplam tahsilat okunuyor", EKRAN, TEMA, Boolean(ozet && /Toplam tahsilat/.test(ozet)), `"${(ozet ?? "").slice(0, 60)}…"`);
+    /* MOBİL KAYDIRMA GERÇEKTEN ÖLÇÜLÜYOR (24.11.2026). Eskiden içKaydırma
+       yalnızca K5'in notuna yazılıyordu, geçti/kaldı kontrolü değildi:
+       390 px'te gövde kaydırılamasa ya da yapışkan eylem satırı son
+       seçeneği örtse kabul yine yeşil kalırdı. Şimdi gövde sona
+       kaydırılıyor ve gönder düğmesinin ekranda, hiçbir şeyin altında
+       kalmadan tıklanabilir olduğu sınanıyor (elementFromPoint). */
+    if (mobil) {
+      const kaydirma = await s.evaluate(() => {
+        const kok = document.querySelector(".drawer-root.open");
+        const govde = kok.querySelector(".drawer-body");
+        const once = govde.scrollTop;
+        govde.scrollTop = govde.scrollHeight;
+        const sonra = govde.scrollTop;
+        const dugme = kok.querySelector('button[type="submit"]');
+        const k = dugme.getBoundingClientRect();
+        const orta = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+        return {
+          kaydirabilir: govde.scrollHeight - govde.clientHeight > 2,
+          ilerledi: sonra > once,
+          ekranda: k.top >= 0 && k.bottom <= window.innerHeight,
+          ustunde: Boolean(dugme.contains(orta) || dugme === orta),
+          sonSutunGorunur: (() => {
+            const sutunlar = [...kok.querySelectorAll(".karsilastir-sutun")];
+            const son = sutunlar[sutunlar.length - 1];
+            if (!son) return null;
+            const r = son.getBoundingClientRect();
+            return r.top < window.innerHeight && r.bottom > 0;
+          })(),
+        };
+      });
+      yaz("K8 · Mobilde pencere kaydırılıyor, eylem satırı içeriği örtmüyor", EKRAN, TEMA,
+          kaydirma.kaydirabilir && kaydirma.ilerledi && kaydirma.ekranda && kaydirma.ustunde,
+          `kaydırılabilir=${kaydirma.kaydirabilir} ilerledi=${kaydirma.ilerledi} ekranda=${kaydirma.ekranda} tıklanabilir=${kaydirma.ustunde} sonSütun=${kaydirma.sonSutunGorunur}`);
+      await resim("K8-kredileri-karsilastir-sona-kaydirilmis");
+    }
     if (!mobil && TEMA === "light") {
       await s.keyboard.press("Escape");
       await s.waitForTimeout(500);
@@ -211,14 +246,46 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       yaz("P2 · Plan karşılaştırma: kredi ve dönem satırları", EKRAN, TEMA, plan.krediSatiri && plan.donemSatiri,
           `sütun=${plan.sutun} kredi=${plan.krediSatiri} dönem=${plan.donemSatiri}`);
       await resim("P2-planlari-karsilastir");
+      /* Mobilde üst pencere de kaydırılabiliyor mu? Plan karşılaştırması
+         390 px'te en uzun içerik; kaydırılamazsa alttaki planlar hiç
+         görülmez. */
+      if (mobil) {
+        const pk = await s.evaluate(() => {
+          const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-satirlar"));
+          const govde = kok.querySelector(".drawer-body");
+          const once = govde.scrollTop;
+          govde.scrollTop = govde.scrollHeight;
+          const dugme = kok.querySelector('button[type="submit"]');
+          const k = dugme.getBoundingClientRect();
+          const orta = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+          return {
+            ilerledi: govde.scrollTop > once,
+            kaydirabilir: govde.scrollHeight - govde.clientHeight > 2,
+            ekranda: k.top >= 0 && k.bottom <= window.innerHeight,
+            ustunde: Boolean(dugme.contains(orta) || dugme === orta),
+          };
+        });
+        yaz("P4 · Mobilde plan karşılaştırması kaydırılıyor, eylem erişilebilir", EKRAN, TEMA,
+            pk.kaydirabilir && pk.ilerledi && pk.ekranda && pk.ustunde,
+            `kaydırılabilir=${pk.kaydirabilir} ilerledi=${pk.ilerledi} ekranda=${pk.ekranda} tıklanabilir=${pk.ustunde}`);
+      }
       await s.keyboard.press("Escape");
       await s.waitForTimeout(500);
       const kalan = await s.locator(".drawer-root.open").count();
       const kilit = await s.evaluate(() => document.documentElement.classList.contains("drawer-open"));
+      const altOdak = await odak(s);
       yaz("P3 · İç içe: ilk Esc üsttekini kapatıyor", EKRAN, TEMA, kalan === 1 && kilit, `kalan=${kalan} kilit=${kilit}`);
+      /* ODAK ALTTAKİ PENCEREYE (#148'in kuralı). Üstteki kapanınca odak
+         sayfaya değil, alttaki pencerede onu açan düğmeye dönmeli. */
+      yaz("P5 · İç içe: odak alttaki pencerenin açan düğmesine dönüyor", EKRAN, TEMA,
+          /Planları karşılaştır/.test(altOdak), `odak=${altOdak}`);
     }
     await s.keyboard.press("Escape");
-    await s.waitForTimeout(400);
+    await s.waitForTimeout(500);
+    const sonOdak = await odak(s);
+    const kilitKalkti = await s.evaluate(() => !document.documentElement.classList.contains("drawer-open"));
+    yaz("P6 · Son pencere kapanınca odak Planı yönet'e, kaydırma serbest", EKRAN, TEMA,
+        /Planı yönet/.test(sonOdak) && kilitKalkti, `odak=${sonOdak} kilitKalktı=${kilitKalkti}`);
   } catch (e) {
     yaz("B/K/P · bireysel akış", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`);
   }
