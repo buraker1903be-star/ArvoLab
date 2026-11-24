@@ -237,9 +237,26 @@ export default function DocumentUploadForm({
           </small>
         </label>
 
-        <label className="project-form-full">
+        {/*
+          DOSYA SEÇİCİ TÜRKÇE (24.11.2026). Ham <input type="file">
+          tarayıcının KENDİ metnini çiziyor: Türkçe arayüzde bile
+          "Choose File / No file chosen" yazıyordu — ekranın tek
+          İngilizce yeri ve asıl eylemin kendisi. Girdi ekran okuyucuya
+          açık kalıyor (.sr-only): etikete tıklamak da, Tab'la girdiye
+          gelip Enter/Space'e basmak da dosya seçiciyi açıyor, `required`
+          doğrulaması da çalışmaya devam ediyor. Kabul edilen biçimler
+          ve 20 MB sınırı değişmedi (sınır gönderimde de denetleniyor).
+        */}
+        <label className="project-form-full dosya-secici">
           <span>{t({ tr: "Dosya (.docx veya .pdf, en fazla 20 MB)", en: "File (.docx or .pdf, up to 20 MB)" })}</span>
+          <span className="dosya-secici-alan">
+            <span className="dosya-secici-dugme" aria-hidden="true">{t({ tr: "Dosya seç", en: "Choose file" })}</span>
+            <span className="dosya-secici-ad" data-bos={fileName ? undefined : true}>
+              {fileName ?? t({ tr: "Henüz dosya seçilmedi", en: "No file chosen" })}
+            </span>
+          </span>
           <input
+            className="sr-only"
             type="file"
             name="file"
             accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -253,9 +270,6 @@ export default function DocumentUploadForm({
             <UploadCloud size={16} aria-hidden="true" />
             {loading ? t({ tr: "Yükleniyor ve analiz ediliyor...", en: "Uploading and analyzing..." }) : t({ tr: "Yükle ve Analiz Et", en: "Upload and Analyze" })}
           </button>
-          {fileName ? (
-            <span className="muted text-base">{fileName}</span>
-          ) : null}
         </div>
       </form>
 

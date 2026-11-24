@@ -20,6 +20,7 @@ import {
 } from "@/lib/kaynak-aktarim";
 import type { CitationStyle } from "@/lib/citation-format";
 import { showToast } from "../_components/toast-events";
+import { useDosyaBirakma } from "@/app/dashboard/_components/dosya-birakma";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
 
@@ -122,6 +123,15 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     s.durum === "ertelendi" && s.neden ? ERTELEME_NEDENI[s.neden] : DURUM_ADI[s.durum];
   const saat = yenilenmeSaati(doiOzeti?.yenilenme, YEREL[dil]);
 
+
+  /* Bırakılan dosya <input accept> süzgecinden geçmez; biçim denetimi
+     kancanın içinde (dosya-birakma.ts). */
+  const risBirakma = useDosyaBirakma({
+    kabul: [".ris", ".bib", ".bibtex", ".txt"],
+    onDosya: (d) => void dosyaSecildi(d),
+    onHata: () => setDosyaHatasi(t({ tr: "Yalnızca .ris, .bib, .bibtex ya da .txt dosyası okunabiliyor.", en: "Only .ris, .bib, .bibtex or .txt files can be read." })),
+  });
+
   return (
     <div className="pencere-iki-kart">
       <section className="pencere-kart">
@@ -137,9 +147,13 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
             buraya yükleyin. Google Scholar&apos;ın “BibTeX” çıktısı da olur. Aynı DOI ya da aynı başlık ve yıl ikinci kez eklenmez.
           </p>
         )}
-        <label className="dropzone">
+        {/* Sürükle–bırak gerçekten çalışıyor (24.11.2026): alan bırakma
+            alanı gibi görünüyordu ama işleyicisi yoktu, sürüklenen .ris
+            dosyası tarayıcıda açılıyordu. */}
+        <label className="dropzone" {...risBirakma.ozellikler}>
           <FileUp size={22} aria-hidden="true" />
           <span>{dosya ? dosya.ad : t({ tr: "RIS ya da BibTeX dosyası seçin", en: "Choose an RIS or BibTeX file" })}</span>
+          <small className="muted">{t({ tr: ".ris · .bib · .bibtex · .txt — sürükleyip bırakabilirsiniz", en: ".ris · .bib · .bibtex · .txt — you can drag and drop" })}</small>
           <input type="file" accept=".ris,.bib,.bibtex,.txt" hidden onChange={(e) => { void dosyaSecildi(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
         {dosyaHatasi ? <p className="alert" data-tone="danger" role="alert">{dosyaHatasi}</p> : null}

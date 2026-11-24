@@ -12,6 +12,8 @@ import http from "node:http";
 const PORT = Number(process.env.TAKLIT_PORT ?? 54777);
 /* Dönem bitişi kabul metninde birebir aranıyor: 23 Mayıs 2027. */
 const DONEM_BITISI = process.env.TAKLIT_DONEM_BITISI ?? "2027-05-23T00:00:00.000Z";
+/* Deneme bitişi: kabul metninde birebir aranıyor. */
+const DENEME_BITISI = process.env.TAKLIT_DENEME_BITISI ?? "2026-12-08T00:00:00.000Z";
 
 
 /*
@@ -80,10 +82,14 @@ const sunucu = http.createServer((istek, yanit) => {
       eylem === "close"
         ? { closed: true }
         : {
-            status: "active",
+            /* DENEME durumu ayrı bir kullanıcıyla sınanıyor: e-postası
+               "ayar-deneme" ile başlayana ArvoOS'un deneme yanıtı
+               veriliyor (status trialing + trialEndsAt). Üretimde yeni
+               açılan her bireysel hesap bu durumda başlıyor. */
+            status: eposta.startsWith("ayar-deneme") ? "trialing" : "active",
             access: true,
-            trialEndsAt: null,
-            currentPeriodEnd: DONEM_BITISI,
+            trialEndsAt: eposta.startsWith("ayar-deneme") ? DENEME_BITISI : null,
+            currentPeriodEnd: eposta.startsWith("ayar-deneme") ? null : DONEM_BITISI,
             plans: eposta.startsWith("ayar-katalog") ? KATALOG_DOLU : KATALOG_BUGUN,
             /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
             creditPackages: PAKETLER,

@@ -465,6 +465,17 @@
 }
 .dropzone:hover,
 .dropzone:focus-within { border-color: var(--primary-ink); background: var(--primary-soft); }
+/*
+  SÜRÜKLEME GERİ BİLDİRİMİ (24.11.2026). Alan bırakma alanı gibi
+  görünüyordu ama bırakmayı kabul etmiyordu; artık ediyor
+  (dosya-birakma.ts) ve dosya üstüne geldiğinde bunu gösteriyor.
+  Kalınlaşan çerçeve yalnızca renge değil kalınlığa da dayanıyor:
+  renk körlüğünde renk tek başına ayırt edilmiyor.
+*/
+.dropzone[data-surukleniyor] {
+  border-color: var(--primary-ink); border-style: solid; border-width: 2px;
+  background: var(--primary-soft);
+}
 .dropzone strong { color: var(--ink); }
 .file-info-bar {
   display: flex;

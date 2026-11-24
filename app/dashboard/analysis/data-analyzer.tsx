@@ -66,6 +66,7 @@ import { aciklayiciFaktorAnalizi, kmoYorumu, maddeUyarisi } from "@/lib/stats-fa
 import { sayisalMi } from "@/lib/veri-eslestirme";
 import SutunSecimi from "./sutun-secimi";
 import VeriHazirlama from "./veri-hazirlama";
+import { useDosyaBirakma } from "@/app/dashboard/_components/dosya-birakma";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import type { Metin } from "@/lib/dil";
 
@@ -491,6 +492,15 @@ export default function DataAnalyzer({
     veride gruplar hep sayıyla kodlu; eskiden bu sütunlar yalnızca sayısal
     sayıldığı için t-testi, ANOVA ve ki-karenin grup listesi boş kalıyordu.
   */
+
+  /* Sürükle–bırak: bırakılan dosya <input accept> süzgecinden geçmez,
+     biçim denetimi kancada (dosya-birakma.ts). */
+  const veriBirakma = useDosyaBirakma({
+    kabul: [".xlsx", ".xls", ".csv", ".tsv", ".txt"],
+    onDosya: (d) => handleFile(d),
+    onHata: () => setParseError(t({ tr: "Desteklenen biçimler: .xlsx, .xls, .csv, .tsv, .txt", en: "Supported formats: .xlsx, .xls, .csv, .tsv, .txt" })),
+  });
+
   const grupSutunlari = useMemo(
     () => (dataset ? grupSutunlariniBul(dataset.categoricalColumns, dataset.numericColumns, dataset.rows) : []),
     [dataset],
@@ -3397,7 +3407,8 @@ export default function DataAnalyzer({
       )}
 
       {!dataset && (
-        <label className="dropzone">
+        /* Sürükle–bırak gerçekten çalışıyor (24.11.2026). */
+        <label className="dropzone" {...veriBirakma.ozellikler}>
           <UploadCloud size={28} aria-hidden="true" />
           {/* Görünür düğme: tıklanabilir alanın kendisi görünmediği için
               kullanıcı nereye basacağını aramak zorunda kalıyordu. */}

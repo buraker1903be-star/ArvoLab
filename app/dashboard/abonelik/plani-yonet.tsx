@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DESTEK_YOLU } from "@/lib/os/uygulamalar";
 import { useState, type ReactNode } from "react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { BillingPlan } from "@/lib/billing-plan";
@@ -149,7 +150,7 @@ export default function PlaniYonet({
                   (editörün "Uzmana sor" düğmesiyle aynı adres). Eskiden
                   "Destek'ten yazın" diyordu ama bağlantı yoktu. */}
               {t({ tr: "Farklı bir plana geçmek isterseniz", en: "To move to a different plan," })}{" "}
-              <Link href="/dashboard/support">{t({ tr: "Destek'e yazın", en: "write to Support" })}</Link>.
+              <Link href={DESTEK_YOLU}>{t({ tr: "Destek'e yazın", en: "write to Support" })}</Link>.
             </p>
           ) : null}
 

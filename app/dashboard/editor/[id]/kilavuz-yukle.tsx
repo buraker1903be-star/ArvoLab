@@ -11,6 +11,13 @@ import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { dogrulamaMesaji, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
 import { stilAdiMetni } from "@/lib/atif/stiller";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { useDosyaBirakma } from "@/app/dashboard/_components/dosya-birakma";
+
+/* Deponun KENDİ sınırı (storage.buckets.file_size_limit, migration
+   20260924100000): 20 MB. Ekranda yazan sayı uygulanan sayı olsun diye
+   buradan okunuyor; istemci de aynı sınırda durduruyor ki kullanıcı
+   20 MB'ı yükleyip beklemek zorunda kalmasın. */
+const KILAVUZ_EN_COK_MB = 20;
 
 /*
   ÖĞRENCİNİN KENDİ KILAVUZUNU YÜKLEMESİ (26.10.2026).
@@ -103,6 +110,13 @@ export default function KilavuzYukle({
       showToast("error", t({ tr: "Şimdilik yalnızca PDF okunabiliyor.", en: "Only PDFs can be read for now." }));
       return;
     }
+    if (dosya.size > KILAVUZ_EN_COK_MB * 1024 * 1024) {
+      showToast("error", t({
+        tr: `Dosya ${KILAVUZ_EN_COK_MB} MB sınırını aşıyor.`,
+        en: `The file is larger than the ${KILAVUZ_EN_COK_MB} MB limit.`,
+      }));
+      return;
+    }
     const no = ++islemNo.current;
     const guncel = () => islemNo.current === no;
     setDosyaAdi(dosya.name);
@@ -149,6 +163,19 @@ export default function KilavuzYukle({
       setAdim("secim");
     }
   };
+
+
+  /* Bırakılan dosya <input accept> süzgecinden GEÇMEZ; biçim ve boyut
+     denetimi bu yüzden kancanın içinde (dosya-birakma.ts). */
+  const birakma = useDosyaBirakma({
+    kabul: [".pdf", "application/pdf"],
+    enCokBayt: KILAVUZ_EN_COK_MB * 1024 * 1024,
+    onDosya: (d) => void dosyaSec(d),
+    onHata: (sebep) =>
+      showToast("error", sebep === "boyut"
+        ? t({ tr: `Dosya ${KILAVUZ_EN_COK_MB} MB sınırını aşıyor.`, en: `The file is larger than the ${KILAVUZ_EN_COK_MB} MB limit.` })
+        : t({ tr: "Şimdilik yalnızca PDF okunabiliyor.", en: "Only PDFs can be read for now." })),
+  });
 
   const adresTara = async () => {
     if (!adres.trim()) return;
@@ -581,15 +608,24 @@ export default function KilavuzYukle({
         (tasarım incelemesi, bulgu 4): aynı cümle iki punto farkıyla
         üst üste duruyordu. Başlık artık yalnızca pencerede.
       */}
-      <label className="dropzone">
+      {/*
+        SÜRÜKLE–BIRAK (24.11.2026). Alan kesik çerçevesi ve bulut
+        simgesiyle "buraya bırakabilirsin" diyordu ama hiçbir bırakma
+        işleyicisi yoktu: sürüklenen PDF tarayıcıda açılıyor, kullanıcı
+        uygulamadan çıkıyordu. Biçim ve boyut sınırı da yazmıyordu —
+        20 MB'lık sınır yalnızca sunucuda vardı, kullanıcı dosyayı
+        yükleyip beklediğinde öğreniyordu.
+      */}
+      <label className="dropzone" {...birakma.ozellikler}>
         <UploadCloud size={28} aria-hidden="true" />
         <strong className="text-base">{t({ tr: "Kılavuz PDF'inizi seçin", en: "Choose your guideline PDF" })}</strong>
         <small className="muted">
           {t({
-            tr: "Danışmanınızın gönderdiği ya da enstitü sitesinden indirdiğiniz dosya.",
-            en: "The file your advisor sent or that you downloaded from your graduate school's website.",
+            tr: "Danışmanınızın gönderdiği ya da enstitü sitesinden indirdiğiniz dosya. Buraya sürükleyip bırakabilirsiniz.",
+            en: "The file your advisor sent or that you downloaded from your graduate school's website. You can drag and drop it here.",
           })}
         </small>
+        <small className="muted">{t({ tr: `PDF · en fazla ${KILAVUZ_EN_COK_MB} MB`, en: `PDF · up to ${KILAVUZ_EN_COK_MB} MB` })}</small>
         {/*
           Tarayıcının ham "Choose File" düğmesi ekrandaki en önemsiz
           görünen öğeydi, oysa asıl eylem oydu. Girdi ekran okuyucuya
