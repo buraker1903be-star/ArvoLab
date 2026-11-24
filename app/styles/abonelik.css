@@ -73,9 +73,24 @@
   display: grid; align-content: start; gap: 8px;
   padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
 }
-/* Öne çıkan sütun: ölçülü lacivert çerçeve, dolu bir blok değil. */
-.karsilastir-sutun[data-one-cikan] { border-color: var(--primary-ink); box-shadow: 0 0 0 1px var(--primary-ink) inset; }
-.karsilastir-sutun[data-secili] { background: var(--primary-soft); border-color: var(--primary-ink); }
+/*
+  GÜÇLÜ ÇERÇEVE YALNIZCA SEÇİLİ KARTA (24.11.2026).
+
+  Eskiden çift lacivert çerçeve ÖNE ÇIKAN karta aitti: 250 kredi seçili
+  olduğu hâlde 1.000 kredi kartı seçilmiş görünüyordu ve özet "Seçilen:
+  250 kredi" diyordu. İki farklı şey aynı görsel dili kullanınca
+  kullanıcı neyi satın aldığını kartlardan okuyamıyor.
+
+  Şimdi iş bölümü net: ÖNERİYİ "Yoğun kullanım için" / "Yoğun
+  araştırmalar için" rozeti söylüyor (kartın kendisi nötr kalıyor),
+  SEÇİMİ güçlü çerçeve + dolgu, "Seçildi" etiketi ve işaretli radyo
+  düğmesi birlikte söylüyor. Aynı kural plan kartlarında da geçerli:
+  ikisi de bu sınıfı kullanıyor.
+*/
+.karsilastir-sutun[data-secili] {
+  background: var(--primary-soft); border-color: var(--primary-ink);
+  box-shadow: 0 0 0 1px var(--primary-ink) inset;
+}
 .karsilastir-sutun h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
 .karsilastir-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .karsilastir-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }

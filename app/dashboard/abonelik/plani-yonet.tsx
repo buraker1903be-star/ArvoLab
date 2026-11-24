@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { BillingPlan } from "@/lib/billing-plan";
@@ -44,10 +45,25 @@ export default function PlaniYonet({
   const [acik, setAcik] = useState(false);
   const [karsilastir, setKarsilastir] = useState(false);
 
+  /*
+    EYLEMSİZ PENCERE "YÖNET" DEMİYOR (24.11.2026).
+
+    Katalog karşılaştırmaya hazır değilken ve ödenecek bir yenileme de
+    yokken pencerede tek düğme "Kapat" oluyordu; başlığı "Planı yönet",
+    metni "aboneliğinizi bu pencereden yönetebilirsiniz" diyordu. Burada
+    yönetilecek bir şey YOK: pencere aboneliğin özetini gösteriyor.
+    Yapılamayacak bir şeyi vaat eden etiket, kullanıcıyı eylem arayıp
+    bulamadığı bir pencerede bırakıyor.
+
+    Eylem belirince (yenileme ödenebilir ya da katalog doldu) etiket
+    kendiliğinden "Planı yönet"e dönüyor.
+  */
+  const eylemVar = karsilastirilabilir || Boolean(yenilemeAlani);
+
   return (
     <>
       <button type="button" className="projects-filter-button button-compact" onClick={() => setAcik(true)}>
-        {t({ tr: "Planı yönet", en: "Manage plan" })}
+        {eylemVar ? t({ tr: "Planı yönet", en: "Manage plan" }) : t({ tr: "Abonelik özeti", en: "Subscription summary" })}
       </button>
 
       <Dialog
@@ -55,8 +71,12 @@ export default function PlaniYonet({
         onClose={() => setAcik(false)}
         boy="orta"
         kicker={t({ tr: "Abonelik", en: "Subscription" })}
-        title={t({ tr: "Planı yönet", en: "Manage plan" })}
-        description={t({ tr: "Çalışma temponuza uygun planı bulun.", en: "Find the plan that fits your working pace." })}
+        title={eylemVar ? t({ tr: "Planı yönet", en: "Manage plan" }) : t({ tr: "Abonelik özeti", en: "Subscription summary" })}
+        description={
+          eylemVar
+            ? t({ tr: "Çalışma temponuza uygun planı bulun.", en: "Find the plan that fits your working pace." })
+            : t({ tr: "Planınızın durumu ve yenileme bilgisi.", en: "Your plan's status and renewal information." })
+        }
       >
         <div className="plan-yonet">
           <div className="plan-yonet-mevcut">
@@ -116,10 +136,20 @@ export default function PlaniYonet({
           */}
           {!karsilastirilabilir ? (
             <p className="muted text-sm">
-              {t({
-                tr: "Plan seçenekleri şu anda ödeme sisteminden gelmiyor; aboneliğinizi bu pencereden yönetebilirsiniz. Farklı bir plana geçmek isterseniz Destek'ten yazın.",
-                en: "Plan options are not reported by the payment system right now; you can manage your subscription from this window. If you want to move to a different plan, write to Support.",
-              })}
+              {eylemVar
+                ? t({
+                    tr: "Plan seçenekleri şu anda ödeme sisteminden gelmiyor; mevcut aboneliğinizi buradan yenileyebilirsiniz.",
+                    en: "Plan options are not reported by the payment system right now; you can renew your current subscription here.",
+                  })
+                : t({
+                    tr: "Plan seçenekleri şu anda ödeme sisteminden gelmiyor; bu pencere aboneliğinizin özetini gösteriyor.",
+                    en: "Plan options are not reported by the payment system right now; this window shows a summary of your subscription.",
+                  })}{" "}
+              {/* Destek yönlendirmesi MEVCUT destek yoluna: /dashboard/support
+                  (editörün "Uzmana sor" düğmesiyle aynı adres). Eskiden
+                  "Destek'ten yazın" diyordu ama bağlantı yoktu. */}
+              {t({ tr: "Farklı bir plana geçmek isterseniz", en: "To move to a different plan," })}{" "}
+              <Link href="/dashboard/support">{t({ tr: "Destek'e yazın", en: "write to Support" })}</Link>.
             </p>
           ) : null}
 

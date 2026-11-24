@@ -105,7 +105,11 @@ const tarayici = await chromium.launch({ args: ["--no-sandbox"] });
 const eylemler = (s) => s.evaluate(() => {
   const dugmeler = [...document.querySelectorAll("button")].map((b) => b.textContent ?? "");
   return {
+    /* Eylemsiz durumda düğme "Abonelik özeti" (24.11.2026): pencere
+       yönetim vaat etmiyor. İkisini de tanıyoruz, hangisi çıktığı
+       ayrıntıya yazılıyor. */
     planYonet: dugmeler.some((m) => /Planı yönet/.test(m)),
+    planOzet: dugmeler.some((m) => /Abonelik özeti/.test(m)),
     krediIncele: dugmeler.some((m) => /Kredi paketlerini incele/.test(m)),
     ekKrediEylem: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
     ekKrediBilgi: Boolean(document.querySelector('.abonelik-ek-kredi[data-bilgi="true"]')),
@@ -150,14 +154,17 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
         cubuk: Boolean(document.querySelector(".abonelik-cubuk")),
         ekKredi: Boolean(document.querySelector(".abonelik-ek-kredi:not([data-bilgi])")),
         sekmeler: [...document.querySelectorAll(".abonelik-sekmeler .ayarlar-sekme")].map((x) => x.textContent.trim()),
-        planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet/.test(b.textContent))),
+        /* Eylem yoksa etiket "Abonelik özeti" (24.11.2026): pencere
+           yönetim vaat etmiyor. Burada aranan, plan penceresinin
+           ERİŞİLEBİLİR olması. */
+        planYonet: Boolean([...document.querySelectorAll("button")].find((b) => /Planı yönet|Abonelik özeti/.test(b.textContent))),
         sayfaTasmasi: document.documentElement.scrollWidth - document.documentElement.clientWidth > 2,
       };
     });
     yaz("B1 · İki kompakt kart", EKRAN, TEMA, sayfa.kartSayisi === 2 && sayfa.sutunlar === (mobil ? 1 : 2),
         `kart=${sayfa.kartSayisi} sütun=${sayfa.sutunlar}`);
     yaz("B2 · Kullanım çubuğu doğrulanabilen veride", EKRAN, TEMA, sayfa.cubuk, `çubuk=${sayfa.cubuk}`);
-    yaz("B3 · Ek kredi alanı ve Planı yönet var", EKRAN, TEMA, sayfa.ekKredi && sayfa.planYonet, `ekKredi=${sayfa.ekKredi} plan=${sayfa.planYonet}`);
+    yaz("B3 · Ek kredi alanı ve plan penceresi var", EKRAN, TEMA, sayfa.ekKredi && sayfa.planYonet, `ekKredi=${sayfa.ekKredi} plan=${sayfa.planYonet}`);
     yaz("B4 · Faturalar ve Kredi hareketleri sekmeleri", EKRAN, TEMA,
         JSON.stringify(sayfa.sekmeler) === JSON.stringify(["Faturalar", "Kredi hareketleri"]), JSON.stringify(sayfa.sekmeler));
     yaz("B5 · Sayfa yatay taşmıyor", EKRAN, TEMA, !sayfa.sayfaTasmasi, `taşma=${sayfa.sayfaTasmasi}`);
@@ -175,8 +182,9 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
        eylem de sunuluyor. U2/U3 ile birlikte okununca hangi eylemin
        hangi durumda göründüğü kabulde sabitlenmiş oluyor. */
     const be = await eylemler(s);
-    yaz("B7 · Bireysel (veri var): iki eylem de sunuluyor", EKRAN, TEMA, be.planYonet && be.krediIncele,
-        `planYönet=${be.planYonet} krediİncele=${be.krediIncele}`);
+    yaz("B7 · Bireysel (veri var): plan penceresi ve kredi satın alma sunuluyor", EKRAN, TEMA,
+        (be.planYonet || be.planOzet) && be.krediIncele,
+        `planYönet=${be.planYonet} planÖzet=${be.planOzet} krediİncele=${be.krediIncele}`);
 
     /* ---- K · Kredileri karşılaştır penceresi ---- */
     await s.locator("button", { hasText: /Kredi paketlerini incele/ }).first().click();
@@ -239,6 +247,31 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     });
     yaz("K10 · Seçili kart metinle de belirtiliyor", EKRAN, TEMA, secim.var && secim.tek && secim.isaretli,
         `seçili=${secim.var} tek=${secim.tek} işaret=${secim.isaretli}`);
+    /*
+      GÜÇLÜ ÇERÇEVE YALNIZCA SEÇİLİ KARTTA. Eskiden çift lacivert
+      çerçeve ÖNE ÇIKAN karta aitti: 250 kredi seçiliyken 1.000 kredi
+      kartı seçilmiş görünüyor, özet "Seçilen: 250 kredi" diyordu.
+      Burada 250 kredi seçili (K6 ilk radyoyu işaretliyor, liste
+      krediye göre artan sıralı) ve çerçeve ONDA olmalı.
+    */
+    const cerceve = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return [...kok.querySelectorAll(".karsilastir-sutun")].map((k) => {
+        const st = getComputedStyle(k);
+        return {
+          baslik: (k.querySelector("h3")?.textContent ?? "").trim(),
+          secili: k.dataset.secili !== undefined,
+          oneCikan: k.dataset.oneCikan !== undefined,
+          guclu: st.boxShadow !== "none" && st.boxShadow.includes("inset"),
+          radyo: Boolean(k.querySelector("input[type=radio]")?.checked),
+        };
+      });
+    });
+    const gucluler = cerceve.filter((k) => k.guclu);
+    yaz("K11 · Güçlü çerçeve yalnızca seçili kartta", EKRAN, TEMA,
+        gucluler.length === 1 && gucluler[0].secili && gucluler[0].radyo &&
+          cerceve.every((k) => !k.guclu || k.secili),
+        `güçlü=[${gucluler.map((k) => k.baslik).join(", ")}] seçili=[${cerceve.filter((k) => k.secili).map((k) => k.baslik).join(", ")}] öneri=[${cerceve.filter((k) => k.oneCikan).map((k) => k.baslik).join(", ")}]`);
     /* MOBİL KAYDIRMA GERÇEKTEN ÖLÇÜLÜYOR (24.11.2026). Eskiden içKaydırma
        yalnızca K5'in notuna yazılıyordu, geçti/kaldı kontrolü değildi:
        390 px'te gövde kaydırılamasa ya da yapışkan eylem satırı son
@@ -293,19 +326,37 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       halihazırda hangisinde olduğunu bilemezdi. Pencere mevcut
       abonelik yönetimi yolunu gösteriyor.
     */
-    await s.locator("button", { hasText: /Planı yönet/ }).first().click();
+    await s.locator("button", { hasText: /Planı yönet|Abonelik özeti/ }).first().click();
     await s.waitForSelector(".drawer-root.open .plan-yonet", { timeout: 15000 });
     await s.waitForTimeout(350);
     const bugun = await s.evaluate(() => {
       const kok = document.querySelector(".drawer-root.open");
+      const eylemler = [...kok.querySelectorAll("button, a[href]")]
+        .map((e) => (e.textContent ?? "").trim())
+        .filter((m) => m && !/^Pencereyi kapat$/.test(m));
       return {
         karsilastirVar: [...kok.querySelectorAll("button")].some((b) => /Planları karşılaştır/.test(b.textContent)),
+        baslik: kok.querySelector(".drawer-title, h2")?.textContent?.trim() ?? null,
+        destek: Boolean(kok.querySelector('a[href="/dashboard/support"]')),
+        eylemler,
         metin: kok.innerText.replace(/\s+/g, " "),
       };
     });
-    yaz("G1 · Bugünkü katalogda karşılaştırma sunulmuyor, mevcut yol yazıyor", EKRAN, TEMA,
+    yaz("G1 · Bugünkü katalogda karşılaştırma sunulmuyor", EKRAN, TEMA,
         !bugun.karsilastirVar && /gelmiyor/.test(bugun.metin),
-        `karşılaştır=${bugun.karsilastirVar} "${bugun.metin.slice(0, 70)}"`);
+        `karşılaştır=${bugun.karsilastirVar}`);
+    /*
+      EYLEMSİZ PENCERE "YÖNET" DEMİYOR. Tek eylem "Kapat" iken başlığın
+      "Planı yönet", metnin "buradan yönetebilirsiniz" demesi
+      kullanıcıyı olmayan bir eylemi aramaya bırakıyordu.
+    */
+    const yonetVaadi = /yönet/i.test(bugun.baslik ?? "") || /yönetebilirsiniz/i.test(bugun.metin);
+    yaz("G2 · Eylemsiz pencere abonelik özeti olarak tanımlanıyor", EKRAN, TEMA,
+        /özet/i.test(bugun.baslik ?? "") && /özetini/i.test(bugun.metin) && !yonetVaadi,
+        `başlık="${bugun.baslik}" yönetVaadi=${yonetVaadi}`);
+    /* Destek yönlendirmesi varsa MEVCUT destek bağlantısı olmalı. */
+    yaz("G3 · Destek yönlendirmesi gerçek bağlantı", EKRAN, TEMA,
+        !/Destek/i.test(bugun.metin) || bugun.destek, `destekBağlantısı=${bugun.destek}`);
     await resim("G1-plani-yonet-katalog-bos");
     await s.keyboard.press("Escape");
     await s.waitForTimeout(400);
@@ -358,6 +409,24 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       yaz("P7 · Her plan kartında dahil asistan kredisi", EKRAN, TEMA,
           planKart.length > 0 && planKart.every((k) => k.kredi && k.fiyat),
           `kart=${planKart.length} eksik=${planKart.filter((k) => !k.kredi).length}`);
+      /* Aynı kural plan kartlarında: öneriyi rozet, seçimi çerçeve. */
+      await s.locator(".drawer-root.open .karsilastir-sec input:not([disabled])").first().check();
+      await s.waitForTimeout(250);
+      const planCerceve = await s.evaluate(() => {
+        const kok = [...document.querySelectorAll(".drawer-root.open")].find((k) => k.querySelector(".karsilastir-sutun"));
+        return [...kok.querySelectorAll(".karsilastir-sutun")].map((k) => {
+          const st = getComputedStyle(k);
+          return {
+            baslik: (k.querySelector("h3")?.textContent ?? "").trim(),
+            secili: k.dataset.secili !== undefined,
+            guclu: st.boxShadow !== "none" && st.boxShadow.includes("inset"),
+          };
+        });
+      });
+      const pg = planCerceve.filter((k) => k.guclu);
+      yaz("P8 · Plan kartlarında da güçlü çerçeve yalnızca seçilide", EKRAN, TEMA,
+          pg.length === 1 && pg[0].secili,
+          `güçlü=[${pg.map((k) => k.baslik).join(", ")}] seçili=[${planCerceve.filter((k) => k.secili).map((k) => k.baslik).join(", ")}]`);
       await resim("P2-planlari-karsilastir");
       /* Mobilde üst pencere de kaydırılabiliyor mu? Plan karşılaştırması
          390 px'te en uzun içerik; kaydırılamazsa alttaki planlar hiç
