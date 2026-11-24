@@ -100,7 +100,21 @@ export default function AracMenusu({
         hidden={!acik}
         // Öğe tıklanınca menü kapanır; tıklama öğenin kendi işini yaptıktan sonra.
         onClick={(olay) => {
-          if ((olay.target as Element).closest("button:not([data-acik-kalir])")) setAcik(false);
+          if (!(olay.target as Element).closest("button:not([data-acik-kalir])")) return;
+          setAcik(false);
+          /*
+            ODAK DÜĞMEYE, TIKLAMA SIRASINDA (24.11.2026). Menü kapanınca
+            panel hidden olur ve tarayıcı, odaktaki öğe gizlendiği için
+            odağı gövdeye alır. Menüden bir pencere açılıyorsa (Kısayollar,
+            Sürümler, Paylaş) pencere "açılışta odakta olan öğe" diye
+            gövdeyi kaydediyor ve kapanınca odağı oraya iade ediyordu:
+            klavyeyle çalışan biri her pencereden sonra sayfanın en
+            başından Tab'lamak zorunda kalıyordu. Odak burada, daha React
+            yeniden çizmeden düğmeye alınıyor; bileşenin baştan beri
+            söylediği davranış ("odak düğmeye döner") Escape dışındaki
+            kapanışlarda da geçerli oluyor.
+          */
+          dugme.current?.focus();
         }}
       >
         {children}

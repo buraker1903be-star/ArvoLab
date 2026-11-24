@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { enUstPencere, useOdakTuzagi } from "./odak-tuzagi";
+import { useOdakTuzagi } from "./odak-tuzagi";
+import { odagiIadeEt } from "./odak-iadesi";
+import { usePencereKatmani } from "./pencere-katmani";
 import { ACTION_SUCCESS_EVENT } from "./toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
@@ -96,52 +98,32 @@ export default function PanelDrawer({
   const kokRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+  /* Tetiksiz pencerede (adresten açılan kılavuz, ActionForm onayı) iade
+     edilecek düğme yok; açılış anında odakta olan öğe yedek hedeftir. */
+  const oncekiOdak = useRef<HTMLElement | null>(null);
 
   // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
   useOdakTuzagi(dialogRef, open);
+  /* Katman, Escape ve sayfa kilidi Dialog ile AYNI koddan. */
+  const kapat = useCallback(() => setOpen(false), [setOpen]);
+  usePencereKatmani(kokRef, open, kapat);
 
   useEffect(() => {
     if (!open) {
-      // Kapanınca odak, pencereyi açan düğmeye geri döner
-      if (wasOpen.current) triggerRef.current?.focus();
+      /* Kapanınca odak tetiğe döner; tetik yoksa odak-iadesi.ts'teki
+         sıra işler (açan menü düğmesi, alttaki pencere, sayfa başlığı).
+         Eskiden tetiksiz pencerede odak sayfanın gövdesine düşüyordu. */
+      if (wasOpen.current) odagiIadeEt(triggerRef.current ?? oncekiOdak.current);
       wasOpen.current = false;
       return;
     }
     wasOpen.current = true;
-    /*
-      İÇ İÇE PENCERE (Literatür → Manuel kaynak ekle): Escape yalnızca en
-      üstteki pencereyi kapatır. Eskiden her açık pencere kendi dinleyicisiyle
-      kapanıyordu ve tek tuş ikisini birden kapatıyordu.
-    */
-    /*
-      KATMAN: açılan pencere, o an açık olanların ÜSTÜNE çizilir. Belge
-      sırasına güvenilemiyor: iç pencerenin kökü (portal) dıştakinden
-      önce ekleniyor ve iç pencere arkada kalıyordu. Sıra açılış anında
-      sayılıp köke yazılıyor; en üstteki = en büyük katman.
-    */
-    const kok = kokRef.current;
-    if (kok) {
-      const katman = String(document.querySelectorAll(".drawer-root.open").length);
-      kok.dataset.katman = katman;
-      kok.style.setProperty("--katman", katman);
-    }
-    const enUsttekiMi = () => enUstPencere() === kokRef.current;
-    const onKeyDown = (event: KeyboardEvent) => {
-      /* İçteki seçici ya da takvim Escape'i işlediyse (preventDefault) pencere
-         açık kalır. Eskiden takvimi kapatan Esc yarım doldurulmuş "Yeni
-         çalışma" penceresini de kapatıyor, yazılanlar gidiyordu. */
-      if (event.key === "Escape" && !event.defaultPrevented && enUsttekiMi()) setOpen(false);
-    };
+    oncekiOdak.current = document.activeElement as HTMLElement | null;
     const onSuccess = () => setOpen(false);
-    document.addEventListener("keydown", onKeyDown);
     if (basaridaKapan) window.addEventListener(ACTION_SUCCESS_EVENT, onSuccess);
-    document.documentElement.classList.add("drawer-open");
     window.requestAnimationFrame(() => dialogRef.current?.focus());
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener(ACTION_SUCCESS_EVENT, onSuccess);
-      // Altta açık bir pencere kaldıysa sayfa kilidi sürmeli.
-      if (!document.querySelector(".drawer-root.open")) document.documentElement.classList.remove("drawer-open");
     };
   }, [open, basaridaKapan, setOpen]);
 
