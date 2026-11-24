@@ -205,23 +205,83 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await s.waitForTimeout(400);
   } catch (e) { yaz("A · aktif abonelik", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
-  /* ---- F · Dosya seçici: sürükle–bırak GERÇEKTEN çalışıyor ---- */
-  try {
-    /* Kılavuz penceresi ÇALIŞMA AYRINTI görünümünde (calisma-durum-karti);
-       çalışma listesinde yok. Çalışma yoksa önce açılıyor. */
+  /* Belge Kontrol ve kılavuz penceresi bir ÇALIŞMAYA bağlı; yoksa
+     sayfalar "önce bir çalışma başlatın" diyor. Bir kez kuruluyor. */
+  const calismaKur = async () => {
     await git("/dashboard/editor");
     await s.waitForTimeout(900);
-    let calismaId = await s.evaluate(() =>
+    let id = await s.evaluate(() =>
       document.querySelector('a[href*="/dashboard/editor/"]')?.getAttribute("href")?.split("/")[3] ?? null);
-    if (!calismaId) {
+    if (!id) {
       await s.locator("button, a", { hasText: /^Yeni çalışma$/ }).first().click();
       await s.waitForSelector('.drawer-root.open input[name="title"]', { timeout: 20000 });
       await s.fill('.drawer-root.open input[name="title"]', "Takip kabulu");
       await s.locator(".drawer-root.open button", { hasText: /^Proje/ }).first().click();
       await Promise.all([s.waitForURL(/\/dashboard\/editor\//, { timeout: 60000 }),
                          s.locator(".drawer-root.open button", { hasText: /Oluştur ve yaz/ }).click()]);
-      calismaId = s.url().match(/\/dashboard\/editor\/([^/?]+)/)?.[1] ?? null;
+      id = s.url().match(/\/dashboard\/editor\/([^/?]+)/)?.[1] ?? null;
     }
+    return id;
+  };
+  let calismaId = null;
+  try { calismaId = await calismaKur(); } catch { /* alt bölümler kendi hatalarını yazar */ }
+
+  /* ---- B · Belge Kontrol: dosya seçici Türkçe ---- */
+  try {
+    await git("/dashboard/documents");
+    await s.waitForTimeout(900);
+    await s.locator("button", { hasText: /Belge yükle/ }).first().click();
+    await s.waitForSelector(".drawer-root.open .dosya-secici", { timeout: 20000 });
+    await s.waitForTimeout(400);
+    const b = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      const girdi = kok.querySelector('input[type="file"]');
+      const metin = kok.innerText.replace(/\s+/g, " ");
+      return {
+        dosyaSec: /Dosya seç/.test(metin),
+        bos: /Henüz dosya seçilmedi/.test(metin),
+        ingilizce: /Choose File|No file chosen|Dosya Seç\b.*Dosya seçilmedi/.test(metin),
+        kabul: girdi?.getAttribute("accept") ?? "",
+        zorunlu: girdi?.required ?? false,
+        sinir: /20 MB/.test(metin),
+        gizli: girdi?.classList.contains("sr-only") ?? false,
+      };
+    });
+    yaz("B1 · Türkçe: 'Dosya seç' ve 'Henüz dosya seçilmedi'", EKRAN, TEMA, b.dosyaSec && b.bos && !b.ingilizce,
+        `dosyaSeç=${b.dosyaSec} boş=${b.bos} ingilizce=${b.ingilizce}`);
+    yaz("B2 · .docx ve .pdf kabulü, zorunlu alan, 20 MB sınırı korundu", EKRAN, TEMA,
+        /\.docx/.test(b.kabul) && /\.pdf/.test(b.kabul) && b.zorunlu && b.sinir,
+        `accept="${b.kabul.slice(0, 40)}…" required=${b.zorunlu} sınır=${b.sinir}`);
+    /* KLAVYE: girdi .sr-only ama odaklanabilir olmalı; odaklanamazsa
+       dosya yalnızca fareyle seçilebilirdi. */
+    const klavye = await s.evaluate(() => {
+      const girdi = document.querySelector('.drawer-root.open input[type="file"]');
+      girdi.focus();
+      return document.activeElement === girdi;
+    });
+    yaz("B3 · Klavyeyle dosya seçimi korundu (girdi odaklanabilir)", EKRAN, TEMA, klavye && b.gizli,
+        `odaklanabilir=${klavye} sr-only=${b.gizli}`);
+    /* Dosya seçilince ADI görünmeli. */
+    await s.setInputFiles('.drawer-root.open input[type="file"]', {
+      name: "tez-taslagi.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 kabul"),
+    });
+    await s.waitForTimeout(400);
+    const adGoruldu = await s.evaluate(() => {
+      const m = document.querySelector(".drawer-root.open").innerText;
+      return { ad: /tez-taslagi\.pdf/.test(m), bosHala: /Henüz dosya seçilmedi/.test(m) };
+    });
+    yaz("B4 · Dosya seçilince adı görünüyor", EKRAN, TEMA, adGoruldu.ad && !adGoruldu.bosHala,
+        `ad=${adGoruldu.ad} boşMetinKaldı=${adGoruldu.bosHala}`);
+    await resim("SONRA-belge-kontrol-dosya-secici");
+    await s.keyboard.press("Escape");
+    await s.waitForTimeout(400);
+  } catch (e) { yaz("B · Belge Kontrol dosya seçici", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+
+  /* ---- F · Dosya seçici: sürükle–bırak GERÇEKTEN çalışıyor ---- */
+  try {
+    /* Kılavuz penceresi ÇALIŞMA AYRINTI görünümünde (calisma-durum-karti);
+       çalışma listesinde yok. Çalışma yoksa önce açılıyor. */
+    if (!calismaId) calismaId = await calismaKur();
     await git(`/dashboard/editor?sec=${calismaId}&ayrinti=1`);
     await s.waitForTimeout(1200);
     await s.locator("button", { hasText: /Kılavuz yükle|Yazım kılavuzu/ }).first().click();
@@ -254,11 +314,117 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       halaSecim: Boolean(document.querySelector(".drawer-root.open .dropzone")),
       uyari: /yalnızca PDF|Only PDFs/i.test(document.body.innerText),
     }));
-    yaz("F3 · Uymayan dosya reddediliyor, yükleme başlamıyor", EKRAN, TEMA, red.halaSecim && red.uyari,
+    yaz("F3 · Kılavuz: uymayan dosya reddediliyor, yükleme başlamıyor", EKRAN, TEMA, red.halaSecim && red.uyari,
         `seçimde=${red.halaSecim} uyarı=${red.uyari}`);
+    /* GEÇERLİ dosya İŞLENİYOR: bırakılan PDF seçim adımından çıkarıp
+       yükleme/tarama adımını başlatmalı. Taramanın SONUCU beklenmiyor
+       (ücretli çağrı); ölçülen, bırakmanın işlenmiş olması. */
+    const dt3 = await s.evaluateHandle(() => {
+      const d = new DataTransfer();
+      d.items.add(new File(["%PDF-1.4 kabul"], "kilavuz.pdf", { type: "application/pdf" }));
+      return d;
+    });
+    await s.dispatchEvent(".drawer-root.open .dropzone", "drop", { dataTransfer: dt3 });
+    await s.waitForTimeout(1800);
+    const islendi = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return { secimdeDegil: !kok?.querySelector(".dropzone"), metin: (kok?.innerText ?? "").replace(/\s+/g, " ").slice(0, 80) };
+    });
+    yaz("F4 · Kılavuz: geçerli PDF işleniyor (seçim adımından çıkıyor)", EKRAN, TEMA, islendi.secimdeDegil,
+        `"${islendi.metin}"`);
     await s.keyboard.press("Escape");
     await s.waitForTimeout(400);
-  } catch (e) { yaz("F · dosya seçici", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+  } catch (e) { yaz("F · kılavuz dosya alanı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+
+  /* ---- R · Kaynak içe aktarma (RIS/BibTeX) ---- */
+  try {
+    await git("/dashboard/literature");
+    await s.waitForTimeout(1200);
+    /* "Dosyadan içe aktar" penceresi "Kaynak ekle" sekmesinin içinde;
+       sekme açılmadan tetikleyici DOM'da yok. */
+    const sekme = s.locator("button", { hasText: /^Kaynak ekle$/ }).first();
+    if (await sekme.count()) { await sekme.click().catch(() => {}); await s.waitForTimeout(1200); }
+    const ice = s.locator("button", { hasText: /Dosyadan içe aktar/ }).first();
+    if (await ice.count()) { await ice.click({ timeout: 15000, force: true }).catch(() => {}); await s.waitForTimeout(1800); }
+    /*
+      Literatür sayfasında BİRDEN FAZLA bırakma alanı var (kaynak
+      aktarma ve kaynağın kendi PDF'i). Yanlışına bırakmak sınanan şeyi
+      kaçırırdı: alan İÇERİĞİNDEN seçiliyor (RIS/BibTeX yazan).
+    */
+    const alan = ".dropzone:has-text('RIS')";
+    if (await s.locator(alan).count()) {
+      /* GEÇERSİZ: .pdf reddedilmeli. */
+      const dtk = await s.evaluateHandle(() => { const d = new DataTransfer();
+        d.items.add(new File(["%PDF"], "makale.pdf", { type: "application/pdf" })); return d; });
+      await s.dispatchEvent(alan, "drop", { dataTransfer: dtk });
+      await s.waitForTimeout(700);
+      /* innerText GİZLİ metni atlar; panel kapalı bir pencerede
+         bağlıyken uyarı DOM'da olur ama innerText'te görünmez.
+         Ölçüm bu yüzden textContent üzerinden. */
+      const redR = await s.evaluate(() =>
+        [...document.querySelectorAll('.alert[data-tone="danger"]')].some((e) => /Yalnızca \.ris/.test(e.textContent ?? "")));
+      yaz("R1 · Kaynak aktarma: geçersiz dosya reddediliyor", EKRAN, TEMA, redR, `uyarı=${redR}`);
+      /* GEÇERLİ: .ris okunmalı ve önizleme çıkmalı. */
+      const dtg = await s.evaluateHandle(() => { const d = new DataTransfer();
+        const ris = "TY  - JOUR\nTI  - Kabul denemesi\nAU  - Yilmaz, A\nPY  - 2020\nER  -\n";
+        d.items.add(new File([ris], "kaynaklar.ris", { type: "text/plain" })); return d; });
+      await s.dispatchEvent(alan, "drop", { dataTransfer: dtg });
+      await s.waitForTimeout(1500);
+      const okR = await s.evaluate(() => ({
+        onizleme: Boolean(document.querySelector(".kaynak-onizleme")),
+        ad: /kaynaklar\.ris/.test(document.body.innerText),
+      }));
+      yaz("R2 · Kaynak aktarma: geçerli .ris işleniyor", EKRAN, TEMA, okR.onizleme || okR.ad,
+          `önizleme=${okR.onizleme} ad=${okR.ad}`);
+      await resim("SONRA-kaynak-aktarma");
+    } else yaz("R1 · Kaynak aktarma bırakma alanı", EKRAN, TEMA, false, "bırakma alanı bulunamadı");
+  } catch (e) { yaz("R · kaynak aktarma", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+
+  /* ---- V · Veri çözümleme (xlsx/csv) ---- */
+  try {
+    await git("/dashboard/analysis");
+    await s.waitForTimeout(1500);
+    if (await s.locator(".dropzone").count()) {
+      const dtk = await s.evaluateHandle(() => { const d = new DataTransfer();
+        d.items.add(new File(["%PDF"], "rapor.pdf", { type: "application/pdf" })); return d; });
+      await s.dispatchEvent(".dropzone", "drop", { dataTransfer: dtk });
+      await s.waitForTimeout(700);
+      const redV = await s.evaluate(() =>
+        [...document.querySelectorAll(".alert, [role=alert]")].some((e) => /Desteklenen biçimler/i.test(e.textContent ?? "")));
+      yaz("V1 · Veri çözümleme: geçersiz dosya reddediliyor", EKRAN, TEMA, redV, `uyarı=${redV}`);
+      const dtg = await s.evaluateHandle(() => { const d = new DataTransfer();
+        d.items.add(new File(["a,b\n1,2\n3,4\n"], "veri.csv", { type: "text/csv" })); return d; });
+      await s.dispatchEvent(".dropzone", "drop", { dataTransfer: dtg });
+      await s.waitForTimeout(2500);
+      const okV = await s.evaluate(() => ({ dropzoneGitti: !document.querySelector(".dropzone"),
+        metin: document.body.innerText.replace(/\s+/g, " ").slice(0, 120) }));
+      yaz("V2 · Veri çözümleme: geçerli .csv işleniyor", EKRAN, TEMA, okV.dropzoneGitti, `"${okV.metin.slice(0, 70)}"`);
+      await resim("SONRA-veri-cozumleme");
+    } else yaz("V1 · Veri çözümleme bırakma alanı", EKRAN, TEMA, false, "bırakma alanı bulunamadı");
+  } catch (e) { yaz("V · veri çözümleme", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+
+  /* ---- W · Destek: "Bize yaz" formu açılıyor (GÖNDERİM YOK) ---- */
+  try {
+    await git("/dashboard/expert-requests");
+    await s.waitForTimeout(1200);
+    await s.locator("button", { hasText: /Bize yaz/ }).first().click();
+    await s.waitForSelector(".drawer-root.open", { timeout: 20000 });
+    await s.waitForTimeout(600);
+    const w = await s.evaluate(() => {
+      const kok = document.querySelector(".drawer-root.open");
+      return {
+        baslik: kok.querySelector("h2, .drawer-title")?.textContent?.trim() ?? null,
+        alan: kok.querySelectorAll("textarea, input[type=text]").length,
+        gonder: [...kok.querySelectorAll("button")].some((b) => b.type === "submit"),
+      };
+    });
+    /* Form AÇILIYOR; gönderim yapılmıyor. */
+    yaz("W1 · 'Bize yaz' formu açılıyor (gönderilmedi)", EKRAN, TEMA, Boolean(w.baslik) && w.alan > 0 && w.gonder,
+        `başlık="${w.baslik}" alan=${w.alan} gönderDüğmesi=${w.gonder}`);
+    await resim("SONRA-bize-yaz");
+    await s.keyboard.press("Escape");
+    await s.waitForTimeout(400);
+  } catch (e) { yaz("W · Bize yaz formu", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
   await ctx.close();
 }

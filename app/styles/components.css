@@ -2278,3 +2278,25 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   .kart-menu-liste button,
   .kaynak-arac-liste button { min-height: 44px; }
 }
+
+/*
+  DOSYA SEÇİCİ (24.11.2026). Ham <input type="file"> tarayıcının kendi
+  metnini çiziyordu ("Choose File / No file chosen"): Türkçe arayüzde
+  tek İngilizce yer ve asıl eylemin kendisi. Girdi .sr-only ile ekran
+  okuyucuda ve klavyede duruyor; görünen düğme ile seçilen dosyanın adı
+  etiketin içinde.
+*/
+.dosya-secici-alan {
+  display: flex; align-items: center; gap: 10px; min-height: 40px;
+  padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); cursor: pointer;
+}
+.dosya-secici:hover .dosya-secici-alan,
+.dosya-secici:focus-within .dosya-secici-alan { border-color: var(--primary-ink); }
+.dosya-secici:focus-within .dosya-secici-alan { box-shadow: var(--odak-halkasi); }
+.dosya-secici-dugme {
+  flex: none; padding: 6px 12px; border-radius: var(--r-sm);
+  background: var(--primary-ink); color: var(--on-primary); font-size: var(--fs-sm); font-weight: 600;
+}
+.dosya-secici-ad { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.dosya-secici-ad[data-bos] { color: var(--muted); }
