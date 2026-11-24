@@ -64,6 +64,21 @@ export type OsUygulama = {
 */
 export type OsYer = "hesap" | "yonetim" | "arac" | "yardim";
 
+/*
+  DESTEK YOLU TEK YERDEN (24.11.2026).
+
+  /dashboard/support bir YÖNLENDİRME (app/dashboard/support/page.tsx →
+  expert-requests). Uygulama içinden bu adrese bağlanınca Next önce
+  yönlendirmenin RSC yanıtını, sonra gerçek sayfanınkini çekiyor: iki
+  tur boyunca içerik alanı BOŞ kalıyor (üretimde bomboş bir ekran,
+  yerelde ~1 sn "Yükleniyor…"). Kullanıcı "Destek"e bastığında boş bir
+  sayfa görüyor.
+
+  Uygulama içindeki bağlantılar bu sabiti kullanıyor; /dashboard/support
+  eski bağlantılar ve dışarıdan gelenler için yönlendirme olarak KALIYOR.
+*/
+export const DESTEK_YOLU = "/dashboard/expert-requests";
+
 export const ANA_SAYFA = "/dashboard";
 
 /*

@@ -210,7 +210,19 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
       : access.kind === "individual"
         ? t({ tr: "Bireysel plan", en: "Individual plan" })
         : t({ tr: "İç ekip", en: "Internal team" });
+  /*
+    DENEMEDE "YENİLEME" YOK (24.11.2026). Kart, denemenin BİTİŞ tarihini
+    "Sonraki yenileme" diye yazıyordu: denemede yenilenen bir şey yok,
+    tarih geldiğinde çalışma ekranları kapanıyor ve kullanıcının ödeme
+    yapması gerekiyor. Ana sayfa bunu baştan doğru söylüyordu ("Deneme
+    süreniz … tarihinde bitiyor"); bu sayfa aynı tarihe başka bir anlam
+    yüklüyordu.
+  */
+  const denemede = access.kind === "individual" && access.status === "trialing";
   const yenilemeMetni = access.periodEnd ? uzunTarih(access.periodEnd) : access.trialEndsAt ? uzunTarih(access.trialEndsAt) : null;
+  const yenilemeEtiketi = denemede
+    ? t({ tr: "Deneme bitişi", en: "Trial ends" })
+    : t({ tr: "Sonraki yenileme", en: "Next renewal" });
   /*
     YÜRÜRLÜKTEKİ PLAN KODU ŞU AN BİLİNMİYOR: köprü de aynası da
     (individual_subscriptions) yalnızca durum ve dönem bitişi tutuyor.
@@ -295,7 +307,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               "—" yazmak bilinmeyeni bilinir göstermek olurdu. */}
           {yenilemeMetni ? (
             <div className="abonelik-kart-satir">
-              <span>{t({ tr: "Sonraki yenileme", en: "Next renewal" })}</span>
+              <span>{yenilemeEtiketi}</span>
               <b>{yenilemeMetni}</b>
             </div>
           ) : null}
@@ -307,10 +319,26 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             organizations.ai_credit_limit). Hak bildirilmemişse satır
             çizilmiyor.
           */}
-          {kredi.goster && kredi.aylikLimit > 0 ? (
+          {/*
+            DENEMEDE AYLIK KREDİ YAZILMAZ (24.11.2026). Kart "Aylık
+            asistan kredisi 1.000" diyor, hemen altındaki kredi kartı
+            ise "Deneme süresince asistanı 2 kez kullanabilirsiniz"
+            diyordu: iki satır birbiriyle çelişiyordu. Denemede hak
+            KREDİYLE değil kullanım SAYISIYLA ölçülüyor
+            (lib/ai/deneme-hakki.ts); 1.000 kredi abonelik başlayınca
+            geçerli. Kullanıcının bugün sahip olmadığı bir hakkı
+            yazmak, olmayan bir sınır göstermekle aynı hata.
+          */}
+          {!denemede && kredi.goster && kredi.aylikLimit > 0 ? (
             <div className="abonelik-kart-satir">
               <span>{t({ tr: "Aylık asistan kredisi", en: "Monthly assistant credits" })}</span>
               <b>{sayi(kredi.aylikLimit)}</b>
+            </div>
+          ) : null}
+          {denemede ? (
+            <div className="abonelik-kart-satir">
+              <span>{t({ tr: "Deneme hakkı", en: "Trial allowance" })}</span>
+              <b>{t({ tr: `${DENEME_ASISTAN_HAKKI} asistan çalışması`, en: `${DENEME_ASISTAN_HAKKI} assistant runs` })}</b>
             </div>
           ) : null}
           {ozet === null ? (
@@ -332,11 +360,16 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             <PlaniYonet
               planAdi={planAdi}
               durum={ozet?.statusLabel ?? null}
-              yenileme={yenilemeMetni ? t({ tr: `Sonraki yenileme: ${yenilemeMetni}`, en: `Next renewal: ${yenilemeMetni}` }) : null}
+              yenileme={yenilemeMetni ? `${yenilemeEtiketi}: ${yenilemeMetni}` : null}
               dahilKredi={
-                kredi.goster && kredi.aylikLimit > 0
-                  ? t({ tr: `Aylık ${sayi(kredi.aylikLimit)} asistan kredisi dahil`, en: `${sayi(kredi.aylikLimit)} assistant credits included each month` })
-                  : null
+                denemede
+                  ? t({
+                      tr: `Denemede ${DENEME_ASISTAN_HAKKI} asistan çalışması; aylık kredi abonelik başlayınca geçerli.`,
+                      en: `${DENEME_ASISTAN_HAKKI} assistant runs during the trial; the monthly credits apply once the subscription starts.`,
+                    })
+                  : kredi.goster && kredi.aylikLimit > 0
+                    ? t({ tr: `Aylık ${sayi(kredi.aylikLimit)} asistan kredisi dahil`, en: `${sayi(kredi.aylikLimit)} assistant credits included each month` })
+                    : null
               }
               planlar={access.plans}
               mevcutKod={mevcutPlanKodu}

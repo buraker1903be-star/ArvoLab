@@ -337,7 +337,10 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       return {
         karsilastirVar: [...kok.querySelectorAll("button")].some((b) => /Planları karşılaştır/.test(b.textContent)),
         baslik: kok.querySelector(".drawer-title, h2")?.textContent?.trim() ?? null,
-        destek: Boolean(kok.querySelector('a[href="/dashboard/support"]')),
+        /* Bağlantı artık YÖNLENDİRMEYE değil hedefe gidiyor
+           (24.11.2026, DESTEK_YOLU): /dashboard/support'a uğramak iki
+           RSC turu demekti ve arada ekran boş kalıyordu. */
+        destek: Boolean(kok.querySelector('a[href="/dashboard/expert-requests"]')),
         eylemler,
         metin: kok.innerText.replace(/\s+/g, " "),
       };

@@ -148,6 +148,7 @@ import {
   type SettingsSource,
 } from "@/app/actions/manuscript";
 import { saveNamedVersion } from "@/app/actions/manuscript-versions";
+import { DESTEK_YOLU } from "@/lib/os/uygulamalar";
 import { createClient } from "@/lib/supabase/client";
 import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules";
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
@@ -3921,7 +3922,7 @@ export default function ManuscriptEditor({
             <button type="button" className="projects-primary-button" disabled={uyumsuzYedekleniyor} onClick={() => void uyumsuzIcerikleDevam()}>
               {t({ tr: "Yedekle ve devam et", en: "Back up and continue" })}
             </button>
-            <Link href="/dashboard/support" className="projects-filter-button">
+            <Link href={DESTEK_YOLU} className="projects-filter-button">
               {t({ tr: "Destek", en: "Support" })}
             </Link>
           </span>
