@@ -1,0 +1,120 @@
+/* ============================================================
+   AYARLAR PENCERESİ (24.11.2026)
+   Bileşenler: app/dashboard/_components/ayarlar-penceresi.tsx,
+   ayarlar-icerik.tsx; sayfa hâli app/dashboard/settings/.
+
+   Pencere ortak kabı kullanıyor (.drawer, overlays.css): masaüstünde
+   ortada, telefonda alttan açılan sayfa. Buradaki kurallar yalnızca
+   ayarların İÇİ: sekme şeridi, kompakt form genişliği ve ince ayırıcılar.
+   ============================================================ */
+
+.ayarlar { display: grid; gap: 0; }
+
+/* ---------- Sekme şeridi ----------
+   Başlığın hemen altında ve yapışkan: uzun bir sekmede aşağı kayarken
+   hangi bölümde olunduğu görünür kalsın. Telefonda yatay kayıyor;
+   kaydırma çubuğu gizli, kenarda kalan sekme parmakla çekilerek
+   getiriliyor ve seçilen sekme kendi görüş alanına kaydırılıyor
+   (ayarlar-icerik.tsx). */
+.ayarlar-sekme-serit {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  margin: -4px -4px 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line-soft);
+}
+.ayarlar-sekme-serit::-webkit-scrollbar { display: none; }
+.ayarlar-sekme {
+  flex: none;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+.ayarlar-sekme:hover { color: var(--ink); }
+.ayarlar-sekme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); border-radius: var(--r-sm); }
+/* Vurgu ölçülü: yalnızca alt çizgi ve koyulaşan yazı, dolu bir kutu değil. */
+.ayarlar-sekme[data-etkin] { color: var(--primary-ink); border-bottom-color: var(--primary-ink); }
+@media (prefers-reduced-motion: reduce) { .ayarlar-sekme { transition: none; } }
+
+/* ---------- Gövde ----------
+   KOMPAKT FORM GENİŞLİĞİ: alanlar pencere genişledikçe uzamıyor. Uzun
+   bir metin kutusu okunur ama uzun bir AD kutusu yalnızca boş durur. */
+.ayarlar-govde { padding-top: 18px; }
+.ayarlar-panel { display: grid; gap: 18px; max-width: 46rem; }
+/* display:grid tarayıcının [hidden] kuralını EZİYOR: bu olmadan beş
+   sekmenin içeriği alt alta birden çiziliyordu. */
+.ayarlar-panel[hidden] { display: none; }
+.ayarlar-bolum { display: grid; gap: 18px; }
+.ayarlar-form { display: grid; gap: 14px; }
+.ayarlar-form label { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); }
+.ayarlar-form label > span { color: var(--muted); font-weight: 600; }
+.ayarlar-form p { margin: 0; }
+
+/* Ad ve Soyad masaüstünde yan yana, dar ekranda alt alta. */
+.ayarlar-ikili { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+/* Telefon: ülke kodu dar, numara kalanı. Dar ekranda ikisi de tam satır. */
+.ayarlar-telefon { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 560px) {
+  .ayarlar-ikili,
+  .ayarlar-telefon { grid-template-columns: 1fr; }
+}
+
+/* Bekleyen e-posta doğrulaması: adresin yanında, ayrı satırda. */
+.ayarlar-bekleyen {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ayarlar-bekleyen svg { flex: none; }
+
+/* Bölümler arasında İNCE ayırıcı; kutu içinde kutu yok. */
+.ayarlar-bolum > .settings-facts,
+.ayarlar-bolum > .ayar-listesi { padding-top: 18px; border-top: 1px solid var(--line-soft); }
+
+/* ---------- Telefonda tam ekran ----------
+   Ayarlar bir sayfanın karşılığı: alttan açılan yaprak değil, ekranın
+   tamamı. Öteki pencereler (onay, kısayollar) yaprak olarak kalıyor. */
+@media (max-width: 760px) {
+  .drawer-root:has(.ayarlar-pencere) { padding-top: 0; }
+  .drawer-root:has(.ayarlar-pencere) .drawer {
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .drawer-root:has(.ayarlar-pencere) .drawer-header::before { display: none; }
+  .ayarlar-panel { max-width: none; }
+}
+
+/* ---------- Sayfa hâli ----------
+   /dashboard/settings doğrudan açıldığında aynı içerik; pencere kabı
+   olmadığı için genişlik ve üst boşluk burada veriliyor. */
+.ayarlar-sayfa {
+  max-width: 52rem;
+  padding: 20px 22px 26px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.ayarlar-sayfa .ayarlar-sekme-serit { top: -20px; }
+@media (max-width: 760px) { .ayarlar-sayfa { padding: 16px 14px 20px; } }

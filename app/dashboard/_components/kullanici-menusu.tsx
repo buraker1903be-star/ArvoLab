@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronDown, ChevronsUpDown, Gauge, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { OsSimge } from "./os-simge";
+import AyarlarMenuBaglantisi from "./ayarlar-menu-baglantisi";
 import type { OsIkon } from "@/lib/os/uygulamalar";
 import { ceviri, tarihler } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
@@ -160,12 +161,26 @@ export default async function KullaniciMenusu({
           </details>
         ) : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>
-          {hesapBaglantilari.map((b) => (
-            <Link key={b.key} href={b.href}>
-              <OsSimge ad={b.ikon} boyut={16} />
-              {b.label}
-            </Link>
-          ))}
+          {/*
+            AYARLAR BİR PENCERE (24.11.2026). Bağlantı olarak kalıyor
+            (JavaScript'siz ve yeni sekmede çalışsın diye) ama tıklama
+            yakalanıp sayfa değişmeden pencere açılıyor: editörde yazan
+            öğrenci belgesinden, kaydırma konumundan ve seçiminden
+            olmuyor. Öteki hesap bağlantıları gerçekten sayfa.
+          */}
+          {hesapBaglantilari.map((b) =>
+            b.key === "ayarlar" ? (
+              <AyarlarMenuBaglantisi key={b.key} href={b.href}>
+                <OsSimge ad={b.ikon} boyut={16} />
+                {b.label}
+              </AyarlarMenuBaglantisi>
+            ) : (
+              <Link key={b.key} href={b.href}>
+                <OsSimge ad={b.ikon} boyut={16} />
+                {b.label}
+              </Link>
+            ),
+          )}
           {/* Destek ana gezinmede de var; yardım isteyen kişi önce kendi menüsüne bakıyor. */}
           <Link href="/dashboard/expert-requests">
             <LifeBuoy size={16} aria-hidden="true" />
