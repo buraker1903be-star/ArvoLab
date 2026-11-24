@@ -4,6 +4,7 @@ import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { eksikKaynakcaGirdileri, hazirDuzeltmeler, type DuzeltmeOzeti, type KutuphaneKaynagi } from "@/lib/atif/hazir-duzeltme";
 import { YEREL } from "@/lib/dil";
+import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { belgeDili } from "@/lib/belge-dili";
 
 /*
@@ -49,7 +50,7 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
 
   const { data: calisma, error: calismaHatasi } = await ctx.supabase
     .from("academic_projects")
-    .select("id, citation_style")
+    .select("id, citation_style, guideline_id")
     .eq("id", projectId)
     .maybeSingle();
   if (calismaHatasi) {
@@ -94,6 +95,13 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
     kaynakçası Türkçe kalmalı (lib/belge-dili.ts'teki kuralla aynı).
   */
   const kunyeDili = await belgeDili(ctx.supabase, projectId, dil);
+  /*
+    KILAVUZUN İNTERNET ÖRNEKLERİ. Kılavuz okunamazsa akış DÜŞMÜYOR:
+    örnekler boş kalır ve panel bugünkü uyarıyı gösterir — geçici bir
+    arıza, düzeltmeleri tümden engellememeli.
+  */
+  const kilavuz = await calismaKilavuzuOku(ctx.supabase, projectId, (calisma.guideline_id as string | null) ?? null).catch(() => null);
+  const internetOrnekleri = kilavuz?.kilavuz?.internetOrnekleri ?? [];
   const bugun = new Date().toLocaleDateString(YEREL[kunyeDili], {
     timeZone: "Europe/Istanbul",
     ...(kunyeDili === "en" ? { day: "numeric", month: "long", year: "numeric" } : { day: "2-digit", month: "2-digit", year: "numeric" }),
@@ -109,6 +117,7 @@ export async function hazirKaynakcaDuzeltmeleri(projectId: string): Promise<Duze
     stil,
     dil: kunyeDili,
     erisimTarihi: bugun,
+    internetOrnekleri,
   });
   const kutuphane = (kaynaklar ?? []) as unknown as KutuphaneKaynagi[];
   return {

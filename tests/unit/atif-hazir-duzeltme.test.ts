@@ -278,3 +278,75 @@ describe("kılavuzun özel kuralı doğrulanamayan künye işaretleniyor", () =>
     assert.ok(site_?.yeni && site_.yeni.length > 10);
   });
 });
+
+describe("kılavuzdaki internet örnekleri düzeltmeye bağlanıyor", () => {
+  const ORNEKLER = [
+    { metin: "Türkiye İstatistik Kurumu. (2023). Nüfus verileri. https://www.tuik.gov.tr/x", tur: "kurumsal-sayfa" as const, kesin: true, bolum: "İNTERNET KAYNAKLARI", sayfa: 12 },
+    { metin: "Sağlık Bakanlığı. (2022). Yıllık sağlık raporu. https://saglik.gov.tr/rapor", tur: "cevrimici-rapor" as const, kesin: true, bolum: "İNTERNET KAYNAKLARI", sayfa: 12 },
+  ];
+  const site = (ek: Partial<KutuphaneKaynagi> & { id: string; title: string }) =>
+    kaynak({ source_type: "website", container_title: null, volume: null, issue: null, pages: null, doi_or_url: "https://ornek.gov.tr/x", ...ek });
+
+  test("türü kesin olan kaynağa uygun örnek ÖNERİLİYOR", () => {
+    const kurumsal = site({ id: "w1", title: "Nufus istatistikleri sayfasi", authors: "Türkiye İstatistik Kurumu" });
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [{ raw: "TUIK 2020 Nufus istatistikleri sayfasi" }],
+      kaynaklar: [kurumsal],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    });
+    const d = ozet.duzeltmeler[0];
+    assert.equal(d.ornekDurumu?.oneri?.tur, "kurumsal-sayfa");
+    assert.equal(d.ornekDurumu?.oneri?.bolum, "İNTERNET KAYNAKLARI");
+    assert.equal(d.ornekDurumu?.secenekler.length, 2);
+  });
+
+  test("türü belirsizse öneri YOK, iki seçenek de sunuluyor", () => {
+    const belirsiz = site({ id: "w2", title: "Bir blog yazisi", authors: "Yılmaz, A." });
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [belirsiz],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    }).duzeltmeler[0];
+    assert.equal(d.ornekDurumu?.oneri, null);
+    assert.equal(d.ornekDurumu?.secenekler.length, 2);
+  });
+
+  test("kılavuzda örnek yoksa ornekDurumu hiç yok (bugünkü uyarı kalır)", () => {
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Bir blog yazisi" }],
+      kaynaklar: [site({ id: "w3", title: "Bir blog yazisi" })],
+      stil: "apa7",
+    }).duzeltmeler[0];
+    assert.equal(d.ozelKural, true);
+    assert.equal(d.ornekDurumu, undefined);
+  });
+
+  test("internet dışı kaynakta örnek sorulmuyor", () => {
+    const d = hazirDuzeltmeler({
+      kunyeler: [{ raw: "Yilmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" }],
+      kaynaklar: [OGRENME],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    }).duzeltmeler[0];
+    assert.equal(d.ozelKural, false);
+    assert.equal(d.ornekDurumu, undefined);
+  });
+
+  /* Seçim bekleyen künye ötekileri ENGELLEMEZ: ikisi de listede. */
+  test("seçim bekleyen künye öteki düzeltmeleri engellemiyor", () => {
+    const ozet = hazirDuzeltmeler({
+      kunyeler: [
+        { raw: "Yilmaz A 2020 Bir blog yazisi" },
+        { raw: "Yilmaz A 2020 Öğrenme stilleri ve akademik başarı Eğitim Dergisi" },
+      ],
+      kaynaklar: [site({ id: "w2", title: "Bir blog yazisi" }), OGRENME],
+      stil: "apa7",
+      internetOrnekleri: ORNEKLER,
+    });
+    assert.equal(ozet.duzeltmeler.length, 2);
+    assert.equal(ozet.duzeltmeler.filter((d) => d.ornekDurumu && !d.ornekDurumu.oneri).length, 1);
+    assert.equal(ozet.duzeltmeler.filter((d) => !d.ozelKural).length, 1);
+  });
+});

@@ -31,6 +31,7 @@ import { eksikAlanAnahtarlari, formatReferenceParts, kunyeAlanAdi, type CitableS
 /* Kütüphane kaydı: biçimleyicinin istediği alanlar + kaydın kimliği. */
 export type KutuphaneKaynagi = CitableSource & { id: string };
 import { kunyeAnahtari } from "@/lib/kaynak-pdf";
+import { onerilenOrnek, type OrnekKunye } from "@/lib/kilavuz-ornek-kunyeler";
 import { stilTanimi } from "./stiller";
 
 export type DenetlenenKunye = { raw: string; issues?: { message: string; severity?: string }[] | null };
@@ -66,6 +67,16 @@ export type HazirDuzeltme = {
     uydurmaz.
   */
   eksikNotu: string[];
+  /*
+    KILAVUZDAKİ ÖRNEKLER (24.11.2026). Yalnızca özel kuralı
+    doğrulanamayan kaynaklarda (internet) ve kılavuzda örnek VARSA
+    dolu. `oneri` null ise tür güvenle belirlenemedi: ekran
+    "Kılavuzdaki örnekleri karşılaştır" diyor ve karar öğrencinin —
+    bir örneği "uygun" diye işaretlemek, doğrulamadığımız bir kurala
+    yönlendirmek olurdu. Örnek SEÇMEK künyenin biçimini değiştirmez;
+    öğrencinin "bu kuralı okudum" onayıdır ve önizleme aynı kalır.
+  */
+  ornekDurumu?: { oneri: OrnekKunye | null; secenekler: OrnekKunye[] };
 };
 
 export type EksikBilgili = {
@@ -169,6 +180,7 @@ export function hazirDuzeltmeler({
   dil = "tr",
   erisimTarihi = null,
   kilavuzZorunlulari = [],
+  internetOrnekleri = [],
 }: {
   kunyeler: DenetlenenKunye[];
   kaynaklar: KutuphaneKaynagi[];
@@ -177,6 +189,8 @@ export function hazirDuzeltmeler({
   erisimTarihi?: string | null;
   /** Kılavuzdan DOĞRULANMIŞ ek zorunluluklar; bugün boş (bkz. engelleyenEksikler). */
   kilavuzZorunlulari?: KunyeAlani[];
+  /** Kılavuzun internet kaynağı örnekleri (lib/kilavuz-ornek-kunyeler.ts). */
+  internetOrnekleri?: OrnekKunye[];
 }): DuzeltmeOzeti {
   const duzeltmeler: HazirDuzeltme[] = [];
   const eksikler: EksikBilgili[] = [];
@@ -212,14 +226,18 @@ export function hazirDuzeltmeler({
     /* Zaten doğruysa düzeltme sunulmaz: "6 düzeltme hazır" derken
        dokunulacak bir şeyi olmayan satırları saymak sayıyı şişirirdi. */
     if (!yeni || yeni.replace(/\s+/g, " ") === ham.replace(/\s+/g, " ")) return;
+    const ozelKural = kaynak.source_type === "website";
     duzeltmeler.push({
       anahtar,
       ham,
       yeni,
       parcalar,
       kaynakId: kaynak.id,
-      ozelKural: kaynak.source_type === "website",
+      ozelKural,
       eksikNotu,
+      ...(ozelKural && internetOrnekleri.length
+        ? { ornekDurumu: { oneri: onerilenOrnek(internetOrnekleri, kaynak), secenekler: internetOrnekleri } }
+        : {}),
       sebepler: (kunye.issues ?? []).map((s) => s.message).filter(Boolean),
     });
   });
