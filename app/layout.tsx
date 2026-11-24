@@ -25,6 +25,7 @@ import "./styles/os5-ana-sayfa.css";
 import "./styles/kaynak-alani.css";
 import "./styles/analiz-alani.css";
 import "./styles/ayarlar.css";
+import "./styles/abonelik.css";
 /* Görsel uyum (19.11.2026): onaylı prototipe uyum kuralları; öncekilerin ÜSTÜNE yazar, en sonda yüklenir. */
 import "./styles/gorsel-uyum.css";
 
