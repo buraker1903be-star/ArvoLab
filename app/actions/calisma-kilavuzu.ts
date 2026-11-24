@@ -10,7 +10,7 @@ import { ornekKalibi } from "@/lib/atif/tyk";
 import { atifSistemiSec, atifYontemleri, ilkGonderimdeSerbestMi, otomatikAtifSistemi } from "@/lib/atif-sistemi";
 import { celiskiliAdaylar, stilDayanagi, type StilDayanagi } from "@/lib/kilavuz-stil-dayanagi";
 import { stilAdi } from "@/lib/atif/stiller";
-import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult, type TaramaMetni } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { butceyeTakildi, sor } from "@/lib/ai/saglayici";
@@ -88,6 +88,14 @@ export interface TaramaSonucu {
     durum; öğrenciye ne olduğu ve iki çıkış yolu söyleniyor.
   */
   okunamadi?: boolean;
+  /*
+    Okunamama SEBEBİ, yalnızca doğrulanabiliyorsa. "taranmis": pdf-parse
+    boş döndü ve belge taranmış görüntü olarak tanındı, yani dosyanın
+    metin katmanı yok. Başka durumlarda (bozuk dosya, OCR düştü,
+    desteklenmeyen biçim) sebep BİLİNMİYOR ve yazılmıyor: tahmini bir
+    sebep öğrenciyi yanlış dosyayı aramaya yollar.
+  */
+  okunamamaSebebi?: "taranmis";
   /** Öğrenciye onaylatılacak alanlar. */
   form?: DogrulamaFormu;
   /*
@@ -220,7 +228,7 @@ export async function kilavuzuTara(
   }
 
   try {
-    let tarama: { sonuc: GuidelineScanResult; metin: string };
+    let tarama: TaramaMetni;
     if (girdi.depoYolu) {
       const { data: dosya, error } = await ctx.supabase.storage.from("project-files").download(girdi.depoYolu);
       if (error || !dosya) {
@@ -240,6 +248,7 @@ export async function kilavuzuTara(
         tarama = await scanGuidelineBytesMetinli(dosya, dosya.type || "application/pdf", girdi.depoYolu);
       } catch (hata) {
         console.error("[calisma-kilavuzu] yüklenen dosyadan metin çıkarılamadı:", hata instanceof Error ? hata.message : hata);
+        /* Çıkarım hiç tamamlanmadı: taranmış mı, bozuk mu, bilmiyoruz. */
         return { okunamadi: true };
       }
     } else if (girdi.adres?.trim()) {
@@ -251,7 +260,9 @@ export async function kilavuzuTara(
       Eşik, yapay zekâ okumasının eşiğiyle aynı (200 karakter): bunun
       altında kalan bir çıkarımdan kural okunamaz. Kılavuz KAYDEDİLMEZ.
     */
-    if (tarama.metin.trim().length < 200) return { okunamadi: true };
+    if (tarama.metin.trim().length < 200) {
+      return { okunamadi: true, ...(tarama.taranmis ? { okunamamaSebebi: "taranmis" as const } : {}) };
+    }
 
     let sonuc = tarama.sonuc;
 

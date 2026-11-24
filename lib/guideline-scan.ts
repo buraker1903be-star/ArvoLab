@@ -732,8 +732,18 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   return taramayiTamamla(url, await fetchOfficialSource(url));
 }
 
+/*
+  Taramanın tam metni ve "bu PDF'in metin katmanı yok muydu" bilgisi.
+  `taranmis` yalnızca pdf-parse boş dönüp belge taranmış görüntü olarak
+  TANINDIĞINDA true olur; metin çıkarımı başka bir sebeple başarısız
+  olduğunda (bozuk dosya, desteklenmeyen biçim) false kalır. Ekran
+  öğrenciye sebep yazarken bu ayrımı kullanıyor: doğrulanamayan bir
+  sebebi söylemek, yanlış dosyayı aratmaya yollar.
+*/
+export type TaramaMetni = { sonuc: GuidelineScanResult; metin: string; taranmis: boolean };
+
 /** Adresten tarama + tam metin (scanGuidelineBytesMetinli'nin eşi). */
-export async function scanGuidelineUrlMetinli(url: string): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
+export async function scanGuidelineUrlMetinli(url: string): Promise<TaramaMetni> {
   return taramayiTamamlaMetinli(url, await fetchOfficialSource(url));
 }
 
@@ -767,7 +777,7 @@ export async function scanGuidelineBytesMetinli(
   bytes: ArrayBuffer | Uint8Array | Blob,
   contentType: string,
   etiketAdres: string,
-): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
+): Promise<TaramaMetni> {
   const yanit = new Response(bytes as BodyInit, { status: 200, headers: { "content-type": contentType } });
   return taramayiTamamlaMetinli(etiketAdres, yanit);
 }
@@ -776,7 +786,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   return (await taramayiTamamlaMetinli(url, res)).sonuc;
 }
 
-async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
+async function taramayiTamamlaMetinli(url: string, res: Response): Promise<TaramaMetni> {
   if (!res.ok) {
     throw new Error(`Kaynak alınamadı (HTTP ${res.status}).`);
   }
@@ -787,6 +797,8 @@ async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ son
   let ocrGuven = 0;
   /** OCR hiç koşamadıysa sebebi; uyarı olarak kayda yazılır (lib/ocr.ts). */
   let ocrHatasi: string | null = null;
+  /** Belgenin metin katmanı yok mu (pdf-parse boş döndü ve taranmış tanındı). */
+  let taranmis = false;
   // Sınırsız okuma yok: bkz. lib/safe-official-fetch.ts
   const sourceBytes = await kaynagiOku(res);
   let text: string;
@@ -817,6 +829,7 @@ async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ son
       OKUNAMADIĞINI bilmiyordu, kılavuz kötü yazılmış gibi görünüyordu.
     */
     if (taranmisBelgeMi(text, sayfaSayisi)) {
+      taranmis = true;
       const ocr = await pdfMetniniOcrIleOku(buffer, sayfaSayisi);
       ocrHatasi = ocr.hata ?? null;
       if (ocr.metin.trim().length > text.trim().length) {
@@ -920,5 +933,5 @@ async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ son
       ...(ocrHatasi ? [ocrHatasi] : []),
     ],
   };
-  return { sonuc, metin: text };
+  return { sonuc, metin: text, taranmis };
 }

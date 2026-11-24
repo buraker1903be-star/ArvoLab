@@ -135,6 +135,13 @@ export default function ShortcutsDialog({ open, onClose }: { open: boolean; onCl
   const t = useCeviri();
   return (
     <Dialog
+      /*
+        Boy içeriğe göre ORTA. 520 px'te açıklamalar iki satıra kırılıyordu;
+        1040 px'te ise tuşlar ve açıklamalar pencerenin iki ucuna ayrılıyor,
+        aradaki boşluk satırı okunmaz yapıyordu. İki sütunlu ızgara 680'e
+        rahat sığıyor (app/styles/workspace.css, .shortcut-row).
+      */
+      boy="orta"
       open={open}
       onClose={onClose}
       kicker={t({ tr: "Yardım", en: "Help" })}

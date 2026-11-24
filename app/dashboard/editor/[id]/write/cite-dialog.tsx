@@ -205,6 +205,8 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
 
   return (
     <Dialog
+      /* Boy içeriğe göre: kaynak listesi ve arama. */
+      boy="orta"
       open={open}
       onClose={close}
       kicker={t({ tr: "Kaynaktan atıf", en: "Cite a source" })}

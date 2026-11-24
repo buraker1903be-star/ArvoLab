@@ -170,6 +170,8 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
       onClick={() => setAcik(true)}
     />
     <Dialog
+      /* Boy içeriğe göre: yorum yazışması: alıntı + metin + yanıt. */
+      boy="genis"
       open={acik}
       onClose={() => setAcik(false)}
       kicker={t({ tr: "Danışmanla yazışma", en: "Advisor conversation" })}

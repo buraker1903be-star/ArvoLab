@@ -190,7 +190,15 @@
 .os-kullanici-cikis { padding-top: 4px; border-top: 1px solid var(--line-soft); }
 /* "Personel Araçları" başlığı (Phase 5.1d-3): hesap bağlantılarından ayrı bir bölüm olduğu görünsün. */
 .os-kullanici-bolum { display: block; padding: 6px 12px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.os-kullanici-cikis button { color: var(--danger); }
+/* ÇIKIŞ NÖTR RENKTE (24.11.2026, tasarım incelemesi). Çıkış yapmak geri
+   alınabilir bir işlem; kırmızı olunca hesap silmeyle aynı ağırlıkta
+   görünüyordu ve rengin "burada durup düşün" anlamı ikisinde de
+   zayıflıyordu. Kırmızı yalnızca geri alınamaz işlemlerde. */
+.os-kullanici-cikis button { color: var(--ink); }
+/* Kullanım satırı açılır olduğunu göstersin: ok sağ uçta, açılınca döner. */
+.os-kullanici-kullanim-ok { flex: none; margin-left: 2px; color: var(--muted); transition: transform .18s ease; }
+.os-kullanici-kullanim[open] > summary .os-kullanici-kullanim-ok { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .os-kullanici-kullanim-ok { transition: none; } }
 /* Komut paleti satırı 23.11.2026'da hesap menüsünden kalktı; kuralları
    da kalktı. Palet gezinmedeki "Daha fazla" penceresinde
    (.os-daha-komut) ve Ctrl+K / ⌘K ile. */
@@ -298,3 +306,12 @@
 .os-kullanici-hak-deger[data-durum="tukendi"] { color: var(--warning); }
 .os-kullanici-hak-deger[data-durum="bilinmiyor"] { color: var(--muted); font-weight: 500; }
 .os-kullanici-hak small { color: var(--muted); font-size: var(--fs-micro); }
+
+/* Hesap menüsü telefonda: ekran kenarına 16 px'ten fazla yaklaşmıyor ve
+   dar ekranda rahat bir genişliğe açılıyor (tasarım incelemesi, bulgu 6). */
+@media (max-width: 760px) {
+  .os-kullanici-menu { width: min(320px, calc(100vw - 32px)); max-width: calc(100vw - 32px); }
+  .os-kullanici-baglantilar a,
+  .os-kullanici-cikis button,
+  .os-kullanici-kullanim > summary { min-height: 44px; }
+}

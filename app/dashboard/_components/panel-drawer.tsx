@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useOdakTuzagi } from "./odak-tuzagi";
 import { odagiIadeEt } from "./odak-iadesi";
 import { usePencereKatmani } from "./pencere-katmani";
+import { PencereKapatBaglami } from "./pencere-kapat";
 import { ACTION_SUCCESS_EVENT } from "./toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
@@ -155,7 +156,9 @@ export default function PanelDrawer({
             <X size={18} aria-hidden="true" />
           </button>
         </header>
-        <div className="drawer-body">{children}</div>
+        <div className="drawer-body">
+          <PencereKapatBaglami.Provider value={kapat}>{children}</PencereKapatBaglami.Provider>
+        </div>
       </section>
     </div>
   );

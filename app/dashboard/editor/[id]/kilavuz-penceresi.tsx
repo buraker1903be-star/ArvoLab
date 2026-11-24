@@ -76,12 +76,22 @@ export default async function KilavuzPenceresi({
                 tr: "Kurallar yüklediğiniz dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî onayından geçmedi.",
                 en: "The rules were extracted from the file you uploaded and are applied with your approval; they have not been officially approved by your institution.",
               })
-          : t({
-              tr: "Kurumunuzun onaylı kılavuzu katalogda yok. Elinizdeki kılavuzu yükleyin; sayfa düzeni, zorunlu bölümler ve kaynakça sistemi editöre kendiliğinden uygulansın. Bu, kurumunuzun resmî onayı yerine geçmez.",
-              en: "Your institution's approved guideline is not in the catalog. Upload the guideline you have so that page layout, required sections and the citation system are applied to the editor automatically. This does not replace your institution's official approval.",
+          : /*
+               "Kendiliğinden uygulansın" yanlıştı: okunan kurallar önce
+               doğrulama ekranında gösteriliyor, ancak onaylanınca yazılıyor.
+            */
+            t({
+              tr: "Kurumunuzun onaylı kılavuzu katalogda yok. Elinizdeki kılavuzu yükleyin; okuduğum kuralları onaylarsanız sayfa düzeni, zorunlu bölümler ve kaynakça sistemi editöre uygulanır. Bu, kurumunuzun resmî onayı yerine geçmez.",
+              en: "Your institution's approved guideline is not in the catalog. Upload the guideline you have; once you confirm the rules I read, page layout, required sections and the citation system are applied to the editor. This does not replace your institution's official approval.",
             })
       }
-      boy="tam"
+      /*
+        BOY İŞE GÖRE (24.11.2026). Kılavuzu olan çalışmada pencere yan
+        yana iki kart taşıyor ve "tam" gerekiyor. Kılavuzu OLMAYAN
+        çalışmada tek bir dosya seçimi var: 1360 px'lik pencerenin alt
+        üçte biri boş kalıyordu (tasarım incelemesi, bulgu 4).
+      */
+      boy={uygulanan ? "tam" : "orta"}
       basaridaKapan={false}
       acikBasla={acikBasla}
     >
@@ -90,9 +100,9 @@ export default async function KilavuzPenceresi({
         kılavuzu yükleme ya da değiştirme. Literatür, Kaynakça ve Kanıt
         matrisi pencereleriyle aynı düzen.
       */}
-      <div className="pencere-iki-kart">
-        <section className="pencere-kart">
-          <h3 className="pencere-kart-baslik">{t({ tr: "Uygulanan kurallar", en: "Applied rules" })}</h3>
+      <div className={uygulanan ? "pencere-iki-kart" : "stack"}>
+        <section className={uygulanan ? "pencere-kart" : "contents"}>
+          {uygulanan ? <h3 className="pencere-kart-baslik">{t({ tr: "Uygulanan kurallar", en: "Applied rules" })}</h3> : null}
           {uygulanan ? (
             <div className="kilavuz-bicim">
               <ul>
@@ -115,29 +125,17 @@ export default async function KilavuzPenceresi({
                 ))}
               </ul>
             </div>
-          ) : (
-            <>
-              <p className="muted text-sm">
-                {t({
-                  tr: "Henüz kılavuz yok. Yüklediğinizde şunlar editöre kendiliğinden uygulanır:",
-                  en: "No guideline yet. Once you upload one, these are applied to the editor automatically:",
-                })}
-              </p>
-              <div className="kilavuz-bicim">
-                <ul>
-                  <li>{t({ tr: "Sayfa düzeni: kenar boşlukları, yazı tipi, satır aralığı", en: "Page layout: margins, font, line spacing" })}</li>
-                  <li>{t({ tr: "Zorunlu bölümler: teslim listesinde eksik olanlar söylenir", en: "Required sections: missing ones are flagged in the submission checklist" })}</li>
-                  <li>{t({ tr: "Kaynakça sistemi: APA, IEEE, Chicago…", en: "Citation system: APA, IEEE, Chicago…" })}</li>
-                </ul>
-              </div>
-            </>
-          )}
-          {/* TYK'nın atıf örneği: stil adının söylemediği noktalama (lib/atif/tyk.ts). */}
-          <OrnekAtifFormu projectId={calisma.id} mevcut={calisma.ornek_atif ?? null} />
+          ) : null}
+          {/* TYK'nın atıf örneği: stil adının söylemediği noktalama (lib/atif/tyk.ts).
+              Kılavuzsuz hâlde ikincil bir ayrıntı; dosya seçiminin ALTINDA
+              çiziliyor, yoksa ekranın ilk kutusu asıl eylemin önüne geçiyor. */}
+          {uygulanan ? <OrnekAtifFormu projectId={calisma.id} mevcut={calisma.ornek_atif ?? null} /> : null}
         </section>
 
-        <section className="pencere-kart">
-          <h3 className="pencere-kart-baslik">{uygulanan ? t({ tr: "Kılavuzu değiştir", en: "Change guideline" }) : t({ tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" })}</h3>
+        <section className={uygulanan ? "pencere-kart" : "contents"}>
+          {/* Başlık YALNIZCA kılavuz varken: kılavuzsuz hâlde bu başlık
+              pencerenin başlığını kelimesi kelimesine tekrar ediyordu. */}
+          {uygulanan ? <h3 className="pencere-kart-baslik">{t({ tr: "Kılavuzu değiştir", en: "Change guideline" })}</h3> : null}
           {/* Katalog bağlantısı yok: katalog personelin sayfası (lib/os/uygulamalar.ts). */}
           {/*
             KILAVUZ HER DURUMDA DEĞİŞTİRİLEBİLİR (02.11.2026, kurum sahibinin
@@ -198,6 +196,21 @@ export default async function KilavuzPenceresi({
             okunamayan PDF ekranında bağlantı iki kez görünüyordu.
           */}
           {!uygulanan && !kilavuzOkunamadi ? <KilavuzYukle projectId={calisma.id} kilavuzsuz /> : null}
+          {/*
+            Örnek atıf kılavuzsuz hâlde İSTEĞE BAĞLI bir incelik: açıkken
+            pencereyi kaydırmaya zorluyor ve ekranın tek kararı (dosya
+            seçmek) olması gereken yerde ikinci bir form duruyordu.
+            Katlanmış duruyor; isteyen açıyor.
+          */}
+          {!uygulanan ? (
+            <details className="form-details">
+              <summary>
+                <span>{t({ tr: "Kılavuzunuzdaki örnek atıf", en: "The example citation in your guideline" })}</span>
+                <small>{t({ tr: "İsteğe bağlı: denetim atıflarınızı bu örneğin noktalamasına göre denetler.", en: "Optional: the check uses this example's punctuation for your citations." })}</small>
+              </summary>
+              <OrnekAtifFormu projectId={calisma.id} mevcut={calisma.ornek_atif ?? null} />
+            </details>
+          ) : null}
           {!uygulanan && kilavuzOkunamadi ? (
             <p className="muted text-sm">
               {t({

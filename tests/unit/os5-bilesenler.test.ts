@@ -123,9 +123,19 @@ describe("Phase 1 mevcut ekranları değiştirmez", () => {
       for (const parca of ustDuzeyBol(s)) assert.match(parca, /\.os5-|\.arvolab-logo/, `os5'e bağlı olmayan seçici: ${parca.trim()}`);
     }
   });
-  test("Dialog ve Secici: prop verilmezse eski sınıflar", () => {
+  /*
+    24.11.2026: Dialog'un genişliği .drawer-compact sınıfından data-boy'a
+    taşındı (tek boy 520 px'ti; kısayol listesi orada sıkışıyordu). Sözleşme
+    DEĞİŞMEDİ: gorunum verilmezse os5 görünümü kapalı. Test bunu artık
+    sınıfın adından değil, os5-pencere'nin koşullu kalmasından okuyor; boyun
+    varsayılanı da burada sabitleniyor, yoksa "dar" bir gün sessizce değişir.
+  */
+  test("Dialog ve Secici: prop verilmezse os5 görünümü kapalı", () => {
     const dialog = readFileSync("app/dashboard/_components/dialog.tsx", "utf8");
-    assert.match(dialog, /gorunum === "os5" \? "drawer drawer-compact os5-pencere" : "drawer drawer-compact"/);
+    assert.match(dialog, /gorunum === "os5" \? "drawer os5-pencere" : "drawer"/);
+    assert.doesNotMatch(dialog, /drawer-compact/);
+    assert.match(dialog, /boy = "dar"/);
+    assert.match(dialog, /data-boy=\{boy\}/);
     const secici = readFileSync("app/dashboard/_components/secici.tsx", "utf8");
     assert.match(secici, /gorunum === "os5" \? "secici os5-secici" : "secici"/);
   });

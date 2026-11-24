@@ -46,6 +46,8 @@ export default function SubmissionChecklistDialog({
   const ready = checklist.done === checklist.total;
   return (
     <Dialog
+      /* Boy içeriğe göre: madde listesi. */
+      boy="orta"
       open={open}
       onClose={onClose}
       kicker={t({ tr: "Teslim kontrolü", en: "Submission checklist" })}
