@@ -8,7 +8,28 @@
    ayarların İÇİ: sekme şeridi, kompakt form genişliği ve ince ayırıcılar.
    ============================================================ */
 
-.ayarlar { display: grid; gap: 0; }
+/* ---------- DIŞ ÖLÇÜLER SEKMEDEN BAĞIMSIZ (24.11.2026) ----------
+
+   Pencerenin yüksekliği içeriğe göre kuruluyordu (.drawer yalnızca
+   max-height taşıyor): Hesap'tan Güvenlik'e geçince kutu kısalıyor,
+   ortalandığı için YUKARI–AŞAĞI da kayıyordu. Kullanıcı sekmeye basınca
+   pencere altından kaçıyor, bir sonraki sekmenin yeri her seferinde
+   başka oluyordu.
+
+   Yükseklik artık sabit: aynı ekranda beş sekmede de aynı genişlik,
+   aynı yükseklik, aynı konum. Başlık ve sekme şeridi yerinde duruyor;
+   yalnızca .ayarlar-govde kayıyor. Sabit yükseklik en uzun sekmeye
+   göre değil ekrana göre seçildi (min(78dvh, 760px)): kısa sekmede
+   altta boşluk kalması, her geçişte pencerenin zıplamasından iyidir.
+*/
+.drawer-root:has(.ayarlar-pencere) .drawer { height: min(78dvh, 760px); }
+/* Gövde ARTIK kaymıyor: kaydırma .ayarlar-govde'de, böylece sekme
+   şeridi gerçekten sabit (yapışkan değil) ve kaydırma çubuğu yalnızca
+   içeriğin yanında. */
+.drawer-root:has(.ayarlar-pencere) .drawer-body { overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.drawer-root:has(.ayarlar-pencere) .ayarlar { flex: 1; min-height: 0; }
+
+.ayarlar { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0; }
 
 /* ---------- Sekme şeridi ----------
    Başlığın hemen altında ve yapışkan: uzun bir sekmede aşağı kayarken
@@ -55,7 +76,9 @@
 /* ---------- Gövde ----------
    KOMPAKT FORM GENİŞLİĞİ: alanlar pencere genişledikçe uzamıyor. Uzun
    bir metin kutusu okunur ama uzun bir AD kutusu yalnızca boş durur. */
-.ayarlar-govde { padding-top: 18px; }
+/* Tek kaydırılan alan burası; şerit ve başlık dışarıda kalıyor.
+   overscroll-behavior: alt sınıra gelince arkadaki sayfa kaymasın. */
+.ayarlar-govde { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: 18px; }
 .ayarlar-panel { display: grid; gap: 18px; max-width: 46rem; }
 /* display:grid tarayıcının [hidden] kuralını EZİYOR: bu olmadan beş
    sekmenin içeriği alt alta birden çiziliyordu. */
@@ -115,11 +138,15 @@
    tamamı. Öteki pencereler (onay, kısayollar) yaprak olarak kalıyor. */
 @media (max-width: 760px) {
   .drawer-root:has(.ayarlar-pencere) { padding-top: 0; }
+  /* KULLANILABİLİR ekran alanı: 100dvh tarayıcı çubuklarını hesaba
+     katıyor ama çentik ve alt gösterge şeridini katmıyor; onlar
+     düşülmezse son satır parmağın altında kalıyordu. */
   .drawer-root:has(.ayarlar-pencere) .drawer {
-    max-height: 100dvh;
-    height: 100dvh;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     border-radius: 0;
   }
+  .drawer-root:has(.ayarlar-pencere) .ayarlar-govde { padding-bottom: env(safe-area-inset-bottom); }
   .drawer-root:has(.ayarlar-pencere) .drawer-header::before { display: none; }
   .ayarlar-panel { max-width: none; }
 }
