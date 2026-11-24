@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useOdakTuzagi } from "./odak-tuzagi";
+import { odagiIadeEt } from "./odak-iadesi";
+import { usePencereKatmani } from "./pencere-katmani";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
 const subscribeNothing = () => () => undefined;
@@ -35,6 +37,7 @@ export default function Dialog({
   const t = useCeviri();
   const titleId = useId();
   const dialogRef = useRef<HTMLElement>(null);
+  const kokRef = useRef<HTMLDivElement>(null);
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
 
   // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
@@ -47,35 +50,31 @@ export default function Dialog({
     "Kaynak ekle"de başlığa yazılan ilk harften sonra imleç DOI kutusuna
     kaçıyor, sonraki harfler oraya yazılıyordu.
   */
-  const kapatRef = useRef(onClose);
-  useEffect(() => {
-    kapatRef.current = onClose;
-  });
+  /* Katman, Escape ve sayfa kilidi PanelDrawer ile AYNI koddan
+     (pencere-katmani.ts): Dialog eskiden Escape'i koşulsuz işliyor ve
+     kilidi koşulsuz kaldırıyordu, yani iki pencere açıkken tek tuş
+     ikisini birden kapatıyordu. */
+  usePencereKatmani(kokRef, open, onClose);
 
   useEffect(() => {
     if (!open) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const onKeyDown = (event: KeyboardEvent) => {
-      // İçteki seçici ya da takvim Escape'i kendisi işlediyse pencere kapanmaz.
-      if (event.key === "Escape" && !event.defaultPrevented) kapatRef.current();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    document.documentElement.classList.add("drawer-open");
+    const oncekiOdak = document.activeElement as HTMLElement | null;
     window.requestAnimationFrame(() => {
       const firstField = dialogRef.current?.querySelector<HTMLElement>("textarea, input, select");
       (firstField ?? dialogRef.current)?.focus();
     });
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.documentElement.classList.remove("drawer-open");
-      previousFocus?.focus?.();
+      /* Odak iadesi odak-iadesi.ts'te: açılış anındaki öğe menü kapandığı
+         için gizlendiyse odak menünün görünür düğmesine döner, eskiden
+         sayfanın gövdesine düşüyordu. */
+      odagiIadeEt(oncekiOdak);
     };
   }, [open]);
 
   if (!isClient) return null;
 
   return createPortal(
-    <div className={open ? "drawer-root open" : "drawer-root"}>
+    <div ref={kokRef} className={open ? "drawer-root open" : "drawer-root"}>
       <button className="drawer-backdrop" type="button" aria-label={t({ tr: "Pencereyi kapat", en: "Close window" })} tabIndex={open ? 0 : -1} onClick={onClose} />
       <section
         ref={dialogRef}
