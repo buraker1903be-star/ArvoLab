@@ -152,15 +152,28 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       await s.setViewportSize({ width: 390, height: 420 });
       await s.locator('.drawer-root.open input[name="onay"]').focus();
       await s.waitForTimeout(400);
-      const erisilir = await s.evaluate(() => {
+      const olcu = await s.evaluate(() => {
+        const govde = document.querySelector(".drawer-root.open .drawer-body");
         const d = document.querySelector(".drawer-root.open .project-form-actions button[type=submit]");
-        if (!d) return false;
-        d.scrollIntoView({ block: "nearest" });
-        const r = d.getBoundingClientRect();
-        return r.top >= 0 && r.bottom <= window.innerHeight + 1 && r.height >= 40;
+        const alan = document.querySelector('.drawer-root.open input[name="onay"]');
+        if (!govde || !d || !alan) return null;
+        /* Odaktaki alan görünür hâle getirilebiliyor mu? */
+        alan.scrollIntoView({ block: "center" });
+        const kaydirilabilir = govde.scrollHeight - govde.clientHeight > 2;
+        const a = alan.getBoundingClientRect();
+        const e = d.getBoundingClientRect();
+        return {
+          kaydirilabilir,
+          eylemGorunur: e.top >= 0 && e.bottom <= window.innerHeight + 1 && e.height >= 40,
+          alanGorunur: a.top >= 0 && a.bottom <= window.innerHeight + 1,
+          /* Yapışkan eylem satırı alanı ÖRTMESİN. */
+          ortusmuyor: a.bottom <= e.top + 1,
+        };
       });
       await resim("H6-mobil-klavye");
-      yaz("H6 · Klavye açıkken eylem erişilebilir (taklit)", EKRAN, TEMA, erisilir, `görünür=${erisilir} görünüm=390×420`);
+      yaz("H6 · Klavye açıkken eylem erişilebilir (taklit)", EKRAN, TEMA, Boolean(olcu?.eylemGorunur), `eylemGörünür=${olcu?.eylemGorunur} görünüm=390×420`);
+      yaz("H7 · Alan odaktayken içerik kaydırılabiliyor", EKRAN, TEMA, Boolean(olcu?.kaydirilabilir && olcu?.alanGorunur), `kaydırılabilir=${olcu?.kaydirilabilir} alanGörünür=${olcu?.alanGorunur}`);
+      yaz("H8 · Eylem satırı alanı örtmüyor", EKRAN, TEMA, Boolean(olcu?.ortusmuyor), `örtüşmüyor=${olcu?.ortusmuyor}`);
       await s.setViewportSize({ width: 390, height: 844 });
     }
     await s.keyboard.press("Escape");
@@ -224,8 +237,18 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await s.waitForTimeout(400);
     const o = await pencereOlc(s);
     await resim("P1-kisayollar");
-    const beklenen = EKRAN === 1440 ? o.w > 900 : o.w <= EKRAN;
-    yaz("P1 · Kısayollar içeriğine göre geniş", EKRAN, TEMA, beklenen && !o.ekraniAsiyor, `boy=${o.boy} ${o.w}×${o.h} iç=${o.icKaydirma}`);
+    const beklenen = EKRAN === 1440 ? o.w === 680 : o.w <= EKRAN;
+    yaz("P1 · Kısayollar içeriğine uygun orta genişlik", EKRAN, TEMA, beklenen && !o.ekraniAsiyor, `boy=${o.boy} ${o.w}×${o.h} iç=${o.icKaydirma}`);
+    /* Açıklama tuşların YANINDA: iki uca ayrılmış değil. */
+    const hiza = await s.evaluate(() => {
+      const satir = document.querySelector(".drawer-root.open .shortcut-row");
+      if (!satir) return null;
+      const dt = satir.querySelector("dt").getBoundingClientRect();
+      const dd = satir.querySelector("dd").getBoundingClientRect();
+      const s2 = satir.getBoundingClientRect();
+      return { aralik: Math.round(dd.left - dt.right), saga: Math.round(s2.right - dd.right), solaYasli: Math.round(dd.left - s2.left) };
+    });
+    yaz("P2 · Açıklama tuşların yanında", EKRAN, TEMA, hiza !== null && hiza.aralik < 120, `tuş–açıklama arası=${hiza?.aralik}px sağ boşluk=${hiza?.saga}px`);
     await s.keyboard.press("Escape");
   } catch (e) { yaz("P1 · Kısayollar içeriğine göre geniş", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 60)}`); }
 

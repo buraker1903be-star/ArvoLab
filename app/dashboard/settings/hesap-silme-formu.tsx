@@ -90,6 +90,9 @@ export default function HesapSilmeFormu({ action, eposta, bireysel }: Props) {
       <label>
         <span>{t({ tr: "Onaylamak için e-posta adresinizi yazın", en: "Type your email address to confirm" })}</span>
         <input
+          /* Ortak form alanı stili: .hesap-silme-form bir project-form-grid
+             değil, alan tarayıcı varsayılanıyla çiziliyordu. */
+          className="field-control"
           name="onay"
           type="text"
           inputMode="email"

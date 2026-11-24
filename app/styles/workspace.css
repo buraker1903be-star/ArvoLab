@@ -502,17 +502,26 @@
 
 /* Klavye kısayolları */
 .shortcut-list { display: grid; margin: 0; }
+/*
+  AÇIKLAMA TUŞLARIN YANINDA (24.11.2026). Satır space-between bir flex'ti
+  ve açıklama sağa yaslıydı: 520 px'lik pencerede ikisi birbirine yakın
+  duruyordu, pencere genişleyince tuşlar solda, açıklama sağda kalıp
+  aradaki boşluk okunamaz hâle geliyordu — göz her satırda baştan sona
+  gidip geliyordu. Artık iki sütunlu bir ızgara: tuş sütunu sabit
+  genişlikte, açıklamalar tek bir dikey çizgide ve sola yaslı başlıyor.
+*/
 .shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 14px;
   padding: 7px 0;
   border-bottom: 1px solid var(--line-soft);
 }
 .shortcut-row:last-child { border-bottom: 0; }
-.shortcut-row dt { display: flex; flex-shrink: 0; gap: 4px; }
-.shortcut-row dd { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); text-align: right; }
+.shortcut-row dt { display: flex; flex-wrap: wrap; gap: 4px; }
+.shortcut-row dd { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); }
+@media (max-width: 760px) { .shortcut-row { grid-template-columns: 112px minmax(0, 1fr); } }
 .shortcut-row kbd {
   display: inline-flex;
   align-items: center;
