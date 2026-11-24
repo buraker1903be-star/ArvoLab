@@ -135,6 +135,8 @@ export default function ShortcutsDialog({ open, onClose }: { open: boolean; onCl
   const t = useCeviri();
   return (
     <Dialog
+      /* Boy içeriğe göre: iki sütunlu tuş listesi: 520 px'te açıklamalar iki satıra kırılıyor ve pencere kendi içinde kayıyordu. */
+      boy="genis"
       open={open}
       onClose={onClose}
       kicker={t({ tr: "Yardım", en: "Help" })}

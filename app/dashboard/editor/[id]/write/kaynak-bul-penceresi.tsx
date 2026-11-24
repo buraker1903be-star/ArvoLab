@@ -115,6 +115,8 @@ export default function KaynakBulPenceresi({
 
   return (
     <Dialog
+      /* Boy içeriğe göre: arama ve sonuç listesi. */
+      boy="genis"
       open={open}
       onClose={onClose}
       kicker={t({ tr: "Cümleye kaynak bul", en: "Find a source for this sentence" })}

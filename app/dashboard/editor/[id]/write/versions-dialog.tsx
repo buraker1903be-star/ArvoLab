@@ -153,6 +153,8 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
 
   return (
     <Dialog
+      /* Boy içeriğe göre: sürüm listesi ve karşılaştırma paneli yan yana. */
+      boy="genis"
       open={open}
       onClose={close}
       kicker={t({ tr: "Sürüm geçmişi", en: "Version history" })}

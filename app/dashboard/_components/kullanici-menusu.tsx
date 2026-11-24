@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronsUpDown, Gauge, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, Gauge, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { OsSimge } from "./os-simge";
 import type { OsIkon } from "@/lib/os/uygulamalar";
 import { ceviri, tarihler } from "@/lib/dil-sunucu";
@@ -90,13 +90,25 @@ export default async function KullaniciMenusu({
         ) : null}
       </summary>
       <div className="os-kullanici-menu">
-        <div className="os-kullanici-bas">
-          <span className="os-avatar os-avatar-buyuk">{basHarf}</span>
-          <div>
-            <b>{ad}</b>
-            <small>{rol}</small>
+        {/*
+          KİMLİK TEKRARI KALKTI (24.11.2026, tasarım incelemesi).
+          Masaüstünde menü kenar çubuğunun dibindeki satırdan açılıyor ve
+          o satır zaten adı, rolü ve baş harfi gösteriyor; menü aynı üçünü
+          8 piksel yukarıda, daha büyük puntoyla tekrar ediyordu —
+          menünün ilk 56 pikseli kendi tetiğinin kopyasıydı. Üst çubuk
+          yerleşiminde tetik yalnızca yuvarlak baş harf olduğu için orada
+          kimlik satırı KALIYOR: kim olarak oturum açıldığı başka yerde
+          yazmıyor.
+        */}
+        {yerlesim === "ust" ? (
+          <div className="os-kullanici-bas">
+            <span className="os-avatar os-avatar-buyuk">{basHarf}</span>
+            <div>
+              <b>{ad}</b>
+              <small>{rol}</small>
+            </div>
           </div>
-        </div>
+        ) : null}
         {/*
           "Görünüm" seçimi (Personel / Öğrenci · kurum / Öğrenci · bireysel)
           ve iç ekibin kurum seçicisi 20.11.2026'da kalktı: herkesin ana
@@ -115,12 +127,22 @@ export default async function KullaniciMenusu({
           değişmiyor, menü kapanmıyor. Sayılar Abonelik ve Kredi
           ekranıyla AYNI kaynaklardan (lib/kullanim-haklarim.ts).
         */}
+        {/*
+          KULLANIM SATIRI AÇILIR OLDUĞUNU GÖSTERSİN (24.11.2026).
+          Satır bir <details> ama hiçbir açılma işareti yoktu ve iki
+          ayracın arasında durduğu için tıklanabilir değil, bir etiket
+          gibi okunuyordu. Ok eklendi; kalan hak özeti KAPALIYKEN de
+          satırda duruyor, ayrıntı (hak adları ve yenilenme) açılınca
+          görünüyor. Yenilenme tarihi yalnızca kayıtlıysa yazılıyor —
+          zaten öyleydi, bu turda da öyle kalıyor.
+        */}
         {kullanim.length ? (
           <details className="os-kullanici-kullanim">
             <summary>
               <Gauge size={16} aria-hidden="true" />
               <span className="os-kullanici-kullanim-ad">{t({ tr: "Kullanım", en: "Usage" })}</span>
               {ozet ? <span className="os-kullanici-kullanim-ozet">{t(HAK_OZETI[ozet.durum](ozet))}</span> : null}
+              <ChevronDown size={14} className="os-kullanici-kullanim-ok" aria-hidden="true" />
             </summary>
             <ul className="os-kullanici-hak">
               {kullanim.map((h) => (

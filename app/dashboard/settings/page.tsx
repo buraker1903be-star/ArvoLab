@@ -450,15 +450,24 @@ export default async function SettingsPage() {
                     })}
                   </small>
                 </span>
+                {/*
+                  TEK VE KOMPAKT ONAY (24.11.2026). Eskiden aynı soru üç
+                  kez soruluyordu: satırın başlığı, 680 px'lik pencerenin
+                  başlığı ve o pencerenin gövdesindeki TEK düğme
+                  ("Hesabımı silmek istiyorum"). Gövdesi tek düğmeden
+                  ibaret 680×232'lik bir pencerede "Vazgeç" bile yoktu;
+                  asıl onay (e-postayı yazmak) bir adım sonra geliyordu.
+                  Artık onay boyunda (480) tek pencere: sonuçlar, veri
+                  indirme, e-posta kutusu ve iki eylem bir arada.
+                  Pencerenin açıklaması satırın açıklamasını tekrar
+                  etmiyor; sonuçlar gövdede madde madde yazıyor.
+                */}
                 <PanelDrawer
                   triggerLabel={t({ tr: "Sil", en: "Delete" })}
                   triggerClassName="projects-filter-button button-compact button-danger"
+                  boy="onay"
                   kicker={t({ tr: "Hesap", en: "Account" })}
                   title={t({ tr: "Hesabımı sil", en: "Delete my account" })}
-                  description={t({
-                    tr: "Hesabınızı ve ArvoLab'daki bütün verilerinizi kalıcı olarak silme talebi. Silme hemen olmaz; vazgeçmek için süreniz olur.",
-                    en: "A request to permanently delete your account and all your data in ArvoLab. Deletion is not immediate; you have time to change your mind.",
-                  })}
                 >
                   <HesapSilmeFormu action={hesapSilmeTalebi} eposta={ctx.user.email ?? ""} bireysel={access.kind === "individual"} />
                 </PanelDrawer>

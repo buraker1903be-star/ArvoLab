@@ -61,7 +61,22 @@ export default function KilavuzYukle({
   const [kaydediliyor, setKaydediliyor] = useState(false);
   const [stilEksik, setStilEksik] = useState(false);
   const stilKutusu = useRef<HTMLSelectElement>(null);
+  const [dosyaAdi, setDosyaAdi] = useState<string | null>(null);
   const router = useRouter();
+  /*
+    VAZGEÇİLEN TARAMA GERİ GELMESİN (24.11.2026). Yükleme ve okuma sunucuda
+    sürüyor; "Vazgeç"e basıp seçim ekranına dönen öğrencinin önüne, saniyeler
+    sonra biten tarama doğrulama formunu açıyordu — başka bir dosya seçmek
+    üzereyken ekran değişiyordu. Her tarama kendi numarasıyla başlıyor;
+    numara değiştiyse (vazgeçildi ya da yenisi başladı) sonuç atılıyor.
+  */
+  const islemNo = useRef(0);
+  const vazgec = () => {
+    islemNo.current += 1;
+    setDosyaAdi(null);
+    setDurum("");
+    setAdim("secim");
+  };
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
     /*
@@ -88,6 +103,9 @@ export default function KilavuzYukle({
       showToast("error", t({ tr: "Şimdilik yalnızca PDF okunabiliyor.", en: "Only PDFs can be read for now." }));
       return;
     }
+    const no = ++islemNo.current;
+    const guncel = () => islemNo.current === no;
+    setDosyaAdi(dosya.name);
     setAdim("tarama");
     try {
       setDurum(t({ tr: "Dosya yükleniyor…", en: "Uploading file…" }));
@@ -95,6 +113,7 @@ export default function KilavuzYukle({
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!guncel()) return;
       if (!user) {
         showToast("error", t({ tr: "Oturumunuz sona erdi. Yeniden giriş yapın.", en: "Your session has expired. Sign in again." }));
         setAdim("secim");
@@ -105,6 +124,7 @@ export default function KilavuzYukle({
         contentType: "application/pdf",
         upsert: false,
       });
+      if (!guncel()) return;
       if (error) {
         console.error(error);
         showToast("error", t({ tr: "Dosya yüklenemedi. Yeniden deneyin.", en: "The file could not be uploaded. Try again." }));
@@ -118,9 +138,13 @@ export default function KilavuzYukle({
           en: "Reading the guideline… If it is a scanned document, this can take up to half a minute.",
         }),
       );
-      taramayiBitir(await kilavuzuTara(projectId, { depoYolu: yol }));
+      const cevap = await kilavuzuTara(projectId, { depoYolu: yol });
+      /* Vazgeçildiyse ya da yeni bir tarama başladıysa bu sonuç atılır. */
+      if (!guncel()) return;
+      taramayiBitir(cevap);
     } catch (err) {
       console.error(err);
+      if (!guncel()) return;
       showToast("error", t({ tr: "Kılavuz okunamadı. Yeniden deneyin.", en: "The guideline could not be read. Try again." }));
       setAdim("secim");
     }
@@ -128,12 +152,18 @@ export default function KilavuzYukle({
 
   const adresTara = async () => {
     if (!adres.trim()) return;
+    const no = ++islemNo.current;
+    const guncel = () => islemNo.current === no;
+    setDosyaAdi(adres.trim());
     setAdim("tarama");
     setDurum(t({ tr: "Kılavuz indiriliyor ve okunuyor…", en: "Downloading and reading the guideline…" }));
     try {
-      taramayiBitir(await kilavuzuTara(projectId, { adres }));
+      const cevap = await kilavuzuTara(projectId, { adres });
+      if (!guncel()) return;
+      taramayiBitir(cevap);
     } catch (err) {
       console.error(err);
+      if (!guncel()) return;
       showToast("error", t({ tr: "Adres okunamadı. Yeniden deneyin.", en: "The address could not be read. Try again." }));
       setAdim("secim");
     }
@@ -174,7 +204,7 @@ export default function KilavuzYukle({
 
   /* Kılavuz isteğe bağlı: kaynak toplamak, atıf yapmak ve denetlemek kılavuzsuz da çalışıyor. */
   const devamBaglantisi = (
-    <Link className="projects-filter-button button-compact" href={`/dashboard/literature?calisma=${projectId}`}>
+    <Link className="link-button" href={`/dashboard/literature?calisma=${projectId}`}>
       {t({ tr: "Kılavuz eklemeden devam et", en: "Continue without a guideline" })}
     </Link>
   );
@@ -188,9 +218,23 @@ export default function KilavuzYukle({
             en: "We couldn't extract text from this PDF. You can choose another file or carry on without a guideline.",
           })}
         </p>
+        {/*
+          SEBEP YALNIZCA DOĞRULANABİLİYORSA. Sunucu "taranmış" dediğinde
+          belgenin metin katmanı gerçekten yok (app/actions/calisma-kilavuzu.ts).
+          Öteki hâllerde (bozuk dosya, OCR düştü) sebep bilinmiyor ve
+          yazılmıyor: tahmin, öğrenciyi olmayan bir dosyayı aramaya yollar.
+        */}
+        {sonuc?.okunamamaSebebi === "taranmis" ? (
+          <p className="muted text-sm">
+            {t({
+              tr: "Dosya taranmış sayfalardan oluşuyor; içinde seçilebilir metin yok. Enstitü sitesindeki metin tabanlı sürüm ya da Word'den PDF'e çevrilmiş bir kopya okunabilir.",
+              en: "The file is made of scanned pages and contains no selectable text. A text-based version from your graduate school's site, or a copy exported from Word, can be read.",
+            })}
+          </p>
+        ) : null}
         {/* İki eylem, BİRER KEZ: hata mesajının hemen altında. */}
         <div className="cluster">
-          <button type="button" className="projects-primary-button button-compact" onClick={() => setAdim("secim")}>
+          <button type="button" className="projects-primary-button button-compact" onClick={vazgec}>
             {t({ tr: "Başka bir dosya seç", en: "Choose another file" })}
           </button>
           {kilavuzsuz ? devamBaglantisi : null}
@@ -200,11 +244,30 @@ export default function KilavuzYukle({
   }
 
   if (adim === "tarama") {
+    /*
+      BELİRSİZ İLERLEME, UYDURMA YÜZDE DEĞİL. Depoya yükleme ilerleme
+      bildirmiyor, metin çıkarma ve OCR hiç bildirmiyor: ölçülebilir bir
+      oran YOK. Dolan bir çubuk çizmek, bilmediğimiz bir şeyi biliyormuş
+      gibi göstermek olurdu — süresi tutmayan çubuk "takıldı" sanılır.
+    */
     return (
-      <div className="kilavuz-bekleme" role="status" aria-live="polite">
-        <span className="kilavuz-bekleme-nokta" aria-hidden="true" />
-        <strong>{durum}</strong>
-        <p className="muted text-sm">{t({ tr: "Bu sırada sayfadan ayrılmayın.", en: "Don't leave the page in the meantime." })}</p>
+      <div className="stack">
+        <div className="kilavuz-ilerleme" role="status" aria-live="polite">
+          {dosyaAdi ? <b className="kilavuz-ilerleme-ad">{dosyaAdi}</b> : null}
+          <span className="kilavuz-ilerleme-cubuk" aria-hidden="true" />
+          <span className="kilavuz-ilerleme-durum">{durum}</span>
+        </div>
+        <p className="muted text-sm">
+          {t({
+            tr: "Taranmış bir belgeyse yarım dakikayı bulabilir. Bu sırada sayfadan ayrılmayın.",
+            en: "If it is a scanned document, this can take up to half a minute. Don't leave the page in the meantime.",
+          })}
+        </p>
+        <div className="cluster">
+          <button type="button" className="projects-filter-button button-compact" onClick={vazgec}>
+            {t({ tr: "Vazgeç", en: "Cancel" })}
+          </button>
+        </div>
       </div>
     );
   }
@@ -512,23 +575,30 @@ export default function KilavuzYukle({
 
   return (
     <div className="stack">
-      <p className="text-sm">
-        {t({
-          tr: "Kurumunuzun kılavuzu sistemde yok. Kendi kılavuzunuzu yüklerseniz biçim kuralları editöre kendiliğinden uygulanır; zorunlu bölümleri ve sayfa sınırını sizin yerinize takip ederim.",
-          en: "Your institution's guideline is not in the system. If you upload your own, its formatting rules are applied to the editor automatically, and I keep track of the required sections and page limit for you.",
-        })}
-      </p>
-
+      {/*
+        TEK BAŞLIK. Bu kartın başlığı ve giriş paragrafı pencerenin
+        başlığıyla açıklamasını kelimesi kelimesine tekrar ediyordu
+        (tasarım incelemesi, bulgu 4): aynı cümle iki punto farkıyla
+        üst üste duruyordu. Başlık artık yalnızca pencerede.
+      */}
       <label className="dropzone">
         <UploadCloud size={28} aria-hidden="true" />
-        <span className="text-base">{t({ tr: "Kılavuz PDF'inizi seçin", en: "Choose your guideline PDF" })}</span>
+        <strong className="text-base">{t({ tr: "Kılavuz PDF'inizi seçin", en: "Choose your guideline PDF" })}</strong>
         <small className="muted">
           {t({
             tr: "Danışmanınızın gönderdiği ya da enstitü sitesinden indirdiğiniz dosya.",
             en: "The file your advisor sent or that you downloaded from your graduate school's website.",
           })}
         </small>
+        {/*
+          Tarayıcının ham "Choose File" düğmesi ekrandaki en önemsiz
+          görünen öğeydi, oysa asıl eylem oydu. Girdi ekran okuyucuya
+          açık kalıyor (.sr-only), görünen düğme etiketin içinde: etikete
+          tıklamak da, Tab'la girdiye gelip Enter'a basmak da çalışıyor.
+        */}
+        <span className="dropzone-dugme" aria-hidden="true">{t({ tr: "Dosya seç", en: "Choose file" })}</span>
         <input
+          className="sr-only"
           type="file"
           accept="application/pdf"
           onChange={(e) => {
@@ -539,7 +609,9 @@ export default function KilavuzYukle({
       </label>
 
       <details className="form-details">
-        <summary>{t({ tr: "Dosya yerine adres vereyim", en: "I'll give an address instead of a file" })}</summary>
+        {/* Ok işareti .form-details > summary > span kuralından geliyor;
+            span olmadan satır tıklanabilir görünmüyordu. */}
+        <summary><span>{t({ tr: "Dosya yerine adres vereyim", en: "I'll give an address instead of a file" })}</span></summary>
         <div className="cluster mt-sm">
           <input
             className="field-control"
@@ -555,13 +627,28 @@ export default function KilavuzYukle({
       </details>
 
       {/*
+        "Kendiliğinden uygulanır" YANLIŞTI: okunan kurallar önce
+        doğrulama ekranında gösteriliyor ve ancak "Kurallarımı uygula"
+        denince yazılıyor. Cümle akışın gerçeğini söylüyor.
+      */}
+      <div className="kilavuz-ozet">
+        <span className="kilavuz-ozet-baslik">{t({ tr: "Onayınızdan sonra uygulanacaklar", en: "Applied after you confirm" })}</span>
+        <p className="muted text-sm">
+          {t({
+            tr: "Sayfa düzeni · Zorunlu bölümler · Kaynakça sistemi. Okunan kuralları önce size gösteririm; uygulamadan önce değiştirebilirsiniz.",
+            en: "Page layout · Required sections · Citation system. I show you the rules I read first; you can change them before they are applied.",
+          })}
+        </p>
+      </div>
+
+      {/*
         KILAVUZ İSTEĞE BAĞLI. Bu cümle ve bağlantı eskiden kılavuz
         penceresinde çiziliyordu; okunamayan PDF ekranı da kendi
         bağlantısını çizince "Kılavuz eklemeden devam et" iki kez
         görünüyordu. Tek yer burası.
       */}
       {kilavuzsuz ? (
-        <>
+        <div className="kilavuz-atla">
           <p className="muted text-sm">
             {t({
               tr: "Kılavuz zorunlu değil. Eklemeden de kaynak toplayabilir, atıf yapabilir ve kaynakçanızı denetleyebilirsiniz; çalışmanızın kayıtlı atıf stili kullanılır.",
@@ -569,7 +656,7 @@ export default function KilavuzYukle({
             })}
           </p>
           {devamBaglantisi}
-        </>
+        </div>
       ) : null}
     </div>
   );

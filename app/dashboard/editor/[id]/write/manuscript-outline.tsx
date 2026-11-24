@@ -91,6 +91,8 @@ export default function ManuscriptOutline({
 
       {sections.length > 0 ? (
         <Dialog
+      /* Boy içeriğe göre: bölüm listesi. */
+      boy="orta"
           open={acik}
           onClose={() => setAcik(false)}
           kicker={t({ tr: "Kılavuz", en: "Guideline" })}

@@ -158,6 +158,11 @@ html.drawer-open { overflow: hidden; }
 .drawer-root[data-boy="tam"] .drawer { width: min(1360px, 100%); max-height: min(92dvh, 1100px); }
 /* Onay penceresi ("emin misiniz?"): kısa metin ve iki düğme (ActionForm). */
 .drawer-root[data-boy="onay"] .drawer { width: min(480px, 100%); }
+/* Dar pencere: kısa form (paylaş, Word'den aktar). Dialog'un varsayılanı.
+   Kural 24.11.2026'ya kadar workspace.css'te, öteki boylardan AYRI
+   duruyordu; ayrı durduğu için Dialog'un tek boyda kaldığı da
+   görünmüyordu. */
+.drawer-root[data-boy="dar"] .drawer { width: min(520px, 100%); }
 .onay-metni { display: grid; gap: 10px; color: var(--muted); line-height: 1.55; }
 .onay-metni p { margin: 0; }
 .onay-eylemleri { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }

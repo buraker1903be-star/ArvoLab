@@ -98,6 +98,8 @@ export default function ImageLibraryDialog({ open, projectId, onClose, onPick }:
 
   return (
     <Dialog
+      /* Boy içeriğe göre: görsel ızgarası. */
+      boy="genis"
       open={open}
       onClose={close}
       kicker={t({ tr: "Resimler", en: "Images" })}

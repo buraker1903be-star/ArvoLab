@@ -300,7 +300,6 @@
 .footnote-list button:hover { color: var(--primary-ink); }
 
 /* Kısa pencere (dipnot vb.) */
-.drawer.drawer-compact { width: min(520px, 100%); }
 .dialog-field { display: grid; gap: 6px; }
 .dialog-field > span { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
 .dialog-field textarea {
