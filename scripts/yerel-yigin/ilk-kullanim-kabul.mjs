@@ -127,23 +127,62 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await resim("ilk-kullanim");
   } catch (e) { yaz("I · ilk kullanım", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
-  /* ---- G · Katalog hazır DEĞİLSE bölüm gizli (bugünkü ArvoOS) ---- */
+  /* ---- G · BUGÜNKÜ ArvoOS kataloğu: üç kart kapalı, mevcut ödeme yolu çalışıyor ---- */
+  /*
+    SENARYO ÜRETİMİN BULUNDUĞU DURUMU YENİDEN ÜRETİYOR (25.11.2026, ölçüm
+    düzeltmesi).
+
+    Bu blok eskiden `ik-bos` kullanıcısında koşuyordu ve iki ölçümü de
+    YANLIŞ YERDEN geçiyordu:
+    - O kullanıcı taklitte `active` (deneme DEĞİL) ve yenilemeye 14 günden
+      fazla var. `PlanSecimi` yalnızca denemede çizildiği için bölüm
+      "katalog eksik" diye değil, kullanıcı denemede olmadığı için
+      gizliydi: katalog kapısı hiç sınanmıyordu.
+    - `showPayment` etkin abonede (yenileme uzakken) false, yani ödeme
+      düğmesi zaten çizilmiyordu. Ölçüt `main` metninde "abonelik"
+      kelimesini arıyordu ve o kelime "Abonelik planı henüz tanımlanmadı"
+      cümlesinden geliyordu — düğme hiç olmadan da geçiyordu.
+
+    Artık kullanıcı DENEME üyesi ve kataloğu KATALOG_BUGUN: yalnızca kod,
+    dönem ve tutar; ad, kredi ve avantaj YOK — gerçek köprünün bugün
+    bildirdiği biçim. Böylece bölümün gizli kalması kataloğun
+    EKSİKLİĞİNDEN geliyor ve lisans kartındaki ödeme düğmesinin gerçekten
+    var olup çalıştığı ölçülebiliyor.
+  */
+  const BUGUN = await kullaniciKur(`ayar-deneme-bugun-${EKRAN}${TEMA}`);
   try {
-    const d = await s.evaluate(() => ({
-      planBolumu: Boolean(document.querySelector(".plan-secimi")),
-      lisansKarti: /Kartla öde|Abone ol|abonelik/i.test(document.querySelector("main")?.innerText ?? ""),
-    }));
-    yaz("G1 · Katalog hazır değilse üç kartlı bölüm GİZLİ", EKRAN, TEMA, !d.planBolumu, `bölüm=${d.planBolumu}`);
-    yaz("G2 · Mevcut ödeme yolu yerinde", EKRAN, TEMA, d.lisansKarti, `lisans/ödeme metni=${d.lisansKarti}`);
-    /* Katalog eksikken TARİH de lisans kartında kalmalı: kartlar
-       çizilmediği için onu gösterecek başka yer yok. */
-    const g3 = await s.evaluate(() => ({
-      tarih: Boolean(document.querySelector(".license-card-validity")),
-      odeme: [...document.querySelectorAll("main button")].some((b) => /Kartla öde|Abone ol/.test(b.textContent ?? "")),
-    }));
-    yaz("G3 · Katalog eksikken tarih lisans kartında erişilebilir", EKRAN, TEMA, g3.tarih,
-        `tarih=${g3.tarih} ödemeDüğmesi=${g3.odeme}`);
-  } catch (e) { yaz("G · katalog kapısı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+    await giris(BUGUN);
+    await git("/dashboard");
+    const d = await s.evaluate(() => {
+      const ana = document.querySelector("main");
+      const dugmeler = [...ana.querySelectorAll("form button[type=submit]")]
+        .map((b) => (b.textContent ?? "").replace(/\s+/g, " ").trim())
+        .filter((metin) => /Kartla öde/.test(metin));
+      return {
+        planBolumu: Boolean(document.querySelector(".plan-secimi")),
+        deneme: /Deneme süresi|Deneme bitişi/.test(ana.innerText),
+        dugmeler,
+        /* Düğme tutarı da taşımalı: ne ödeyeceğini söylemeyen bir
+           "Kartla öde", müşteriden bilmediği bir bedeli istemek olurdu. */
+        tutarli: dugmeler.some((metin) => /\d/.test(metin) && /₺/.test(metin)),
+        tarih: Boolean(document.querySelector(".license-card-validity")),
+      };
+    });
+    yaz("G1 · Bugünkü katalogla üç kartlı bölüm GİZLİ (kullanıcı DENEMEDE)", EKRAN, TEMA,
+        !d.planBolumu && d.deneme, `bölüm=${d.planBolumu} deneme=${d.deneme}`);
+    yaz("G2 · Lisans kartında gerçek ödeme düğmesi var (tutarıyla)", EKRAN, TEMA,
+        d.dugmeler.length > 0 && d.tutarli, `düğme=${JSON.stringify(d.dugmeler)}`);
+    yaz("G3 · Deneme bitiş tarihi lisans kartında erişilebilir", EKRAN, TEMA, d.tarih, `tarih=${d.tarih}`);
+    await resim("katalog-bugun");
+    /* ÇALIŞIYOR = düğme ödeme akışını AÇIYOR ve bir plan kodu gönderiyor.
+       Taklidin ödeme adresi yakalanıp uygulamaya dönüyor; gerçek para
+       hareketi yok. */
+    odemeEkranindakiPlan = null;
+    await s.locator("form button[type=submit]").filter({ hasText: "Kartla öde" }).first().click();
+    await s.waitForURL(/\/dashboard\/abonelik/, { timeout: 60000 });
+    yaz("G4 · Mevcut ödeme yolu ÇALIŞIYOR (akış açıldı, plan kodu gitti)", EKRAN, TEMA,
+        Boolean(odemeEkranindakiPlan), `ödeme ekranındaki plan=${odemeEkranindakiPlan}`);
+  } catch (e) { yaz("G · bugünkü katalog", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
   /* ---- P · Üç plan kartı (katalog dolu, deneme üyesi) ---- */
   const KARTLI = await kullaniciKur(`ayar-katalog-iptal-kartlar-${EKRAN}${TEMA}`);
