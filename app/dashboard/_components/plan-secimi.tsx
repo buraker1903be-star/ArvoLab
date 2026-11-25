@@ -6,6 +6,7 @@ import { formatTry, type BillingPlan } from "@/lib/billing-plan";
 import { planKartlari } from "@/lib/plan-satis";
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import OdemeButonu from "./odeme-butonu";
+import YasalNot from "./yasal-not";
 
 /*
   DENEME ÜYESİNE PLAN SEÇİMİ (25.11.2026, ana sayfa ilk kullanım akışı).
@@ -74,14 +75,45 @@ export default async function PlanSecimi({
                 </li>
               ))}
             </ul>
-            {/* Mevcut ödeme akışı, seçilen planın koduyla. */}
-            <form action={payArvolabSubscription}>
-              <input type="hidden" name="plan" value={k.kod} />
-              <OdemeButonu birincil etiket={t(k.dugme)} />
-            </form>
+            {/* Eylemler kartın DİBİNDE: üç kartın düğmeleri masaüstünde
+                aynı alt hizada (app/styles/os5-ana-sayfa.css). */}
+            <div className="plan-secimi-eylemler">
+              {/* Mevcut ödeme akışı, seçilen planın koduyla. */}
+              <form action={payArvolabSubscription}>
+                <input type="hidden" name="plan" value={k.kod} />
+                <OdemeButonu birincil etiket={t(k.dugme)} />
+              </form>
+              {/*
+                YILLIK SEÇENEK KENDİ KARTINDA. Ayrı bir listede dursaydı
+                hangi plana ait olduğu belirsiz kalırdı; düğme planın
+                adını taşıyor.
+              */}
+              {k.yillik ? (
+                <form action={payArvolabSubscription}>
+                  <input type="hidden" name="plan" value={k.yillik.kod} />
+                  <OdemeButonu
+                    birincil={false}
+                    ikonlu={false}
+                    etiket={t({
+                      tr: `${k.ad} yıllık · ${formatTry(k.yillik.fiyat, dil)}`,
+                      en: `${k.ad} yearly · ${formatTry(k.yillik.fiyat, dil)}`,
+                    })}
+                  />
+                </form>
+              ) : null}
+            </div>
           </article>
         ))}
       </div>
+
+      {/*
+        ÖDEME KOŞULLARI ÜÇ KARTIN HEMEN ALTINDA (25.11.2026). Aşağıdaki
+        lisans kartı aynı notu ve aynı ödeme düğmelerini tekrar
+        ediyordu; kullanıcı hangi düğmenin hangisi olduğunu
+        ayıramıyordu. Not buraya taşındı, lisans kartındaki ödeme
+        bölümü bu ekranda gizleniyor (odemeGizle).
+      */}
+      <YasalNot />
     </section>
   );
 }

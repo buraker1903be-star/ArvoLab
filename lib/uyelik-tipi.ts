@@ -26,15 +26,34 @@ export type UyelikKaynagi = {
   plans: BillingPlan[];
   /** lib/access.ts AccessState.planKodu */
   planKodu: string | null;
+  /** lib/access.ts AccessState.status — ArvoOS'un bildirdiği durum. */
+  durum: string;
 };
 
+/*
+  ÜCRETLİ PLAN ETİKETİ YALNIZCA ABONELİK ETKİNKEN (25.11.2026).
+
+  Eskiden yalnızca plan koduna bakılıyordu. Köprü DENEMEDEKİ bir
+  aboneye de plan kodu bildirebiliyor (deneme bir planın üstünde
+  başlatılmış olabilir) ve ekranda aynı anda "Deneme süresi" ile "Pro"
+  yazıyordu: kullanıcı ödemediği bir üyeliğin adını kendi hesabında
+  görüyordu. Ücretli etiket ancak ödeme ArvoOS'ta doğrulanıp abonelik
+  ETKİN olduğunda çıkıyor.
+
+  Denemede, ödemesi gecikmişte, iptal edilmişte ve durumu bilinmeyende
+  null dönüyor; çağıran satırı hiç çizmiyor.
+*/
+const ETKIN_DURUMLAR = new Set(["active", "trialing_paid", "etkin"]);
+
 /**
- * Abonenin üyelik tipi ("Standart", "Plus", "Pro"); bilinmiyorsa null.
+ * Abonenin üyelik tipi ("Standart", "Plus", "Pro"); bilinmiyorsa ya da
+ * abonelik etkin değilse null.
  *
  * Kod katalogda bulunamazsa da null: katalogda olmayan bir koda ad
  * uydurmak, kullanıcıya ödemediği bir planı göstermek olurdu.
  */
-export function uyelikTipi({ plans, planKodu }: UyelikKaynagi): string | null {
+export function uyelikTipi({ plans, planKodu, durum }: UyelikKaynagi): string | null {
+  if (!ETKIN_DURUMLAR.has(durum)) return null;
   if (!planKodu) return null;
   const plan = plans.find((p) => p.code === planKodu);
   const ad = plan?.ad;

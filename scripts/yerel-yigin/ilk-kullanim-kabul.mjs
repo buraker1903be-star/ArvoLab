@@ -81,8 +81,12 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
   await ctx.addCookies([{ name: "arvolab_dil", value: "tr", url: UYG }]);
   /* TAKLİT ÖDEME SAYFASI: ArvoOS'un ödeme adresi yakalanıp uygulamaya
      geri yönlendiriliyor. Gerçek para hareketi yok. */
+  /* Ödeme ekranına GİDEN planı kaydediyoruz: seçilen kart, ödeme
+     ekranındaki plan ve etkinleşen plan birbirini tutmalı. */
+  let odemeEkranindakiPlan = null;
   await ctx.route("https://odeme.arvoos.taklit/**", async (route) => {
     const u = new URL(route.request().url());
+    odemeEkranindakiPlan = u.searchParams.get("plan");
     const donus = u.searchParams.get("donus") ?? "kart=tamam";
     await route.fulfill({ status: 302, headers: { location: `${UYG}/dashboard/abonelik?${donus}` }, body: "" });
   });
@@ -134,9 +138,9 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
   } catch (e) { yaz("G · katalog kapısı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
   /* ---- P · Üç plan kartı (katalog dolu, deneme üyesi) ---- */
-  const BASARI = await kullaniciKur(`ayar-katalog-basari-${EKRAN}${TEMA}`);
+  const KARTLI = await kullaniciKur(`ayar-katalog-iptal-kartlar-${EKRAN}${TEMA}`);
   try {
-    await giris(BASARI);
+    await giris(KARTLI);
     await git("/dashboard");
     const p = await s.evaluate(() => {
       const bolum = document.querySelector(".plan-secimi");
@@ -179,42 +183,103 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await resim("plan-secimi");
   } catch (e) { yaz("P · plan kartları", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
-  /* ---- B · Ödeme BAŞARILI: üyelik etkinleşiyor, dört ekrana yansıyor ---- */
-  try {
-    await s.locator('.plan-secimi-kart:has(h3:text-is("Plus"))').locator("button[type=submit]").click();
-    await s.waitForURL(/\/dashboard\/abonelik/, { timeout: 60000 });
-    await s.waitForLoadState("networkidle").catch(() => {});
-    await s.waitForTimeout(900);
-    const abonelik = await s.evaluate(() => (document.querySelector(".abonelik-kartlar")?.innerText ?? "").replace(/\s+/g, " "));
-    yaz("B1 · Ödeme sonrası Abonelik ekranında yeni plan", EKRAN, TEMA, /Plus/.test(abonelik), `"${abonelik.slice(0, 80)}"`);
-    await git("/dashboard");
-    const anaSayfa = await s.evaluate(() => ({
-      planBolumu: Boolean(document.querySelector(".plan-secimi")),
-      nav: [...document.querySelectorAll(".os-kullanici-kimlik, .os-kullanici-bas")]
-        .find((e) => e.getClientRects().length > 0)?.querySelector("small")?.textContent?.trim() ?? null,
-    }));
-    yaz("B2 · Ana sayfada plan seçimi artık YOK (deneme bitti)", EKRAN, TEMA, !anaSayfa.planBolumu, `bölüm=${anaSayfa.planBolumu}`);
-    yaz("B3 · Navigasyonda plan adı", EKRAN, TEMA, anaSayfa.nav === "Plus", `nav="${anaSayfa.nav ?? ""}"`);
-    await s.locator("details.os-kullanici summary").filter({ visible: true }).first().click();
-    await s.locator('.os-kullanici-menu a[href="/dashboard/settings"]').filter({ visible: true }).first().click();
-    await s.waitForSelector(".drawer-root.open .ayarlar-pencere", { timeout: 25000 });
-    await s.waitForTimeout(800);
-    const ayarlar = await s.evaluate(() => {
-      const liste = document.querySelector(".drawer-root.open .ayarlar-bilgiler");
-      return [...(liste?.querySelectorAll("div") ?? [])].map((d) => `${d.querySelector("dt")?.textContent?.trim()}=${d.querySelector("dd")?.textContent?.trim()}`).join(" ");
-    });
-    yaz("B4 · Ayarlar'da üyelik tipi", EKRAN, TEMA, /Üyelik tipi=Plus/.test(ayarlar), `"${ayarlar}"`);
-    await resim("odeme-basarili");
-    await s.keyboard.press("Escape");
-    await s.waitForTimeout(400);
-  } catch (e) { yaz("B · ödeme başarılı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 80)}`); }
+  /* ---- B · Ödeme BAŞARILI: üç kademe AYRI AYRI ---- */
+  for (const kademe of [
+    { ad: "Standart", kod: "standart-ay" },
+    { ad: "Plus", kod: "plus-ay" },
+    { ad: "Pro", kod: "pro-ay" },
+  ]) {
+    const K = await kullaniciKur(`ayar-katalog-basari-${kademe.ad.toLowerCase()}-${EKRAN}${TEMA}`);
+    try {
+      await giris(K);
+      await git("/dashboard");
+      /* DENEMEDE ÜCRETLİ ETİKET OLMAMALI: ekran aynı anda "Deneme
+         süresi" ve "Pro" gösteriyordu. */
+      const once = await s.evaluate(() => ({
+        nav: [...document.querySelectorAll(".os-kullanici-kimlik, .os-kullanici-bas")]
+          .find((e) => e.getClientRects().length > 0)?.querySelector("small")?.textContent?.trim() ?? "",
+        deneme: /Deneme/.test(document.querySelector("main")?.innerText ?? ""),
+      }));
+      yaz(`B0 ${kademe.ad} · Denemede navigasyonda ücretli etiket YOK`, EKRAN, TEMA,
+          once.deneme && once.nav === "", `deneme=${once.deneme} nav="${once.nav}"`);
+      /* Lisans kartı ödeme düğmelerini TEKRARLAMIYOR; sözleşme notu
+         üç kartın hemen altında, tek kez. */
+      const tekrar = await s.evaluate(() => {
+        const ana = document.querySelector("main");
+        const kartlar = document.querySelector(".plan-secimi");
+        return {
+          kartlaOde: [...ana.querySelectorAll("button")].filter((b) => /Kartla öde/.test(b.textContent ?? "")).length,
+          yasalNot: ana.querySelectorAll(".yasal-not").length,
+          yasalKartlarda: Boolean(kartlar?.querySelector(".yasal-not")),
+          hizalar: [...(kartlar?.querySelectorAll(".plan-secimi-eylemler") ?? [])]
+            .map((e) => Math.round(e.getBoundingClientRect().bottom)),
+          yillik: [...(kartlar?.querySelectorAll(".plan-secimi-kart") ?? [])].map((k) => {
+            const formlar = [...k.querySelectorAll("form")];
+            const yillikForm = formlar.find((f) => /yıllık/i.test(f.querySelector("button")?.textContent ?? ""));
+            if (!yillikForm) return null;
+            const ad = k.querySelector("h3")?.textContent?.trim();
+            const kod = yillikForm.querySelector('input[name="plan"]')?.value ?? "";
+            const aylikKod = formlar[0]?.querySelector('input[name="plan"]')?.value ?? "";
+            return `${ad}→${yillikForm.querySelector("button").textContent.trim()}|kod=${kod}|aylık=${aylikKod}`;
+          }),
+        };
+      });
+      yaz(`B0b ${kademe.ad} · Lisans kartında tekrar eden ödeme düğmesi yok`, EKRAN, TEMA,
+          tekrar.kartlaOde === 0, `"Kartla öde" sayısı=${tekrar.kartlaOde}`);
+      yaz(`B0c ${kademe.ad} · Sözleşme notu TEK ve üç kartın altında`, EKRAN, TEMA,
+          tekrar.yasalNot === 1 && tekrar.yasalKartlarda, `not=${tekrar.yasalNot} kartlarda=${tekrar.yasalKartlarda}`);
+      if (!mobil) {
+        yaz(`B0d ${kademe.ad} · Masaüstünde düğmeler aynı alt hizada`, EKRAN, TEMA,
+            new Set(tekrar.hizalar).size === 1, `hizalar=${JSON.stringify(tekrar.hizalar)}`);
+      }
+      /* Yıllık düğme hem ADIYLA hem de KENDİ koduyla kendi planına
+         bağlı olmalı: "Standart yıllık" düğmesi standart-yil kodunu
+         göndermeli, aylık kodu değil. */
+      yaz(`B0e ${kademe.ad} · Yıllık seçenek kendi planına bağlı (ad ve kod)`, EKRAN, TEMA,
+          tekrar.yillik.some((x) => x && /Standart→Standart yıllık.*kod=standart-yil\|aylık=standart-ay/.test(x)) &&
+          tekrar.yillik.some((x) => x && /Pro→Pro yıllık.*kod=pro-yil\|aylık=pro-ay/.test(x)),
+          JSON.stringify(tekrar.yillik));
+
+      odemeEkranindakiPlan = null;
+      await s.locator(`.plan-secimi-kart:has(h3:text-is("${kademe.ad}"))`).locator("button[type=submit]").first().click();
+      await s.waitForURL(/\/dashboard\/abonelik/, { timeout: 60000 });
+      await s.waitForLoadState("networkidle").catch(() => {});
+      await s.waitForTimeout(900);
+      yaz(`B1 ${kademe.ad} · Ödeme ekranına SEÇİLEN planın kodu gidiyor`, EKRAN, TEMA,
+          odemeEkranindakiPlan === kademe.kod, `gönderilen=${odemeEkranindakiPlan} beklenen=${kademe.kod}`);
+      const abonelik = await s.evaluate(() => (document.querySelector(".abonelik-kartlar")?.innerText ?? "").replace(/\s+/g, " "));
+      yaz(`B2 ${kademe.ad} · Etkinleşen plan Abonelik ekranında`, EKRAN, TEMA,
+          new RegExp(kademe.ad).test(abonelik), `"${abonelik.slice(0, 70)}"`);
+      await git("/dashboard");
+      const sonra = await s.evaluate(() => ({
+        planBolumu: Boolean(document.querySelector(".plan-secimi")),
+        nav: [...document.querySelectorAll(".os-kullanici-kimlik, .os-kullanici-bas")]
+          .find((e) => e.getClientRects().length > 0)?.querySelector("small")?.textContent?.trim() ?? null,
+      }));
+      yaz(`B3 ${kademe.ad} · Ana sayfada plan seçimi kalktı, navigasyonda plan adı`, EKRAN, TEMA,
+          !sonra.planBolumu && sonra.nav === kademe.ad, `bölüm=${sonra.planBolumu} nav="${sonra.nav}"`);
+      await s.locator("details.os-kullanici summary").filter({ visible: true }).first().click();
+      await s.locator('.os-kullanici-menu a[href="/dashboard/settings"]').filter({ visible: true }).first().click();
+      await s.waitForSelector(".drawer-root.open .ayarlar-pencere", { timeout: 25000 });
+      await s.waitForTimeout(700);
+      const ayarlar = await s.evaluate(() => {
+        const liste = document.querySelector(".drawer-root.open .ayarlar-bilgiler");
+        return [...(liste?.querySelectorAll("div") ?? [])].map((d) => `${d.querySelector("dt")?.textContent?.trim()}=${d.querySelector("dd")?.textContent?.trim()}`).join(" ");
+      });
+      yaz(`B4 ${kademe.ad} · Ayarlar'da üyelik tipi aynı plan`, EKRAN, TEMA,
+          new RegExp(`Üyelik tipi=${kademe.ad}`).test(ayarlar), `"${ayarlar}"`);
+      if (kademe.ad === "Plus") await resim("odeme-basarili");
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(350);
+    } catch (e) { yaz(`B · ${kademe.ad} başarı senaryosu`, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 80)}`); }
+  }
 
   /* ---- V · İPTAL: deneme sürüyor ---- */
   const IPTAL = await kullaniciKur(`ayar-katalog-iptal-${EKRAN}${TEMA}`);
   try {
     await giris(IPTAL);
     await git("/dashboard");
-    await s.locator('.plan-secimi-kart:has(h3:text-is("Pro"))').locator("button[type=submit]").click();
+    await s.locator('.plan-secimi-kart:has(h3:text-is("Pro"))').locator("button[type=submit]").first().click();
     await s.waitForURL(/\/dashboard\/abonelik/, { timeout: 60000 });
     await s.waitForLoadState("networkidle").catch(() => {});
     await s.waitForTimeout(800);
@@ -231,7 +296,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
   try {
     await giris(HATA);
     await git("/dashboard");
-    await s.locator('.plan-secimi-kart:has(h3:text-is("Standart"))').locator("button[type=submit]").click();
+    await s.locator('.plan-secimi-kart:has(h3:text-is("Standart"))').locator("button[type=submit]").first().click();
     /*
       Ürün hatayı TOAST ile söylüyor (ActionErrorToast): sunucu
       /dashboard?error=odeme-baslatilamadi'ya yönlendiriyor, bileşen

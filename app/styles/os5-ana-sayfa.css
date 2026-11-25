@@ -311,20 +311,23 @@
 .os5-ana .plan-secimi { display: grid; gap: 12px; }
 .os5-ana .plan-secimi-deneme { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
 .os5-ana .plan-secimi-izgara { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+/* Sütun yerleşimi: eylemler margin-top:auto ile kartın DİBİNE iniyor,
+   böylece üç kartın düğmeleri masaüstünde aynı alt hizada — metinleri
+   farklı uzunlukta olsa da. */
 .os5-ana .plan-secimi-kart {
-  display: grid; align-content: start; gap: 10px;
+  display: flex; flex-direction: column; gap: 10px;
   padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
 }
+.os5-ana .plan-secimi-eylemler { display: grid; gap: 8px; margin-top: auto; padding-top: 4px; }
+.os5-ana .plan-secimi-eylemler button { width: 100%; justify-content: center; }
 .os5-ana .plan-secimi-kart h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
 .os5-ana .plan-secimi-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .os5-ana .plan-secimi-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
 .os5-ana .plan-secimi-metin { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .os5-ana .plan-secimi-liste { display: grid; gap: 6px; margin: 0; padding: 10px 0 0; list-style: none; border-top: 1px solid var(--line-soft); }
+.os5-ana .plan-secimi .yasal-not { margin: 0; }
 .os5-ana .plan-secimi-liste li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; font-size: var(--fs-sm); }
 .os5-ana .plan-secimi-liste svg { margin-top: 3px; color: var(--muted); }
-/* Düğme kartın altına yapışıyor: üç kartın eylemi aynı hizada. */
-.os5-ana .plan-secimi-kart form { align-self: end; margin-top: 4px; }
-.os5-ana .plan-secimi-kart form button { width: 100%; justify-content: center; }
 @media (max-width: 860px) {
   .os5-ana .plan-secimi-izgara { grid-template-columns: 1fr; }
 }

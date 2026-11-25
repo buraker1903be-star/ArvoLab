@@ -191,7 +191,7 @@ export async function ayarlariOku(): Promise<{ veri: AyarlarVerisi } | { error: 
       ad: adlar.ad,
       soyad: adlar.soyad,
       adBolunusuBelirsiz: adlar.belirsiz,
-      uyelikTipi: uyelikTipi({ plans: access.plans, planKodu: access.planKodu }),
+      uyelikTipi: uyelikTipi({ plans: access.plans, planKodu: access.planKodu, durum: access.status }),
       kurumAdi,
       abonelik: {
         tur: access.kind,

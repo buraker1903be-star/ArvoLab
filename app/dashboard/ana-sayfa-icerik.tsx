@@ -13,6 +13,7 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
 import PlanSecimi from "./_components/plan-secimi";
+import { satisHazir } from "@/lib/plan-satis";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
@@ -549,7 +550,10 @@ export default async function AnaSayfaIcerik() {
             altında. Katalog eksikse bileşen null döner ve aşağıdaki
             lisans kartı mevcut ödeme yolunu sunmaya devam eder. */}
         {deneme ? <PlanSecimi planlar={access.plans} denemeBitis={denemeBitisMetni} /> : null}
-        <LicenseCard access={access} />
+        {/* Üç kart çiziliyorsa lisans kartı ödeme düğmelerini ve
+            sözleşme notunu TEKRARLAMIYOR; durum bilgisi kalıyor.
+            Katalog eksikse kartlar yok ve mevcut ödeme yolu burada. */}
+        <LicenseCard access={access} odemeGizle={deneme && satisHazir(access.plans)} />
         </>
       ) : ogrenciGorunumu && resume ? (
         <>

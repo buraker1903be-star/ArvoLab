@@ -126,7 +126,7 @@ const sunucu = http.createServer((istek, yanit) => {
          uygulamaya geri yönlendiriyor. */
       const donus = s === "iptal" ? "kart=hata" : "kart=tamam";
       yanit.writeHead(200, { "content-type": "application/json" })
-        .end(JSON.stringify({ checkoutUrl: `https://odeme.arvoos.taklit/ode?senaryo=${s ?? "basari"}&donus=${encodeURIComponent(donus)}` }));
+        .end(JSON.stringify({ checkoutUrl: `https://odeme.arvoos.taklit/ode?senaryo=${s ?? "basari"}&plan=${encodeURIComponent(secilenPlan ?? "")}&donus=${encodeURIComponent(donus)}` }));
       return;
     }
     /*
@@ -161,9 +161,12 @@ const sunucu = http.createServer((istek, yanit) => {
                ölçülebilsin. Kademe e-postadan seçiliyor: üç kademenin
                ÜÇÜ DE ayrı ayrı sınanabilsin diye (yalnızca Pro'yu
                görmek, etiketin plana göre değiştiğini göstermezdi). */
+            /* Ödeme öncesi (deneme) plan kodu BİLDİRİLMİYOR: denemedeki
+               hesap ücretli bir planın adını taşımamalı. Etkinleşince
+               seçilen kod bildiriliyor. */
             ...(ETKINLESENLER.has(eposta)
               ? { planCode: ETKINLESENLER.get(eposta) }
-              : planKodu(eposta) ? { planCode: planKodu(eposta) } : {}),
+              : senaryo(eposta) ? {} : planKodu(eposta) ? { planCode: planKodu(eposta) } : {}),
             /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
             creditPackages: PAKETLER,
             cardStorage: false,

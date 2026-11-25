@@ -63,6 +63,12 @@ export type PlanKarti = {
   avantajlar: string[];
   metin: Metin;
   dugme: Metin;
+  /*
+    AYNI KADEMENİN YILLIK SÜRÜMÜ (25.11.2026). Katalogda varsa kartın
+    İÇİNDE gösteriliyor: yıllık seçenek ayrı bir listede dursaydı
+    hangi plana ait olduğu belirsiz kalırdı. Yoksa null.
+  */
+  yillik: { kod: string; fiyat: number } | null;
 };
 
 /** Satış metni anahtarı: "Standart" → "standart". */
@@ -102,7 +108,15 @@ export function planKartlari(planlar: BillingPlan[]): PlanKarti[] {
       avantajlar,
       metin: metinler.metin,
       dugme: metinler.dugme,
+      yillik: null,
     });
+  }
+  /* Yıllık sürümler: kartın kendi kademesine bağlanıyor. */
+  for (const p of planlar) {
+    if (!p.code || !p.ad || p.price === null || p.interval !== "year") continue;
+    const kart = kademeler.get(anahtar(p.ad));
+    if (!kart || kart.kod === p.code || kart.yillik) continue;
+    kart.yillik = { kod: p.code, fiyat: p.price };
   }
   const kartlar = [...kademeler.values()];
   /*

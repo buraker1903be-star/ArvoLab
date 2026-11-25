@@ -10,7 +10,22 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 // Ana sayfadaki lisans/abonelik bölümü: aktif mi, ödeme alınmadıysa neden ve
 // geçerlilik tarihi. İç ekipte ve durum bilinmiyorken hiç gösterilmez.
 
-export default async function LicenseCard({ access }: { access: AccessState }) {
+export default async function LicenseCard({
+  access,
+  odemeGizle = false,
+}: {
+  access: AccessState;
+  /*
+    ÖDEME BÖLÜMÜ GİZLENSİN Mİ (25.11.2026). Ana sayfada üç plan kartı
+    gösterilirken bu kart AYNI düğmeleri ve aynı sözleşme notunu
+    tekrar ediyordu: ekranda iki ayrı "Kartla öde" takımı vardı ve
+    kullanıcı hangisinin hangi planı aldığını ayıramıyordu. Kart
+    durumu göstermeye devam ediyor, ödeme bölümü yalnızca o ekranda
+    susuyor. Katalog eksikse üç kart hiç çizilmediği için bu bayrak
+    false kalıyor ve MEVCUT ödeme yolu erişilebilir duruyor.
+  */
+  odemeGizle?: boolean;
+}) {
   const t = await ceviri();
   const dil = await aktifDil();
   const summary = licenseSummary(access, new Date(), dil);
@@ -34,7 +49,7 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
       ) : null}
       {summary.paymentNote ? <p className="tone-text text-sm" data-tone={summary.tone}>{summary.paymentNote}</p> : null}
       {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
-      {summary.showPayment ? (
+      {summary.showPayment && !odemeGizle ? (
         access.plans.length > 0 ? (
           <>
           <div className="cluster">
