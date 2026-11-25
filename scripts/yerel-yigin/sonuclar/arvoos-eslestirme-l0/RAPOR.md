@@ -63,6 +63,38 @@ sayılarını birebir verdi (537 · 0 / 0 / 42 / 495, kapsanan kurum 0, rol
 `OZET.md` ayrıca "bağı doğrulanmamış İŞ YETKİSİ önerisi" sayısını veriyor ve
 önerisi "yok" olan satırları bu sayıya katmıyor.
 
+## Çıktı yolu denetimi (25.11.2026, incelemede çıkan P2)
+
+Depo sınırı `process.cwd()` ile ölçülüyordu. `cwd` ÇAĞIRANIN dizini, deponun
+kökü değil: `scripts/` içinden `--cikti ../gizli-rapor` verildiğinde hedef
+`<depo>/gizli-rapor` oluyor ama denetim `scripts/`'e göre baktığı için
+geçiyordu. **Düzeltmeden önce ölçüldü:** alt dizinden koşulan bu komut
+denetimi geçti ve akış veritabanı okumasına kadar geldi; bağlantı olsaydı
+e-posta ve kimlik taşıyan rapor depo içine yazılacaktı.
+
+Düzeltme: kök **betiğin kendi konumundan** hesaplanıyor
+(`dirname(fileURLToPath(import.meta.url))`'ın üst dizini, realpath'li) ve
+hedef **gerçek yoluyla**, dizin OLUŞTURULMADAN ÖNCE karşılaştırılıyor.
+`gercekYol` var olan en yakın atayı realpath'liyor, kalan parçayı ona
+ekliyor ve son parça bağlantıysa — hedefi kırık olsa bile — onu da çözüyor;
+döngüde derinlik sınırı kesiyor. Sınır `path.sep` ile, yani `<kök>-yedek`
+içinde sayılmıyor. Kök altında `package.json` yoksa betik duruyor: kökü
+bilemediğimiz yerde koruma anlamsız, açık kalmasına izin verilmiyor.
+
+| # | Sınama | Beklenen | Gözlenen | |
+|---|---|---|---|---|
+| L0-21 | `scripts/` içinden `--cikti ../gizli-rapor` | reddedilir | `✗ --cikti depo içinde: <depo>/gizli-rapor`, çıkış 1 (düzeltmeden önce GEÇİYORDU) | PASS |
+| L0-22 | `scripts/` içinden depo DIŞINDA geçerli hedef | çalışır | canlı yerel yığında dört dosya yazıldı, çıkış 0, 537 profil | PASS |
+| L0-23 | Depo içini gösteren sembolik bağlantı (hedefi YOK) | engellenir, gerçek yol yazılır | `✗ --cikti depo içinde: <depo>/sizdiran`, çıkış 1 | PASS |
+| L0-24 | Henüz oluşturulmamış derin hedef | var olan atasına göre çözülür | aynı (birim sınaması) | PASS |
+| L0-25 | Hedefi VAR olan bağlantı | çözülür | aynı | PASS |
+| L0-26 | Bağlantı döngüsü | sonsuza gitmez | derinlik sınırı kesti | PASS |
+| L0-27 | `<kök>-yedek` sınırı | içinde SAYILMAZ | aynı | PASS |
+
+L0-21/22/23 regresyon testinde betiği `scripts/` dizininden gerçekten
+koşturuyor (`spawnSync`, ölü bir YEREL veritabanı adresiyle; ağ gerekmiyor).
+Üç koşunun hiçbiri depoya dosya bırakmadı.
+
 ### L0-1'in anlamı
 
 42 bağın "ölçülemedi" çıkması kusur değil, kuralın kendisi: ArvoOS üye

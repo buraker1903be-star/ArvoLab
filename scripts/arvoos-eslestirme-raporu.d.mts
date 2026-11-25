@@ -19,6 +19,11 @@ export type Rapor = {
   kaynak?: string;
 };
 
+/** Var olmayan hedefi ve sembolik bağlantıyı da çözen gerçek yol. */
+export function gercekYol(yol: string, derinlik?: number): string;
+/** Gerçek yol depo kökünün içinde mi (sınır path ayracıyla). */
+export function depoIcinde(hedefGercek: string, depoKoku: string): boolean;
+
 export function saltOkunurFetch(
   icFetch?: (url: unknown, secenek?: { method?: string }) => Promise<unknown>,
 ): (url: unknown, secenek?: { method?: string }) => Promise<unknown>;

@@ -29,9 +29,10 @@
 //
 // ÇIKTI DEPO DIŞINA YAZILIR ve depoya girmez: satırlar e-posta ve kimlik
 // taşıyor (onaylayan kişi kayıt kayıt bakacak). Ekrana yalnızca SAYI basılır.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   atamaOnerileri,
   bagOzeti,
@@ -46,6 +47,56 @@ import { yerelAdresMi } from "../lib/depo-envanteri.ts";
 const require = createRequire(import.meta.url);
 const SAYFA = 1000;
 const UZAK_ONAY_METNI = "SALT OKUNUR UZAK OKUMA ONAYLANDI";
+
+/*
+  DEPO KÖKÜ BETİĞİN KONUMUNDAN (25.11.2026, incelemede çıkan P2).
+
+  Eskiden depo sınırı `process.cwd()` ile ölçülüyordu. `cwd` ÇAĞIRANIN
+  dizini, deponun kökü değil: `scripts/` içinden `--cikti ../gizli-rapor`
+  verildiğinde hedef `<depo>/gizli-rapor` oluyor ama denetim `scripts/`'e
+  göre baktığı için geçiyordu. Yani e-posta ve kimlik taşıyan rapor depo
+  içine yazılabiliyordu — korumanın engellemek için var olduğu şeyin tam
+  kendisi. Kök artık betiğin kendi yolundan hesaplanıyor; betik
+  `<depo>/scripts/` içinde durduğu için kök onun üst dizini.
+*/
+const BETIK_DIZINI = dirname(fileURLToPath(import.meta.url));
+
+/*
+  HEDEFİN GERÇEK YOLU.
+
+  İki şeyi birden karşılamak gerekiyor: hedef dizin HENÜZ YOK (rapor onu
+  kendisi açacak) ve araya sembolik bağlantı girebilir. `realpathSync` tek
+  başına ikisini de karşılamıyor — olmayan yolda düşüyor, kırık bağlantıda
+  da düşüyor. Lexical bir karşılaştırma ise bağlantıyı hiç görmüyor:
+  depo dışında görünen `/tmp/rapor` bağlantısı depo içini gösterebilir.
+
+  Bu yüzden: var olan en yakın atayı realpath'liyoruz, kalan parçayı ona
+  ekliyoruz, ve son parça BAĞLANTIYSA (hedefi kırık olsa bile) onu da
+  çözüyoruz. Bağlantı döngüsünde derinlik sınırı kesiyor.
+*/
+export function gercekYol(yol, derinlik = 0) {
+  const tam = resolve(yol);
+  if (derinlik > 32) return tam;
+  try {
+    return realpathSync(tam);
+  } catch {
+    /* Yolun kendisi ya da bir parçası yok; aşağıda parça parça çözülüyor. */
+  }
+  const ust = dirname(tam);
+  if (ust === tam) return tam;
+  const birlesik = join(gercekYol(ust, derinlik + 1), basename(tam));
+  try {
+    const hedef = readlinkSync(birlesik);
+    return gercekYol(isAbsolute(hedef) ? hedef : join(dirname(birlesik), hedef), derinlik + 1);
+  } catch {
+    /* Bağlantı değil (ya da yok): çözülmüş ata + son parça. */
+    return birlesik;
+  }
+}
+
+/** Gerçek yol depo kökünün İÇİNDE mi? Sınır `sep` ile: `<kök>-yedek` içinde değildir. */
+export const depoIcinde = (hedefGercek, depoKoku) =>
+  hedefGercek === depoKoku || hedefGercek.startsWith(depoKoku + sep);
 
 /*
   Okuma dışındaki her istek ağa çıkmadan reddedilir. depo-envanteri'nin
@@ -239,9 +290,21 @@ if (dogrudanCalisti) {
     Çıktı depo içine yazılmaz. Rapor kişisel veri taşıyor ve depoya
     girmemeli; yanlışlıkla `git add .` ile commit'lenmesinin önüne geçen tek
     güvenilir yer burası (.gitignore bir dizin adını bilemez).
+
+    Kök betiğin konumundan, hedef GERÇEK yoluyla karşılaştırılıyor; ikisi de
+    dizin OLUŞTURULMADAN önce. Kökün kendisi de realpath'leniyor: deponun
+    kendisine bir bağlantı üzerinden girilmiş olabilir ve o zaman iki yol
+    metin olarak eşleşmezdi.
   */
-  if (cikti === process.cwd() || cikti.startsWith(`${process.cwd()}/`)) {
-    console.error(`✗ --cikti depo içinde: ${cikti}. Rapor kişisel veri taşıyor, depo dışına yazın.`);
+  const depoKoku = gercekYol(dirname(BETIK_DIZINI));
+  if (!existsSync(join(depoKoku, "package.json"))) {
+    // Kökü bilemiyorsak koruma anlamsız: açık kalmasına izin vermek yerine duruyoruz.
+    console.error(`✗ Depo kökü belirlenemedi (${depoKoku}); koruma doğrulanamadığı için durduruldu.`);
+    process.exit(1);
+  }
+  const ciktiGercek = gercekYol(cikti);
+  if (depoIcinde(ciktiGercek, depoKoku)) {
+    console.error(`✗ --cikti depo içinde: ${ciktiGercek}. Rapor kişisel veri taşıyor, depo dışına yazın.`);
     process.exit(1);
   }
   if (!yerelAdresMi(url) && process.env.ARVOOS_ESLESTIRME_UZAK_ONAYI !== UZAK_ONAY_METNI) {
