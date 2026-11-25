@@ -88,7 +88,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     Rol ve yetki kontrolleri (uygulamalar listesi, sayfa kapıları,
     ADMIN_ROLES) değişmedi.
   */
-  const uyelik = uyelikTipi({ plans: access.plans, planKodu: access.planKodu }) ?? "";
+  const uyelik = uyelikTipi({ plans: access.plans, planKodu: access.planKodu, durum: access.status }) ?? "";
   const hesapMenusu = {
     ad: userName,
     rol: uyelik,

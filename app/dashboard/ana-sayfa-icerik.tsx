@@ -12,6 +12,8 @@ import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
+import PlanSecimi from "./_components/plan-secimi";
+import { satisHazir } from "@/lib/plan-satis";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
@@ -53,7 +55,7 @@ export default async function AnaSayfaIcerik() {
   const t = await ceviri();
   const dil = await aktifDil();
   const saatDilimi = await aktifSaatDilimi();
-  const { tarih } = await tarihler();
+  const { tarih, uzunTarih } = await tarihler();
   const sayi = (n: number) => n.toLocaleString(YEREL[dil]);
   /* editedAgo: dil ve saat dilimi her çağrıda aynı; "şimdi" verilmezse o anki saat. */
   const once = (damga: string, an?: number) => editedAgo(damga, an ?? simdi(), dil, saatDilimi);
@@ -129,6 +131,11 @@ export default async function AnaSayfaIcerik() {
     yapıyor (lib/manuscript-readiness.ts), plain_text de metin–liste
     tutarsızlığı için. Bunu kaldırmak kayıtta özet üretmeyi gerektirir.
   */
+  /* Deneme üyesi mi? Plan seçimi yalnızca denemede gösteriliyor:
+     abonesi olan kullanıcıya "planını seç" demek, zaten ödediği şeyi
+     yeniden satmaktır. Durum köprüden (lib/access.ts). */
+  const deneme = access.kind === "individual" && access.status === "trialing";
+  const denemeBitisMetni = access.trialEndsAt ? uzunTarih(access.trialEndsAt) : null;
   const yeniKullanici = ilkKullanim({
     calismaSayisi: projects.length,
     okunamadi: projelerOkunamadi,
@@ -472,17 +479,26 @@ export default async function AnaSayfaIcerik() {
         </p>
       ) : null}
 
-      {/* Öğrencide abonelik tez kartının yanındaki kartta; ayrıca üstte tekrar edilmiyor. */}
-      {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
+      {/*
+        İLK KULLANIM KARŞILAMANIN HEMEN ALTINDA (25.11.2026). Lisans
+        kartı araya giriyordu: hiç çalışması olmayan kullanıcı önce
+        abonelik durumunu, sonra ne yapacağını okuyordu. Yeni hesapta
+        ilk iş çalışma açmak; kart ve tek birincil düğme artık
+        selamlamanın hemen ardında, lisans kartı onların altında.
+        Öteki kullanıcılarda yer değişmedi: öğrencide tez kartının
+        yanında, ötekilerde burada.
+      */}
+      {!yeniKullanici && !(ogrenciGorunumu && resume) ? <LicenseCard access={access} /> : null}
 
       {yeniKullanici ? (
-        /*
+        <>
+        {/*
           YENİ KULLANICI (ikinci tur, 17.11.2026): kısa başlık, tek açıklama,
           tek belirgin "İlk çalışmayı oluştur". Üç adımlı rehber "Nasıl
           başlarım?" altında isteğe bağlı açılıyor. Eskiden selamlamanın altında
           iki cümle, ardından başlıklı bir kartta üç uzun adım ve iki düğme
           vardı; ilk ekranın tamamı okunacak metindi.
-        */
+        */}
         <section className="pw-bolum pw-baslangic" aria-labelledby="pw-baslangic-baslik">
           <h2 id="pw-baslangic-baslik">{t({ tr: "İlk çalışmanızı oluşturun", en: "Create your first work" })}</h2>
           <p>
@@ -530,6 +546,16 @@ export default async function AnaSayfaIcerik() {
             </Link>
           </details>
         </section>
+        {/* Deneme üyesine plan seçimi: ilk çalışma bölümünün HEMEN
+            altında. Katalog eksikse bileşen null döner ve aşağıdaki
+            lisans kartı mevcut ödeme yolunu sunmaya devam eder. */}
+        {deneme ? <PlanSecimi planlar={access.plans} denemeBitis={denemeBitisMetni} /> : null}
+        {/* Üç kart çiziliyorsa lisans kartı ödeme düğmelerini, sözleşme
+            notunu ve deneme bitiş TARİHİNİ tekrarlamıyor; durum rozeti
+            kalıyor. Katalog eksikse kartlar yok, tarih ve mevcut ödeme
+            yolu bu kartta erişilebilir duruyor. */}
+        <LicenseCard access={access} tekrarGizle={deneme && satisHazir(access.plans)} />
+        </>
       ) : ogrenciGorunumu && resume ? (
         <>
           {/*

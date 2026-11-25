@@ -10,7 +10,25 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 // Ana sayfadaki lisans/abonelik bölümü: aktif mi, ödeme alınmadıysa neden ve
 // geçerlilik tarihi. İç ekipte ve durum bilinmiyorken hiç gösterilmez.
 
-export default async function LicenseCard({ access }: { access: AccessState }) {
+export default async function LicenseCard({
+  access,
+  tekrarGizle = false,
+}: {
+  access: AccessState;
+  /*
+    TEKRAR EDEN BİLGİ GİZLENSİN Mİ (25.11.2026). Ana sayfada üç plan
+    kartı gösterilirken bu kart AYNI düğmeleri, aynı sözleşme notunu ve
+    AYNI deneme bitiş tarihini tekrar ediyordu: ekranda iki ayrı
+    "Kartla öde" takımı ve iki ayrı tarih vardı, kullanıcı hangisinin
+    hangisi olduğunu ayıramıyordu. Kart durum rozetini ve başlığını
+    göstermeye devam ediyor; tarih ve ödeme bölümü yalnızca o ekranda
+    susuyor (tarih kartların üstünde, ödeme kartların içinde).
+
+    Katalog eksikse üç kart hiç çizilmediği için bu bayrak false kalıyor
+    ve hem TARİH hem MEVCUT ödeme yolu bu kartta erişilebilir duruyor.
+  */
+  tekrarGizle?: boolean;
+}) {
   const t = await ceviri();
   const dil = await aktifDil();
   const summary = licenseSummary(access, new Date(), dil);
@@ -26,7 +44,7 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
         </span>
       </div>
       <h2>{summary.title}</h2>
-      {summary.detail ? (
+      {summary.detail && !tekrarGizle ? (
         <p className="license-card-validity">
           <CalendarClock size={15} aria-hidden="true" />
           <span>{summary.detail}</span>
@@ -34,7 +52,7 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
       ) : null}
       {summary.paymentNote ? <p className="tone-text text-sm" data-tone={summary.tone}>{summary.paymentNote}</p> : null}
       {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
-      {summary.showPayment ? (
+      {summary.showPayment && !tekrarGizle ? (
         access.plans.length > 0 ? (
           <>
           <div className="cluster">

@@ -41,12 +41,32 @@ const KATALOG_BUGUN = [
 ];
 
 const KATALOG_DOLU = [
-  { code: "standart-ay", ad: "Standart", interval: "month", price: 14900, kredi: 1000 },
-  { code: "plus-ay", ad: "Plus", interval: "month", price: 24900, kredi: 2500 },
-  { code: "pro-ay", ad: "Pro", interval: "month", price: 39900, kredi: 6000 },
-  { code: "standart-yil", ad: "Standart", interval: "year", price: 149000, kredi: 1000 },
-  { code: "pro-yil", ad: "Pro", interval: "year", price: 399000, kredi: 6000 },
+  { code: "standart-ay", ad: "Standart", interval: "month", price: 14900, kredi: 1000,
+    avantajlar: ["3 çalışma", "Kaynakça ve atıf denetimi"] },
+  { code: "plus-ay", ad: "Plus", interval: "month", price: 24900, kredi: 2500,
+    avantajlar: ["10 çalışma", "Literatür tarama asistanı", "Danışman paylaşımı"] },
+  { code: "pro-ay", ad: "Pro", interval: "month", price: 39900, kredi: 6000,
+    avantajlar: ["Sınırsız çalışma", "Öncelikli destek", "Makale çalışma alanı"] },
+  { code: "standart-yil", ad: "Standart", interval: "year", price: 149000, kredi: 1000,
+    avantajlar: ["3 çalışma", "Kaynakça ve atıf denetimi"] },
+  { code: "pro-yil", ad: "Pro", interval: "year", price: 399000, kredi: 6000,
+    avantajlar: ["Sınırsız çalışma", "Öncelikli destek"] },
 ];
+
+/*
+  ÖDEME SENARYOLARI (25.11.2026). Gerçek akış: ArvoLab checkout ister,
+  ArvoOS bir ödeme adresi döndürür, kullanıcı orada öder ve ONAYI
+  ArvoOS alır; ArvoLab bir sonraki "ensure"da yeni durumu okur.
+  Taklit bunu şöyle canlandırıyor:
+    - checkout → uygulamaya geri dönen bir adres verir,
+    - "başarı" senaryosunda abonelik BELLEKTE etkinleşir (seçilen kodla),
+    - "iptal" ve "hata" senaryolarında hiçbir şey değişmez; kullanıcı
+      denemede kalır — ürünün davranışı da bu olmalı.
+  Senaryo e-postadan: ...-basari, ...-iptal, ...-hata.
+*/
+const ETKINLESENLER = new Map();
+const senaryo = (eposta) =>
+  eposta.includes("-basari") ? "basari" : eposta.includes("-iptal") ? "iptal" : eposta.includes("-hata") ? "hata" : null;
 
 const PAKETLER = [
   { kod: "k250", ad: "250 kredi", kredi: 250, fiyat: 12500 },
@@ -76,11 +96,39 @@ const sunucu = http.createServer((istek, yanit) => {
   istek.on("end", () => {
     let eylem = "ensure";
     let eposta = "";
+    let secilenPlan = null;
     try {
       const g = JSON.parse(govde);
       eylem = g.action ?? "ensure";
       eposta = String(g.email ?? "");
+      secilenPlan = typeof g.plan === "string" && g.plan ? g.plan : null;
     } catch { /* biçim bozuksa varsayılan */ }
+
+    /*
+      CHECKOUT: gerçek ArvoOS bir ödeme adresi döndürüyor. Taklit
+      uygulamaya geri dönen bir adres veriyor ve senaryoya göre:
+        başarı → aboneliği SEÇİLEN KODLA etkinleştiriyor (ArvoOS'un
+                 PayTR onayından sonra yaptığı şeyin karşılığı),
+        iptal  → hiçbir şey değiştirmiyor, kullanıcı denemede kalıyor,
+        hata   → ödeme adresi vermiyor; ürün "ödeme başlatılamadı" der
+                 ve üyelik yine denemede kalır.
+    */
+    if (eylem === "checkout") {
+      const s = senaryo(eposta);
+      if (s === "hata") {
+        yanit.writeHead(409, { "content-type": "application/json" }).end(JSON.stringify({ error: "fee_not_set" }));
+        return;
+      }
+      if (s === "basari" && secilenPlan) ETKINLESENLER.set(eposta, secilenPlan);
+      /* Ürün yalnızca https adresine gidiyor (payArvolabSubscription:
+         köprü yanıtı bozulursa başka şemaya gidilmesin). Taklit ödeme
+         sayfası bu yüzden https; kabul betiği bu adresi yakalayıp
+         uygulamaya geri yönlendiriyor. */
+      const donus = s === "iptal" ? "kart=hata" : "kart=tamam";
+      yanit.writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ checkoutUrl: `https://odeme.arvoos.taklit/ode?senaryo=${s ?? "basari"}&plan=${encodeURIComponent(secilenPlan ?? "")}&donus=${encodeURIComponent(donus)}` }));
+      return;
+    }
     /*
       "ulaşılamıyor" yolunu da sınayabilmek için: e-postası ayar-kopuk ile
       başlayan kullanıcıya 503. Ürün bunu geçici arıza sayıp durumu
@@ -98,18 +146,27 @@ const sunucu = http.createServer((istek, yanit) => {
                "ayar-deneme" ile başlayana ArvoOS'un deneme yanıtı
                veriliyor (status trialing + trialEndsAt). Üretimde yeni
                açılan her bireysel hesap bu durumda başlıyor. */
-            status: eposta.startsWith("ayar-deneme") ? "trialing" : "active",
+            status: ETKINLESENLER.has(eposta)
+              ? "active"
+              : eposta.startsWith("ayar-deneme") || senaryo(eposta) ? "trialing" : "active",
             access: true,
-            trialEndsAt: eposta.startsWith("ayar-deneme") ? DENEME_BITISI : null,
-            currentPeriodEnd: eposta.startsWith("ayar-deneme") ? null : DONEM_BITISI,
-            plans: eposta.startsWith("ayar-katalog") ? KATALOG_DOLU : KATALOG_BUGUN,
+            trialEndsAt: ETKINLESENLER.has(eposta)
+              ? null
+              : eposta.startsWith("ayar-deneme") || senaryo(eposta) ? DENEME_BITISI : null,
+            currentPeriodEnd: ETKINLESENLER.has(eposta) || !(eposta.startsWith("ayar-deneme") || senaryo(eposta)) ? DONEM_BITISI : null,
+            plans: eposta.startsWith("ayar-katalog") || senaryo(eposta) ? KATALOG_DOLU : KATALOG_BUGUN,
             /* ABONENİN PLAN KODU. Gerçek ArvoOS bugün bildirmiyor;
                yalnızca dolu katalog senaryosunda veriliyor ki "Üyelik
                tipi" satırının ve "Mevcut plan" işaretinin DOLU hâli de
                ölçülebilsin. Kademe e-postadan seçiliyor: üç kademenin
                ÜÇÜ DE ayrı ayrı sınanabilsin diye (yalnızca Pro'yu
                görmek, etiketin plana göre değiştiğini göstermezdi). */
-            ...(planKodu(eposta) ? { planCode: planKodu(eposta) } : {}),
+            /* Ödeme öncesi (deneme) plan kodu BİLDİRİLMİYOR: denemedeki
+               hesap ücretli bir planın adını taşımamalı. Etkinleşince
+               seçilen kod bildiriliyor. */
+            ...(ETKINLESENLER.has(eposta)
+              ? { planCode: ETKINLESENLER.get(eposta) }
+              : senaryo(eposta) ? {} : planKodu(eposta) ? { planCode: planKodu(eposta) } : {}),
             /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
             creditPackages: PAKETLER,
             cardStorage: false,

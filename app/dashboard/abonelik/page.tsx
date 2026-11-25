@@ -209,7 +209,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
      kaynak, lib/uyelik-tipi.ts); yoksa erişim türünden okunan insanca
      ad. */
   const planAdi =
-    uyelikTipi({ plans: access.plans, planKodu: access.planKodu }) ??
+    uyelikTipi({ plans: access.plans, planKodu: access.planKodu, durum: access.status }) ??
     (access.kind === "organization"
       ? t({ tr: "Kurum lisansı", en: "Institution licence" })
       : access.kind === "individual"
