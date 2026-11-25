@@ -299,3 +299,32 @@
 .os5-ana .pw-rehber > summary:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
 .os5-ana .pw-rehber[open] > summary { color: var(--ink); }
 .os5-ana .pw-rehber .baslangic-adimlari { margin: 4px 0 12px; }
+
+.os5-ana /* ============================================================
+   DENEME ÜYESİNE PLAN SEÇİMİ (25.11.2026)
+   Bileşen: app/dashboard/_components/plan-secimi.tsx
+   Üç EŞİT kart: genişlik içeriğe göre değişmiyor (1fr). Eşit olmayan
+   kartlar pahalı planı görsel olarak öne çıkarır; öne çıkarma kararı
+   ürünün değil müşterinin. Seçiciler .os5-ana altında: bu stil yalnızca
+   öğrenci ve boş hesap görünümüne ait (tests/unit/os5-ana-sayfa.test.ts).
+   ============================================================ */
+.os5-ana .plan-secimi { display: grid; gap: 12px; }
+.os5-ana .plan-secimi-deneme { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.os5-ana .plan-secimi-izgara { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.os5-ana .plan-secimi-kart {
+  display: grid; align-content: start; gap: 10px;
+  padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
+}
+.os5-ana .plan-secimi-kart h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
+.os5-ana .plan-secimi-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.os5-ana .plan-secimi-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
+.os5-ana .plan-secimi-metin { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.os5-ana .plan-secimi-liste { display: grid; gap: 6px; margin: 0; padding: 10px 0 0; list-style: none; border-top: 1px solid var(--line-soft); }
+.os5-ana .plan-secimi-liste li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; font-size: var(--fs-sm); }
+.os5-ana .plan-secimi-liste svg { margin-top: 3px; color: var(--muted); }
+/* Düğme kartın altına yapışıyor: üç kartın eylemi aynı hizada. */
+.os5-ana .plan-secimi-kart form { align-self: end; margin-top: 4px; }
+.os5-ana .plan-secimi-kart form button { width: 100%; justify-content: center; }
+@media (max-width: 860px) {
+  .os5-ana .plan-secimi-izgara { grid-template-columns: 1fr; }
+}

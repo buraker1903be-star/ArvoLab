@@ -25,6 +25,14 @@ export interface BillingPlan {
   */
   ad?: string | null;
   kredi?: number | null;
+  /*
+    PLANI AYIRAN SOMUT AVANTAJLAR (25.11.2026, ana sayfadaki plan
+    seçimi). Katalogdan gelir; ArvoLab bir avantaj UYDURMAZ. Köprü
+    göndermezse boş dizi ve satış bölümü açılmaz (lib/plan-satis.ts):
+    "daha fazla alan" gibi ölçüsüz bir cümleyi tek başına satmak,
+    müşteriye ne aldığını söylememek olurdu.
+  */
+  avantajlar?: string[];
 }
 
 const MONTH_WORDS = ["month", "monthly", "aylik", "ay"];
@@ -100,6 +108,19 @@ const krediSayisi = (...values: unknown[]): number | null => {
   return null;
 };
 
+/** Avantaj listesi: metin olmayan, boş ya da aşırı uzun öğeler atılır. */
+const avantajlar = (...values: unknown[]): string[] => {
+  for (const item of values) {
+    if (!Array.isArray(item)) continue;
+    const liste = item
+      .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+      .map((x) => x.trim().slice(0, 120))
+      .slice(0, 6);
+    if (liste.length) return liste;
+  }
+  return [];
+};
+
 const planFrom = (raw: Record<string, unknown>): BillingPlan => ({
   code: kod(raw.code) ?? kod(raw.planCode),
   // Eski yanıtlarda dönem yazmaz, tutar "monthlyFee" adıyla gelir: aylık sayılır.
@@ -107,6 +128,7 @@ const planFrom = (raw: Record<string, unknown>): BillingPlan => ({
   price: priceOf(raw.price, raw.amount, raw.monthlyFee),
   ad: ad(raw.ad, raw.name, raw.label, raw.title),
   kredi: krediSayisi(raw.kredi, raw.credits, raw.monthlyCredits, raw.aylikKredi),
+  avantajlar: avantajlar(raw.avantajlar, raw.advantages, raw.features, raw.benefits),
 });
 
 const isPlan = (plan: BillingPlan) => plan.price !== null || plan.code !== null;

@@ -11,9 +11,10 @@ describe("ArvoOS sözleşmesi", () => {
   */
   test("gerçek yanıt aylık plana çevriliyor", () => {
     const [plan] = normalizePlans({ status: "trialing", trialEndsAt: null, monthlyFee: 14900 });
-    /* ad ve kredi 24.11.2026'da eklendi: ArvoOS göndermiyorsa NULL, ekran
-       "—" yazıyor. Uydurma bir plan adı ya da kredi miktarı yok. */
-    assert.deepEqual(plan, { code: null, interval: "month", price: 14900, ad: null, kredi: null });
+    /* ad ve kredi 24.11.2026'da, avantajlar 25.11.2026'da eklendi:
+       ArvoOS göndermiyorsa NULL / boş dizi. Uydurma bir plan adı,
+       kredi miktarı ya da avantaj yok. */
+    assert.deepEqual(plan, { code: null, interval: "month", price: 14900, ad: null, kredi: null, avantajlar: [] });
     assert.equal(describePlan(plan), "Aylık 149,00 ₺");
   });
 
