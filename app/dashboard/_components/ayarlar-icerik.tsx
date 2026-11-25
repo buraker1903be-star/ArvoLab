@@ -518,17 +518,35 @@ function HesapSekmesi({ veri, kirliDegis }: { veri: AyarlarVerisi; kirliDegis?: 
         ) : null}
       </div>
 
-      {/* Rol ve kurum salt okunur: ikisini de kurum yöneticisi belirliyor. */}
-      <dl className="ayarlar-bilgiler">
-        <div>
-          <dt>{t({ tr: "Rol", en: "Role" })}</dt>
-          <dd>{veri.rolEtiketi}</dd>
-        </div>
-        <div>
-          <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
-          <dd>{veri.kurumAdi ?? "—"}</dd>
-        </div>
-      </dl>
+      {/*
+        ÜYELİK TİPİ VE KURUM, SALT OKUNUR (25.11.2026).
+
+        Eskiden burada "Rol: Üye / Öğrenci" yazıyordu; rol bir YETKİ
+        kavramı, müşterinin "hangi üyelikteyim" sorusunun cevabı değil.
+        Etiket sol navigasyondakiyle AYNI kaynaktan geliyor
+        (lib/uyelik-tipi.ts: plan kodu + katalogdaki ad).
+
+        BİLİNMİYORSA SATIR HİÇ ÇİZİLMİYOR. "—" yazmak ya da yerine rolü
+        koymak, bilinmeyeni biliniyormuş gibi göstermek olurdu. Kurum
+        adı da yalnızca PANELDE KAYITLI bir kurum seçimi varsa
+        (profiles.organization_id) yazılıyor.
+      */}
+      {veri.uyelikTipi || veri.kurumAdi ? (
+        <dl className="ayarlar-bilgiler">
+          {veri.uyelikTipi ? (
+            <div>
+              <dt>{t({ tr: "Üyelik tipi", en: "Membership" })}</dt>
+              <dd>{veri.uyelikTipi}</dd>
+            </div>
+          ) : null}
+          {veri.kurumAdi ? (
+            <div>
+              <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
+              <dd>{veri.kurumAdi}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </div>
   );
 }

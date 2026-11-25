@@ -17,6 +17,7 @@ import { faturalamaVePaketler, kartDurumum } from "@/lib/subscription";
 import { KART_HATALARI } from "@/lib/kart-odeme";
 import { licenseSummary } from "@/lib/license-summary";
 import { karsilastirmaHazir } from "@/lib/plan-karsilastirma";
+import { uyelikTipi } from "@/lib/uyelik-tipi";
 import PlaniYonet from "./plani-yonet";
 import KredileriIncele from "./kredileri-incele";
 import AbonelikSekmeleri from "./abonelik-sekmeleri";
@@ -204,12 +205,16 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     karşılaştırma penceresi onu kullanıyor (lib/billing-plan.ts).
   */
   const ozet = licenseSummary(access, new Date(), dil);
+  /* Plan adı ÖNCE katalogdan (Hesap ekranı ve sol navigasyonla aynı
+     kaynak, lib/uyelik-tipi.ts); yoksa erişim türünden okunan insanca
+     ad. */
   const planAdi =
-    access.kind === "organization"
+    uyelikTipi({ plans: access.plans, planKodu: access.planKodu }) ??
+    (access.kind === "organization"
       ? t({ tr: "Kurum lisansı", en: "Institution licence" })
       : access.kind === "individual"
         ? t({ tr: "Bireysel plan", en: "Individual plan" })
-        : t({ tr: "İç ekip", en: "Internal team" });
+        : t({ tr: "İç ekip", en: "Internal team" }));
   /*
     DENEMEDE "YENİLEME" YOK (24.11.2026). Kart, denemenin BİTİŞ tarihini
     "Sonraki yenileme" diye yazıyordu: denemede yenilenen bir şey yok,
@@ -224,13 +229,13 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     ? t({ tr: "Deneme bitişi", en: "Trial ends" })
     : t({ tr: "Sonraki yenileme", en: "Next renewal" });
   /*
-    YÜRÜRLÜKTEKİ PLAN KODU ŞU AN BİLİNMİYOR: köprü de aynası da
-    (individual_subscriptions) yalnızca durum ve dönem bitişi tutuyor.
-    null geçiliyor ve karşılaştırma penceresi HİÇBİR satırı "Mevcut plan"
-    işaretlemiyor — yanlış planı işaretlemek, kullanıcıya ödemediği bir
-    planı ödüyormuş gibi göstermek olurdu.
+    YÜRÜRLÜKTEKİ PLAN KODU artık köprüden okunuyor (25.11.2026,
+    lib/subscription.ts → planCode). ArvoOS bildirmiyorsa hâlâ null ve
+    karşılaştırma penceresi HİÇBİR satırı "Mevcut plan" işaretlemiyor —
+    yanlış planı işaretlemek, kullanıcıya ödemediği bir planı ödüyormuş
+    gibi göstermek olurdu.
   */
-  const mevcutPlanKodu: string | null = null;
+  const mevcutPlanKodu: string | null = access.planKodu;
   /*
     İKİ EYLEM, İKİ AYRI KARAR (24.11.2026).
 

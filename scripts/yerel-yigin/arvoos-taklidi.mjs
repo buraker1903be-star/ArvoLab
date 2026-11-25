@@ -91,6 +91,11 @@ const sunucu = http.createServer((istek, yanit) => {
             trialEndsAt: eposta.startsWith("ayar-deneme") ? DENEME_BITISI : null,
             currentPeriodEnd: eposta.startsWith("ayar-deneme") ? null : DONEM_BITISI,
             plans: eposta.startsWith("ayar-katalog") ? KATALOG_DOLU : KATALOG_BUGUN,
+            /* ABONENİN PLAN KODU. Gerçek ArvoOS bugün bildirmiyor;
+               yalnızca dolu katalog senaryosunda veriliyor ki "Üyelik
+               tipi" satırının ve "Mevcut plan" işaretinin DOLU hâli de
+               ölçülebilsin. */
+            ...(eposta.startsWith("ayar-katalog") ? { planCode: "pro-ay" } : {}),
             /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
             creditPackages: PAKETLER,
             cardStorage: false,
