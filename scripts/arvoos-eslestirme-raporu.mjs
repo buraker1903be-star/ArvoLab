@@ -140,7 +140,7 @@ export function raporla({ profiller, atamalar }, { kayitlar, kapsam, kaynak }) {
   return {
     baglar,
     atamalar: atamaOnerileri(atamalar, baglar),
-    roller: rolOnerileri(profiller),
+    roller: rolOnerileri(profiller, baglar),
     ozet: bagOzeti(baglar),
     kaynak,
   };
@@ -153,7 +153,11 @@ function arguman(ad) {
 
 const BAG_BASLIKLARI = ["profil", "kurum", "rol", "hukum", "sebep", "arvoosUserId", "baskaKurumdaDa"];
 const ATAMA_BASLIKLARI = ["proje", "kurum", "atanan", "atananinBagi", "arvoosUserId"];
-const ROL_BASLIKLARI = ["profil", "kurum", "rol", "oneri"];
+/* `bagi` sütunu: öneriyi onaylayan kişi kişinin kurum bağının doğrulanıp
+   doğrulanmadığını satırda görmeli (atama tablosundaki `atananinBagi` gibi). */
+const ROL_BASLIKLARI = ["profil", "kurum", "rol", "oneri", "bagi"];
+
+const rolSayisi = (roller, oneri) => roller.filter((x) => x.oneri === oneri).length;
 
 function ozetMetni(r, { url, kaynak }) {
   const o = r.ozet;
@@ -201,10 +205,19 @@ bağı doğrulanmamış atama iş yetkisine çevrilmez.
 
 ## Rol önerileri
 
-Satır: ${r.roller.length} (hepsi iş yetkisi önerisi). Teknik yetki önerisi
-bugün YOK: Asistan Kayıtları kapısı yalnızca iç ekibe açık
-(\`lib/ai/kayit-gorunum.ts\`), yani C maddesi geldiğinde taşınacak mevcut bir
-hak yok.
+Satır: ${r.roller.length} · iş yetkisi önerisi ${rolSayisi(r.roller, "is_yetkisi")} ·
+öneri yok ${rolSayisi(r.roller, "yok")} (kurumu olmayan personel: iş yetkisi
+ArvoOS'taki bir kurumun işinden gelir).
+
+Her satır \`bagi\` sütununda kişinin kurum bağı hükmünü taşıyor; bağı
+doğrulanmamış bir personele iş yetkisi vermek, yanlış kişiye başkasının
+çalışmasını açar. Bağı doğrulanmamış İŞ YETKİSİ önerisi:
+${r.roller.filter((x) => x.oneri !== "yok" && x.bagi !== "dogrulanabilir").length}
+(önerisi "yok" olan satırlar sayılmıyor: orada verilecek bir yetki yok).
+
+Teknik yetki önerisi bugün YOK: Asistan Kayıtları kapısı yalnızca iç ekibe
+açık (\`lib/ai/kayit-gorunum.ts\`), yani C maddesi geldiğinde taşınacak mevcut
+bir hak yok.
 `;
 }
 

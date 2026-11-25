@@ -192,24 +192,81 @@ describe("atamaOnerileri", () => {
 });
 
 describe("rolOnerileri", () => {
-  test("personel rolleri iş yetkisi önerisi alır", () => {
-    const o = rolOnerileri([
+  /** Hüküm satırlarını gerçek yoldan üretir: çağıran da bunu geçiriyor. */
+  const baglarla = (profiller: ArvolabProfili[], kayitlar: ArvoosKaydi[] = []) =>
+    rolOnerileri(profiller, bagRaporu(profiller, kayitlar, kapsananKurumlar(kayitlar)));
+
+  test("kurumlu personel rolleri iş yetkisi önerisi alır", () => {
+    const profiller = [
       profil({ id: "p1", rol: "employee" as UserRole }),
       profil({ id: "p2", rol: "expert" as UserRole }),
       profil({ id: "p3", rol: "controller" as UserRole }),
       profil({ id: "p4", rol: "academic_manager" as UserRole }),
-    ]);
+    ];
+    const o = baglarla(profiller, [kayit()]);
     assert.deepEqual(o.map((x) => x.profil), ["p1", "p2", "p3", "p4"]);
     assert.ok(o.every((x) => x.oneri === "is_yetkisi"));
   });
 
   test("üye/öğrenci ve iç ekip öneri almaz", () => {
-    const o = rolOnerileri([
+    const o = baglarla([
       profil({ id: "p1", rol: "client" as UserRole }),
       profil({ id: "p2", rol: "system_admin" as UserRole }),
       profil({ id: "p3", rol: "founder" as UserRole }),
     ]);
     assert.deepEqual(o, []);
+  });
+
+  /*
+    DAYANAK SATIRDA GÖRÜNMELİ. Eskiden rol önerisi yalnızca role bakıyordu;
+    bağı doğrulanmamış personel, onaylayan kişinin önüne bu bilgi olmadan
+    düşüyordu.
+  */
+  test("kurumlu personelde doğrulanamadı hükmü satıra yansır", () => {
+    // Kurum kapsamda (başka bir e-posta bildirildi), kişinin e-postası listede yok.
+    const profiller = [profil({ id: "p1", rol: "employee" as UserRole, eposta: "yok@kurum-a.test" })];
+    const o = baglarla(profiller, [kayit({ eposta: "baskasi@kurum-a.test" })]);
+    assert.equal(o[0].bagi, "dogrulanamadi");
+    assert.equal(o[0].oneri, "is_yetkisi", "öneri hüküm olumsuz diye düşmez; karar insanın");
+  });
+
+  test("kurumlu personelde ölçülemedi hükmü satıra yansır", () => {
+    // ArvoOS tarafı o kurum için hiç satır bildirmedi.
+    const profiller = [profil({ id: "p1", rol: "controller" as UserRole })];
+    const o = baglarla(profiller, []);
+    assert.equal(o[0].bagi, "olculemedi");
+    assert.equal(o[0].oneri, "is_yetkisi");
+  });
+
+  test("doğrulanmış bağ da satıra yansır", () => {
+    const o = baglarla([profil({ id: "p1", rol: "expert" as UserRole })], [kayit()]);
+    assert.equal(o[0].bagi, "dogrulanabilir");
+  });
+
+  /*
+    İş yetkisi ArvoOS'taki bir KURUMUN işinden gelir; kurumu olmayan
+    personele "iş yetkisi" önermek hangi kurumun işi olduğunu söylemez.
+    Eskiden onlar da listede is_yetkisi ile duruyordu.
+  */
+  test("kurumu olmayan personel iş yetkisi önerisi almaz", () => {
+    const profiller = [
+      profil({ id: "p1", rol: "employee" as UserRole, kurum: null }),
+      profil({ id: "p2", rol: "controller" as UserRole, kurum: null }),
+      profil({ id: "p3", rol: "employee" as UserRole }),
+    ];
+    const o = baglarla(profiller, [kayit()]);
+    assert.deepEqual(o.map((x) => [x.profil, x.oneri]), [
+      ["p1", "yok"],
+      ["p2", "yok"],
+      ["p3", "is_yetkisi"],
+    ]);
+    // Bağsız profilin hükmü de kapsam dışı; satır bunu söylüyor.
+    assert.equal(o[0].bagi, "kapsamda_degil");
+  });
+
+  test("hüküm satırı bulunmayan profil sessizce geçmez", () => {
+    const profiller = [profil({ id: "p1", rol: "employee" as UserRole })];
+    assert.equal(rolOnerileri(profiller, [])[0].bagi, "profil_yok");
   });
 
   /*
@@ -219,11 +276,14 @@ describe("rolOnerileri", () => {
     bu test düşer ve rolOnerileri onunla birlikte güncellenir.
   */
   test("bugün hiçbir role teknik yetki önerilmiyor", () => {
-    const o = rolOnerileri([
-      profil({ id: "p1", rol: "employee" as UserRole }),
-      profil({ id: "p2", rol: "controller" as UserRole }),
-      profil({ id: "p3", rol: "client" as UserRole }),
-    ]);
+    const o = baglarla(
+      [
+        profil({ id: "p1", rol: "employee" as UserRole }),
+        profil({ id: "p2", rol: "controller" as UserRole }),
+        profil({ id: "p3", rol: "client" as UserRole }),
+      ],
+      [kayit()],
+    );
     assert.equal(o.filter((x) => x.oneri === "teknik_yetki").length, 0);
   });
 });

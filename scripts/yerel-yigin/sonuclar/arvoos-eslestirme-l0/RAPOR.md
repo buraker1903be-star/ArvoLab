@@ -32,6 +32,37 @@ dizesi **yok**: rapor çıktısı kişisel veri taşıyor ve depo dışına yaz�
 | L0-13 | Salt okunurluk: tam koşu sonrası veri | tek satır değişmez | `profiles` + `arvoos_members` + `academic_projects` md5 özeti koşu öncesi/sonrası AYNI (iki ayrı koşuda) | PASS |
 | L0-14 | Sınama satırları temizlendi | yerel veri başlangıç durumuna döner | `arvoos_members` 0 satır (başlangıç da 0); temizlik sonrası koşu **ilk koşunun sayılarını birebir** verdi: 537 · 0 / 0 / 42 / 495, kapsanan kurum 0 | PASS |
 
+## Rol önerisinin dayanağı (25.11.2026, incelemede çıkan düzeltme)
+
+İncelemede `rolOnerileri` ile `atamaOnerileri` arasında bir asimetri görüldü:
+atama önerisi dayanağını (`atananinBagi`) taşıyordu, rol önerisi taşımıyordu.
+Bağı "doğrulanamadı" ya da "ölçülemedi" olan bir personel, kayıt kayıt
+onaylayan kişinin önüne bu bilgi OLMADAN düşüyordu; ayrıca `organization_id`'si
+NULL olan personel rollü hesaplar da `is_yetkisi` önerisi alıyordu.
+
+Düzeltme: `rolOnerileri` artık bağ hükümlerini alıyor, `rol-onerileri.csv`
+`bagi` sütunu taşıyor ve kurumu olmayan personel `oneri: "yok"` alıyor.
+
+| # | Sınama | Beklenen | Gözlenen | |
+|---|---|---|---|---|
+| L0-15 | Kurumlu personel, bağı doğrulanmış | `is_yetkisi` + `bagi=dogrulanabilir` | aynı | PASS |
+| L0-16 | Kurumlu personel, e-posta kapsanan kurumun listesinde yok | `is_yetkisi` + `bagi=dogrulanamadi` | aynı | PASS |
+| L0-17 | Kurumlu personel, kurumu için ArvoOS verisi yok | `is_yetkisi` + `bagi=olculemedi` | aynı | PASS |
+| L0-18 | Kurumu olmayan personel | `oneri=yok` + `bagi=kapsamda_degil`, iş yetkisi önerisi ALMAZ | aynı | PASS |
+| L0-19 | Hüküm satırı bulunmayan profil | `bagi=profil_yok` (sessizce geçmez) | aynı (birim sınaması) | PASS |
+| L0-20 | `raporla` bağlantısı | hükümler bir kez hesaplanıp hem atama hem rol tablosuna geçer | aynı; kopsa her satır `profil_yok` olurdu | PASS |
+
+Dördü (L0-15…18) yerel yığında **uçtan uca** da üretildi: üç profilin rolü
+geçici olarak `employee`/`controller` yapıldı, rapor koşuldu, CSV sütunları
+görüldü, sonra roller `client`'a ve `arvoos_members` 0 satıra geri alındı.
+Geri alma kanıtı: üç tablonun md5 özeti yine `50cf0209…` ve koşu ilk koşunun
+sayılarını birebir verdi (537 · 0 / 0 / 42 / 495, kapsanan kurum 0, rol
+önerisi 0).
+
+Öneri, hüküm olumsuz diye DÜŞMÜYOR — karar insanın; hüküm satırda görünüyor.
+`OZET.md` ayrıca "bağı doğrulanmamış İŞ YETKİSİ önerisi" sayısını veriyor ve
+önerisi "yok" olan satırları bu sayıya katmıyor.
+
 ### L0-1'in anlamı
 
 42 bağın "ölçülemedi" çıkması kusur değil, kuralın kendisi: ArvoOS üye

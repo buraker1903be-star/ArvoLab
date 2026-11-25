@@ -205,7 +205,14 @@ export function atamaOnerileri(atamalar: Atama[], bagSatirlari: BagSatiri[]): At
 
 /* -------------------------------------------------------------------------- */
 
-export type RolOnerisi = { profil: string; kurum: string | null; rol: UserRole; oneri: "is_yetkisi" | "teknik_yetki" | "yok" };
+export type RolOnerisi = {
+  profil: string;
+  kurum: string | null;
+  rol: UserRole;
+  oneri: "is_yetkisi" | "teknik_yetki" | "yok";
+  /** Kişinin kurum bağı hükmü; önerinin dayanağı o. */
+  bagi: BagHukmu | "profil_yok";
+};
 
 /*
   ROL → YETKİ ÖNERİSİ.
@@ -213,6 +220,20 @@ export type RolOnerisi = { profil: string; kurum: string | null; rol: UserRole; 
   Plan personel rollerini iki yeni kavrama bölüyor: iş yetkisi (D, ArvoOS'un
   iş atamasından gelir) ve teknik yetki (C, ayrıca ve dar verilir, K3).
   Bugünkü rollerden hangisinin hangisine karşılık geldiği bir ÖNERİ.
+
+  DAYANAĞI BİRLİKTE YAZILIYOR (25.11.2026, incelemede çıktı). Eskiden bu
+  fonksiyon yalnızca role bakıyordu ve `rol-onerileri.csv` dört sütun
+  taşıyordu: bağı "doğrulanamadı" ya da "ölçülemedi" olan bir personel,
+  kayıt kayıt onaylayan kişinin önüne bu bilgi OLMADAN düşüyordu. Atama
+  önerisi dayanağını (`atananinBagi`) baştan taşıyordu; aynı gerekçe rol
+  önerisi için de geçerli — doğrulanmamış bir bağ üzerine kurulan iş
+  yetkisi, yanlış kişiye başkasının çalışmasını açar. Öneri, hüküm olumsuz
+  diye düşmüyor (karar insanın), ama hüküm satırda görünüyor.
+
+  KURUMU OLMAYAN PERSONELE İŞ YETKİSİ ÖNERİLMEZ. İş yetkisi ArvoOS'taki bir
+  kurumun işinden gelir; `organization_id`'si NULL olan personel rollü bir
+  hesap için "iş yetkisi" önerisi hangi kurumun işi olduğunu söylemez.
+  Eskiden onlar da listede `is_yetkisi` ile duruyordu.
 
   Teknik yetki önerisi bugün için BOŞ ÇIKAR, bilerek: Asistan Kayıtları
   sayfasının kapısı `KAYIT_ROLLERI` ve o küme yalnızca `system_admin` ile
@@ -222,10 +243,17 @@ export type RolOnerisi = { profil: string; kurum: string | null; rol: UserRole; 
   "önerilecek kimse yok" diye okumayın: kapı bugün başka bir role açılırsa
   bu fonksiyon da onunla birlikte değişmeli.
 */
-export function rolOnerileri(profiller: ArvolabProfili[]): RolOnerisi[] {
+export function rolOnerileri(profiller: ArvolabProfili[], bagSatirlari: BagSatiri[]): RolOnerisi[] {
+  const baglar = new Map(bagSatirlari.map((s) => [s.profil, s]));
   return profiller
     .filter((p) => !icEkip(p.rol) && STAFF_ROLES.includes(p.rol))
-    .map((p) => ({ profil: p.id, kurum: p.kurum, rol: p.rol, oneri: "is_yetkisi" as const }));
+    .map((p) => ({
+      profil: p.id,
+      kurum: p.kurum,
+      rol: p.rol,
+      oneri: p.kurum ? ("is_yetkisi" as const) : ("yok" as const),
+      bagi: baglar.get(p.id)?.hukum ?? "profil_yok",
+    }));
 }
 
 /* -------------------------------------------------------------------------- */

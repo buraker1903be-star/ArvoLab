@@ -16,7 +16,9 @@ const KURUM_B = "22222222-2222-2222-2222-222222222222";
 
 describe("saltOkunurFetch", () => {
   const sayac = { istek: 0 };
-  const ic = async (_url: unknown, _secenek?: { method?: string }) => {
+  /* Parametre almıyor: sayılan şey ÇAĞRILIP çağrılmadığı. Daha az
+     parametreli işlev sarmalayıcının tipine uyuyor. */
+  const ic = async () => {
     sayac.istek += 1;
     return { ok: true };
   };
@@ -117,6 +119,20 @@ describe("raporla", () => {
     assert.equal(r.atamalar[0].arvoosUserId, "a1");
     // client öneri almaz; employee ve expert alır.
     assert.deepEqual(r.roller.map((x) => x.profil), ["p1", "p2"]);
+  });
+
+  /*
+    Rol önerisi dayanağını `raporla` içinden alıyor: hükümler bir kez
+    hesaplanıp hem atama hem rol tablosuna geçiyor. Bu bağlantı kopsaydı
+    CSV'deki `bagi` sütunu her satırda "profil_yok" olurdu.
+  */
+  test("rol önerileri bağ hükmünü raporla üzerinden taşıyor", () => {
+    const kayitlar = [{ arvoosUserId: "a1", eposta: "a@kurum-a.test", kurum: KURUM_A }];
+    const r = raporla({ profiller, atamalar }, { kayitlar, kapsam: new Set([KURUM_A]) });
+    assert.deepEqual(r.roller.map((x) => [x.profil, x.oneri, x.bagi]), [
+      ["p1", "is_yetkisi", "dogrulanabilir"],
+      ["p2", "is_yetkisi", "olculemedi"],
+    ]);
   });
 
   /* ArvoOS tarafı bütünüyle boşsa hiçbir bağ "doğrulanamadı" olmaz. */
