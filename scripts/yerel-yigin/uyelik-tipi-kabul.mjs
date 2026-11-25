@@ -58,8 +58,18 @@ const KURUM = psql(`insert into public.organizations (name, license_status, sync
 
 /* BUGÜNKÜ katalog: plan adı ve kodu YOK → üyelik satırı gizli. */
 const BOS = await kullaniciKur({ etiket: "uy-bos", tamAd: "Plansiz Uye", kurum: null });
-/* DOLU katalog: ArvoOS ad ve plan kodu bildiriyor → "Pro". */
-const DOLU = await kullaniciKur({ etiket: "ayar-katalog", tamAd: "Planli Uye", kurum: null });
+/*
+  DOLU katalog: ArvoOS ad ve plan kodu bildiriyor. ÜÇ KADEME DE ayrı
+  ayrı sınanıyor — yalnızca birini görmek, etiketin plana göre
+  değiştiğini değil, sabit bir metin olmadığını bile göstermezdi.
+*/
+const KADEMELER = [
+  { etiket: "ayar-katalog-std", ad: "Standart Uye", beklenen: "Standart" },
+  { etiket: "ayar-katalog-plus", ad: "Plus Uye", beklenen: "Plus" },
+  { etiket: "ayar-katalog-pro", ad: "Pro Uye", beklenen: "Pro" },
+];
+const DOLULAR = [];
+for (const k of KADEMELER) DOLULAR.push({ ...k, ...(await kullaniciKur({ etiket: k.etiket, tamAd: k.ad, kurum: null })) });
 /* Panelde KAYITLI kurum seçimi olan kullanıcı. */
 const KURUMLU = await kullaniciKur({ etiket: "uy-kurum", tamAd: "Kurum Uyesi", kurum: KURUM });
 
@@ -127,19 +137,30 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await s.waitForTimeout(400);
   } catch (e) { yaz("U · plansız kullanıcı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
-  /* ---- D · Katalog ad ve plan kodu bildiriyorsa "Pro" ---- */
+  /* ---- D · Üç kademe ayrı ayrı: Standart, Plus, Pro ---- */
+  for (const kademe of DOLULAR) {
+    try {
+      await giris(kademe);
+      const nav = await navEtiketi();
+      await ayarlariAc();
+      const h = await hesapSatirlari();
+      const uyelik = h.satirlar.find((r) => /Üyelik tipi/.test(r.etiket));
+      yaz(`D1 ${kademe.beklenen} · Hesap'ta "Üyelik tipi" ve plan adı`, EKRAN, TEMA,
+          uyelik?.deger === kademe.beklenen, `satır=${JSON.stringify(uyelik ?? null)}`);
+      yaz(`D2 ${kademe.beklenen} · Sol navigasyonda aynı etiket`, EKRAN, TEMA,
+          nav === kademe.beklenen, `nav="${nav ?? ""}"`);
+      yaz(`D3 ${kademe.beklenen} · İki ekran birebir eşit`, EKRAN, TEMA,
+          Boolean(uyelik) && nav === uyelik.deger, `nav="${nav}" hesap="${uyelik?.deger}"`);
+      await resim(`uyelik-${kademe.beklenen.toLowerCase()}`);
+      await s.keyboard.press("Escape");
+      await s.waitForTimeout(350);
+    } catch (e) { yaz(`D · ${kademe.beklenen} kademesi`, EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+  }
+
+  /* ---- O · #153: sabit ölçüler ve içerik kaydırması (regresyon) ---- */
   try {
-    await giris(DOLU);
-    const nav = await navEtiketi();
+    await giris(DOLULAR[DOLULAR.length - 1]);
     await ayarlariAc();
-    const h = await hesapSatirlari();
-    const uyelik = h.satirlar.find((r) => /Üyelik tipi/.test(r.etiket));
-    yaz("D1 · Hesap'ta 'Üyelik tipi' satırı ve plan adı", EKRAN, TEMA, uyelik?.deger === "Pro",
-        `satır=${JSON.stringify(uyelik ?? null)}`);
-    yaz("D2 · Navigasyon AYNI etiketi gösteriyor", EKRAN, TEMA, nav === "Pro", `nav="${nav ?? ""}"`);
-    yaz("D3 · İki ekran aynı kaynaktan (etiketler eşit)", EKRAN, TEMA, nav === uyelik?.deger,
-        `nav="${nav}" hesap="${uyelik?.deger}"`);
-    await resim("uyelik-dolu-hesap");
 
     /* ---- O · #153: sabit ölçüler ve içerik kaydırması (regresyon) ---- */
     const olc = () => s.evaluate(() => {
@@ -187,7 +208,7 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     await resim("uyelik-son-satir");
     await s.keyboard.press("Escape");
     await s.waitForTimeout(400);
-  } catch (e) { yaz("D/O · planlı kullanıcı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
+  } catch (e) { yaz("O · pencere ölçüleri", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
   /* ---- K · Panelde kayıtlı kurum seçimi varsa kurum satırı ---- */
   try {
