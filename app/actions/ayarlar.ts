@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { uyelikTipi } from "@/lib/uyelik-tipi";
 import { createClient } from "@/lib/supabase/server";
 import { oturumYokMesaji, getAuthContext, type ActionResult } from "@/lib/auth-guards";
 import { ceviri, aktifDil } from "@/lib/dil-sunucu";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { ADMIN_ROLES, ROLE_LABELS, type UserRole } from "@/lib/project-labels";
+import { ADMIN_ROLES, type UserRole } from "@/lib/project-labels";
 import { adlarGecerliMi, formAdlari, tamAdiKur } from "@/lib/profil-adi";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
 import { SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
@@ -37,7 +38,15 @@ export type AyarlarVerisi = {
   soyad: string;
   /** Ad/soyad full_name'den TAHMİN edildi ve bölünüşü belirsiz. */
   adBolunusuBelirsiz: boolean;
-  rolEtiketi: string;
+  /*
+    ÜYELİK TİPİ, ROL DEĞİL (25.11.2026). Hesap ekranı "Rol: Üye /
+    Öğrenci" yazıyordu: rol bir YETKİ kavramı, müşterinin "hangi
+    üyelikteyim" sorusunun cevabı değil. Etiket sol navigasyonla AYNI
+    kaynaktan (lib/uyelik-tipi.ts); bilinmiyorsa null ve satır
+    çizilmiyor. Rol ve yetki KONTROLLERİ değişmedi, yalnızca bu satır.
+  */
+  uyelikTipi: string | null;
+  /** Panelde KAYITLI kurum seçimi (profiles.organization_id); yoksa null. */
   kurumAdi: string | null;
   abonelik: {
     tur: "organization" | "individual" | "staff";
@@ -182,7 +191,7 @@ export async function ayarlariOku(): Promise<{ veri: AyarlarVerisi } | { error: 
       ad: adlar.ad,
       soyad: adlar.soyad,
       adBolunusuBelirsiz: adlar.belirsiz,
-      rolEtiketi: ctx.role ? t(ROLE_LABELS[ctx.role]) : t({ tr: "Üye", en: "Member" }),
+      uyelikTipi: uyelikTipi({ plans: access.plans, planKodu: access.planKodu }),
       kurumAdi,
       abonelik: {
         tur: access.kind,

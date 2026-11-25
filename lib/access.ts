@@ -31,6 +31,12 @@ export interface AccessState {
   organizationName: string | null;
   /** Bireysel abone için ArvoOS'un sunduğu planlar (aylık, yıllık) */
   plans: BillingPlan[];
+  /**
+   * Abonenin YÜRÜRLÜKTEKİ plan kodu; köprü bildirmezse null. Üyelik
+   * tipi etiketi (lib/uyelik-tipi.ts) ve "Mevcut plan" işareti bunu
+   * kullanıyor: kod bilinmeden hangi planda olunduğu söylenemez.
+   */
+  planKodu: string | null;
   /** Bireysel abonenin AI kredi paketleri; kurumda ve bilinmeyende boş. */
   krediPaketleri: KrediPaketi[];
   /** Bireysel abonede kart saklama/otomatik yenileme açık mı (ArvoOS'un anahtarı); diğerlerinde false. */
@@ -43,7 +49,8 @@ export interface AccessState {
 }
 
 const open = (kind: AccessKind, status: string): AccessState => ({
-  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [], krediPaketleri: [], kartSaklama: false,
+  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [],
+  planKodu: null, krediPaketleri: [], kartSaklama: false,
 });
 
 /*
@@ -73,6 +80,7 @@ const accessFor = cache(async function accessFor(
       organizationName: license.organizationName,
       // Kurumun aboneliğini kurumu öder; burada ödeme planı gösterilmez.
       plans: [],
+      planKodu: null,
       krediPaketleri: [],
       kartSaklama: false,
     };
@@ -97,6 +105,7 @@ const accessFor = cache(async function accessFor(
     periodEnd: subscription.currentPeriodEnd,
     organizationName: null,
     plans: subscription.plans,
+    planKodu: subscription.planCode ?? null,
     krediPaketleri: subscription.krediPaketleri,
     kartSaklama: subscription.cardStorage,
   };

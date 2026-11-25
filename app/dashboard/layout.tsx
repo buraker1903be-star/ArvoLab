@@ -5,8 +5,8 @@ import { sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
+import { uyelikTipi } from "@/lib/uyelik-tipi";
 import { ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
@@ -51,7 +51,6 @@ function initialsOf(name: string) {
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [profile, t] = await Promise.all([getCurrentProfile(), ceviri()]);
   const userName = profile?.full_name?.trim() || t({ tr: "Kullanıcı", en: "User" });
-  const roleLabel = profile ? t(ROLE_LABELS[profile.role]) : "";
   const initials = initialsOf(userName);
   // Kim girebilir: kurum lisansı ya da bireysel abonelik (lib/access.ts).
   /*
@@ -80,9 +79,19 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   */
   const kullanim = profile ? await kullanimHaklarim(access, profile.id).catch(() => []) : [];
   // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
+  /*
+    AD ALTINDAKİ ETİKET ÜYELİK TİPİ, ROL DEĞİL (25.11.2026). Burada
+    "Üye / Öğrenci" yazıyordu: rol bir YETKİ kavramı. Etiket Hesap
+    ekranıyla AYNI kaynaktan (lib/uyelik-tipi.ts) okunuyor; plan kodu
+    ya da katalogdaki ad bilinmiyorsa BOŞ kalıyor ve satır çizilmiyor
+    — yerine rolü koymak iki ekranı yeniden ayrıştırırdı.
+    Rol ve yetki kontrolleri (uygulamalar listesi, sayfa kapıları,
+    ADMIN_ROLES) değişmedi.
+  */
+  const uyelik = uyelikTipi({ plans: access.plans, planKodu: access.planKodu }) ?? "";
   const hesapMenusu = {
     ad: userName,
-    rol: roleLabel,
+    rol: uyelik,
     basHarf: initials,
     cikis: logout,
     /*

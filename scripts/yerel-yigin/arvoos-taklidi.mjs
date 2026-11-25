@@ -54,6 +54,18 @@ const PAKETLER = [
   { kod: "k1000", ad: "1.000 kredi", kredi: 1000, fiyat: 40000 },
 ];
 
+/*
+  Dolu katalog senaryosunda abonenin plan kodu. E-posta hangi kademeyi
+  istediğini söylüyor: ayar-katalog-std → Standart, -plus → Plus,
+  başka her "ayar-katalog…" → Pro.
+*/
+function planKodu(eposta) {
+  if (!eposta.startsWith("ayar-katalog")) return null;
+  if (eposta.startsWith("ayar-katalog-std")) return "standart-ay";
+  if (eposta.startsWith("ayar-katalog-plus")) return "plus-ay";
+  return "pro-ay";
+}
+
 const sunucu = http.createServer((istek, yanit) => {
   if (istek.method !== "POST" || !istek.url?.startsWith("/api/bridge/subscription")) {
     yanit.writeHead(404).end("yok");
@@ -91,6 +103,13 @@ const sunucu = http.createServer((istek, yanit) => {
             trialEndsAt: eposta.startsWith("ayar-deneme") ? DENEME_BITISI : null,
             currentPeriodEnd: eposta.startsWith("ayar-deneme") ? null : DONEM_BITISI,
             plans: eposta.startsWith("ayar-katalog") ? KATALOG_DOLU : KATALOG_BUGUN,
+            /* ABONENİN PLAN KODU. Gerçek ArvoOS bugün bildirmiyor;
+               yalnızca dolu katalog senaryosunda veriliyor ki "Üyelik
+               tipi" satırının ve "Mevcut plan" işaretinin DOLU hâli de
+               ölçülebilsin. Kademe e-postadan seçiliyor: üç kademenin
+               ÜÇÜ DE ayrı ayrı sınanabilsin diye (yalnızca Pro'yu
+               görmek, etiketin plana göre değiştiğini göstermezdi). */
+            ...(planKodu(eposta) ? { planCode: planKodu(eposta) } : {}),
             /* Kredi paketleri okuyucunun beklediği anahtarla: creditPackages. */
             creditPackages: PAKETLER,
             cardStorage: false,

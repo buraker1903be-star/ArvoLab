@@ -101,6 +101,13 @@ async function mirrorSubscription(userId: string, state: SubscriptionState) {
 export interface SubscriptionState {
   status: string;
   access: boolean;
+  /**
+   * Abonenin YÜRÜRLÜKTEKİ plan kodu (ArvoOS bildirirse). #151'de bu alan
+   * hiç yoktu: plan karşılaştırmasında hiçbir satır "Mevcut plan"
+   * işaretlenemiyor, üyelik tipi de yazılamıyordu. Köprü göndermezse
+   * null kalır ve ekran plan adı UYDURMAZ.
+   */
+  planCode: string | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   /** ArvoOS'un sunduğu abonelik planları (aylık, yıllık) */
@@ -113,6 +120,14 @@ export interface SubscriptionState {
    */
   cardStorage: boolean;
   checkoutUrl?: string;
+}
+
+/** Abonenin plan kodu: boş ya da aşırı uzun değer yok sayılır. */
+function abonePlanKodu(payload: Record<string, unknown>): string | null {
+  for (const deger of [payload.planCode, payload.plan, payload.currentPlan, payload.planKodu]) {
+    if (typeof deger === "string" && deger.trim()) return deger.trim().slice(0, 64);
+  }
+  return null;
 }
 
 function endpoint() {
@@ -180,6 +195,9 @@ async function call(
     recordHealth(true);
     const state = {
       ...(payload as unknown as SubscriptionState),
+      /* Alan adı sürümden sürüme değişebildiği için hoşgörülü okunuyor
+         (lib/billing-plan.ts ile aynı ilke). */
+      planCode: abonePlanKodu(payload),
       plans: normalizePlans(payload),
       krediPaketleri: krediPaketleriniOku(payload),
       cardStorage: payload.cardStorage === true,

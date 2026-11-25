@@ -66,6 +66,7 @@ export default async function KullaniciMenusu({
 }: {
   yerlesim?: "ust" | "kenar";
   ad: string;
+  /** Üyelik tipi etiketi; bilinmiyorsa boş dize ve satır çizilmez. */
   rol: string;
   basHarf: string;
   cikis: () => Promise<void>;
@@ -84,7 +85,10 @@ export default async function KullaniciMenusu({
           <>
             <span className="os-kullanici-kimlik" aria-hidden="true">
               <b>{ad}</b>
-              <small>{rol}</small>
+              {/* Etiket üyelik tipi (lib/uyelik-tipi.ts); bilinmiyorsa
+                  BOŞ gelir ve satır hiç çizilmez — boş bir <small>
+                  adın altında sebepsiz boşluk bırakıyordu. */}
+              {rol ? <small>{rol}</small> : null}
             </span>
             <ChevronsUpDown size={16} aria-hidden="true" />
           </>
@@ -106,7 +110,7 @@ export default async function KullaniciMenusu({
             <span className="os-avatar os-avatar-buyuk">{basHarf}</span>
             <div>
               <b>{ad}</b>
-              <small>{rol}</small>
+              {rol ? <small>{rol}</small> : null}
             </div>
           </div>
         ) : null}
