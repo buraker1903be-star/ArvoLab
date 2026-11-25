@@ -75,33 +75,36 @@ export default async function PlanSecimi({
                 </li>
               ))}
             </ul>
-            {/* Eylemler kartın DİBİNDE: üç kartın düğmeleri masaüstünde
-                aynı alt hizada (app/styles/os5-ana-sayfa.css). */}
-            <div className="plan-secimi-eylemler">
-              {/* Mevcut ödeme akışı, seçilen planın koduyla. */}
-              <form action={payArvolabSubscription}>
-                <input type="hidden" name="plan" value={k.kod} />
-                <OdemeButonu birincil etiket={t(k.dugme)} />
+            {/*
+              ANA DÜĞMELER AYNI YATAY ÇİZGİDE (25.11.2026). Eylemler tek
+              bir sarmalayıcıdaydı ve yalnızca ALTLARI hizalanıyordu:
+              yıllık seçeneği olan Standart ve Pro'nun ana düğmesi
+              yukarı kayıyor, yıllığı olmayan Plus'ınki aşağıda
+              kalıyordu. Artık her satır kartın kendi ızgara satırı
+              (subgrid, app/styles/os5-ana-sayfa.css): ana düğmeler aynı
+              satırda, yıllık seçenek KENDİ planının ana düğmesinin
+              altındaki satırda. Yıllığı olmayan kartta o satır BOŞ
+              kalıyor — sahte bir düğme konmuyor.
+            */}
+            <form action={payArvolabSubscription} className="plan-secimi-ana-eylem">
+              <input type="hidden" name="plan" value={k.kod} />
+              <OdemeButonu birincil etiket={t(k.dugme)} />
+            </form>
+            {/* Yıllık seçenek kendi planının altında; düğme planın adını
+                taşıyor ki hangi plana ait olduğu belirsiz kalmasın. */}
+            {k.yillik ? (
+              <form action={payArvolabSubscription} className="plan-secimi-yillik-eylem">
+                <input type="hidden" name="plan" value={k.yillik.kod} />
+                <OdemeButonu
+                  birincil={false}
+                  ikonlu={false}
+                  etiket={t({
+                    tr: `${k.ad} yıllık · ${formatTry(k.yillik.fiyat, dil)}`,
+                    en: `${k.ad} yearly · ${formatTry(k.yillik.fiyat, dil)}`,
+                  })}
+                />
               </form>
-              {/*
-                YILLIK SEÇENEK KENDİ KARTINDA. Ayrı bir listede dursaydı
-                hangi plana ait olduğu belirsiz kalırdı; düğme planın
-                adını taşıyor.
-              */}
-              {k.yillik ? (
-                <form action={payArvolabSubscription}>
-                  <input type="hidden" name="plan" value={k.yillik.kod} />
-                  <OdemeButonu
-                    birincil={false}
-                    ikonlu={false}
-                    etiket={t({
-                      tr: `${k.ad} yıllık · ${formatTry(k.yillik.fiyat, dil)}`,
-                      en: `${k.ad} yearly · ${formatTry(k.yillik.fiyat, dil)}`,
-                    })}
-                  />
-                </form>
-              ) : null}
-            </div>
+            ) : null}
           </article>
         ))}
       </div>

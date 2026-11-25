@@ -135,6 +135,14 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
     }));
     yaz("G1 · Katalog hazır değilse üç kartlı bölüm GİZLİ", EKRAN, TEMA, !d.planBolumu, `bölüm=${d.planBolumu}`);
     yaz("G2 · Mevcut ödeme yolu yerinde", EKRAN, TEMA, d.lisansKarti, `lisans/ödeme metni=${d.lisansKarti}`);
+    /* Katalog eksikken TARİH de lisans kartında kalmalı: kartlar
+       çizilmediği için onu gösterecek başka yer yok. */
+    const g3 = await s.evaluate(() => ({
+      tarih: Boolean(document.querySelector(".license-card-validity")),
+      odeme: [...document.querySelectorAll("main button")].some((b) => /Kartla öde|Abone ol/.test(b.textContent ?? "")),
+    }));
+    yaz("G3 · Katalog eksikken tarih lisans kartında erişilebilir", EKRAN, TEMA, g3.tarih,
+        `tarih=${g3.tarih} ödemeDüğmesi=${g3.odeme}`);
   } catch (e) { yaz("G · katalog kapısı", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
   /* ---- P · Üç plan kartı (katalog dolu, deneme üyesi) ---- */
@@ -180,6 +188,37 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
         eksik.length ? `eksik=[${eksik.join(", ")}]` : p.kartlar.map((k) => `${k.ad}/${k.kod}`).join(" "));
     const avantaj = p.yok ? false : p.kartlar.every((k) => /çalışma/.test(k.metin));
     yaz("P5 · Avantajlar katalogdan", EKRAN, TEMA, avantaj, `kartlarda avantaj satırı=${avantaj}`);
+    if (mobil) {
+      /* 390 px'te kartlar alt alta, sıra Standart → Plus → Pro ve her
+         ana düğmeye kaydırarak ulaşılabilmeli. */
+      const m = await s.evaluate(() => {
+        const kartlar = [...document.querySelectorAll(".plan-secimi-kart")];
+        const ustler = kartlar.map((k) => Math.round(k.getBoundingClientRect().top));
+        return {
+          sira: kartlar.map((k) => k.querySelector("h3")?.textContent?.trim()),
+          altAlta: ustler.every((u, i) => i === 0 || u > ustler[i - 1]),
+          tekSutun: new Set(kartlar.map((k) => Math.round(k.getBoundingClientRect().left))).size === 1,
+        };
+      });
+      yaz("P6 · 390'da kartlar alt alta ve sıra Standart→Plus→Pro", EKRAN, TEMA,
+          m.altAlta && m.tekSutun && JSON.stringify(m.sira) === JSON.stringify(["Standart", "Plus", "Pro"]),
+          `sıra=${JSON.stringify(m.sira)} altAlta=${m.altAlta} tekSütun=${m.tekSutun}`);
+      const ulasim = [];
+      for (const ad of ["Standart", "Plus", "Pro"]) {
+        const dugme = s.locator(`.plan-secimi-kart:has(h3:text-is("${ad}")) .plan-secimi-ana-eylem button`);
+        await dugme.scrollIntoViewIfNeeded();
+        await s.waitForTimeout(200);
+        const gorunur = await dugme.evaluate((b) => {
+          const r = b.getBoundingClientRect();
+          const orta = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return r.top >= 0 && r.bottom <= window.innerHeight && Boolean(b.contains(orta) || b === orta);
+        });
+        if (!gorunur) ulasim.push(ad);
+      }
+      yaz("P7 · 390'da üç düğmeye de kaydırarak ulaşılıyor", EKRAN, TEMA, ulasim.length === 0,
+          ulasim.length ? `ulaşılamayan=[${ulasim.join(", ")}]` : "üçü de tıklanabilir");
+      await resim("plan-secimi-mobil-kaydirilmis");
+    }
     await resim("plan-secimi");
   } catch (e) { yaz("P · plan kartları", EKRAN, TEMA, false, `HATA ${String(e.message).slice(0, 70)}`); }
 
@@ -211,8 +250,17 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
           kartlaOde: [...ana.querySelectorAll("button")].filter((b) => /Kartla öde/.test(b.textContent ?? "")).length,
           yasalNot: ana.querySelectorAll(".yasal-not").length,
           yasalKartlarda: Boolean(kartlar?.querySelector(".yasal-not")),
-          hizalar: [...(kartlar?.querySelectorAll(".plan-secimi-eylemler") ?? [])]
-            .map((e) => Math.round(e.getBoundingClientRect().bottom)),
+          anaHizalar: [...(kartlar?.querySelectorAll(".plan-secimi-ana-eylem button") ?? [])]
+            .map((e) => Math.round(e.getBoundingClientRect().top)),
+          yillikAltta: [...(kartlar?.querySelectorAll(".plan-secimi-kart") ?? [])].every((k) => {
+            const ana = k.querySelector(".plan-secimi-ana-eylem button");
+            const yil = k.querySelector(".plan-secimi-yillik-eylem button");
+            return !yil || yil.getBoundingClientRect().top > ana.getBoundingClientRect().top;
+          }),
+          bosDugme: [...(kartlar?.querySelectorAll(".plan-secimi-kart button") ?? [])]
+            .filter((b) => !(b.textContent ?? "").trim()).length,
+          tarihSayisi: ((document.querySelector("main")?.innerText ?? "").match(/8 Aralık 2026/g) ?? []).length,
+          lisansTarih: Boolean(document.querySelector(".license-card-validity")),
           yillik: [...(kartlar?.querySelectorAll(".plan-secimi-kart") ?? [])].map((k) => {
             const formlar = [...k.querySelectorAll("form")];
             const yillikForm = formlar.find((f) => /yıllık/i.test(f.querySelector("button")?.textContent ?? ""));
@@ -229,9 +277,19 @@ for (const [EKRAN, YUK, TEMA] of [[1440, 900, "light"], [1440, 900, "dark"], [39
       yaz(`B0c ${kademe.ad} · Sözleşme notu TEK ve üç kartın altında`, EKRAN, TEMA,
           tekrar.yasalNot === 1 && tekrar.yasalKartlarda, `not=${tekrar.yasalNot} kartlarda=${tekrar.yasalKartlarda}`);
       if (!mobil) {
-        yaz(`B0d ${kademe.ad} · Masaüstünde düğmeler aynı alt hizada`, EKRAN, TEMA,
-            new Set(tekrar.hizalar).size === 1, `hizalar=${JSON.stringify(tekrar.hizalar)}`);
+        /* ANA düğmelerin ÜST kenarı aynı olmalı. Eskiden yalnızca eylem
+           bloğunun ALTI hizalanıyordu; yıllığı olan kartta ana düğme
+           yukarı kayıyordu. */
+        yaz(`B0d ${kademe.ad} · Masaüstünde ANA düğmeler aynı yatay çizgide`, EKRAN, TEMA,
+            tekrar.anaHizalar.length === 3 && new Set(tekrar.anaHizalar).size === 1,
+            `ana düğme üstleri=${JSON.stringify(tekrar.anaHizalar)}`);
       }
+      yaz(`B0f ${kademe.ad} · Yıllık kendi ana düğmesinin altında, boş düğme yok`, EKRAN, TEMA,
+          tekrar.yillikAltta && tekrar.bosDugme === 0,
+          `yıllıkAltta=${tekrar.yillikAltta} boşDüğme=${tekrar.bosDugme}`);
+      yaz(`B0g ${kademe.ad} · Deneme tarihi tek yerde (kartların üstünde)`, EKRAN, TEMA,
+          tekrar.tarihSayisi === 1 && !tekrar.lisansTarih,
+          `tarih sayısı=${tekrar.tarihSayisi} lisansKartındaTarih=${tekrar.lisansTarih}`);
       /* Yıllık düğme hem ADIYLA hem de KENDİ koduyla kendi planına
          bağlı olmalı: "Standart yıllık" düğmesi standart-yil kodunu
          göndermeli, aylık kodu değil. */

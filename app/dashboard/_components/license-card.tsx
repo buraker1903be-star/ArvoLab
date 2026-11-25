@@ -12,19 +12,22 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 export default async function LicenseCard({
   access,
-  odemeGizle = false,
+  tekrarGizle = false,
 }: {
   access: AccessState;
   /*
-    ÖDEME BÖLÜMÜ GİZLENSİN Mİ (25.11.2026). Ana sayfada üç plan kartı
-    gösterilirken bu kart AYNI düğmeleri ve aynı sözleşme notunu
-    tekrar ediyordu: ekranda iki ayrı "Kartla öde" takımı vardı ve
-    kullanıcı hangisinin hangi planı aldığını ayıramıyordu. Kart
-    durumu göstermeye devam ediyor, ödeme bölümü yalnızca o ekranda
-    susuyor. Katalog eksikse üç kart hiç çizilmediği için bu bayrak
-    false kalıyor ve MEVCUT ödeme yolu erişilebilir duruyor.
+    TEKRAR EDEN BİLGİ GİZLENSİN Mİ (25.11.2026). Ana sayfada üç plan
+    kartı gösterilirken bu kart AYNI düğmeleri, aynı sözleşme notunu ve
+    AYNI deneme bitiş tarihini tekrar ediyordu: ekranda iki ayrı
+    "Kartla öde" takımı ve iki ayrı tarih vardı, kullanıcı hangisinin
+    hangisi olduğunu ayıramıyordu. Kart durum rozetini ve başlığını
+    göstermeye devam ediyor; tarih ve ödeme bölümü yalnızca o ekranda
+    susuyor (tarih kartların üstünde, ödeme kartların içinde).
+
+    Katalog eksikse üç kart hiç çizilmediği için bu bayrak false kalıyor
+    ve hem TARİH hem MEVCUT ödeme yolu bu kartta erişilebilir duruyor.
   */
-  odemeGizle?: boolean;
+  tekrarGizle?: boolean;
 }) {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -41,7 +44,7 @@ export default async function LicenseCard({
         </span>
       </div>
       <h2>{summary.title}</h2>
-      {summary.detail ? (
+      {summary.detail && !tekrarGizle ? (
         <p className="license-card-validity">
           <CalendarClock size={15} aria-hidden="true" />
           <span>{summary.detail}</span>
@@ -49,7 +52,7 @@ export default async function LicenseCard({
       ) : null}
       {summary.paymentNote ? <p className="tone-text text-sm" data-tone={summary.tone}>{summary.paymentNote}</p> : null}
       {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
-      {summary.showPayment && !odemeGizle ? (
+      {summary.showPayment && !tekrarGizle ? (
         access.plans.length > 0 ? (
           <>
           <div className="cluster">

@@ -550,10 +550,11 @@ export default async function AnaSayfaIcerik() {
             altında. Katalog eksikse bileşen null döner ve aşağıdaki
             lisans kartı mevcut ödeme yolunu sunmaya devam eder. */}
         {deneme ? <PlanSecimi planlar={access.plans} denemeBitis={denemeBitisMetni} /> : null}
-        {/* Üç kart çiziliyorsa lisans kartı ödeme düğmelerini ve
-            sözleşme notunu TEKRARLAMIYOR; durum bilgisi kalıyor.
-            Katalog eksikse kartlar yok ve mevcut ödeme yolu burada. */}
-        <LicenseCard access={access} odemeGizle={deneme && satisHazir(access.plans)} />
+        {/* Üç kart çiziliyorsa lisans kartı ödeme düğmelerini, sözleşme
+            notunu ve deneme bitiş TARİHİNİ tekrarlamıyor; durum rozeti
+            kalıyor. Katalog eksikse kartlar yok, tarih ve mevcut ödeme
+            yolu bu kartta erişilebilir duruyor. */}
+        <LicenseCard access={access} tekrarGizle={deneme && satisHazir(access.plans)} />
         </>
       ) : ogrenciGorunumu && resume ? (
         <>

@@ -311,15 +311,28 @@
 .os5-ana .plan-secimi { display: grid; gap: 12px; }
 .os5-ana .plan-secimi-deneme { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
 .os5-ana .plan-secimi-izgara { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
-/* Sütun yerleşimi: eylemler margin-top:auto ile kartın DİBİNE iniyor,
-   böylece üç kartın düğmeleri masaüstünde aynı alt hizada — metinleri
-   farklı uzunlukta olsa da. */
+/*
+  ANA DÜĞMELER AYNI YATAY ÇİZGİDE. Kart içeriği SUBGRID ile ızgaranın
+  satırlarını paylaşıyor: başlık, fiyat, satış metni, liste, ana düğme
+  ve yıllık düğme her kartta aynı satırda. Eskiden yalnızca eylemlerin
+  ALTI hizalanıyordu (margin-top:auto) ve yıllık seçeneği olan kartta
+  ana düğme yukarı kayıyordu. Yıllığı olmayan kartta son satır BOŞ
+  kalıyor; sahte bir düğme konmuyor.
+
+  Subgrid tanımayan tarayıcıda (aşağıdaki @supports) eski davranış:
+  eylemler kartın dibine iner, altları hizalanır.
+*/
 .os5-ana .plan-secimi-kart {
   display: flex; flex-direction: column; gap: 10px;
   padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
 }
-.os5-ana .plan-secimi-eylemler { display: grid; gap: 8px; margin-top: auto; padding-top: 4px; }
-.os5-ana .plan-secimi-eylemler button { width: 100%; justify-content: center; }
+.os5-ana .plan-secimi-ana-eylem { margin-top: auto; }
+.os5-ana .plan-secimi-kart form button { width: 100%; justify-content: center; }
+@supports (grid-template-rows: subgrid) {
+  .os5-ana .plan-secimi-izgara { grid-auto-rows: auto; }
+  .os5-ana .plan-secimi-kart { display: grid; grid-row: span 6; grid-template-rows: subgrid; }
+  .os5-ana .plan-secimi-ana-eylem { margin-top: 0; align-self: end; }
+}
 .os5-ana .plan-secimi-kart h3 { margin: 0; font-size: var(--fs-md); font-weight: 700; }
 .os5-ana .plan-secimi-fiyat { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .os5-ana .plan-secimi-fiyat small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
